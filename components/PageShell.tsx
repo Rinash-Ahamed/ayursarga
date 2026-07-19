@@ -1,0 +1,52 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import SmoothScroll from "@/components/SmoothScroll";
+import Preloader from "@/components/Preloader";
+import CustomCursor from "@/components/CustomCursor";
+import ProgressFlame from "@/components/ProgressFlame";
+import Nav from "@/components/Nav";
+import Hero from "@/components/Hero";
+import Philosophy from "@/components/Philosophy";
+import Journey from "@/components/Journey";
+import Therapies from "@/components/Therapies";
+import Sanctuary from "@/components/Sanctuary";
+import Voices from "@/components/Voices";
+import Contact from "@/components/Contact";
+import Footer from "@/components/Footer";
+
+// Particle field touches WebGL/canvas APIs — load client-only, no SSR.
+const ParticleField = dynamic(() => import("@/components/ParticleField"), { ssr: false });
+
+export default function PageShell() {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    document.body.classList.remove("loading");
+  }, [ready]);
+
+  return (
+    <>
+      <Preloader onDone={() => setReady(true)} />
+      <div className="grain-overlay" />
+      <ParticleField />
+      <ProgressFlame />
+      <CustomCursor />
+      <Nav />
+
+      <SmoothScroll>
+        <main>
+          <Hero ready={ready} />
+          <Philosophy />
+          <Journey />
+          <Therapies />
+          <Sanctuary />
+          <Voices />
+          <Contact />
+        </main>
+        <Footer />
+      </SmoothScroll>
+    </>
+  );
+}
