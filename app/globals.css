@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ==========================================================================
-   AYURSARGA — Design tokens
+   AYURSARGA - Design tokens
    ========================================================================== */
 :root{
   --clay:      #A88E75;
@@ -69,6 +69,8 @@ em{ font-style: italic; color: var(--clay-dark); }
   animation: fadeInWord .8s ease forwards .9s;
 }
 @keyframes fadeInWord{ to{ opacity:1; } }
+.pre-logo{ width:clamp(210px,28vw,320px); aspect-ratio:1; border-radius:50%; overflow:hidden; box-shadow:0 24px 70px rgba(58,61,46,.16); }
+.pre-logo img{ width:100%; height:100%; object-fit:cover; }
 
 /* ==========================================================================
    Ambient layers
@@ -214,7 +216,7 @@ em{ font-style: italic; color: var(--clay-dark); }
 .scroll-word{ font-size:11px; letter-spacing:.25em; text-transform:uppercase; color:var(--sage); writing-mode:vertical-rl; }
 
 /* ==========================================================================
-   Sections — generic
+   Sections - generic
    ========================================================================== */
 .section{ position:relative; padding: var(--section-pad) 0; }
 .section-inner{ max-width:1320px; margin:0 auto; padding:0 40px; position:relative; z-index:2; }
@@ -292,7 +294,7 @@ em{ font-style: italic; color: var(--clay-dark); }
 .sanctuary-glow{ position:absolute; inset:0; background: radial-gradient(ellipse at 30% 20%, rgba(255,240,210,.35), transparent 55%); }
 .sanctuary-list{ list-style:none; display:flex; flex-direction:column; gap:14px; }
 .sanctuary-list li{ font-size:15px; color:rgba(249,245,234,.75); padding-left:22px; position:relative; }
-.sanctuary-list li::before{ content:"—"; position:absolute; left:0; color:var(--gold); }
+.sanctuary-list li::before{ content:"-"; position:absolute; left:0; color:var(--gold); }
 
 /* ==========================================================================
    Voices
@@ -331,6 +333,15 @@ em{ font-style: italic; color: var(--clay-dark); }
 .footer-inner{ max-width:900px; margin:0 auto; display:flex; flex-direction:column; align-items:center; gap:14px; }
 .footer-mark{ display:flex; align-items:center; gap:10px; }
 .footer-mark img{ width:48px; height:48px; object-fit:cover; border-radius:50%; }
+.footer-logo-wrap{ position:relative; width:48px; height:48px; border-radius:50%; }
+.footer-logo-wrap::after{
+  content:""; position:absolute; inset:-7px; border:1px solid rgba(201,166,107,.38); border-radius:50%;
+  animation:footerLogoPulse 3.8s ease-in-out infinite;
+}
+@keyframes footerLogoPulse{
+  0%,100%{ opacity:.25; transform:scale(.88); }
+  50%{ opacity:.75; transform:scale(1.08); }
+}
 .footer-mark span{ font-family:var(--font-display); color:var(--cream); font-size:16px; }
 .footer-fine{ font-size:12px; opacity:.6; }
 
@@ -444,6 +455,26 @@ button{ cursor:pointer; }
   .process-grid{ grid-template-columns:1fr; }.process-card:not(:last-child){ border-right:0; margin-right:0; }
   .path-grid,.partner-points,.choice-grid{ grid-template-columns:1fr; }
   .quiz-card{ padding:28px 22px; min-height:580px; }.partner-panel{ border-radius:20px; }
+}
+
+/* Scroll-drawn botanical section transitions */
+.botanical-transition{
+  position:relative; z-index:3; height:clamp(90px,11vw,150px); overflow:hidden;
+  margin:0; pointer-events:none;
+}
+.botanical-transition.cream{ background:var(--cream); }
+.botanical-transition.cream-to-forest{ background:linear-gradient(to bottom,var(--cream) 0 48%,var(--forest) 48% 100%); }
+.botanical-transition.forest-to-cream{ background:linear-gradient(to bottom,var(--forest) 0 48%,var(--cream) 48% 100%); }
+.botanical-transition svg{ width:100%; height:100%; display:block; overflow:visible; }
+.botanical-transition.reverse svg{ transform:scaleX(-1); }
+.botanical-stem{ fill:none; stroke:var(--clay-dark); stroke-width:2; vector-effect:non-scaling-stroke; stroke-linecap:round; opacity:.72; }
+.botanical-leaf{ fill:#68775a; transform-box:fill-box; transform-origin:0 50%; filter:drop-shadow(0 4px 4px rgba(42,40,31,.1)); }
+.botanical-vein{ fill:none; stroke:#48543e; stroke-width:1; vector-effect:non-scaling-stroke; stroke-linecap:round; }
+.cream-to-forest .botanical-stem,.forest-to-cream .botanical-stem{ stroke:var(--gold); }
+.cream-to-forest .botanical-leaf,.forest-to-cream .botanical-leaf{ fill:#7e8967; }
+@media(max-width:600px){
+  .botanical-transition{ height:86px; }
+  .botanical-transition svg{ width:150%; margin-left:-25%; }
 }
 
 /* Reliable interaction layer and tactile feedback */

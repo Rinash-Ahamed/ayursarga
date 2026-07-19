@@ -1,34 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Preloader({ onDone }: { onDone: () => void }) {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    const t = setTimeout(() => setVisible(false), 1500);
-    return () => clearTimeout(t);
+    const timer = window.setTimeout(() => setVisible(false), 1600);
+    return () => window.clearTimeout(timer);
   }, []);
 
-  return (
-    <AnimatePresence onExitComplete={onDone}>
-      {visible && (
-        <motion.div
-          id="preloader"
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.7, ease: "easeOut" }}
-        >
-          <svg className="pre-mark" viewBox="0 0 200 200" fill="none">
-            <path
-              d="M100 20 C130 60 145 100 120 150 C112 165 88 165 80 150 C55 100 70 60 100 20 Z"
-              stroke="#A88E75"
-              strokeWidth="2"
-            />
-          </svg>
-          <span className="pre-word">Ayursarga</span>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
+  return <AnimatePresence onExitComplete={onDone}>
+    {visible && <motion.div id="preloader" exit={{ opacity: 0 }} transition={{ duration: .65, ease: "easeOut" }}>
+      <motion.div className="pre-logo" initial={{ opacity: 0, scale: .82 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}>
+        <Image src="/mainlogo.png" alt="Ayursarga" width={280} height={280} priority />
+      </motion.div>
+    </motion.div>}
+  </AnimatePresence>;
 }

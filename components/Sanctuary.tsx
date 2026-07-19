@@ -4,7 +4,7 @@ import { FadeUp, RevealLines, RevealWords } from "./Reveal";
 
 const BENEFITS = [
   ["Verified partners", "Centres are considered for the quality, credibility and consistency of their care."],
-  ["Doctor-guided matching", "Clinical needs help shape the shortlist—not just photographs or room rates."],
+  ["Doctor-guided matching", "Clinical needs help shape the shortlist - not just photographs or room rates."],
   ["Transparent pricing", "Understand packages and inclusions clearly before you confirm."],
   ["One point of contact", "A single Ayursarga guide supports you from first question to booking."],
   ["Personal recommendations", "Your care, privacy, family needs, location and budget all matter."],

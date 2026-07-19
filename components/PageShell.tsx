@@ -16,8 +16,9 @@ import Sanctuary from "@/components/Sanctuary";
 import Voices from "@/components/Voices";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
+import BotanicalTransition from "@/components/BotanicalTransition";
 
-// Particle field touches WebGL/canvas APIs — load client-only, no SSR.
+// Particle field uses browser animation APIs - load client-only, no SSR.
 const ParticleField = dynamic(() => import("@/components/ParticleField"), { ssr: false });
 
 export default function PageShell() {
@@ -41,10 +42,15 @@ export default function PageShell() {
         <main>
           <Hero ready={ready} />
           <Philosophy />
+          <BotanicalTransition tone="cream-to-forest" />
           <Journey />
+          <BotanicalTransition tone="forest-to-cream" reverse />
           <Therapies />
+          <BotanicalTransition tone="cream-to-forest" />
           <Sanctuary />
+          <BotanicalTransition tone="forest-to-cream" reverse />
           <Voices />
+          <BotanicalTransition tone="cream" />
           <Contact />
         </main>
         <Footer />

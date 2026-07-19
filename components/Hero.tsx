@@ -38,7 +38,7 @@ export default function Hero({ ready }: { ready: boolean }) {
           ))}
         </h1>
         <motion.p className="hero-sub" initial={{ opacity: 0, y: 20 }} animate={ready ? { opacity: 1, y: 0 } : {}} transition={{ delay: .82, duration: .8 }}>
-          Discover your ideal Ayurvedic recovery retreat in Kerala—matched to your care, comfort and budget by people who understand the journey.
+          Discover your ideal Ayurvedic recovery retreat in Kerala - matched to your care, comfort and budget by people who understand the journey.
         </motion.p>
         <motion.div className="hero-ctas" initial={{ opacity: 0, y: 20 }} animate={ready ? { opacity: 1, y: 0 } : {}} transition={{ delay: 1, duration: .7 }}>
           <MagneticButton href="#matching" className="btn-magnetic btn-primary">Find My Retreat</MagneticButton>
