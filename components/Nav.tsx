@@ -57,7 +57,9 @@ export default function Nav() {
           </MagneticButton>
           <button
             id="nav-burger"
-            aria-label="Menu"
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+            aria-controls="mobile-menu"
             className={open ? "open" : ""}
             onClick={() => setOpen((o) => !o)}
           >
@@ -74,8 +76,8 @@ export default function Nav() {
             {l.label}
           </a>
         ))}
-        <a href="#contact" onClick={() => setOpen(false)}>
-          Book a Consultation
+        <a className="mobile-book-link" href="#contact" onClick={() => setOpen(false)}>
+          Begin Your Journey <span>&rarr;</span>
         </a>
       </div>
     </>
