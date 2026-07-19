@@ -369,9 +369,19 @@ a:focus-visible, button:focus-visible, input:focus-visible{
 button, select, textarea{ font:inherit; }
 button{ cursor:pointer; }
 .section-intro{ max-width:610px; color:var(--sage); font-size:17px; line-height:1.75; margin-top:20px; }
-.hero-orbit{ position:absolute; z-index:1; border:1px solid rgba(168,142,117,.18); border-radius:50%; pointer-events:none; }
+.hero-orbit{ position:absolute; z-index:2; border:1px solid rgba(168,142,117,.18); border-radius:50%; pointer-events:none; }
 .hero-orbit-one{ width:560px; height:560px; left:-250px; top:18%; }
 .hero-orbit-two{ width:360px; height:360px; right:-120px; bottom:8%; }
+.hero-orbit-art{ position:absolute; width:190px; overflow:visible; fill:none; stroke:var(--clay-dark); stroke-width:1.15; stroke-linecap:round; stroke-linejoin:round; }
+.hero-orbit-one .hero-orbit-art{ right:38px; top:185px; }
+.hero-orbit-two .hero-orbit-art{ left:26px; top:74px; }
+.orbit-art-halo{ stroke-dasharray:2 9; opacity:.45; transform-origin:center; animation:orbit-art-turn 30s linear infinite; }
+.orbit-art-fill{ fill:rgba(201,166,107,.08); stroke:var(--clay-dark); }
+.hero-lotus-art{ animation:orbit-art-breathe 6s ease-in-out infinite; }
+.hero-sun-art{ animation:orbit-art-breathe 6s -3s ease-in-out infinite; }
+.sun-rays{ transform-origin:center; animation:orbit-art-turn 38s linear infinite; }
+@keyframes orbit-art-turn{ to{ transform:rotate(360deg); } }
+@keyframes orbit-art-breathe{ 0%,100%{ translate:0 0; opacity:.62; } 50%{ translate:0 -7px; opacity:.9; } }
 .hero-trust{ margin-top:42px; display:flex; justify-content:center; align-items:center; gap:15px; color:var(--sage); font-size:11px; letter-spacing:.09em; text-transform:uppercase; }
 .hero-trust i{ width:4px; height:4px; background:var(--gold); border-radius:50%; }
 

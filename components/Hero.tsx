@@ -29,7 +29,31 @@ export default function Hero({ ready }: { ready: boolean }) {
   return (
     <section id="hero">
       <div className="hero-glow" ref={glowRef} /><div className="hero-rays" />
-      <div className="hero-orbit hero-orbit-one" /><div className="hero-orbit hero-orbit-two" />
+      <div className="hero-orbit hero-orbit-one" aria-hidden="true">
+        <svg className="hero-orbit-art hero-lotus-art" viewBox="0 0 200 200" role="presentation">
+          <circle className="orbit-art-halo" cx="100" cy="100" r="78" />
+          <path className="orbit-art-fill" d="M100 128C72 102 73 67 100 39C127 67 128 102 100 128Z" />
+          <path d="M98 133C63 129 42 105 43 72C74 76 96 99 98 133Z" />
+          <path d="M102 133C137 129 158 105 157 72C126 76 104 99 102 133Z" />
+          <path d="M93 139C62 149 35 139 20 114C47 102 78 112 93 139Z" />
+          <path d="M107 139C138 149 165 139 180 114C153 102 122 112 107 139Z" />
+          <path d="M37 151C75 163 125 163 163 151" />
+        </svg>
+      </div>
+      <div className="hero-orbit hero-orbit-two" aria-hidden="true">
+        <svg className="hero-orbit-art hero-sun-art" viewBox="0 0 200 200" role="presentation">
+          <circle className="orbit-art-halo" cx="100" cy="100" r="78" />
+          <g className="sun-rays">
+            {Array.from({ length: 12 }).map((_, index) => (
+              <path key={index} transform={`rotate(${index * 30} 100 100)`} d="M100 25V42" />
+            ))}
+          </g>
+          <circle className="orbit-art-fill" cx="100" cy="93" r="34" />
+          <path d="M38 120C56 110 73 110 91 120C109 130 127 130 162 112" />
+          <path d="M38 137C56 127 73 127 91 137C109 147 127 147 162 129" />
+          <path d="M51 154C75 146 102 149 125 157" />
+        </svg>
+      </div>
       <div className="hero-content">
         <motion.p className="eyebrow" initial={{ opacity: 0, y: 14 }} animate={ready ? { opacity: 1, y: 0 } : {}} transition={{ delay: .25 }}>Ayurveda, personally matched</motion.p>
         <h1>
@@ -42,7 +66,7 @@ export default function Hero({ ready }: { ready: boolean }) {
         </motion.p>
         <motion.div className="hero-ctas" initial={{ opacity: 0, y: 20 }} animate={ready ? { opacity: 1, y: 0 } : {}} transition={{ delay: 1, duration: .7 }}>
           <MagneticButton href="#matching" className="btn-magnetic btn-primary">Find My Retreat</MagneticButton>
-          <a href="#wellness" className="btn-text" data-hover>Explore wellness paths ↓</a>
+          <a href="#wellness" className="btn-text" data-hover>Explore wellness paths &darr;</a>
         </motion.div>
         <motion.div className="hero-trust" initial={{ opacity: 0 }} animate={ready ? { opacity: 1 } : {}} transition={{ delay: 1.2 }}>
           <span>Verified partners</span><i /><span>Doctor-guided matching</span><i /><span>Confidential booking</span>
