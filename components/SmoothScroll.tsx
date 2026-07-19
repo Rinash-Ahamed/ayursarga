@@ -23,6 +23,27 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
 
     lenis.on("scroll", ScrollTrigger.update);
 
+    const handleAnchorClick = (event: MouseEvent) => {
+      const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="#"]');
+      if (!link) return;
+      const hash = link.getAttribute("href");
+      if (!hash || hash === "#") return;
+      const target = document.querySelector<HTMLElement>(hash);
+      if (!target) return;
+
+      event.preventDefault();
+      lenis.scrollTo(target, {
+        offset: -76,
+        duration: 1.05,
+        onComplete: () => {
+          window.history.replaceState(null, "", hash);
+          target.focus({ preventScroll: true });
+        },
+      });
+    };
+
+    document.addEventListener("click", handleAnchorClick);
+
     // GSAP supplies seconds; Lenis expects milliseconds. Both stay synced to
     // the display's native requestAnimationFrame cadence (60/90/120/144 Hz).
     const tick = (time: number) => lenis.raf(time * 1000);
@@ -31,6 +52,7 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
 
     return () => {
       gsap.ticker.remove(tick);
+      document.removeEventListener("click", handleAnchorClick);
       lenis.destroy();
     };
   }, []);

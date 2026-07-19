@@ -194,9 +194,10 @@ export default function ParticleField() {
   if (reduced) return null;
 
   return (
-    <div id="particle-canvas-wrap">
+    <div id="particle-canvas-wrap" aria-hidden="true">
       <Canvas
         dpr={[0.85, 1.25]}
+        style={{ pointerEvents: "none" }}
         gl={{ alpha: true, antialias: false, powerPreference: "high-performance" }}
         camera={{ position: [0, 0, 5], fov: 50 }}
         resize={{ debounce: { scroll: 0, resize: 120 } }}

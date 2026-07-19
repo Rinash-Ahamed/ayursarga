@@ -81,6 +81,13 @@ em{ font-style: italic; color: var(--clay-dark); }
   position:fixed; inset:0; width:100vw; height:100vh; z-index:5; pointer-events:none;
   transform:translateZ(0); contain:strict;
 }
+#particle-canvas-wrap,
+#particle-canvas-wrap *,
+#particle-canvas-wrap canvas{
+  pointer-events:none !important;
+  touch-action:none !important;
+  user-select:none !important;
+}
 #particle-canvas-wrap canvas{ transform:translateZ(0); }
 .cursor-dot{
   position:fixed; top:0; left:0; width:10px; height:10px; border-radius:50%;
@@ -437,4 +444,16 @@ button{ cursor:pointer; }
   .process-grid{ grid-template-columns:1fr; }.process-card:not(:last-child){ border-right:0; margin-right:0; }
   .path-grid,.partner-points,.choice-grid{ grid-template-columns:1fr; }
   .quiz-card{ padding:28px 22px; min-height:580px; }.partner-panel{ border-radius:20px; }
+}
+
+/* Reliable interaction layer and tactile feedback */
+.progress-flame{ pointer-events:none; }
+.btn-magnetic{ cursor:pointer; pointer-events:auto; }
+.quiz-card{ position:relative; z-index:10; pointer-events:auto; }
+.path-card a{ position:relative; z-index:2; }
+.form-submit{ cursor:pointer; transition:transform .2s var(--ease-out),background .2s; }
+.form-submit:hover{ background:var(--clay-dark); }
+.btn-primary:active,.form-submit:active,.quiz-next:active{ transform:scale(.975); }
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--clay-dark); outline-offset:3px;
 }
