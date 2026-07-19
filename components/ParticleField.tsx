@@ -18,7 +18,7 @@ export default function ParticleField() {
       const stamp = Date.now() + sequence.current++ * 10;
       const leaves = Array.from({length:7},(_,index) => {
         const angle = (-150 + index * 50) * Math.PI / 180;
-        const distance = 55 + (index % 3) * 22;
+        const distance = 34 + (index % 3) * 12;
         return {id:stamp+index,x:event.clientX,y:event.clientY,tx:Math.cos(angle)*distance,ty:Math.sin(angle)*distance+45,rotation:-90+index*43,delay:index*18};
       });
       setBursts((current) => [...current.slice(-21),...leaves]);

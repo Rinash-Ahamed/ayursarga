@@ -39,7 +39,7 @@ export default function Nav() {
 
   return (
     <>
-      <header id="site-nav" className={scrolled ? "scrolled" : ""}>
+      <header id="site-nav" className={`${scrolled ? "scrolled " : ""}${open ? "menu-open" : ""}`}>
         <div className="nav-inner">
           <a href="#hero" className="nav-mark" data-hover>
             <Image src="/mainlogo.png" alt="Ayursarga" width={56} height={56} />
@@ -57,7 +57,9 @@ export default function Nav() {
           </MagneticButton>
           <button
             id="nav-burger"
-            aria-label="Menu"
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+            aria-controls="mobile-menu"
             className={open ? "open" : ""}
             onClick={() => setOpen((o) => !o)}
           >
@@ -69,14 +71,11 @@ export default function Nav() {
       </header>
 
       <div id="mobile-menu" className={open ? "open" : ""}>
-        {LINKS.map((l) => (
-          <a key={l.href} href={l.href} onClick={() => setOpen(false)}>
-            {l.label}
-          </a>
-        ))}
-        <a href="#contact" onClick={() => setOpen(false)}>
-          Book a Consultation
-        </a>
+        <span className="mobile-menu-kicker">Explore Ayursarga</span>
+        <nav className="mobile-menu-links">
+          {LINKS.map((l, index) => <a key={l.href} href={l.href} onClick={() => setOpen(false)}><small>0{index + 1}</small><span>{l.label}</span></a>)}
+        </nav>
+        <a className="mobile-menu-cta" href="#contact" onClick={() => setOpen(false)}>Book a Consultation <span>→</span></a>
       </div>
     </>
   );
