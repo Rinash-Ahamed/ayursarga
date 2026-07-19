@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { RevealLines, RevealWords } from "./Reveal";
+import TreatmentFilm from "./TreatmentFilm";
 
 const PATHS = [
   ["Postnatal recovery", "Restorative care for the mother after birth, with support options for baby and family."],
@@ -21,6 +22,7 @@ export default function Therapies() {
     <RevealWords text="Wellness Paths" className="eyebrow" />
     <RevealLines as="h2" className="section-title" lines={["Care for where", "you are now."]} />
     <p className="section-intro">From maternal care to deep rejuvenation, explore programmes selected around your goals - not a generic package list.</p>
+    <TreatmentFilm />
     <motion.div className="family-story" initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .35 }}>
       <Image src="/mother-child-garden.png" alt="Mother and child exploring medicinal leaves in a Kerala retreat garden" width={1152} height={1440} sizes="(max-width: 900px) 100vw, 42vw" />
       <div><span className="eyebrow">Mother &amp; Child</span><h3>Wellness that holds the whole family.</h3><p>From prenatal preparation to postnatal recovery, baby care and lactation support, we match the details that make a stay truly restorative.</p><a href="#matching">Find maternal care <span>→</span></a></div>

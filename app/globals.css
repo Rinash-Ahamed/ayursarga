@@ -540,6 +540,18 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .family-story h3{ font-family:var(--font-display); font-size:clamp(30px,4vw,50px); font-weight:400; line-height:1.15; }
 .family-story p{ color:rgba(249,245,234,.7); font-size:15px; line-height:1.8; margin:24px 0 32px; }
 .family-story a{ color:var(--gold); font-size:12px; letter-spacing:.1em; text-transform:uppercase; }
+.treatment-film{
+  position:relative; height:clamp(480px,62vw,720px); margin-top:58px; border-radius:28px;
+  overflow:hidden; background:var(--forest); box-shadow:0 30px 72px rgba(58,61,46,.16);
+}
+.treatment-film video{ width:100%; height:100%; object-fit:cover; display:block; }
+.treatment-film-shade{ position:absolute; inset:0; pointer-events:none; background:linear-gradient(90deg,rgba(30,31,23,.72) 0%,rgba(30,31,23,.25) 55%,rgba(30,31,23,.06) 100%),linear-gradient(0deg,rgba(30,31,23,.38),transparent 55%); }
+.treatment-film-copy{ position:absolute; left:clamp(28px,6vw,78px); bottom:clamp(34px,7vw,78px); max-width:520px; color:var(--cream); }
+.treatment-film-copy>span{ color:var(--gold); font-size:11px; letter-spacing:.22em; text-transform:uppercase; }
+.treatment-film-copy h3{ font-family:var(--font-display); font-weight:400; font-size:clamp(32px,4.4vw,58px); line-height:1.12; margin:15px 0 18px; }
+.treatment-film-copy p{ max-width:450px; color:rgba(249,245,234,.76); font-size:14px; line-height:1.75; }
+.film-control{ position:absolute; right:28px; bottom:28px; width:50px; height:50px; border-radius:50%; border:1px solid rgba(249,245,234,.5); background:rgba(42,40,31,.32); backdrop-filter:blur(8px); color:var(--cream); display:grid; place-items:center; cursor:pointer; transition:.25s; }
+.film-control:hover{ background:var(--cream); color:var(--forest); transform:scale(1.05); }
 
 @media(max-width:900px){
   .family-story{ grid-template-columns:1fr; }
@@ -551,5 +563,9 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   .maternal-editorial{ min-height:400px; border-radius:20px; }
   .maternal-editorial>img{ height:480px; object-position:62% center; }
   .family-story{ border-radius:20px; }
+  .treatment-film{ height:580px; border-radius:20px; }
+  .treatment-film-shade{ background:linear-gradient(0deg,rgba(30,31,23,.78),rgba(30,31,23,.08) 75%); }
+  .treatment-film-copy{ right:24px; bottom:92px; }
+  .film-control{ right:22px; bottom:22px; }
   .drifting-neem:nth-child(n+7){ display:none; }
 }
