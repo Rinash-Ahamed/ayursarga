@@ -477,6 +477,7 @@ button{ cursor:pointer; }
   .botanical-transition svg{ width:150%; margin-left:-25%; }
 }
 
+
 /* Reliable interaction layer and tactile feedback */
 .progress-flame{ pointer-events:none; }
 .btn-magnetic{ cursor:pointer; pointer-events:auto; }
