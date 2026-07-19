@@ -1,6 +1,7 @@
 "use client";
 
 import { FadeUp, RevealLines, RevealWords } from "./Reveal";
+import Image from "next/image";
 
 const STEPS = [
   ["01", "Tell us what you need", "Share the kind of care, location, privacy and support you are looking for."],
@@ -18,6 +19,10 @@ export default function Philosophy() {
         <RevealLines as="h2" className="section-title" lines={["From what you need", "to where you heal."]} />
         <FadeUp as="p" className="section-intro">
           Finding the right Ayurvedic centre should feel reassuring. We make the journey personal, transparent and beautifully simple.
+        </FadeUp>
+        <FadeUp className="maternal-editorial">
+          <Image src="/mother-newborn-ayurveda.png" alt="Mother resting with her newborn at an Ayurvedic retreat" width={1536} height={1024} sizes="(max-width: 900px) 100vw, 70vw" />
+          <div><span>Care, considered</span><p>For mother, child and every practical need around them.</p></div>
         </FadeUp>
         <div className="process-grid">
           {STEPS.map(([number, title, body], index) => (

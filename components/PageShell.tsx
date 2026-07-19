@@ -6,6 +6,7 @@ import SmoothScroll from "@/components/SmoothScroll";
 import Preloader from "@/components/Preloader";
 import CustomCursor from "@/components/CustomCursor";
 import ProgressFlame from "@/components/ProgressFlame";
+import ScrollLife from "@/components/ScrollLife";
 import Nav from "@/components/Nav";
 import Hero from "@/components/Hero";
 import Philosophy from "@/components/Philosophy";
@@ -32,6 +33,7 @@ export default function PageShell() {
       <div className="grain-overlay" />
       <ParticleField />
       <ProgressFlame />
+      <ScrollLife />
       <CustomCursor />
       <Nav />
 

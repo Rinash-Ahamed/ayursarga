@@ -48,7 +48,6 @@ export default function Hero({ ready }: { ready: boolean }) {
           <span>Verified partners</span><i /><span>Doctor-guided matching</span><i /><span>Confidential booking</span>
         </motion.div>
       </div>
-      <motion.div className="scroll-cue" initial={{ opacity: 0 }} animate={ready ? { opacity: 1 } : {}} transition={{ delay: 1.35 }}><span className="scroll-line" /><span className="scroll-word">Discover</span></motion.div>
     </section>
   );
 }
