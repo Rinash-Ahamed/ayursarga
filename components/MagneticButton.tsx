@@ -10,6 +10,7 @@ export default function MagneticButton({
   onClick,
   type,
   disabled = false,
+  ariaLabel,
 }: {
   href?: string;
   children: ReactNode;
@@ -17,6 +18,7 @@ export default function MagneticButton({
   onClick?: () => void;
   type?: "button" | "submit";
   disabled?: boolean;
+  ariaLabel?: string;
 }) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -38,6 +40,7 @@ export default function MagneticButton({
       <motion.button
         type={type}
         disabled={disabled}
+        aria-label={ariaLabel}
         data-hover
         className={className}
         style={{ x: springX, y: springY }}
