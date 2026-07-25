@@ -76,7 +76,7 @@ em{ font-style: italic; color: var(--clay-dark); }
    Ambient layers
    ========================================================================== */
 .grain-overlay{
-  position:fixed; inset:0; z-index:40; pointer-events:none; opacity:.035; mix-blend-mode:multiply;
+  position:fixed; inset:0; z-index:40; pointer-events:none; opacity:.035; contain:strict;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 #particle-canvas-wrap{
@@ -510,7 +510,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .neem-drift{ position:absolute; inset:0; overflow:hidden; }
 .drifting-neem{
   position:absolute; left:var(--left); top:-180px; width:var(--size); height:auto;
-  opacity:.2; filter:drop-shadow(0 5px 5px rgba(42,40,31,.15));
+  opacity:.2;
   transform-origin:50% 20%; will-change:transform;
   animation:neemFall var(--duration) linear var(--delay) infinite;
 }
@@ -527,7 +527,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 }
 .burst-neem{
   position:fixed; width:20px; height:auto; z-index:9997; opacity:0;
-  transform:translate(-50%,-50%); filter:drop-shadow(0 4px 5px rgba(42,40,31,.18));
+  transform:translate(-50%,-50%);
   animation:leafRelease 1.35s var(--ease-out) var(--burst-delay) forwards;
 }
 @keyframes leafRelease{

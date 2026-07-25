@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 export default function TreatmentFilm() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const userPaused = useRef(false);
-  const [playing, setPlaying] = useState(true);
+  const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -18,7 +18,7 @@ export default function TreatmentFilm() {
         video.pause();
         setPlaying(false);
       }
-    }, { threshold: .3 });
+    }, { threshold: .01, rootMargin: "300px 0px" });
     observer.observe(video);
     return () => observer.disconnect();
   }, []);
@@ -37,7 +37,7 @@ export default function TreatmentFilm() {
   };
 
   return <motion.div className="treatment-film" initial={{ opacity: 0, y: 36 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .25 }} transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}>
-    <video ref={videoRef} muted loop playsInline autoPlay preload="metadata" aria-label="Traditional Ayurvedic treatment experience">
+    <video ref={videoRef} muted loop playsInline preload="metadata" aria-label="Traditional Ayurvedic treatment experience">
       <source src="/ayurvedic-treatment.mp4" type="video/mp4" />
     </video>
     <div className="treatment-film-shade" />

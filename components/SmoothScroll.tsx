@@ -13,11 +13,11 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     if (reduced) return;
 
     const lenis = new Lenis({
-      duration: 0.95,
+      duration: 0.72,
       easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
       syncTouch: false,
-      wheelMultiplier: 0.85,
+      wheelMultiplier: 1,
       touchMultiplier: 1,
     });
 
@@ -48,7 +48,6 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     // the display's native requestAnimationFrame cadence (60/90/120/144 Hz).
     const tick = (time: number) => lenis.raf(time * 1000);
     gsap.ticker.add(tick);
-    gsap.ticker.lagSmoothing(0);
 
     return () => {
       gsap.ticker.remove(tick);

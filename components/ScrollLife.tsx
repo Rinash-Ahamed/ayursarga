@@ -15,7 +15,7 @@ export default function ScrollLife() {
           scale: 1.06,
           yPercent: 3,
           ease: "none",
-          scrollTrigger: { trigger: image.parentElement, start: "top bottom", end: "bottom top", scrub: 0.8 },
+          scrollTrigger: { trigger: image.parentElement, start: "top bottom", end: "bottom top", scrub: 0.35 },
         });
       });
     });
