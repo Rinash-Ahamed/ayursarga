@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { motion, useAnimation } from "framer-motion";
+import { motion, useAnimation, type Variants } from "framer-motion";
 import { gsap } from "gsap";
 import MagneticButton from "./MagneticButton";
 
-const lineVariants = {
+const lineVariants: Variants = {
   hidden: { y: "115%" },
-  visible: (i: number) => ({ y: "0%", transition: { duration: 1.05, delay: 0.28 + i * 0.12, ease: [0.22, 1, 0.36, 1] } }),
+  visible: (i: number) => ({ y: "0%", transition: { duration: 1.05, delay: 0.28 + i * 0.12, ease: [0.22, 1, 0.36, 1] as const } }),
 };
 
 export default function Hero({ ready }: { ready: boolean }) {

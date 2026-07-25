@@ -12,9 +12,16 @@ export default function CustomCursor() {
   const springY = useSpring(y, { stiffness: 500, damping: 40 });
 
   useEffect(() => {
-    const canHover = window.matchMedia("(hover: hover)").matches;
-    setEnabled(canHover);
-    if (!canHover) return;
+    const hoverQuery = window.matchMedia("(hover: hover)");
+    const syncEnabled = () => setEnabled(hoverQuery.matches);
+    const frame = window.requestAnimationFrame(syncEnabled);
+    hoverQuery.addEventListener("change", syncEnabled);
+    if (!hoverQuery.matches) {
+      return () => {
+        window.cancelAnimationFrame(frame);
+        hoverQuery.removeEventListener("change", syncEnabled);
+      };
+    }
 
     const move = (e: MouseEvent) => {
       x.set(e.clientX);
@@ -34,6 +41,8 @@ export default function CustomCursor() {
     window.addEventListener("mouseout", onOut);
 
     return () => {
+      window.cancelAnimationFrame(frame);
+      hoverQuery.removeEventListener("change", syncEnabled);
       window.removeEventListener("mousemove", move);
       window.removeEventListener("mouseover", onOver);
       window.removeEventListener("mouseout", onOut);

@@ -1,7 +1,18 @@
 "use client";
 
 import { motion, Variants } from "framer-motion";
-import { ElementType, ReactNode, useMemo } from "react";
+import { FormEventHandler, ReactNode } from "react";
+
+const motionTags = {
+  article: motion.article,
+  div: motion.div,
+  form: motion.form,
+  h2: motion.h2,
+  p: motion.p,
+  ul: motion.ul,
+};
+
+type MotionTagName = keyof typeof motionTags;
 
 const lineVariants: Variants = {
   hidden: { y: "115%" },
@@ -17,10 +28,10 @@ export function RevealLines({
   className = "",
 }: {
   lines: ReactNode[];
-  as?: ElementType;
+  as?: MotionTagName;
   className?: string;
 }) {
-  const Tag: any = useMemo(() => motion(as as any), [as]);
+  const Tag = motionTags[as];
   return (
     <Tag className={className}>
       {lines.map((line, i) => (
@@ -76,23 +87,34 @@ export function FadeUp({
   className = "",
   delay = 0,
   as = "div",
-  ...rest
+  onSubmit,
 }: {
   children: ReactNode;
   className?: string;
   delay?: number;
-  as?: ElementType;
-  [key: string]: any;
+  as?: MotionTagName;
+  onSubmit?: FormEventHandler<HTMLFormElement>;
 }) {
-  const Tag: any = useMemo(() => motion(as as any), [as]);
+  const animationProps = {
+    className,
+    initial: { opacity: 0, y: 36 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { once: true, amount: 0.7 },
+    transition: { duration: 1, delay, ease: [0.22, 1, 0.36, 1] as const },
+  };
+
+  if (as === "form") {
+    return (
+      <motion.form {...animationProps} onSubmit={onSubmit}>
+        {children}
+      </motion.form>
+    );
+  }
+
+  const Tag = motionTags[as];
   return (
     <Tag
-      className={className}
-      initial={{ opacity: 0, y: 36 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.7 }}
-      transition={{ duration: 1, delay, ease: [0.22, 1, 0.36, 1] }}
-      {...rest}
+      {...animationProps}
     >
       {children}
     </Tag>
