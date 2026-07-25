@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { FadeUp, RevealLines, RevealWords } from "./Reveal";
+import MagneticButton from "./MagneticButton";
 
 type FormStatus = "idle" | "sending" | "sent" | "error";
 
@@ -37,12 +38,34 @@ export default function Contact() {
     {status === "sent" ? <FadeUp className="form-success"><span>&#10003;</span><h3>Thank you. Your journey has begun.</h3><p>Your request has been delivered to info@ayursarga.com.</p></FadeUp> : <FadeUp as="form" className="contact-form" delay={.1} onSubmit={submit}>
       <div className="form-row"><input name="name" aria-label="Your name" type="text" placeholder="Your name" required /><input name="phone" aria-label="Phone number" type="tel" placeholder="Phone number" required /></div>
       <input name="email" aria-label="Email address" type="email" placeholder="Email address" required />
-      <select name="interest" aria-label="Care you are interested in" required defaultValue=""><option value="" disabled>I&apos;m interested in...</option><option>Prenatal care</option><option>Postnatal care</option><option>Baby care</option><option>Lactation support</option><option>Panchakarma</option><option>Wellness retreat</option><option>Partnership</option></select>
+      <select name="interest" aria-label="Care you are interested in" required defaultValue="">
+        <option value="" disabled>I&apos;m interested in...</option>
+        <optgroup label="Wellness paths">
+          <option>Postnatal recovery</option>
+          <option>Panchakarma</option>
+          <option>Stress management</option>
+          <option>Weight management</option>
+          <option>PCOS care</option>
+          <option>Women&apos;s wellness</option>
+          <option>Corporate wellness</option>
+          <option>Couples retreat</option>
+          <option>Detox retreat</option>
+        </optgroup>
+        <optgroup label="More ways we can help">
+          <option>Prenatal and maternity care</option>
+          <option>Baby care and lactation support</option>
+          <option>Centre or resort partnership</option>
+          <option>Not sure - help me choose</option>
+        </optgroup>
+      </select>
       <textarea name="message" aria-label="How can we help" placeholder="Anything you&apos;d like us to know?" rows={3} />
       <input className="hp-field" name="website" type="text" tabIndex={-1} autoComplete="off" aria-hidden="true" />
       <label className="privacy-note"><input name="consent" type="checkbox" required /> I agree to be contacted about my request.</label>
       {status === "error" && <p className="form-error" role="alert">We couldn&apos;t send your request. Please try again or email info@ayursarga.com.</p>}
-      <button className="form-submit" type="submit" disabled={status === "sending"}><span className="submit-label">{status === "sending" ? "Sending..." : "Request a consultation"}</span><span className="submit-arrow" aria-hidden="true">&rarr;</span></button>
+      <MagneticButton className="form-submit btn-magnetic btn-primary" type="submit" disabled={status === "sending"}>
+        <span className="submit-label">{status === "sending" ? "Sending..." : "Request a consultation"}</span>
+        <span className="submit-arrow" aria-hidden="true">&rarr;</span>
+      </MagneticButton>
     </FadeUp>}
   </div></section>;
 }

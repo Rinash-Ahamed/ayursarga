@@ -8,18 +8,22 @@ export default function MagneticButton({
   children,
   className = "",
   onClick,
+  type,
+  disabled = false,
 }: {
   href?: string;
   children: ReactNode;
   className?: string;
   onClick?: () => void;
+  type?: "button" | "submit";
+  disabled?: boolean;
 }) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const springX = useSpring(x, { stiffness: 200, damping: 16, mass: 0.4 });
   const springY = useSpring(y, { stiffness: 200, damping: 16, mass: 0.4 });
 
-  function handleMove(e: MouseEvent<HTMLAnchorElement>) {
+  function handleMove(e: MouseEvent<HTMLElement>) {
     const r = e.currentTarget.getBoundingClientRect();
     x.set((e.clientX - r.left - r.width / 2) * 0.35);
     y.set((e.clientY - r.top - r.height / 2) * 0.5);
@@ -27,6 +31,23 @@ export default function MagneticButton({
   function handleLeave() {
     x.set(0);
     y.set(0);
+  }
+
+  if (type) {
+    return (
+      <motion.button
+        type={type}
+        disabled={disabled}
+        data-hover
+        className={className}
+        style={{ x: springX, y: springY }}
+        onMouseMove={handleMove}
+        onMouseLeave={handleLeave}
+        onClick={onClick}
+      >
+        <span>{children}</span>
+      </motion.button>
+    );
   }
 
   return (
