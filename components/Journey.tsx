@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { RevealLines, RevealWords } from "./Reveal";
 import MagneticButton from "./MagneticButton";
+import type { MatchProfile } from "@/lib/matchProfile";
 
 const NEEDS = ["Prenatal care", "Postnatal care", "Baby care", "Lactation support", "Panchakarma", "Stress relief"];
 const DETAILS: Record<string, string[]> = {
@@ -56,7 +57,7 @@ const TAMIL_NADU_DISTRICTS = [
   "Virudhunagar",
 ] as const;
 
-export default function Journey() {
+export default function Journey({ onComplete }: { onComplete?: (profile: MatchProfile) => void }) {
   const [step, setStep] = useState(0);
   const [needs, setNeeds] = useState<string[]>([]);
   const [preferences, setPreferences] = useState<string[]>([]);
@@ -72,6 +73,12 @@ export default function Journey() {
     setStep(1);
   };
   const selectedDistrict = district === "Other" ? otherDistrict.trim() : district;
+  const captureProfile = () => onComplete?.({
+    needs,
+    preferences,
+    district: selectedDistrict,
+    budget,
+  });
   const restart = () => { setStep(0); setNeeds([]); setPreferences([]); setDistrict("Any district"); setOtherDistrict(""); setBudget("Flexible"); };
 
   return (
@@ -120,7 +127,7 @@ export default function Journey() {
             <span className="result-mark">✓</span><span className="quiz-kicker">Your profile is ready</span><h3>We’ll find retreats matched to your care goals.</h3>
             <p className="result-needs">{needs.join(" · ")}</p>
             <p>{selectedDistrict} · {budget}{preferences.length ? ` · ${preferences.length} care preferences` : ""}</p>
-            <MagneticButton href="#contact" className="quiz-next">Get my personal shortlist <span>→</span></MagneticButton><MagneticButton type="button" className="restart-link" onClick={restart}>Start again</MagneticButton>
+            <MagneticButton href="#contact" className="quiz-next" onClick={captureProfile}>Get my personal shortlist <span>→</span></MagneticButton><MagneticButton type="button" className="restart-link" onClick={restart}>Start again</MagneticButton>
           </motion.div>}
         </AnimatePresence></div>
       </div>

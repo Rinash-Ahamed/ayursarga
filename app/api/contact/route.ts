@@ -13,7 +13,7 @@ export async function POST(request: Request) {
 
     const data: ContactEmailData = {
       name: value(body.name, 100), email: value(body.email, 160), phone: value(body.phone, 50),
-      interest: value(body.interest, 100), message: value(body.message, 3000),
+      interest: value(body.interest, 100), message: value(body.message, 3000), matchProfile: value(body.matchProfile, 2000),
     };
     if (!data.name || !data.phone || !data.interest || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
       return NextResponse.json({ error: "Please complete all required fields." }, { status: 400 });

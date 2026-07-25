@@ -3,11 +3,23 @@
 import { FormEvent, useEffect, useState } from "react";
 import { FadeUp, RevealLines, RevealWords } from "./Reveal";
 import MagneticButton from "./MagneticButton";
+import { formatMatchProfile, type MatchProfile } from "@/lib/matchProfile";
 
 type FormStatus = "idle" | "sending" | "sent" | "error";
 
-export default function Contact() {
+const INTEREST_BY_NEED: Record<string, string> = {
+  "Prenatal care": "Prenatal and maternity care",
+  "Postnatal care": "Postnatal recovery",
+  "Baby care": "Baby care and lactation support",
+  "Lactation support": "Baby care and lactation support",
+  Panchakarma: "Panchakarma",
+  "Stress relief": "Stress management",
+};
+
+export default function Contact({ matchProfile }: { matchProfile: MatchProfile | null }) {
   const [status, setStatus] = useState<FormStatus>("idle");
+  const matchSummary = matchProfile ? formatMatchProfile(matchProfile) : "";
+  const suggestedInterest = matchProfile ? INTEREST_BY_NEED[matchProfile.needs[0]] || "Not sure - help me choose" : "";
   useEffect(() => {
     if (status !== "sent") return;
     const timer = window.setTimeout(() => setStatus("idle"), 6000);
@@ -38,7 +50,13 @@ export default function Contact() {
     {status === "sent" ? <FadeUp className="form-success"><span>&#10003;</span><h3>Thank you. Your journey has begun.</h3><p>Your request has been delivered to info@ayursarga.com.</p></FadeUp> : <FadeUp as="form" className="contact-form" delay={.1} onSubmit={submit}>
       <div className="form-row"><input name="name" aria-label="Your name" type="text" placeholder="Your name" required /><input name="phone" aria-label="Phone number" type="tel" placeholder="Phone number" required /></div>
       <input name="email" aria-label="Email address" type="email" placeholder="Email address" required />
-      <select name="interest" aria-label="Care you are interested in" required defaultValue="">
+      {matchProfile && <div className="captured-match" role="status">
+        <span>Your matching profile</span>
+        <strong>{matchProfile.needs.join(" · ")}</strong>
+        <p>{matchProfile.district} · {matchProfile.budget}{matchProfile.preferences.length ? ` · ${matchProfile.preferences.length} stay preferences` : ""}</p>
+      </div>}
+      <input type="hidden" name="matchProfile" value={matchSummary} />
+      <select key={suggestedInterest || "empty"} name="interest" aria-label="Care you are interested in" required defaultValue={suggestedInterest}>
         <option value="" disabled>I&apos;m interested in...</option>
         <optgroup label="Wellness paths">
           <option>Postnatal recovery</option>

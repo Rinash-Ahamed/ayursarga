@@ -461,6 +461,10 @@ button{ cursor:pointer; }
 
 .contact-form select,.contact-form textarea{ width:100%; padding:16px 20px; border-radius:22px; border:1px solid rgba(58,61,46,.2); background:transparent; color:var(--ink); resize:vertical; }
 .contact-form select{ border-radius:100px; }
+.captured-match{ padding:18px 20px; border:1px solid rgba(168,142,117,.3); border-radius:18px; background:rgba(201,166,107,.1); text-align:left; animation:district-field-in .45s var(--ease-out) both; }
+.captured-match span{ display:block; margin-bottom:7px; color:var(--clay-dark); font-size:9px; font-weight:600; letter-spacing:.17em; text-transform:uppercase; }
+.captured-match strong{ display:block; color:var(--forest); font-family:var(--font-display); font-size:17px; font-weight:400; line-height:1.4; }
+.captured-match p{ margin-top:5px; color:var(--sage); font-size:11px; line-height:1.5; }
 .privacy-note{ display:flex; gap:10px; align-items:center; text-align:left; color:var(--sage); font-size:12px; padding:0 8px; }
 .privacy-note input{ width:auto; }
 .form-submit{ border:0; width:100%; min-width:0; background:var(--forest); color:var(--cream); border-radius:100px; padding:17px 24px; display:flex; align-items:center; justify-content:space-between; gap:18px; text-transform:uppercase; letter-spacing:.06em; font-size:12px; }

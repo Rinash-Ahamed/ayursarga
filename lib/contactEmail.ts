@@ -4,6 +4,7 @@ export type ContactEmailData = {
   phone: string;
   interest: string;
   message: string;
+  matchProfile: string;
 };
 
 const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character] || character);
@@ -17,7 +18,7 @@ export function contactEmailHtml(data: ContactEmailData) {
         <tr><td style="background:#3a3d2e;padding:34px 40px;color:#f9f5ea"><div style="font-family:Georgia,serif;font-size:28px">Ayursarga</div><div style="margin-top:8px;color:#c9a66b;font-size:11px;letter-spacing:2px;text-transform:uppercase">New retreat enquiry</div></td></tr>
         <tr><td style="padding:38px 40px"><h1 style="font-family:Georgia,serif;font-size:28px;font-weight:400;margin:0 0 8px;color:#3a3d2e">A new journey begins.</h1><p style="color:#6c6d5d;line-height:1.7;margin:0 0 30px">A visitor submitted a consultation request through ayursarga.com.</p>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">
-            ${emailRow("Name", safe.name)}${emailRow("Email", safe.email)}${emailRow("Phone", safe.phone)}${emailRow("Interested in", safe.interest)}${emailRow("Message", safe.message || "No message provided")}
+            ${emailRow("Name", safe.name)}${emailRow("Email", safe.email)}${emailRow("Phone", safe.phone)}${emailRow("Interested in", safe.interest)}${safe.matchProfile ? emailRow("Matching profile", safe.matchProfile) : ""}${emailRow("Message", safe.message || "No message provided")}
           </table>
           <a href="mailto:${encodeURIComponent(data.email)}" style="display:inline-block;margin-top:30px;background:#3a3d2e;color:#f9f5ea;text-decoration:none;padding:14px 24px;border-radius:999px;font-size:12px;letter-spacing:1px;text-transform:uppercase">Reply to ${safe.name}</a>
         </td></tr>
@@ -30,5 +31,5 @@ export function contactEmailHtml(data: ContactEmailData) {
 const emailRow = (label: string, value: string) => `<tr><td style="width:120px;padding:13px 0;border-bottom:1px solid #eee7da;color:#8c7259;font-size:11px;letter-spacing:1px;text-transform:uppercase;vertical-align:top">${label}</td><td style="padding:13px 0;border-bottom:1px solid #eee7da;color:#2a281f;font-size:14px;line-height:1.6;white-space:pre-wrap">${value}</td></tr>`;
 
 export function contactEmailText(data: ContactEmailData) {
-  return `New Ayursarga website enquiry\n\nName: ${data.name}\nEmail: ${data.email}\nPhone: ${data.phone}\nInterested in: ${data.interest}\n\nMessage:\n${data.message || "No message provided"}`;
+  return `New Ayursarga website enquiry\n\nName: ${data.name}\nEmail: ${data.email}\nPhone: ${data.phone}\nInterested in: ${data.interest}${data.matchProfile ? `\n\nMatching profile:\n${data.matchProfile}` : ""}\n\nMessage:\n${data.message || "No message provided"}`;
 }
