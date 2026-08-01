@@ -7,6 +7,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  getCountFromServer,
   limit as limitResults,
   orderBy,
   query,
@@ -90,6 +91,12 @@ export async function runFilteredQuery<T>(options: QueryPageOptions): Promise<Qu
     cursor: visible.at(-1) ?? null,
     hasMore: snapshot.docs.length > pageSize,
   };
+}
+
+export async function countDocuments(collectionPath: string, filters: QueryFilter[] = []) {
+  const constraints = filters.map((filter) => where(filter.field, filter.operator, filter.value));
+  const snapshot = await getCountFromServer(query(collection(getClientFirestore(), collectionPath), ...constraints));
+  return snapshot.data().count;
 }
 
 export const firestoreTimestamp = {

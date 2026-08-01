@@ -10,31 +10,12 @@
       ]
     },
     {
-      "collectionGroup": "doctors",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "hospitalId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "name", "order": "ASCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "services",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "hospitalId", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "name", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "availability",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "hospitalId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "date", "order": "ASCENDING" },
-        { "fieldPath": "startTime", "order": "ASCENDING" }
       ]
     },
     {
@@ -63,10 +44,18 @@
       ]
     },
     {
-      "collectionGroup": "notifications",
+      "collectionGroup": "bookings",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "role", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     }

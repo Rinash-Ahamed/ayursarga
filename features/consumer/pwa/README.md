@@ -2,7 +2,8 @@
 
 This directory is reserved exclusively for the consumer application under
 `/app`. A later PWA phase can add its manifest, service worker registration,
-install prompt, offline page, consumer icons, and update handling here.
+install prompt, offline page, consumer icons, update handling, notification
+adapter, and deep-link adapter here.
 
 Admin and hospital layouts must not import this module. Future caching should
 be limited to immutable application assets and explicitly public discovery

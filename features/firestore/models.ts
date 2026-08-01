@@ -18,76 +18,60 @@ export type UserDocument = AuditedDocument & {
 
 export type HospitalDocument = AuditedDocument & {
   name: string;
-  slug: string;
   description: string;
   email: string;
-  phone: string | null;
+  phone: string;
   address: string;
-  district: string;
+  city: string;
   state: string;
+  imageUrl: string | null;
   status: UserStatus;
   isPublic: boolean;
-};
-
-export type HospitalStaffDocument = AuditedDocument & {
-  userId: string;
-  hospitalId: string;
-  title: string;
-  status: UserStatus;
-};
-
-export type DoctorDocument = AuditedDocument & {
-  hospitalId: string;
-  name: string;
-  specialties: string[];
-  status: UserStatus;
-  isPublic: boolean;
+  commissionPercentage: number;
+  createdBy: string;
 };
 
 export type ServiceDocument = AuditedDocument & {
   hospitalId: string;
   name: string;
   description: string;
-  durationMinutes: number;
-  status: UserStatus;
-  isPublic: boolean;
+  price: number;
+  durationMinutes: number | null;
+  status: "active" | "inactive";
 };
 
-export type AvailabilityDocument = AuditedDocument & {
-  hospitalId: string;
-  doctorId: string | null;
-  serviceId: string | null;
-  date: string;
-  startTime: string;
-  endTime: string;
-  status: "available" | "held" | "booked" | "blocked";
-};
+export const BOOKING_STATUSES = [
+  "requested",
+  "confirmed",
+  "reschedule_requested",
+  "rejected",
+  "cancelled",
+  "completed",
+] as const;
+
+export type BookingStatus = (typeof BOOKING_STATUSES)[number];
 
 export type BookingDocument = AuditedDocument & {
   consumerId: string;
   hospitalId: string;
-  doctorId: string | null;
   serviceId: string;
-  availabilityId: string | null;
-  status: "pending" | "confirmed" | "cancelled" | "completed";
-  notes: string | null;
-};
-
-export type NotificationDocument = {
-  userId: string;
-  title: string;
-  body: string;
-  readAt: Timestamp | null;
-  createdAt: Timestamp;
+  preferredDate: Timestamp;
+  preferredTime: string;
+  confirmedDate: Timestamp | null;
+  confirmedTime: string | null;
+  status: BookingStatus;
+  servicePrice: number;
+  commissionPercentage: number;
+  estimatedCommission: number;
+  consumerNotes: string | null;
+  hospitalNotes: string | null;
+  confirmedAt: Timestamp | null;
+  completedAt: Timestamp | null;
 };
 
 export type FirestoreCollectionMap = {
   users: UserDocument;
   hospitals: HospitalDocument;
-  hospitalStaff: HospitalStaffDocument;
-  doctors: DoctorDocument;
   services: ServiceDocument;
-  availability: AvailabilityDocument;
   bookings: BookingDocument;
-  notifications: NotificationDocument;
 };

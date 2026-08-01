@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "firebase:emulators": "firebase emulators:start --project demo-ayursarga --only auth,firestore,hosting",
-    "firebase:emulators:auth": "firebase emulators:start --project demo-ayursarga --only auth,firestore",
+    "firebase:emulators:auth": "firebase emulators:start --project demo-ayursarga --only auth",
+    "firebase:test:auth": "firebase emulators:exec --project demo-ayursarga --only auth \"node scripts/verify-auth-emulator.mjs\"",
     "firebase:deploy:firestore": "firebase deploy --only firestore:rules,firestore:indexes"
   },
   "dependencies": {

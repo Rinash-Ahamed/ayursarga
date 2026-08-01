@@ -1,6 +1,3 @@
 import { RequireRole } from "@/components/auth/RequireRole";
-import { PortalPlaceholder } from "@/components/auth/PortalPlaceholder";
-
-export default function HospitalHomePage() {
-  return <RequireRole role="hospital"><PortalPlaceholder role="hospital" /></RequireRole>;
-}
+import { HospitalDashboard } from "@/components/hospital/HospitalDashboard";
+export default function HospitalPage() { return <RequireRole role="hospital"><HospitalDashboard /></RequireRole>; }

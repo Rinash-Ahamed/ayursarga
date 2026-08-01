@@ -9,7 +9,9 @@ import {
   createDocument,
   firestoreTimestamp,
   readDocument,
+  runFilteredQuery,
   updateDocument,
+  type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
 
 const profileCache = new Map<string, UserProfile>();
@@ -72,4 +74,12 @@ export function clearUserProfileCache(uid?: string) {
   }
   profileCache.clear();
   profileRequests.clear();
+}
+
+export function listUsers(options: Pick<QueryPageOptions, "pageSize" | "cursor"> = {}) {
+  return runFilteredQuery<Record<string, unknown>>({
+    collectionPath: COLLECTIONS.users,
+    sort: { field: "createdAt", direction: "desc" },
+    ...options,
+  });
 }

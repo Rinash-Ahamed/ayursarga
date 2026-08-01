@@ -16,7 +16,6 @@ service cloud.firestore {
         && getCurrentUser().status == 'active';
     }
 
-    // Privileged roles require both a signed custom claim and a matching profile.
     function isAdmin() {
       return hasActiveProfile()
         && request.auth.token.role == 'admin'
@@ -44,7 +43,7 @@ service cloud.firestore {
 
     function isApprovedHospital(hospitalId) {
       let hospital = get(/databases/$(database)/documents/hospitals/$(hospitalId)).data;
-      return hospital.isPublic == true && hospital.status == 'active';
+      return hospital.status == 'active' && hospital.isPublic == true;
     }
 
     function hasExactUserFields() {
@@ -54,13 +53,17 @@ service cloud.firestore {
       ]);
     }
 
-    match /users/{userId} {
-      allow get: if isAdmin()
-        || isDocumentOwner(userId)
-        || (isHospital() && resource.data.hospitalId == getCurrentUser().hospitalId);
-      allow list: if isAdmin()
-        || (isHospital() && resource.data.hospitalId == getCurrentUser().hospitalId);
+    function validHospitalBookingTransition() {
+      return (resource.data.status == 'requested'
+          && request.resource.data.status in ['confirmed', 'reschedule_requested', 'rejected'])
+        || (resource.data.status == 'reschedule_requested'
+          && request.resource.data.status in ['confirmed', 'rejected'])
+        || (resource.data.status == 'confirmed'
+          && request.resource.data.status in ['reschedule_requested', 'completed']);
+    }
 
+    match /users/{userId} {
+      allow read: if isAdmin() || isDocumentOwner(userId);
       allow create: if isDocumentOwner(userId)
         && hasExactUserFields()
         && request.resource.data.uid == userId
@@ -72,7 +75,6 @@ service cloud.firestore {
         && request.resource.data.hospitalId == null
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
-
       allow update: if isAdmin() || (
         isDocumentOwner(userId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -86,64 +88,33 @@ service cloud.firestore {
     }
 
     match /hospitals/{hospitalId} {
-      allow get, list: if isAdmin()
+      allow read: if isAdmin()
         || belongsToHospital(hospitalId)
-        || (resource.data.isPublic == true && resource.data.status == 'active');
+        || (resource.data.status == 'active' && resource.data.isPublic == true);
       allow create, delete: if isAdmin();
       allow update: if isAdmin() || (
         belongsToHospital(hospitalId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'name', 'description', 'address', 'phone', 'email', 'updatedAt'
+          'name', 'description', 'email', 'phone', 'address', 'city', 'state',
+          'imageUrl', 'updatedAt'
         ])
         && request.resource.data.updatedAt == request.time
       );
     }
 
-    match /hospitalStaff/{staffId} {
-      allow read: if isAdmin() || belongsToHospital(resource.data.hospitalId);
-      allow write: if isAdmin();
-    }
-
-    match /doctors/{doctorId} {
-      allow read: if isAdmin()
-        || belongsToHospital(resource.data.hospitalId)
-        || (isConsumer()
-          && resource.data.status == 'active'
-          && isApprovedHospital(resource.data.hospitalId));
-      allow create: if isAdmin()
-        || (belongsToHospital(request.resource.data.hospitalId)
-          && request.resource.data.hospitalId == getCurrentUser().hospitalId);
-      allow update: if isAdmin() || (
-        belongsToHospital(resource.data.hospitalId)
-        && request.resource.data.hospitalId == resource.data.hospitalId
-      );
-      allow delete: if isAdmin() || belongsToHospital(resource.data.hospitalId);
-    }
-
     match /services/{serviceId} {
       allow read: if isAdmin()
         || belongsToHospital(resource.data.hospitalId)
-        || (isConsumer()
-          && resource.data.status == 'active'
-          && isApprovedHospital(resource.data.hospitalId));
-      allow create: if isAdmin() || belongsToHospital(request.resource.data.hospitalId);
-      allow update: if isAdmin() || (
-        belongsToHospital(resource.data.hospitalId)
-        && request.resource.data.hospitalId == resource.data.hospitalId
+        || (resource.data.status == 'active' && isApprovedHospital(resource.data.hospitalId));
+      allow create: if isAdmin() || (
+        belongsToHospital(request.resource.data.hospitalId)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
       );
-      allow delete: if isAdmin() || belongsToHospital(resource.data.hospitalId);
-    }
-
-    match /availability/{availabilityId} {
-      allow read: if isAdmin()
-        || belongsToHospital(resource.data.hospitalId)
-        || (isConsumer()
-          && resource.data.status == 'available'
-          && isApprovedHospital(resource.data.hospitalId));
-      allow create: if isAdmin() || belongsToHospital(request.resource.data.hospitalId);
       allow update: if isAdmin() || (
         belongsToHospital(resource.data.hospitalId)
         && request.resource.data.hospitalId == resource.data.hospitalId
+        && request.resource.data.updatedAt == request.time
       );
       allow delete: if isAdmin() || belongsToHospital(resource.data.hospitalId);
     }
@@ -153,39 +124,55 @@ service cloud.firestore {
         || (isConsumer() && resource.data.consumerId == request.auth.uid)
         || belongsToHospital(resource.data.hospitalId);
 
-      allow create: if isAdmin() || (
-        isConsumer()
+      allow create: if isConsumer()
+        && request.resource.data.keys().hasOnly([
+          'consumerId', 'hospitalId', 'serviceId', 'preferredDate', 'preferredTime',
+          'confirmedDate', 'confirmedTime', 'status', 'servicePrice',
+          'commissionPercentage', 'estimatedCommission', 'consumerNotes',
+          'hospitalNotes', 'createdAt', 'updatedAt', 'confirmedAt', 'completedAt'
+        ])
         && request.resource.data.consumerId == request.auth.uid
-        && request.resource.data.status == 'pending'
+        && request.resource.data.status == 'requested'
+        && request.resource.data.confirmedDate == null
+        && request.resource.data.confirmedTime == null
+        && request.resource.data.hospitalNotes == null
+        && request.resource.data.confirmedAt == null
+        && request.resource.data.completedAt == null
         && isApprovedHospital(request.resource.data.hospitalId)
+        && get(/databases/$(database)/documents/services/$(request.resource.data.serviceId)).data.hospitalId
+          == request.resource.data.hospitalId
+        && get(/databases/$(database)/documents/services/$(request.resource.data.serviceId)).data.status
+          == 'active'
+        && request.resource.data.servicePrice
+          == get(/databases/$(database)/documents/services/$(request.resource.data.serviceId)).data.price
+        && request.resource.data.commissionPercentage
+          == get(/databases/$(database)/documents/hospitals/$(request.resource.data.hospitalId)).data.commissionPercentage
+        && request.resource.data.estimatedCommission
+          == request.resource.data.servicePrice * request.resource.data.commissionPercentage / 100
         && request.resource.data.createdAt == request.time
-        && request.resource.data.updatedAt == request.time
-      );
+        && request.resource.data.updatedAt == request.time;
 
       allow update: if isAdmin()
         || (isConsumer()
           && resource.data.consumerId == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+          && resource.data.status in ['requested', 'confirmed', 'reschedule_requested']
           && request.resource.data.status == 'cancelled'
           && request.resource.data.updatedAt == request.time)
         || (belongsToHospital(resource.data.hospitalId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'status', 'notes', 'updatedAt'
+            'status', 'confirmedDate', 'confirmedTime', 'hospitalNotes',
+            'confirmedAt', 'completedAt', 'updatedAt'
           ])
-          && request.resource.data.updatedAt == request.time);
+          && validHospitalBookingTransition()
+          && request.resource.data.updatedAt == request.time
+          && (request.resource.data.status != 'confirmed'
+            || (request.resource.data.confirmedDate != null
+              && request.resource.data.confirmedTime != null
+              && request.resource.data.confirmedAt == request.time))
+          && (request.resource.data.status != 'completed'
+            || request.resource.data.completedAt == request.time));
       allow delete: if isAdmin();
-    }
-
-    match /notifications/{notificationId} {
-      allow read: if isAdmin() || (
-        isSignedIn() && resource.data.userId == request.auth.uid
-      );
-      allow create, delete: if isAdmin();
-      allow update: if isAdmin() || (
-        isSignedIn()
-        && resource.data.userId == request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt'])
-      );
     }
 
     match /{document=**} {
