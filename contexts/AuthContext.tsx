@@ -63,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     run(async () => {
       const profile = await firebaseAuthAdapter.login(credentials, expectedRole);
       setSnapshot((current) => ({ ...current, profile }));
+      setStatus("authenticated");
       router.replace(getRoleHomePath(profile.role));
       return profile;
     }), [router, run]);
@@ -71,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     run(async () => {
       const profile = await firebaseAuthAdapter.registerConsumer(input);
       setSnapshot((current) => ({ ...current, profile }));
+      setStatus("authenticated");
       router.replace(getRoleHomePath(profile.role));
       return profile;
     }), [router, run]);

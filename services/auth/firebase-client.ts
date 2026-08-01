@@ -127,18 +127,23 @@ export const firebaseAuthAdapter: AuthAdapter = {
     }
   },
   subscribe(listener, onError) {
-    return onIdTokenChanged(getClientAuth(), (user) => {
-      if (!user) {
-        listener({ user: null, profile: null });
-        return;
-      }
+    try {
+      return onIdTokenChanged(getClientAuth(), (user) => {
+        if (!user) {
+          listener({ user: null, profile: null });
+          return;
+        }
 
-      void getUserProfile(user)
-        .then((profile) => listener({ user: toAuthUser(user), profile }))
-        .catch((error) => {
-          listener({ user: toAuthUser(user), profile: null });
-          onError(toAuthenticationError(error));
-        });
-    }, (error) => onError(toAuthenticationError(error)));
+        void getUserProfile(user)
+          .then((profile) => listener({ user: toAuthUser(user), profile }))
+          .catch((error) => {
+            listener({ user: toAuthUser(user), profile: null });
+            onError(toAuthenticationError(error));
+          });
+      }, (error) => onError(toAuthenticationError(error)));
+    } catch (error) {
+      queueMicrotask(() => onError(toAuthenticationError(error)));
+      return () => undefined;
+    }
   },
 };

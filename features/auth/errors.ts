@@ -1,5 +1,3 @@
-import { FirebaseError } from "firebase/app";
-
 export type AuthErrorCode =
   | "configuration"
   | "invalid-credentials"
@@ -41,7 +39,7 @@ export class AuthenticationError extends Error {
 export function toAuthenticationError(error: unknown): AuthenticationError {
   if (error instanceof AuthenticationError) return error;
 
-  if (error instanceof FirebaseError) {
+  if (error instanceof Error && "code" in error && typeof error.code === "string") {
     const code: AuthErrorCode = ({
       "auth/invalid-credential": "invalid-credentials",
       "auth/invalid-email": "invalid-credentials",
@@ -52,6 +50,8 @@ export function toAuthenticationError(error: unknown): AuthenticationError {
       "auth/user-disabled": "user-disabled",
       "auth/too-many-requests": "too-many-requests",
       "auth/network-request-failed": "network",
+      "auth/id-token-expired": "unauthenticated",
+      "auth/id-token-revoked": "unauthenticated",
     } as Record<string, AuthErrorCode>)[error.code] ?? "unknown";
 
     return new AuthenticationError(code, { cause: error });

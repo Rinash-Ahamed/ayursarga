@@ -5,6 +5,11 @@ Application code is added around those working files rather than moving or
 duplicating them.
 
 - `auth/contracts.ts` keeps authentication provider-neutral and role-aware.
+- `../contexts/AuthContext.tsx` and `../hooks/useAuth.ts` provide one shared
+  authentication state and action API for every portal.
+- `../components/auth/RequireRole.tsx` is the reusable client-side portal guard;
+  privileged server operations use `services/auth/server.ts` and signed custom
+  claims instead.
 - `portals/registry.ts` is the single source of truth for the future admin,
   hospital, and consumer route groups. Entries remain disabled until built.
 - `consumer/platform.ts` isolates browser/native capabilities behind adapters,
@@ -16,6 +21,9 @@ duplicating them.
 - `../services` separates browser Firebase APIs from privileged server Admin
   APIs. Firebase initializes lazily and is not included in the current public
   page bundle.
+- Consumer registration is self-service. Admin and hospital accounts must be
+  provisioned in a trusted server environment because privileged roles are
+  represented by signed Firebase custom claims.
 - `../config/routes.ts` owns route paths; `../config/firebase.ts` validates the
   browser configuration only when an application feature requests Firebase.
 
