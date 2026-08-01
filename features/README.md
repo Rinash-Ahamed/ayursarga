@@ -8,13 +8,13 @@ moving or duplicating the public implementation.
   friendly authentication errors.
 - `firestore/models.ts` defines only the four current collections: users,
   hospitals, services, and bookings.
-- `consumer/` keeps web/PWA/Capacitor-safe platform contracts within the
-  consumer boundary. Capacitor and PWA installation are not configured yet.
+- `consumer/pwa/` documents the consumer-only PWA boundary. Capacitor and PWA
+  installation are not configured yet; adapters will be added when used.
 - `../app/app`, `../app/hospital`, and `../app/admin` are independent Next.js
   route/layout boundaries. Route splitting prevents portal modules from being
   included in unrelated pages.
-- `../services/` contains the focused Auth, user, hospital, service, booking,
-  and Firestore data access modules.
+- `../services/` contains only the focused Auth, user, hospital, service,
+  booking, Firebase client, and Firestore data-access modules currently used.
 
 Consumer registration is self-service and always assigns the consumer role.
 Admin and hospital users must be provisioned through the controlled Admin SDK

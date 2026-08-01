@@ -26,10 +26,6 @@ const firebaseEmulatorConfig = {
   firestorePort: numberFromEnvironment(process.env.NEXT_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_PORT, 8080),
 } as const;
 
-export function isFirebaseClientConfigured() {
-  return Object.values(requiredClientConfig).every(Boolean);
-}
-
 export function getFirebaseClientConfig(): FirebaseOptions {
   const missing = Object.entries(requiredClientConfig)
     .filter(([, value]) => !value)

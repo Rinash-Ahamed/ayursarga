@@ -60,4 +60,5 @@ caching are not part of this version.
 
 The consumer-only PWA boundary is documented in
 `features/consumer/pwa/README.md`. It registers no service worker and caches no
-authentication, profile, booking, or personal data.
+authentication, profile, booking, or personal data. Platform adapters will be
+introduced only when the PWA or Capacitor phase uses them.
