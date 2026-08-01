@@ -1,35 +1,22 @@
-# Future portal structure
+# Application feature boundaries
 
-The existing root `app/` route and `components/` remain the public website.
-Application code is added around those working files rather than moving or
-duplicating them.
+The existing root `app/` route and public components remain the Ayursarga
+marketing website. Application code is added alongside those files without
+moving or duplicating the public implementation.
 
-- `auth/contracts.ts` keeps authentication provider-neutral and role-aware.
-- `../contexts/AuthContext.tsx` and `../hooks/useAuth.ts` provide one shared
-  authentication state and action API for every portal.
-- `../components/auth/RequireRole.tsx` is the reusable client-side portal guard;
-  privileged server operations use `services/auth/server.ts` and signed custom
-  claims instead.
-- `portals/registry.ts` is the single source of truth for the future admin,
-  hospital, and consumer route groups. Entries remain disabled until built.
-- `consumer/platform.ts` and `consumer/services/` isolate platform, storage,
-  notification, and deep-link capabilities behind adapters, so discovery and
-  booking code can be shared by the web PWA and a later Capacitor Android/iOS
-  shell. Capacitor is intentionally not installed yet.
-- `../app/app`, `../app/hospital`, and `../app/admin` contain independent Next.js
-  layout boundaries, minimal login flows, role guards, and lightweight future
-  dashboard placeholders. Next.js route splitting keeps portal code out of
-  unrelated routes.
-- `../services` separates browser Firebase APIs from privileged server Admin
-  APIs. Firebase initializes lazily and is not included in the current public
-  page bundle.
-- Consumer registration is self-service. Admin and hospital accounts must be
-  provisioned in a trusted server environment because privileged roles are
-  represented by signed Firebase custom claims.
-- `../config/routes.ts` owns route paths; `../config/firebaseConfig.ts` validates the
-  browser configuration only when an application feature requests Firebase.
+- `auth/` contains provider-neutral roles, profile parsing, redirects, and
+  friendly authentication errors.
+- `firestore/models.ts` defines only the four current collections: users,
+  hospitals, services, and bookings.
+- `consumer/` keeps web/PWA/Capacitor-safe platform contracts within the
+  consumer boundary. Capacitor and PWA installation are not configured yet.
+- `../app/app`, `../app/hospital`, and `../app/admin` are independent Next.js
+  route/layout boundaries. Route splitting prevents portal modules from being
+  included in unrelated pages.
+- `../services/` contains the focused Auth, user, hospital, service, booking,
+  and Firestore data access modules.
 
-When implementation begins, add pages beneath the reserved route segments and
-keep each portal's UI, data access, and authorization checks inside the matching
-feature boundary. PWA manifests and service-worker registration should apply
-only to the consumer route scope, not the admin or hospital portals.
+Consumer registration is self-service and always assigns the consumer role.
+Admin and hospital users must be provisioned through the controlled Admin SDK
+script because their signed Firebase custom claims cannot be safely assigned
+by browser code.

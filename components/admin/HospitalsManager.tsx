@@ -12,7 +12,7 @@ export function HospitalsManager() {
   const { firebaseUser } = useAuth(); const [items, setItems] = useState<DocumentRecord<HospitalDocument>[]>([]);
   const [error, setError] = useState<string | null>(null); const [busy, setBusy] = useState(false);
   const load = useCallback(async () => { try { setItems((await listAllHospitals({ pageSize: 20 })).documents); } catch { setError("Hospitals could not be loaded."); } }, []);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void listAllHospitals({ pageSize: 20 }).then((page) => setItems(page.documents)).catch(() => setError("Hospitals could not be loaded.")); }, []);
   async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (!firebaseUser) return; const form = event.currentTarget; const data = new FormData(form); setBusy(true); setError(null);
     try { await createHospital({ name: String(data.get("name")), description: String(data.get("description")), email: String(data.get("email")), phone: String(data.get("phone")), address: String(data.get("address")), city: String(data.get("city")), state: String(data.get("state")), imageUrl: null, status: "pending", isPublic: false, commissionPercentage: Number(data.get("commission")) }, firebaseUser.uid); form.reset(); await load(); }
     catch { setError("Hospital could not be created."); } finally { setBusy(false); } }

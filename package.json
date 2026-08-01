@@ -11,6 +11,8 @@
     "firebase:emulators": "firebase emulators:start --project demo-ayursarga --only auth,firestore,hosting",
     "firebase:emulators:auth": "firebase emulators:start --project demo-ayursarga --only auth",
     "firebase:test:auth": "firebase emulators:exec --project demo-ayursarga --only auth \"node scripts/verify-auth-emulator.mjs\"",
+    "firebase:test:rules": "firebase emulators:exec --project demo-ayursarga --only auth,firestore \"node scripts/verify-firestore-rules.mjs\"",
+    "firebase:provision-user": "node scripts/provision-portal-user.mjs",
     "firebase:deploy:firestore": "firebase deploy --only firestore:rules,firestore:indexes"
   },
   "dependencies": {

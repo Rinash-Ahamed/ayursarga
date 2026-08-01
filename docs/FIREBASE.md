@@ -15,6 +15,8 @@ Suite. Cloud Functions and Firebase Storage are intentionally not configured.
    commit a service-account JSON file or expose it through `NEXT_PUBLIC_*`.
 6. Replace the demo alias with the real project using `firebase use --add`
    before deploying Firestore rules.
+7. Deploy the rules and composite indexes with
+   `npm run firebase:deploy:firestore` after reviewing the selected project.
 
 The browser Firebase app, Authentication, and Firestore instances are created
 once in `services/firebase/client.ts`. The `NEXT_PUBLIC_` prefix is required by
@@ -38,6 +40,28 @@ FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
 Run `npm run firebase:emulators` in one terminal and `npm run dev` in another.
 The Emulator UI is available at `http://127.0.0.1:4000`.
 The Firestore emulator requires a local Java runtime; Auth and Hosting do not.
+Run `npm run firebase:test:auth` for an isolated Auth emulator verification of
+registration, email/password login, password reset, and cleanup.
+
+## Privileged account provisioning
+
+Public registration can only create consumers. After creating and approving a
+hospital document, provision a hospital user from a trusted workstation with
+Application Default Credentials:
+
+```bash
+npm run firebase:provision-user -- hospital hospital@example.com "temporary-password" "Hospital Manager" hospitalDocumentId
+```
+
+Provision the first admin similarly, without a hospital ID:
+
+```bash
+npm run firebase:provision-user -- admin admin@example.com "temporary-password" "Platform Admin"
+```
+
+The script creates the Firebase Auth user, assigns the signed `role` custom
+claim, and creates the matching Firestore profile. Never run it in browser code
+or expose Admin SDK credentials to the client.
 
 ## Hosting constraint
 

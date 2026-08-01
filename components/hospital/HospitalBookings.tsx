@@ -13,7 +13,7 @@ export function HospitalBookings() {
   const { userProfile } = useAuth(); const hospitalId = userProfile?.hospitalId;
   const [items, setItems] = useState<DocumentRecord<BookingDocument>[]>([]); const [error, setError] = useState<string | null>(null); const [busy, setBusy] = useState<string | null>(null);
   const load = useCallback(async () => { if (!hospitalId) return; try { setItems((await listHospitalBookings(hospitalId, { pageSize: 20 })).documents); } catch { setError("Bookings could not be loaded."); } }, [hospitalId]);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { if (!hospitalId) return; void listHospitalBookings(hospitalId, { pageSize: 20 }).then((page) => setItems(page.documents)).catch(() => setError("Bookings could not be loaded.")); }, [hospitalId]);
   async function act(item: DocumentRecord<BookingDocument>, status: HospitalBookingUpdate["status"]) {
     const update: HospitalBookingUpdate = { status };
     if (status === "confirmed" || status === "reschedule_requested") {
