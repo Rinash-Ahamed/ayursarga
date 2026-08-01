@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useMotionValue, useSpring } from "framer-motion";
-import { MouseEvent, ReactNode } from "react";
+import { PointerEvent, ReactNode, useRef } from "react";
 
 export default function MagneticButton({
   href,
@@ -24,13 +24,19 @@ export default function MagneticButton({
   const y = useMotionValue(0);
   const springX = useSpring(x, { stiffness: 200, damping: 16, mass: 0.4 });
   const springY = useSpring(y, { stiffness: 200, damping: 16, mass: 0.4 });
+  const bounds = useRef<DOMRect | null>(null);
 
-  function handleMove(e: MouseEvent<HTMLElement>) {
-    const r = e.currentTarget.getBoundingClientRect();
-    x.set((e.clientX - r.left - r.width / 2) * 0.35);
-    y.set((e.clientY - r.top - r.height / 2) * 0.5);
+  function handleEnter(event: PointerEvent<HTMLElement>) {
+    if (event.pointerType === "mouse") bounds.current = event.currentTarget.getBoundingClientRect();
+  }
+  function handleMove(event: PointerEvent<HTMLElement>) {
+    if (event.pointerType !== "mouse") return;
+    const r = bounds.current ?? event.currentTarget.getBoundingClientRect();
+    x.set((event.clientX - r.left - r.width / 2) * 0.35);
+    y.set((event.clientY - r.top - r.height / 2) * 0.5);
   }
   function handleLeave() {
+    bounds.current = null;
     x.set(0);
     y.set(0);
   }
@@ -44,8 +50,9 @@ export default function MagneticButton({
         data-hover
         className={className}
         style={{ x: springX, y: springY }}
-        onMouseMove={handleMove}
-        onMouseLeave={handleLeave}
+        onPointerEnter={handleEnter}
+        onPointerMove={handleMove}
+        onPointerLeave={handleLeave}
         onClick={onClick}
       >
         <span>{children}</span>
@@ -59,8 +66,9 @@ export default function MagneticButton({
       data-hover
       className={className}
       style={{ x: springX, y: springY }}
-      onMouseMove={handleMove}
-      onMouseLeave={handleLeave}
+      onPointerEnter={handleEnter}
+      onPointerMove={handleMove}
+      onPointerLeave={handleLeave}
       onClick={onClick}
     >
       <span>{children}</span>

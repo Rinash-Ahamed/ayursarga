@@ -42,7 +42,7 @@ export default function Nav() {
       <header id="site-nav" className={scrolled ? "scrolled" : ""}>
         <div className="nav-inner">
           <a href="#hero" className="nav-mark" data-hover>
-            <Image src="/mainlogo.png" alt="Ayursarga" width={56} height={56} />
+            <Image src="/mainlogo.png" alt="Ayursarga" width={56} height={56} quality={90} sizes="56px" />
             <span>Ayursarga</span>
           </a>
           <nav className="nav-links">

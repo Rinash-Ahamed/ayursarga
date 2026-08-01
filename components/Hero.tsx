@@ -18,12 +18,12 @@ export default function Hero({ ready }: { ready: boolean }) {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !glowRef.current) return;
     const moveX = gsap.quickTo(glowRef.current, "x", { duration: 1.2, ease: "power3.out" });
     const moveY = gsap.quickTo(glowRef.current, "y", { duration: 1.2, ease: "power3.out" });
-    const onMove = (e: MouseEvent) => {
+    const onMove = (e: PointerEvent) => {
       moveX((e.clientX / window.innerWidth - .5) * 40);
       moveY((e.clientY / window.innerHeight - .5) * 30);
     };
-    window.addEventListener("mousemove", onMove);
-    return () => window.removeEventListener("mousemove", onMove);
+    window.addEventListener("pointermove", onMove, { passive: true });
+    return () => window.removeEventListener("pointermove", onMove);
   }, []);
 
   return (

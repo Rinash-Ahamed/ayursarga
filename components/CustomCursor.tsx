@@ -1,61 +1,55 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion, useMotionValue, useSpring } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 
 export default function CustomCursor() {
   const [enabled, setEnabled] = useState(false);
-  const [hover, setHover] = useState(false);
-  const x = useMotionValue(-100);
-  const y = useMotionValue(-100);
-  const springX = useSpring(x, { stiffness: 500, damping: 40 });
-  const springY = useSpring(y, { stiffness: 500, damping: 40 });
+  const cursorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const hoverQuery = window.matchMedia("(hover: hover)");
     const syncEnabled = () => setEnabled(hoverQuery.matches);
-    const frame = window.requestAnimationFrame(syncEnabled);
+    syncEnabled();
+    let frame = 0;
+    let pointerX = -100;
+    let pointerY = -100;
     hoverQuery.addEventListener("change", syncEnabled);
-    if (!hoverQuery.matches) {
-      return () => {
-        window.cancelAnimationFrame(frame);
-        hoverQuery.removeEventListener("change", syncEnabled);
-      };
-    }
 
-    const move = (e: MouseEvent) => {
-      x.set(e.clientX);
-      y.set(e.clientY);
+    const paint = () => {
+      cursorRef.current?.style.setProperty("transform", `translate3d(${pointerX}px, ${pointerY}px, 0)`);
+      frame = 0;
     };
-    window.addEventListener("mousemove", move);
+    const move = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse") return;
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+      if (!frame) frame = window.requestAnimationFrame(paint);
+    };
 
-    const onOver = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest("[data-hover]")) setHover(true);
+    const onOver = (event: PointerEvent) => {
+      if ((event.target as Element | null)?.closest("[data-hover]")) {
+        cursorRef.current?.classList.add("hover");
+      }
     };
-    const onOut = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest("[data-hover]")) setHover(false);
+    const onOut = (event: PointerEvent) => {
+      const target = (event.target as Element | null)?.closest("[data-hover]");
+      const related = (event.relatedTarget as Element | null)?.closest?.("[data-hover]");
+      if (target && target !== related) cursorRef.current?.classList.remove("hover");
     };
-    window.addEventListener("mouseover", onOver);
-    window.addEventListener("mouseout", onOut);
+    window.addEventListener("pointermove", move, { passive: true });
+    window.addEventListener("pointerover", onOver, { passive: true });
+    window.addEventListener("pointerout", onOut, { passive: true });
 
     return () => {
-      window.cancelAnimationFrame(frame);
+      if (frame) window.cancelAnimationFrame(frame);
       hoverQuery.removeEventListener("change", syncEnabled);
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseover", onOver);
-      window.removeEventListener("mouseout", onOut);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerover", onOver);
+      window.removeEventListener("pointerout", onOut);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!enabled) return null;
 
-  return (
-    <motion.div
-      className={`cursor-dot${hover ? " hover" : ""}`}
-      style={{ left: springX, top: springY }}
-    />
-  );
+  return <div ref={cursorRef} className="cursor-dot" />;
 }

@@ -21,7 +21,7 @@ export default function Philosophy() {
           Finding the right Ayurvedic centre should feel reassuring. We make the journey personal, transparent and beautifully simple.
         </FadeUp>
         <FadeUp className="maternal-editorial">
-          <Image src="/mother-newborn-ayurveda.png" alt="Mother resting with her newborn at an Ayurvedic retreat" width={1536} height={1024} sizes="(max-width: 900px) 100vw, 70vw" />
+          <Image src="/mother-newborn-ayurveda.png" alt="Mother resting with her newborn at an Ayurvedic retreat" width={1536} height={1024} sizes="(max-width: 900px) 100vw, 70vw" quality={82} />
           <div><span>Care, considered</span><p>For mother, child and every practical need around them.</p></div>
         </FadeUp>
         <div className="process-grid">

@@ -7,7 +7,7 @@ export default function Footer() {
   return <footer id="site-footer"><div className="footer-inner">
     <motion.div className="footer-mark" initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .8 }} transition={{ duration: .8, ease: [0.22, 1, 0.36, 1] }}>
       <motion.div className="footer-logo-wrap" initial={{ scale: .55, rotate: -24 }} whileInView={{ scale: 1, rotate: 0 }} whileHover={{ scale: 1.08, rotate: 4 }} viewport={{ once: true }} transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}>
-        <Image src="/mainlogo.png" alt="Ayursarga" width={48} height={48} />
+        <Image src="/mainlogo.png" alt="Ayursarga" width={48} height={48} quality={90} sizes="48px" />
       </motion.div>
       <motion.span initial={{ opacity: 0, x: -12 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: .7, delay: .3 }}>Ayursarga</motion.span>
     </motion.div>

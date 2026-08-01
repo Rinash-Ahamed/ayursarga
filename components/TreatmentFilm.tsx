@@ -21,6 +21,7 @@ export default function TreatmentFilm() {
   const activeSlotRef = useRef<VideoSlot>(0);
   const filmIndexRef = useRef(0);
   const transitioning = useRef(false);
+  const mediaPrepared = useRef(false);
   const transitionTimer = useRef<number | null>(null);
   const [activeSlot, setActiveSlot] = useState<VideoSlot>(0);
   const [slotSources, setSlotSources] = useState<[string, string]>([FILMS[0], FILMS[1]]);
@@ -35,6 +36,17 @@ export default function TreatmentFilm() {
       const inactiveVideo = activeSlotRef.current === 0 ? secondVideoRef.current : firstVideoRef.current;
       if (!activeVideo) return;
       if (entry.isIntersecting && !userPaused.current) {
+        // Keep the initial page light, then buffer both cross-fade slots shortly
+        // before the film reaches the viewport.
+        if (!mediaPrepared.current) {
+          mediaPrepared.current = true;
+          activeVideo.preload = "auto";
+          activeVideo.load();
+          if (inactiveVideo) {
+            inactiveVideo.preload = "auto";
+            inactiveVideo.load();
+          }
+        }
         activeVideo.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
       } else {
         activeVideo.pause();
@@ -107,8 +119,8 @@ export default function TreatmentFilm() {
   };
 
   return <motion.div ref={containerRef} className="treatment-film" initial={{ opacity: 0, y: 36 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .25 }} transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}>
-    <video ref={firstVideoRef} src={slotSources[0]} className={`treatment-film-video${activeSlot === 0 ? " active" : ""}`} muted playsInline preload="auto" aria-label="Traditional Ayurvedic treatment experience" onEnded={() => void advanceFilm(0)} />
-    <video ref={secondVideoRef} src={slotSources[1]} className={`treatment-film-video${activeSlot === 1 ? " active" : ""}`} muted playsInline preload="auto" aria-hidden={activeSlot !== 1} onEnded={() => void advanceFilm(1)} />
+    <video ref={firstVideoRef} src={slotSources[0]} className={`treatment-film-video${activeSlot === 0 ? " active" : ""}`} muted playsInline preload="none" aria-label="Traditional Ayurvedic treatment experience" onEnded={() => void advanceFilm(0)} />
+    <video ref={secondVideoRef} src={slotSources[1]} className={`treatment-film-video${activeSlot === 1 ? " active" : ""}`} muted playsInline preload="none" aria-hidden={activeSlot !== 1} onEnded={() => void advanceFilm(1)} />
     <div className="treatment-film-shade" />
     <div className="treatment-film-copy"><span>The practice</span><h3>Ancient care, thoughtfully experienced.</h3><p>A glimpse into the therapies, attention and unhurried rhythm behind an Ayurvedic retreat.</p></div>
     <MagneticButton type="button" className="film-control" onClick={togglePlayback} ariaLabel={playing ? "Pause treatment video" : "Play treatment video"}>{playing ? "Ⅱ" : "▶"}</MagneticButton>
