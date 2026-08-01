@@ -13,12 +13,14 @@ import {
 export function getFirebaseAdminApp(): App {
   if (getApps().length) return getApp();
 
-  const options: AppOptions = { credential: applicationDefault() };
+  const usingEmulators = Boolean(
+    process.env.FIREBASE_AUTH_EMULATOR_HOST || process.env.FIRESTORE_EMULATOR_HOST,
+  );
+  const options: AppOptions = {};
   const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID ?? process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-  const storageBucket = process.env.FIREBASE_ADMIN_STORAGE_BUCKET ?? process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
 
+  if (!usingEmulators) options.credential = applicationDefault();
   if (projectId) options.projectId = projectId;
-  if (storageBucket) options.storageBucket = storageBucket;
 
   return initializeApp(options);
 }

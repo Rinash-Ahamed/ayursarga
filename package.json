@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "firebase:emulators": "firebase emulators:start --project demo-ayursarga --only auth,firestore,hosting",
+    "firebase:emulators:auth": "firebase emulators:start --project demo-ayursarga --only auth,firestore",
+    "firebase:deploy:firestore": "firebase deploy --only firestore:rules,firestore:indexes"
   },
   "dependencies": {
     "firebase": "^12.17.0",
@@ -28,6 +31,7 @@
     "autoprefixer": "^10.5.4",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.2.11",
+    "firebase-tools": "^15.25.1",
     "postcss": "^8.5.23",
     "tailwindcss": "^3.4.19",
     "typescript": "^6.0.3"
