@@ -1,4 +1,4 @@
-/** Boundaries that keep consumer features portable across web, PWA and Capacitor. */
+/** Provider-neutral contracts shared by the web app and a future Capacitor shell. */
 export type ConsumerRuntime = "web" | "pwa" | "capacitor";
 
 export interface ConsumerStorage {
@@ -9,6 +9,6 @@ export interface ConsumerStorage {
 
 export interface ConsumerPlatform {
   runtime: ConsumerRuntime;
-  storage: ConsumerStorage;
+  isNative: boolean;
   openExternalUrl(url: string): Promise<void>;
 }

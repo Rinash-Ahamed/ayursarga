@@ -10,21 +10,21 @@ import {
   updateProfile,
   type User,
 } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
 import type {
   AuthAdapter,
   AuthUser,
   ConsumerRegistration,
+  LoginCredentials,
   PortalRole,
-  UserProfile,
 } from "@/features/auth/contracts";
 import { AuthenticationError, toAuthenticationError } from "@/features/auth/errors";
-import { parseUserProfile } from "@/features/auth/profile";
 import { isPortalRole, verifyProfileRole } from "@/features/auth/roles";
 import { getClientAuth } from "@/services/auth/client";
-import { getClientFirestore } from "@/services/firestore/client";
-
-const USERS_COLLECTION = "users";
+import {
+  clearUserProfileCache,
+  createConsumerProfile,
+  getUserProfile,
+} from "@/services/users/userService";
 
 const toAuthUser = (user: User): AuthUser => ({
   uid: user.uid,
@@ -33,25 +33,19 @@ const toAuthUser = (user: User): AuthUser => ({
   emailVerified: user.emailVerified,
 });
 
-async function getUserProfile(user: User): Promise<UserProfile> {
-  const snapshot = await getDoc(doc(getClientFirestore(), USERS_COLLECTION, user.uid));
-  if (!snapshot.exists()) throw new AuthenticationError("profile-not-found");
-
-  const profile = parseUserProfile(user.uid, snapshot.data(), user.email ?? "");
+async function loadAuthorizedProfile(user: User) {
+  const profile = await getUserProfile(user.uid, user.email ?? "");
   const token = await user.getIdTokenResult();
   const claimRole = isPortalRole(token.claims.role) ? token.claims.role : null;
 
-  // Privileged roles must be issued as signed custom claims by the Admin SDK.
   if (profile.role !== "consumer" && claimRole !== profile.role) {
     throw new AuthenticationError("role-mismatch");
   }
   if (claimRole && claimRole !== profile.role) throw new AuthenticationError("role-mismatch");
-  if (profile.status === "suspended") throw new AuthenticationError("account-suspended");
-
-  return profile;
+  return verifyProfileRole(profile, profile.role);
 }
 
-async function login(credentials: { email: string; password: string }, expectedRole?: PortalRole) {
+async function login(credentials: LoginCredentials, expectedRole?: PortalRole) {
   try {
     const credential = await signInWithEmailAndPassword(
       getClientAuth(),
@@ -59,7 +53,7 @@ async function login(credentials: { email: string; password: string }, expectedR
       credentials.password,
     );
     try {
-      const profile = await getUserProfile(credential.user);
+      const profile = await loadAuthorizedProfile(credential.user);
       return expectedRole ? verifyProfileRole(profile, expectedRole) : profile;
     } catch (error) {
       await signOut(getClientAuth());
@@ -79,33 +73,22 @@ async function registerConsumer(input: ConsumerRegistration) {
       input.password,
     );
     user = credential.user;
-    const displayName = input.displayName.trim();
-    const timestamp = new Date().toISOString();
-
-    await updateProfile(user, { displayName });
-    await setDoc(doc(getClientFirestore(), USERS_COLLECTION, user.uid), {
-      uid: user.uid,
-      email: user.email ?? input.email.trim(),
-      displayName,
-      role: "consumer",
-      status: "active",
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    } satisfies UserProfile);
-
-    return getUserProfile(user);
+    await updateProfile(user, { displayName: input.name.trim() });
+    return await createConsumerProfile(user, input);
   } catch (error) {
     if (user) await deleteUser(user).catch(() => undefined);
     throw toAuthenticationError(error);
   }
 }
 
-export const firebaseAuthAdapter: AuthAdapter = {
+export const authService: AuthAdapter = {
   login,
   registerConsumer,
   async logout() {
     try {
+      const uid = getClientAuth().currentUser?.uid;
       await signOut(getClientAuth());
+      clearUserProfileCache(uid);
     } catch (error) {
       throw toAuthenticationError(error);
     }
@@ -117,11 +100,15 @@ export const firebaseAuthAdapter: AuthAdapter = {
       throw toAuthenticationError(error);
     }
   },
-  async getCurrentProfile() {
+  getCurrentUser() {
+    const user = getClientAuth().currentUser;
+    return user ? toAuthUser(user) : null;
+  },
+  async getCurrentProfile(force = false) {
     const user = getClientAuth().currentUser;
     if (!user) return null;
     try {
-      return await getUserProfile(user);
+      return await getUserProfile(user.uid, user.email ?? "", force);
     } catch (error) {
       throw toAuthenticationError(error);
     }
@@ -133,8 +120,7 @@ export const firebaseAuthAdapter: AuthAdapter = {
           listener({ user: null, profile: null });
           return;
         }
-
-        void getUserProfile(user)
+        void loadAuthorizedProfile(user)
           .then((profile) => listener({ user: toAuthUser(user), profile }))
           .catch((error) => {
             listener({ user: toAuthUser(user), profile: null });

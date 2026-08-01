@@ -9,7 +9,8 @@ export type AuthErrorCode =
   | "profile-not-found"
   | "profile-invalid"
   | "role-mismatch"
-  | "account-suspended"
+  | "account-inactive"
+  | "account-pending"
   | "unauthenticated"
   | "unknown";
 
@@ -24,7 +25,8 @@ const MESSAGES: Record<AuthErrorCode, string> = {
   "profile-not-found": "Your account profile could not be found.",
   "profile-invalid": "Your account profile is incomplete.",
   "role-mismatch": "This account does not have access to this portal.",
-  "account-suspended": "This account is currently suspended.",
+  "account-inactive": "This account is currently inactive. Please contact support.",
+  "account-pending": "This account is awaiting approval.",
   unauthenticated: "Please sign in to continue.",
   unknown: "Authentication could not be completed. Please try again.",
 };

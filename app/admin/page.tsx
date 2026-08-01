@@ -1,6 +1,6 @@
-import { redirect } from "next/navigation";
-import { ROUTES } from "@/config/routes";
+import { RequireRole } from "@/components/auth/RequireRole";
+import { PortalPlaceholder } from "@/components/auth/PortalPlaceholder";
 
-export default function AdminFoundationPage() {
-  redirect(ROUTES.public.home);
+export default function AdminHomePage() {
+  return <RequireRole role="admin"><PortalPlaceholder role="admin" /></RequireRole>;
 }

@@ -12,19 +12,21 @@ duplicating them.
   claims instead.
 - `portals/registry.ts` is the single source of truth for the future admin,
   hospital, and consumer route groups. Entries remain disabled until built.
-- `consumer/platform.ts` isolates browser/native capabilities behind adapters,
-  so discovery and booking code can be shared by the web PWA and a later
-  Capacitor Android/iOS shell.
-- `../app/app`, `../app/hospital`, and `../app/admin` contain colocated Next.js
-  layout boundaries for their future route segments. Their foundation pages
-  redirect to the public site, so no unfinished application UI is exposed.
+- `consumer/platform.ts` and `consumer/services/` isolate platform, storage,
+  notification, and deep-link capabilities behind adapters, so discovery and
+  booking code can be shared by the web PWA and a later Capacitor Android/iOS
+  shell. Capacitor is intentionally not installed yet.
+- `../app/app`, `../app/hospital`, and `../app/admin` contain independent Next.js
+  layout boundaries, minimal login flows, role guards, and lightweight future
+  dashboard placeholders. Next.js route splitting keeps portal code out of
+  unrelated routes.
 - `../services` separates browser Firebase APIs from privileged server Admin
   APIs. Firebase initializes lazily and is not included in the current public
   page bundle.
 - Consumer registration is self-service. Admin and hospital accounts must be
   provisioned in a trusted server environment because privileged roles are
   represented by signed Firebase custom claims.
-- `../config/routes.ts` owns route paths; `../config/firebase.ts` validates the
+- `../config/routes.ts` owns route paths; `../config/firebaseConfig.ts` validates the
   browser configuration only when an application feature requests Firebase.
 
 When implementation begins, add pages beneath the reserved route segments and

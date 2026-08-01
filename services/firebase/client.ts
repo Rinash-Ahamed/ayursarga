@@ -3,7 +3,7 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { connectAuthEmulator, getAuth, type Auth } from "firebase/auth";
 import { connectFirestoreEmulator, getFirestore, type Firestore } from "firebase/firestore";
-import { getFirebaseClientConfig, getFirebaseEmulatorConfig } from "@/config/firebase";
+import { getFirebaseClientConfig, getFirebaseEmulatorConfig } from "@/config/firebaseConfig";
 
 type FirebaseClientServices = {
   app: FirebaseApp;

@@ -26,8 +26,17 @@ export function getRoleLoginPath(role: PortalRole) {
   return ROLE_LOGIN_PATHS[role];
 }
 
+export function getSafeRoleRedirect(requestedPath: string | null | undefined, role: PortalRole) {
+  const home = getRoleHomePath(role);
+  const login = getRoleLoginPath(role);
+  if (!requestedPath || !requestedPath.startsWith("/") || requestedPath.startsWith("//")) return home;
+  if (requestedPath === login || !requestedPath.startsWith(`${home}/`)) return home;
+  return requestedPath;
+}
+
 export function verifyProfileRole(profile: UserProfile, expectedRole: PortalRole) {
   if (profile.role !== expectedRole) throw new AuthenticationError("role-mismatch");
-  if (profile.status === "suspended") throw new AuthenticationError("account-suspended");
+  if (profile.status === "inactive") throw new AuthenticationError("account-inactive");
+  if (profile.status === "pending") throw new AuthenticationError("account-pending");
   return profile;
 }

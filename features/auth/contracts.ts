@@ -1,6 +1,6 @@
 export type PortalRole = "admin" | "hospital" | "consumer";
 
-export type UserStatus = "active" | "pending" | "suspended";
+export type UserStatus = "active" | "inactive" | "pending";
 
 export type AuthUser = {
   uid: string;
@@ -11,18 +11,14 @@ export type AuthUser = {
 
 export type UserProfile = {
   uid: string;
+  name: string;
   email: string;
-  displayName: string;
+  phone: string | null;
   role: PortalRole;
   status: UserStatus;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type AuthSession = {
-  userId: string;
-  role: PortalRole;
-  expiresAt: string;
+  hospitalId: string | null;
+  createdAt: Date | null;
+  updatedAt: Date | null;
 };
 
 export type LoginCredentials = {
@@ -31,7 +27,8 @@ export type LoginCredentials = {
 };
 
 export type ConsumerRegistration = LoginCredentials & {
-  displayName: string;
+  name: string;
+  phone?: string;
 };
 
 export type AuthSnapshot = {
@@ -46,6 +43,7 @@ export interface AuthAdapter {
   registerConsumer(input: ConsumerRegistration): Promise<UserProfile>;
   logout(): Promise<void>;
   resetPassword(email: string): Promise<void>;
-  getCurrentProfile(): Promise<UserProfile | null>;
+  getCurrentUser(): AuthUser | null;
+  getCurrentProfile(force?: boolean): Promise<UserProfile | null>;
   subscribe(listener: AuthStateListener, onError: (error: Error) => void): () => void;
 }

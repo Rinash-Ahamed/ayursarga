@@ -10,21 +10,25 @@ import type {
   UserProfile,
 } from "@/features/auth/contracts";
 import { AuthenticationError, toAuthenticationError } from "@/features/auth/errors";
-import { getRoleHomePath } from "@/features/auth/roles";
+import { getRoleHomePath, getSafeRoleRedirect } from "@/features/auth/roles";
 import { ROUTES } from "@/config/routes";
-import { firebaseAuthAdapter } from "@/services/auth/firebase-client";
+import { authService } from "@/services/auth/authService";
 
 export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
-export type AuthContextValue = AuthSnapshot & {
+export type AuthContextValue = {
+  firebaseUser: AuthSnapshot["user"];
+  userProfile: AuthSnapshot["profile"];
+  role: PortalRole | null;
   status: AuthStatus;
+  isAuthenticated: boolean;
   isLoading: boolean;
   error: AuthenticationError | null;
-  login(credentials: LoginCredentials, expectedRole?: PortalRole): Promise<UserProfile>;
-  register(input: ConsumerRegistration): Promise<UserProfile>;
+  login(credentials: LoginCredentials, expectedRole?: PortalRole, requestedPath?: string | null): Promise<UserProfile>;
+  registerConsumer(input: ConsumerRegistration): Promise<UserProfile>;
   logout(): Promise<void>;
   resetPassword(email: string): Promise<void>;
-  refreshProfile(): Promise<UserProfile | null>;
+  refreshUserProfile(): Promise<UserProfile | null>;
   clearError(): void;
 };
 
@@ -37,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<AuthenticationError | null>(null);
 
-  useEffect(() => firebaseAuthAdapter.subscribe((nextSnapshot) => {
+  useEffect(() => authService.subscribe((nextSnapshot) => {
     setSnapshot(nextSnapshot);
     setStatus(nextSnapshot.user ? "authenticated" : "unauthenticated");
   }, (nextError) => {
@@ -59,18 +63,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = useCallback((credentials: LoginCredentials, expectedRole?: PortalRole) =>
+  const login = useCallback((credentials: LoginCredentials, expectedRole?: PortalRole, requestedPath?: string | null) =>
     run(async () => {
-      const profile = await firebaseAuthAdapter.login(credentials, expectedRole);
+      const profile = await authService.login(credentials, expectedRole);
       setSnapshot((current) => ({ ...current, profile }));
       setStatus("authenticated");
-      router.replace(getRoleHomePath(profile.role));
+      router.replace(getSafeRoleRedirect(requestedPath, profile.role));
       return profile;
     }), [router, run]);
 
-  const register = useCallback((input: ConsumerRegistration) =>
+  const registerConsumer = useCallback((input: ConsumerRegistration) =>
     run(async () => {
-      const profile = await firebaseAuthAdapter.registerConsumer(input);
+      const profile = await authService.registerConsumer(input);
       setSnapshot((current) => ({ ...current, profile }));
       setStatus("authenticated");
       router.replace(getRoleHomePath(profile.role));
@@ -78,33 +82,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }), [router, run]);
 
   const logout = useCallback(() => run(async () => {
-    await firebaseAuthAdapter.logout();
+    await authService.logout();
     setSnapshot({ user: null, profile: null });
     setStatus("unauthenticated");
     router.replace(ROUTES.public.home);
   }), [router, run]);
 
   const resetPassword = useCallback((email: string) =>
-    run(() => firebaseAuthAdapter.resetPassword(email)), [run]);
+    run(() => authService.resetPassword(email)), [run]);
 
-  const refreshProfile = useCallback(() => run(async () => {
-    const profile = await firebaseAuthAdapter.getCurrentProfile();
+  const refreshUserProfile = useCallback(() => run(async () => {
+    const profile = await authService.getCurrentProfile(true);
     setSnapshot((current) => ({ ...current, profile }));
     return profile;
   }), [run]);
 
+  const clearError = useCallback(() => setError(null), []);
   const value = useMemo<AuthContextValue>(() => ({
-    ...snapshot,
+    firebaseUser: snapshot.user,
+    userProfile: snapshot.profile,
+    role: snapshot.profile?.role ?? null,
     status,
+    isAuthenticated: status === "authenticated" && Boolean(snapshot.user && snapshot.profile),
     isLoading: status === "loading" || processing,
     error,
     login,
-    register,
+    registerConsumer,
     logout,
     resetPassword,
-    refreshProfile,
-    clearError: () => setError(null),
-  }), [error, login, logout, processing, refreshProfile, register, resetPassword, snapshot, status]);
+    refreshUserProfile,
+    clearError,
+  }), [clearError, error, login, logout, processing, refreshUserProfile, registerConsumer, resetPassword, snapshot, status]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

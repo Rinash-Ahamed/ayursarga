@@ -1,9 +1,10 @@
 import { AuthenticationError } from "@/features/auth/errors";
 import { isPortalRole } from "@/features/auth/roles";
 import type { UserProfile, UserStatus } from "@/features/auth/contracts";
+import { toDate } from "@/utils/date";
 
 const isUserStatus = (value: unknown): value is UserStatus =>
-  value === "active" || value === "pending" || value === "suspended";
+  value === "active" || value === "inactive" || value === "pending";
 
 export function parseUserProfile(uid: string, value: unknown, fallbackEmail = ""): UserProfile {
   if (!value || typeof value !== "object") throw new AuthenticationError("profile-not-found");
@@ -15,11 +16,13 @@ export function parseUserProfile(uid: string, value: unknown, fallbackEmail = ""
 
   return {
     uid,
+    name: typeof data.name === "string" ? data.name : "",
     email: typeof data.email === "string" ? data.email : fallbackEmail,
-    displayName: typeof data.displayName === "string" ? data.displayName : "",
+    phone: typeof data.phone === "string" ? data.phone : null,
     role: data.role,
     status: data.status,
-    createdAt: typeof data.createdAt === "string" ? data.createdAt : "",
-    updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : "",
+    hospitalId: typeof data.hospitalId === "string" ? data.hospitalId : null,
+    createdAt: toDate(data.createdAt),
+    updatedAt: toDate(data.updatedAt),
   };
 }

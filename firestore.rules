@@ -2,35 +2,190 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() {
+    function isSignedIn() {
       return request.auth != null;
     }
 
+    function getCurrentUser() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasActiveProfile() {
+      return isSignedIn()
+        && getCurrentUser().uid == request.auth.uid
+        && getCurrentUser().status == 'active';
+    }
+
+    // Privileged roles require both a signed custom claim and a matching profile.
     function isAdmin() {
-      return signedIn() && request.auth.token.role == 'admin';
+      return hasActiveProfile()
+        && request.auth.token.role == 'admin'
+        && getCurrentUser().role == 'admin';
+    }
+
+    function isHospital() {
+      return hasActiveProfile()
+        && request.auth.token.role == 'hospital'
+        && getCurrentUser().role == 'hospital'
+        && getCurrentUser().hospitalId != null;
+    }
+
+    function isConsumer() {
+      return hasActiveProfile() && getCurrentUser().role == 'consumer';
+    }
+
+    function belongsToHospital(hospitalId) {
+      return isHospital() && getCurrentUser().hospitalId == hospitalId;
+    }
+
+    function isDocumentOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isApprovedHospital(hospitalId) {
+      let hospital = get(/databases/$(database)/documents/hospitals/$(hospitalId)).data;
+      return hospital.isPublic == true && hospital.status == 'active';
+    }
+
+    function hasExactUserFields() {
+      return request.resource.data.keys().hasOnly([
+        'uid', 'name', 'email', 'phone', 'role', 'status', 'hospitalId',
+        'createdAt', 'updatedAt'
+      ]);
     }
 
     match /users/{userId} {
-      allow read: if isAdmin() || (signedIn() && request.auth.uid == userId);
+      allow get: if isAdmin()
+        || isDocumentOwner(userId)
+        || (isHospital() && resource.data.hospitalId == getCurrentUser().hospitalId);
+      allow list: if isAdmin()
+        || (isHospital() && resource.data.hospitalId == getCurrentUser().hospitalId);
 
-      allow create: if signedIn()
-        && request.auth.uid == userId
+      allow create: if isDocumentOwner(userId)
+        && hasExactUserFields()
         && request.resource.data.uid == userId
+        && request.resource.data.name is string
+        && request.resource.data.email == request.auth.token.email
+        && (request.resource.data.phone == null || request.resource.data.phone is string)
         && request.resource.data.role == 'consumer'
         && request.resource.data.status == 'active'
-        && request.resource.data.keys().hasOnly([
-          'uid', 'email', 'displayName', 'role', 'status', 'createdAt', 'updatedAt'
-        ]);
+        && request.resource.data.hospitalId == null
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
 
       allow update: if isAdmin() || (
-        signedIn()
-        && request.auth.uid == userId
+        isDocumentOwner(userId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'displayName', 'updatedAt'
+          'name', 'phone', 'updatedAt'
         ])
+        && request.resource.data.name is string
+        && (request.resource.data.phone == null || request.resource.data.phone is string)
+        && request.resource.data.updatedAt == request.time
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /hospitals/{hospitalId} {
+      allow get, list: if isAdmin()
+        || belongsToHospital(hospitalId)
+        || (resource.data.isPublic == true && resource.data.status == 'active');
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        belongsToHospital(hospitalId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name', 'description', 'address', 'phone', 'email', 'updatedAt'
+        ])
+        && request.resource.data.updatedAt == request.time
+      );
+    }
+
+    match /hospitalStaff/{staffId} {
+      allow read: if isAdmin() || belongsToHospital(resource.data.hospitalId);
+      allow write: if isAdmin();
+    }
+
+    match /doctors/{doctorId} {
+      allow read: if isAdmin()
+        || belongsToHospital(resource.data.hospitalId)
+        || (isConsumer()
+          && resource.data.status == 'active'
+          && isApprovedHospital(resource.data.hospitalId));
+      allow create: if isAdmin()
+        || (belongsToHospital(request.resource.data.hospitalId)
+          && request.resource.data.hospitalId == getCurrentUser().hospitalId);
+      allow update: if isAdmin() || (
+        belongsToHospital(resource.data.hospitalId)
+        && request.resource.data.hospitalId == resource.data.hospitalId
+      );
+      allow delete: if isAdmin() || belongsToHospital(resource.data.hospitalId);
+    }
+
+    match /services/{serviceId} {
+      allow read: if isAdmin()
+        || belongsToHospital(resource.data.hospitalId)
+        || (isConsumer()
+          && resource.data.status == 'active'
+          && isApprovedHospital(resource.data.hospitalId));
+      allow create: if isAdmin() || belongsToHospital(request.resource.data.hospitalId);
+      allow update: if isAdmin() || (
+        belongsToHospital(resource.data.hospitalId)
+        && request.resource.data.hospitalId == resource.data.hospitalId
+      );
+      allow delete: if isAdmin() || belongsToHospital(resource.data.hospitalId);
+    }
+
+    match /availability/{availabilityId} {
+      allow read: if isAdmin()
+        || belongsToHospital(resource.data.hospitalId)
+        || (isConsumer()
+          && resource.data.status == 'available'
+          && isApprovedHospital(resource.data.hospitalId));
+      allow create: if isAdmin() || belongsToHospital(request.resource.data.hospitalId);
+      allow update: if isAdmin() || (
+        belongsToHospital(resource.data.hospitalId)
+        && request.resource.data.hospitalId == resource.data.hospitalId
+      );
+      allow delete: if isAdmin() || belongsToHospital(resource.data.hospitalId);
+    }
+
+    match /bookings/{bookingId} {
+      allow read: if isAdmin()
+        || (isConsumer() && resource.data.consumerId == request.auth.uid)
+        || belongsToHospital(resource.data.hospitalId);
+
+      allow create: if isAdmin() || (
+        isConsumer()
+        && request.resource.data.consumerId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && isApprovedHospital(request.resource.data.hospitalId)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
       );
 
+      allow update: if isAdmin()
+        || (isConsumer()
+          && resource.data.consumerId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+          && request.resource.data.status == 'cancelled'
+          && request.resource.data.updatedAt == request.time)
+        || (belongsToHospital(resource.data.hospitalId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'notes', 'updatedAt'
+          ])
+          && request.resource.data.updatedAt == request.time);
       allow delete: if isAdmin();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAdmin() || (
+        isSignedIn() && resource.data.userId == request.auth.uid
+      );
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        isSignedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt'])
+      );
     }
 
     match /{document=**} {
