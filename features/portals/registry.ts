@@ -1,4 +1,5 @@
 import type { PortalRole } from "@/features/auth/contracts";
+import { ROUTES } from "@/config/routes";
 
 export type PortalDefinition = {
   role: PortalRole;
@@ -15,22 +16,22 @@ export type PortalDefinition = {
 export const PORTALS = {
   admin: {
     role: "admin",
-    loginPath: "/admin/login",
-    homePath: "/admin",
+    loginPath: ROUTES.admin.login,
+    homePath: ROUTES.admin.home,
     enabled: false,
     installable: false,
   },
   hospital: {
     role: "hospital",
-    loginPath: "/hospital/login",
-    homePath: "/hospital",
+    loginPath: ROUTES.hospital.login,
+    homePath: ROUTES.hospital.home,
     enabled: false,
     installable: false,
   },
   consumer: {
     role: "consumer",
-    loginPath: "/consumer/login",
-    homePath: "/consumer",
+    loginPath: ROUTES.consumer.login,
+    homePath: ROUTES.consumer.home,
     enabled: false,
     installable: true,
   },
