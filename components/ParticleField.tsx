@@ -29,6 +29,6 @@ export default function ParticleField() {
   },[]);
   if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return null;
   return <div id="particle-canvas-wrap" aria-hidden="true"><div className="neem-drift">
-    {DRIFTING_LEAVES.map(([left,size,duration,delay,rotate],index) => <Image unoptimized width={80} height={150} key={index} src="/neem-leaf.svg" alt="" className="drifting-neem" style={{"--left":`${left}%`,"--size":`${size}px`,"--duration":`${duration}s`,"--delay":`-${delay}s`,"--rotate":`${rotate}deg`} as CSSProperties}/>) }
+    {DRIFTING_LEAVES.map(([left,size,duration,delay,rotate],index) => <Image unoptimized loading="eager" fetchPriority="low" width={80} height={150} key={index} src="/neem-leaf.svg" alt="" className="drifting-neem" style={{"--left":`${left}%`,"--size":`${size}px`,"--duration":`${duration}s`,"--delay":`-${delay}s`,"--rotate":`${rotate}deg`} as CSSProperties}/>) }
   </div>{bursts.map((leaf) => <Image unoptimized width={80} height={150} key={leaf.id} src="/neem-leaf.svg" alt="" className="burst-neem" style={{left:leaf.x,top:leaf.y,"--tx":`${leaf.tx}px`,"--ty":`${leaf.ty}px`,"--burst-rotate":`${leaf.rotation}deg`,"--burst-delay":`${leaf.delay}ms`} as CSSProperties}/>)}</div>;
 }

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import SmoothScroll from "@/components/SmoothScroll";
 import Preloader from "@/components/Preloader";
-import CustomCursor from "@/components/CustomCursor";
 import ProgressFlame from "@/components/ProgressFlame";
 import ScrollLife from "@/components/ScrollLife";
 import Nav from "@/components/Nav";
@@ -37,7 +36,6 @@ export default function PageShell() {
       <ParticleField />
       <ProgressFlame />
       <ScrollLife />
-      <CustomCursor />
       <Nav />
 
       <SmoothScroll>

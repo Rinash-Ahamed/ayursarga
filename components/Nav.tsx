@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import MagneticButton from "./MagneticButton";
+import { ROUTES } from "@/config/routes";
 
 const LINKS = [
   { href: "#how-it-works", label: "How It Works" },
@@ -41,20 +41,25 @@ export default function Nav() {
     <>
       <header id="site-nav" className={scrolled ? "scrolled" : ""}>
         <div className="nav-inner">
-          <a href="#hero" className="nav-mark" data-hover>
-            <Image src="/mainlogo.png" alt="Ayursarga" width={56} height={56} quality={90} sizes="56px" />
+          <a href="#hero" className="nav-mark">
+            <Image src="/mainlogo.png" alt="Ayursarga" width={56} height={56} loading="eager" quality={90} sizes="56px" />
             <span>Ayursarga</span>
           </a>
           <nav className="nav-links">
             {LINKS.map((l) => (
-              <a key={l.href} href={l.href} data-hover>
+              <a key={l.href} href={l.href}>
                 {l.label}
               </a>
             ))}
           </nav>
-          <MagneticButton href="#contact" className="btn-magnetic nav-cta btn-primary">
-            Book a Consultation
-          </MagneticButton>
+          <details className="nav-login">
+            <summary>Login</summary>
+            <div className="nav-login-menu">
+              <a href={ROUTES.consumer.login}><span>Consumer</span><small>Discover and book care</small></a>
+              <a href={ROUTES.hospital.login}><span>Hospital</span><small>Manage services and bookings</small></a>
+              <a href={ROUTES.admin.login}><span>Admin</span><small>Platform administration</small></a>
+            </div>
+          </details>
           <button
             id="nav-burger"
             aria-label={open ? "Close menu" : "Open menu"}
@@ -76,9 +81,12 @@ export default function Nav() {
             {l.label}
           </a>
         ))}
-        <a className="mobile-book-link" href="#contact" onClick={() => setOpen(false)}>
-          Begin Your Journey <span>&rarr;</span>
-        </a>
+        <div className="mobile-login-group">
+          <span>Login</span>
+          <a href={ROUTES.consumer.login} onClick={() => setOpen(false)}>Consumer</a>
+          <a href={ROUTES.hospital.login} onClick={() => setOpen(false)}>Hospital</a>
+          <a href={ROUTES.admin.login} onClick={() => setOpen(false)}>Admin</a>
+        </div>
       </div>
     </>
   );

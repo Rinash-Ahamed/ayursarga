@@ -47,7 +47,6 @@ export default function MagneticButton({
         type={type}
         disabled={disabled}
         aria-label={ariaLabel}
-        data-hover
         className={className}
         style={{ x: springX, y: springY }}
         onPointerEnter={handleEnter}
@@ -63,7 +62,6 @@ export default function MagneticButton({
   return (
     <motion.a
       href={href}
-      data-hover
       className={className}
       style={{ x: springX, y: springY }}
       onPointerEnter={handleEnter}
