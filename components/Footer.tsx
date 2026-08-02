@@ -11,8 +11,8 @@ export default function Footer() {
       </motion.div>
       <motion.span initial={{ opacity: 0, x: -12 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: .7, delay: .3 }}>Ayursarga</motion.span>
     </motion.div>
-    <p>Kerala · Personalised Ayurvedic Retreat Matching</p>
-    <div className="footer-links"><a href="#how-it-works">How it works</a><a href="#wellness">Wellness</a><a href="#partners">For partners</a><a href="#contact">Contact</a></div>
+    <p>Kerala · Ayurvedic Hospital Discovery &amp; Appointment Requests</p>
+    <div className="footer-links"><a href="/app">Find hospitals</a><a href="#how-it-works">How it works</a><a href="#wellness">Wellness</a><a href="#partners">For hospitals</a><a href="#contact">Guidance</a></div>
     <p className="footer-fine">© 2026 Ayursarga. Recommendations are personalised; treatment suitability is confirmed by the chosen centre’s physician.</p>
   </div></footer>;
 }

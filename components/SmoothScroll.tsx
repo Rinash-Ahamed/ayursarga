@@ -10,9 +10,7 @@ gsap.registerPlugin(ScrollTrigger);
 export default function SmoothScroll({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) return;
-
-    const lenis = new Lenis({
+    const lenis = reduced ? null : new Lenis({
       duration: 0.72,
       easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
@@ -21,7 +19,7 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
       touchMultiplier: 1,
     });
 
-    lenis.on("scroll", ScrollTrigger.update);
+    lenis?.on("scroll", ScrollTrigger.update);
 
     const handleAnchorClick = (event: MouseEvent) => {
       const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="#"]');
@@ -31,29 +29,43 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
       const target = document.querySelector<HTMLElement>(hash);
       if (!target) return;
 
+      const content = target.querySelector<HTMLElement>(":scope > .section-inner") ?? target;
+      const navigationHeight = document.getElementById("site-nav")?.getBoundingClientRect().height ?? 0;
+      const contentRect = content.getBoundingClientRect();
+      const availableHeight = Math.max(window.innerHeight - navigationHeight, 0);
+      const centeredSpace = contentRect.height < availableHeight
+        ? (availableHeight - contentRect.height) / 2
+        : 16;
+      const destination = window.scrollY + contentRect.top - navigationHeight - centeredSpace;
+      const scrollTop = Math.max(0, destination);
+      const complete = () => {
+        window.history.replaceState(null, "", hash);
+        target.focus({ preventScroll: true });
+      };
+
       event.preventDefault();
-      lenis.scrollTo(target, {
-        offset: -76,
-        duration: 1.05,
-        onComplete: () => {
-          window.history.replaceState(null, "", hash);
-          target.focus({ preventScroll: true });
-        },
-      });
+      if (lenis) {
+        lenis.scrollTo(scrollTop, { duration: 1.05, onComplete: complete });
+      } else {
+        window.scrollTo({ top: scrollTop, behavior: "auto" });
+        complete();
+      }
     };
 
     document.addEventListener("click", handleAnchorClick);
 
     // GSAP supplies seconds; Lenis expects milliseconds. Both stay synced to
     // the display's native requestAnimationFrame cadence (60/90/120/144 Hz).
-    const tick = (time: number) => lenis.raf(time * 1000);
-    gsap.ticker.add(tick);
-    gsap.ticker.lagSmoothing(0);
+    const tick = lenis ? (time: number) => lenis.raf(time * 1000) : null;
+    if (tick) {
+      gsap.ticker.add(tick);
+      gsap.ticker.lagSmoothing(0);
+    }
 
     return () => {
-      gsap.ticker.remove(tick);
+      if (tick) gsap.ticker.remove(tick);
       document.removeEventListener("click", handleAnchorClick);
-      lenis.destroy();
+      lenis?.destroy();
     };
   }, []);
 

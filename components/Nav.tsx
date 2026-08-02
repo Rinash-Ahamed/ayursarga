@@ -6,10 +6,10 @@ import { ROUTES } from "@/config/routes";
 
 const LINKS = [
   { href: "#how-it-works", label: "How It Works" },
-  { href: "#matching", label: "Find Care" },
+  { href: "/app", label: "Find Hospitals" },
   { href: "#wellness", label: "Wellness" },
   { href: "#why-ayursarga", label: "Why Ayursarga" },
-  { href: "#partners", label: "For Partners" },
+  { href: "#partners", label: "For Hospitals" },
 ];
 
 export default function Nav() {

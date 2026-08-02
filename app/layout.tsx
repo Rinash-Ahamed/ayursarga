@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Ayursarga - Find Your Ayurvedic Recovery Retreat in Kerala",
-  description: "Find verified Ayurvedic retreats in Kerala for prenatal and postnatal care, Panchakarma, stress relief, women’s wellness and more.",
+  title: "Ayursarga - Find Ayurvedic Hospitals and Request Appointments",
+  description: "Discover active Ayurvedic hospitals in Kerala, compare their services and request appointments through Ayursarga.",
 };
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#F9F5EA" };

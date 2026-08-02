@@ -45,8 +45,8 @@ export default function Contact({ matchProfile }: { matchProfile: MatchProfile |
   };
 
   return <section id="contact" className="section"><div className="contact-glow" /><div className="section-inner contact-inner">
-    <RevealWords text="Begin Here" className="eyebrow" /><RevealLines as="h2" className="section-title" lines={["Your ideal retreat", "starts with a", "conversation."]} />
-    <FadeUp as="p" className="contact-sub">Tell us what you&apos;re looking for. An Ayursarga guide will help you explore the right options with no pressure.</FadeUp>
+    <RevealWords text="Personal Guidance" className="eyebrow" /><RevealLines as="h2" className="section-title" lines={["Not sure which hospital", "or service to choose?"]} />
+    <FadeUp as="p" className="contact-sub">Tell us what you&apos;re looking for. An Ayursarga guide will help you explore suitable options before you request an appointment.</FadeUp>
     {status === "sent" ? <FadeUp className="form-success"><span>&#10003;</span><h3>Thank you. Your journey has begun.</h3><p>Your request has been delivered to info@ayursarga.com.</p></FadeUp> : <FadeUp as="form" className="contact-form" delay={.1} onSubmit={submit}>
       <div className="form-row"><input name="name" aria-label="Your name" type="text" placeholder="Your name" required /><input name="phone" aria-label="Phone number" type="tel" placeholder="Phone number" required /></div>
       <input name="email" aria-label="Email address" type="email" placeholder="Email address" required />
@@ -72,7 +72,7 @@ export default function Contact({ matchProfile }: { matchProfile: MatchProfile |
         <optgroup label="More ways we can help">
           <option>Prenatal and maternity care</option>
           <option>Baby care and lactation support</option>
-          <option>Centre or resort partnership</option>
+          <option>Ayurvedic hospital partnership</option>
           <option>Not sure - help me choose</option>
         </optgroup>
       </select>
@@ -81,7 +81,7 @@ export default function Contact({ matchProfile }: { matchProfile: MatchProfile |
       <label className="privacy-note"><input name="consent" type="checkbox" required /> I agree to be contacted about my request.</label>
       {status === "error" && <p className="form-error" role="alert">We couldn&apos;t send your request. Please try again or email info@ayursarga.com.</p>}
       <MagneticButton className="form-submit btn-magnetic btn-primary" type="submit" disabled={status === "sending"}>
-        <span className="submit-label">{status === "sending" ? "Sending..." : "Request a consultation"}</span>
+        <span className="submit-label">{status === "sending" ? "Sending..." : "Request personal guidance"}</span>
         <span className="submit-arrow" aria-hidden="true">&rarr;</span>
       </MagneticButton>
     </FadeUp>}

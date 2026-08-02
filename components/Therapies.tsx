@@ -25,13 +25,13 @@ export default function Therapies() {
     <TreatmentFilm />
     <motion.div className="family-story" initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .35 }}>
       <Image src="/mother-child-garden.png" alt="Mother and child exploring medicinal leaves in a Kerala retreat garden" width={1152} height={1440} sizes="(max-width: 900px) 100vw, 42vw" quality={82} />
-      <div><span className="eyebrow">Mother &amp; Child</span><h3>Wellness that holds the whole family.</h3><p>From prenatal preparation to postnatal recovery, baby care and lactation support, we match the details that make a stay truly restorative.</p><a href="#matching">Find maternal care <span>→</span></a></div>
+      <div><span className="eyebrow">Mother &amp; Child</span><h3>Wellness that holds the whole family.</h3><p>From prenatal preparation to postnatal recovery, baby care and lactation support, explore active services from Ayursarga hospital partners.</p><a href="/app">Explore hospitals <span>→</span></a></div>
     </motion.div>
     <div className="path-grid">{PATHS.map(([name, body, image], i) => <motion.article className="path-card" key={name} initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .5 }} transition={{ delay: (i % 3) * .06, duration: .7 }}>
       <motion.div className="path-card-media" initial={{ opacity: 0, scale: 1.06 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true, amount: .35 }} transition={{ duration: 1.1, delay: .12 + (i % 3) * .05 }}>
         <Image src={image} alt="" fill sizes="(max-width: 900px) 100vw, 33vw" quality={82} />
       </motion.div>
-      <span className="path-leaf">0{i + 1}</span><h3>{name}</h3><p>{body}</p><a href="#matching">Find a match <span aria-hidden="true">↗</span></a>
+      <span className="path-leaf">0{i + 1}</span><h3>{name}</h3><p>{body}</p><a href="/app">Explore hospitals <span aria-hidden="true">↗</span></a>
     </motion.article>)}</div>
   </div></section>;
 }

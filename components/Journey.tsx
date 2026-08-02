@@ -16,45 +16,21 @@ const DETAILS: Record<string, string[]> = {
   "Stress relief": ["Relaxation therapy", "Meditation", "Private stay", "Resort ambience"],
 };
 
-const TAMIL_NADU_DISTRICTS = [
-  "Ariyalur",
-  "Chengalpattu",
-  "Chennai",
-  "Coimbatore",
-  "Cuddalore",
-  "Dharmapuri",
-  "Dindigul",
-  "Erode",
-  "Kallakurichi",
-  "Kancheepuram",
-  "Kanyakumari",
-  "Karur",
-  "Krishnagiri",
-  "Madurai",
-  "Mayiladuthurai",
-  "Nagapattinam",
-  "Namakkal",
-  "The Nilgiris",
-  "Perambalur",
-  "Pudukottai",
-  "Ramanathapuram",
-  "Ranipet",
-  "Salem",
-  "Sivaganga",
-  "Tenkasi",
-  "Thanjavur",
-  "Theni",
-  "Thiruvallur",
-  "Thiruvarur",
-  "Thoothukudi",
-  "Tiruchirappalli",
-  "Tirunelveli",
-  "Tirupathur",
-  "Tiruppur",
-  "Tiruvannamalai",
-  "Vellore",
-  "Viluppuram",
-  "Virudhunagar",
+const KERALA_DISTRICTS = [
+  "Alappuzha",
+  "Ernakulam",
+  "Idukki",
+  "Kannur",
+  "Kasaragod",
+  "Kollam",
+  "Kottayam",
+  "Kozhikode",
+  "Malappuram",
+  "Palakkad",
+  "Pathanamthitta",
+  "Thiruvananthapuram",
+  "Thrissur",
+  "Wayanad",
 ] as const;
 
 export default function Journey({ onComplete }: { onComplete?: (profile: MatchProfile) => void }) {
@@ -85,9 +61,9 @@ export default function Journey({ onComplete }: { onComplete?: (profile: MatchPr
     <section id="matching" className="section dark-section match-section">
       <div className="section-inner match-layout">
         <div className="match-copy">
-          <RevealWords text="Your Personal Match" className="eyebrow light" />
+          <RevealWords text="Help Me Choose" className="eyebrow light" />
           <RevealLines as="h2" className="section-title light" lines={["The right care", "starts with", "the right questions."]} />
-          <p>Take a minute to tell us what matters. We’ll use it to shape a thoughtful shortlist for you.</p>
+          <p>Not sure where to begin? Share what matters and an Ayursarga guide can help you explore suitable options.</p>
           <div className="match-progress" aria-label={`Step ${Math.min(step + 1, 3)} of 3`}>{[0, 1, 2].map((n) => <span className={step >= n ? "active" : ""} key={n} />)}</div>
         </div>
         <div className="quiz-card"><AnimatePresence mode="wait">
@@ -105,15 +81,8 @@ export default function Journey({ onComplete }: { onComplete?: (profile: MatchPr
             <MagneticButton type="button" className="quiz-back" onClick={() => setStep(1)}>← Back</MagneticButton><span className="quiz-kicker">Step 3 of 3</span><h3>Help us narrow the match.</h3>
             <label className="quiz-label">Preferred district<select value={district} onChange={(e) => setDistrict(e.target.value)}>
               <option>Any district</option>
-              <optgroup label="Tamil Nadu">
-                {TAMIL_NADU_DISTRICTS.map((name) => <option key={name}>{name}</option>)}
-              </optgroup>
               <optgroup label="Kerala">
-                <option>Kochi / Ernakulam</option>
-                <option>Thiruvananthapuram</option>
-                <option>Kozhikode</option>
-                <option>Thrissur</option>
-                <option>Wayanad</option>
+                {KERALA_DISTRICTS.map((name) => <option key={name}>{name}</option>)}
               </optgroup>
               <option>Other</option>
             </select></label>
@@ -121,13 +90,13 @@ export default function Journey({ onComplete }: { onComplete?: (profile: MatchPr
               <input type="text" value={otherDistrict} onChange={(event) => setOtherDistrict(event.target.value)} placeholder="District name" autoFocus required />
             </label>}
             <label className="quiz-label">Budget preference<select value={budget} onChange={(e) => setBudget(e.target.value)}><option>Flexible</option><option>Essential comfort</option><option>Premium stay</option><option>Luxury retreat</option></select></label>
-            <MagneticButton type="button" className="quiz-next" disabled={district === "Other" && !otherDistrict.trim()} onClick={() => setStep(3)}>Show my matches <span>→</span></MagneticButton>
+            <MagneticButton type="button" className="quiz-next" disabled={district === "Other" && !otherDistrict.trim()} onClick={() => setStep(3)}>Prepare my request <span>→</span></MagneticButton>
           </motion.div>}
           {step === 3 && <motion.div className="quiz-result" key="result" initial={{ opacity: 0, scale: .98 }} animate={{ opacity: 1, scale: 1 }}>
-            <span className="result-mark">✓</span><span className="quiz-kicker">Your profile is ready</span><h3>We’ll find retreats matched to your care goals.</h3>
+            <span className="result-mark">✓</span><span className="quiz-kicker">Your preferences are ready</span><h3>Share them with Ayursarga for personal guidance.</h3>
             <p className="result-needs">{needs.join(" · ")}</p>
             <p>{selectedDistrict} · {budget}{preferences.length ? ` · ${preferences.length} care preferences` : ""}</p>
-            <MagneticButton href="#contact" className="quiz-next" onClick={captureProfile}>Get my personal shortlist <span>→</span></MagneticButton><MagneticButton type="button" className="restart-link" onClick={restart}>Start again</MagneticButton>
+            <MagneticButton href="#contact" className="quiz-next" onClick={captureProfile}>Request personal guidance <span>→</span></MagneticButton><MagneticButton type="button" className="restart-link" onClick={restart}>Start again</MagneticButton>
           </motion.div>}
         </AnimatePresence></div>
       </div>
