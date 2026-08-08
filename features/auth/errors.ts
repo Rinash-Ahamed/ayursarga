@@ -18,7 +18,7 @@ const MESSAGES: Record<AuthErrorCode, string> = {
   configuration: "Authentication is not configured yet.",
   "invalid-credentials": "The email address or password is incorrect.",
   "email-in-use": "An account already exists for this email address.",
-  "weak-password": "Choose a stronger password and try again.",
+  "weak-password": "Use at least 8 characters, including one letter and one digit.",
   "user-disabled": "This account has been disabled. Please contact support.",
   "too-many-requests": "Too many attempts. Please wait and try again.",
   network: "Unable to connect. Check your connection and try again.",

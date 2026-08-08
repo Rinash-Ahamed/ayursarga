@@ -18,6 +18,7 @@ import type {
   PortalRole,
 } from "@/features/auth/contracts";
 import { AuthenticationError, toAuthenticationError } from "@/features/auth/errors";
+import { isValidPassword } from "@/features/auth/password";
 import { isPortalRole, verifyProfileRole } from "@/features/auth/roles";
 import { getClientAuth } from "@/services/auth/client";
 import {
@@ -67,6 +68,7 @@ async function login(credentials: LoginCredentials, expectedRole?: PortalRole) {
 async function registerConsumer(input: ConsumerRegistration) {
   let user: User | null = null;
   try {
+    if (!isValidPassword(input.password)) throw new AuthenticationError("weak-password");
     const credential = await createUserWithEmailAndPassword(
       getClientAuth(),
       input.email.trim(),

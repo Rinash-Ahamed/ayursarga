@@ -12,6 +12,14 @@ body.portal-active{ cursor:auto; overflow:auto; height:auto; }
 .portal-auth-form label>span{ color:var(--sage); font-weight:400; }
 .portal-auth-form input{ width:100%; padding:14px 17px; border:1px solid rgba(58,61,46,.2); border-radius:12px; background:rgba(255,255,255,.38); color:var(--ink); font:inherit; font-size:14px; outline:none; transition:border-color .2s,box-shadow .2s; }
 .portal-auth-form input:focus{ border-color:var(--clay-dark); box-shadow:0 0 0 3px rgba(168,142,117,.13); }
+.portal-password-group{ display:grid; gap:8px; }
+.portal-password-field{ position:relative; }
+.portal-password-field input{ padding-right:52px; }
+.portal-auth-form .portal-password-toggle{ position:absolute; top:50%; right:7px; width:40px; min-height:40px; padding:0; transform:translateY(-50%); border:0; border-radius:50%; background:transparent; color:var(--sage); display:grid; place-items:center; letter-spacing:normal; text-transform:none; transition:background-color .2s,color .2s; }
+.portal-auth-form .portal-password-toggle:hover{ background:rgba(58,61,46,.07); color:var(--forest); }
+.portal-auth-form .portal-password-toggle:focus-visible{ outline:2px solid var(--clay-dark); outline-offset:1px; }
+.portal-password-toggle svg{ width:19px; height:19px; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+.portal-password-requirements{ color:var(--sage); font-size:10px; font-weight:400; line-height:1.5; letter-spacing:.02em; }
 .portal-auth-form button,.portal-placeholder button{ min-height:50px; padding:14px 20px; border:0; border-radius:100px; background:var(--forest); color:var(--cream); display:flex; align-items:center; justify-content:space-between; gap:18px; font:inherit; font-size:11px; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; }
 .portal-auth-form button:disabled,.portal-placeholder button:disabled{ opacity:.58; cursor:wait; }
 .portal-form-error{ padding:11px 13px; border-left:2px solid var(--rust); background:rgba(139,94,60,.07); color:var(--rust); font-size:12px; line-height:1.5; }

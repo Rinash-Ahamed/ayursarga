@@ -6,6 +6,7 @@ import { ROUTES } from "@/config/routes";
 import type { PortalRole } from "@/features/auth/contracts";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthFormShell } from "@/components/auth/AuthFormShell";
+import { PasswordField } from "@/components/auth/PasswordField";
 
 const COPY = {
   admin: { eyebrow: "Administration", title: "Admin login", description: "Secure access for authorised Ayursarga administrators." },
@@ -36,7 +37,7 @@ export function LoginForm({ role, requestedPath }: { role: PortalRole; requested
   return <AuthFormShell eyebrow={copy.eyebrow} title={copy.title} description={copy.description}>
     <form className="portal-auth-form" onSubmit={submit}>
       <label>Email address<input name="email" type="email" autoComplete="email" required /></label>
-      <label>Password<input name="password" type="password" autoComplete="current-password" required minLength={6} /></label>
+      <PasswordField label="Password" name="password" autoComplete="current-password" required />
       {(error || localError) && <p className="portal-form-error" role="alert">{localError || error?.message}</p>}
       <button type="submit" disabled={isLoading}>{isLoading ? "Signing in…" : "Sign in"}<span aria-hidden="true">→</span></button>
     </form>

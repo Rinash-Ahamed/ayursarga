@@ -2,12 +2,11 @@ import { applicationDefault, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 
-const [role, email, password, name, hospitalIdArgument] = process.argv.slice(2);
-if (!['admin', 'hospital'].includes(role) || !email || !password || !name) {
-  throw new Error("Usage: npm run firebase:provision-user -- <admin|hospital> <email> <password> <name> [hospitalId]");
+const [role, email, name, hospitalIdArgument] = process.argv.slice(2);
+if (!['admin', 'hospital'].includes(role) || !email || !name) {
+  throw new Error("Usage: npm run firebase:provision-user -- <admin|hospital> <email> <name> [hospitalId]");
 }
 if (role === "hospital" && !hospitalIdArgument) throw new Error("Hospital accounts require a hospitalId.");
-if (password.length < 8) throw new Error("Use a password of at least eight characters.");
 
 const app = initializeApp({
   credential: applicationDefault(),
@@ -22,8 +21,9 @@ if (hospitalId) {
   if (!hospital.exists) throw new Error(`Hospital ${hospitalId} does not exist.`);
 }
 
-const authUser = await auth.createUser({ email, password, displayName: name });
+const authUser = await auth.createUser({ email, displayName: name });
 try {
+  const passwordSetupLink = await auth.generatePasswordResetLink(email);
   await auth.setCustomUserClaims(authUser.uid, { role });
   await firestore.collection("users").doc(authUser.uid).set({
     uid: authUser.uid, name, email: authUser.email, phone: null, role,
@@ -31,6 +31,7 @@ try {
     createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
   });
   console.log(`${role} account created: ${authUser.uid}`);
+  console.log(`One-time password setup link: ${passwordSetupLink}`);
 } catch (error) {
   await auth.deleteUser(authUser.uid).catch(() => undefined);
   throw error;

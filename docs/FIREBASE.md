@@ -50,18 +50,26 @@ hospital document, provision a hospital user from a trusted workstation with
 Application Default Credentials:
 
 ```bash
-npm run firebase:provision-user -- hospital hospital@example.com "temporary-password" "Hospital Manager" hospitalDocumentId
+npm run firebase:provision-user -- hospital hospital@example.com "Hospital Manager" hospitalDocumentId
 ```
 
 Provision the first admin similarly, without a hospital ID:
 
 ```bash
-npm run firebase:provision-user -- admin admin@example.com "temporary-password" "Platform Admin"
+npm run firebase:provision-user -- admin admin@example.com "Platform Admin"
 ```
 
-The script creates the Firebase Auth user, assigns the signed `role` custom
-claim, and creates the matching Firestore profile. Never run it in browser code
-or expose Admin SDK credentials to the client.
+The script creates the Firebase Auth user without a password, assigns the signed
+`role` custom claim, creates the matching Firestore profile, and prints a
+one-time Firebase password-setup link. Share hospital links only through a
+trusted channel. Passwords belong exclusively to Firebase Authentication and
+must never be stored in Firestore, even as application-managed hashes.
+
+Set `FIREBASE_ADMIN_PROJECT_ID` to the same project ID as
+`NEXT_PUBLIC_FIREBASE_PROJECT_ID` before running the command. In Firebase
+Authentication settings, enforce a minimum length of eight characters and
+require a numeric character so password-setup and reset flows use the same
+server-side policy as the application.
 
 ## Hosting constraint
 

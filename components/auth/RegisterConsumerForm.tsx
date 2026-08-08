@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { ROUTES } from "@/config/routes";
+import { isValidPassword, PASSWORD_REQUIREMENTS } from "@/features/auth/password";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthFormShell } from "@/components/auth/AuthFormShell";
+import { PasswordField } from "@/components/auth/PasswordField";
 
 export function RegisterConsumerForm() {
   const { registerConsumer, isLoading, error, clearError } = useAuth();
@@ -16,6 +18,10 @@ export function RegisterConsumerForm() {
     setLocalError(null);
     const data = new FormData(event.currentTarget);
     const password = String(data.get("password") || "");
+    if (!isValidPassword(password)) {
+      setLocalError(PASSWORD_REQUIREMENTS);
+      return;
+    }
     if (password !== String(data.get("confirmPassword") || "")) {
       setLocalError("The passwords do not match.");
       return;
@@ -32,13 +38,13 @@ export function RegisterConsumerForm() {
     }
   };
 
-  return <AuthFormShell eyebrow="Consumer account" title="Begin your journey" description="Create a personal account for future retreat discovery and booking.">
+  return <AuthFormShell eyebrow="Consumer account" title="Create your account" description="Register to discover hospitals, request appointments and track booking updates.">
     <form className="portal-auth-form" onSubmit={submit}>
       <label>Your name<input name="name" type="text" autoComplete="name" required /></label>
       <label>Email address<input name="email" type="email" autoComplete="email" required /></label>
       <label>Phone number <span>(optional)</span><input name="phone" type="tel" autoComplete="tel" /></label>
-      <label>Password<input name="password" type="password" autoComplete="new-password" required minLength={6} /></label>
-      <label>Confirm password<input name="confirmPassword" type="password" autoComplete="new-password" required minLength={6} /></label>
+      <PasswordField label="Password" name="password" autoComplete="new-password" required showRequirements />
+      <PasswordField label="Confirm password" name="confirmPassword" autoComplete="new-password" required />
       {(error || localError) && <p className="portal-form-error" role="alert">{localError || error?.message}</p>}
       <button type="submit" disabled={isLoading}>{isLoading ? "Creating account…" : "Create consumer account"}<span aria-hidden="true">→</span></button>
     </form>
