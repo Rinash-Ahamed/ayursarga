@@ -135,7 +135,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     {message && <p className="portal-form-success">{message}</p>}
     {hospital && <>
       <article className="portal-card">
-        <div className="portal-row-heading"><h2>{hospital.name}</h2><span className="portal-status">{formatStatus(hospital.status)}</span></div>
+        <div className="portal-row-heading"><h2>{hospital.name}</h2><span className="portal-status" data-status={hospital.status}>{formatStatus(hospital.status)}</span></div>
         {editing ? <form className="portal-form portal-edit-form" onSubmit={saveHospitalDetails} noValidate>
           <label>Hospital name *<input name="name" defaultValue={hospital.name} required minLength={2} maxLength={120} aria-invalid={Boolean(fieldErrors.name)} />{fieldErrors.name && <span className="portal-field-error">{fieldErrors.name}</span>}</label>
           <label>Official email *<input name="email" type="email" defaultValue={hospital.email} required maxLength={160} aria-invalid={Boolean(fieldErrors.email)} />{fieldErrors.email && <span className="portal-field-error">{fieldErrors.email}</span>}</label>
@@ -163,7 +163,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
       </article>
 
       <article className="portal-card portal-contract-card">
-        <div className="portal-row-heading"><h2>Contract and approval</h2><span className="portal-status">{formatStatus(contractStatus)}</span></div>
+        <div className="portal-row-heading"><h2>Contract and approval</h2><span className="portal-status" data-status={contractStatus}>{formatStatus(contractStatus)}</span></div>
         <div className="portal-date-grid">
           <div><span>Created date</span><strong>{formatDate(hospital.createdAt)}</strong></div>
           <div><span>Contract generated</span><strong>{formatDate(hospital.contractGeneratedAt)}</strong></div>
