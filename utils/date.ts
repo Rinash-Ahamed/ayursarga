@@ -13,3 +13,14 @@ export function toDate(value: unknown): Date | null {
   }
   return null;
 }
+
+export function getCalendarMonthRange(value = new Date()) {
+  return {
+    start: new Date(value.getFullYear(), value.getMonth(), 1),
+    end: new Date(value.getFullYear(), value.getMonth() + 1, 1),
+  };
+}
+
+export function formatMonthYear(value = new Date()) {
+  return new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric" }).format(value);
+}

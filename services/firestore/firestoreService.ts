@@ -6,6 +6,7 @@ import {
   getDoc,
   getDocs,
   getCountFromServer,
+  getAggregateFromServer,
   endAt,
   limit as limitResults,
   orderBy,
@@ -13,6 +14,7 @@ import {
   serverTimestamp,
   startAfter,
   startAt,
+  sum,
   Timestamp,
   where,
   type DocumentData,
@@ -86,6 +88,19 @@ export async function countDocuments(collectionPath: string, filters: QueryFilte
   const constraints = filters.map((filter) => where(filter.field, filter.operator, filter.value));
   const snapshot = await getCountFromServer(query(collection(getClientFirestore(), collectionPath), ...constraints));
   return snapshot.data().count;
+}
+
+export async function sumDocuments(
+  collectionPath: string,
+  field: string | FieldPath,
+  filters: QueryFilter[] = [],
+) {
+  const constraints = filters.map((filter) => where(filter.field, filter.operator, filter.value));
+  const snapshot = await getAggregateFromServer(
+    query(collection(getClientFirestore(), collectionPath), ...constraints),
+    { total: sum(field) },
+  );
+  return snapshot.data().total ?? 0;
 }
 
 export const firestoreTimestamp = {

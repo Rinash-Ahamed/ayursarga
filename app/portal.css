@@ -106,6 +106,13 @@ body.portal-active{ cursor:auto; overflow:auto; height:auto; }
 .portal-stat::after{ content:""; position:absolute; right:-8px; bottom:-35px; width:62px; height:116px; background:url("/neem-leaf.svg") center/contain no-repeat; opacity:.1; filter:saturate(.55); pointer-events:none; }
 .portal-stat strong{ display:block; color:var(--forest); font-family:var(--font-display); font-size:42px; font-weight:600; line-height:1; }
 .portal-stat span{ margin-top:12px; color:var(--ink); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.09em; }
+.portal-stat-hospitals{ justify-content:flex-start; }
+.portal-stat-hospitals>span{ margin-top:0; }
+.portal-stat-split{ display:grid; grid-template-columns:1fr 1fr; gap:0; margin-top:18px; }
+.portal-stat-split>div{ min-width:0; }
+.portal-stat-split>div+div{ padding-left:20px; border-left:1px solid rgba(58,61,46,.25); }
+.portal-stat-split strong{ font-size:34px; }
+.portal-stat-split small{ display:block; margin-top:7px; color:var(--sage); font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
 .portal-root :where(a,button,input,textarea,select):focus-visible{ outline:3px solid var(--clay-dark); outline-offset:3px; }
 @media(max-width:760px){ .portal-workspace{ grid-template-columns:1fr; } .portal-sidebar{ position:static; height:auto; padding:22px; box-shadow:0 6px 24px rgba(58,61,46,.08); } .portal-wordmark{ margin-bottom:18px; } .portal-sidebar nav{ display:flex; overflow:auto; padding-bottom:5px; } .portal-sidebar nav a{ white-space:nowrap; } .portal-account{ margin-top:18px; } .portal-content{ padding:34px 22px 60px; } .portal-page-header{ min-height:78px; padding-right:72px; } .portal-page-header::after{ width:42px; height:78px; } .portal-form{ grid-template-columns:1fr; } .portal-date-grid{ grid-template-columns:1fr 1fr; } .portal-row{ align-items:flex-start; } }
 @media(max-width:520px){ .portal-card{ padding:21px; } .portal-row{ padding:17px; flex-direction:column; } .portal-actions{ width:100%; } .portal-actions .portal-button{ flex:1 1 auto; } .portal-date-grid{ grid-template-columns:1fr; } }
