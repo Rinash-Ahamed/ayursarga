@@ -19,7 +19,7 @@ import type {
 } from "@/features/auth/contracts";
 import { AuthenticationError, toAuthenticationError } from "@/features/auth/errors";
 import { isValidPassword } from "@/features/auth/password";
-import { isPortalRole, verifyProfileRole } from "@/features/auth/roles";
+import { verifyProfileRole } from "@/features/auth/roles";
 import { getClientAuth } from "@/services/auth/client";
 import {
   clearUserProfileCache,
@@ -36,13 +36,6 @@ const toAuthUser = (user: User): AuthUser => ({
 
 async function loadAuthorizedProfile(user: User) {
   const profile = await getUserProfile(user.uid, user.email ?? "");
-  const token = await user.getIdTokenResult();
-  const claimRole = isPortalRole(token.claims.role) ? token.claims.role : null;
-
-  if (profile.role !== "consumer" && claimRole !== profile.role) {
-    throw new AuthenticationError("role-mismatch");
-  }
-  if (claimRole && claimRole !== profile.role) throw new AuthenticationError("role-mismatch");
   return verifyProfileRole(profile, profile.role);
 }
 

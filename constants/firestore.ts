@@ -1,8 +1,15 @@
 export const COLLECTIONS = {
   users: "users",
   hospitals: "hospitals",
+  hospitalStaff: "hospitalStaff",
+  doctors: "doctors",
   services: "services",
+  availability: "availability",
   bookings: "bookings",
+  payments: "payments",
+  notifications: "notifications",
+  auditLogs: "auditLogs",
+  systemSettings: "systemSettings",
 } as const;
 
 export const DEFAULT_PAGE_SIZE = 20;

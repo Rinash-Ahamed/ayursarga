@@ -38,14 +38,16 @@ for the existing public contact form.
 - `components/` contains the existing public experience and focused portal UI.
 - `contexts/` and `hooks/` expose the shared authentication state.
 - `services/` contains Firebase client, authentication, user, hospital, service,
-  booking, and Firestore data access.
-- `features/` contains authentication contracts and the four current Firestore models.
+  booking, audit, and Firestore data access.
+- `features/` contains authentication contracts and typed Firestore models.
 - `firestore.rules` and `firestore.indexes.json` define data isolation and queries.
 - `scripts/` contains emulator verification and controlled privileged-user provisioning.
 
 See [Firebase setup](docs/FIREBASE.md) and
 [application architecture](docs/APPLICATION_ARCHITECTURE.md) for configuration,
 security, collection schemas, route boundaries, and deliberately deferred work.
+The preservation and audit design is documented in
+[Firestore data architecture](docs/FIRESTORE_DATA_ARCHITECTURE.md).
 
 ## Deployment note
 

@@ -59,11 +59,16 @@ Provision the first admin similarly, without a hospital ID:
 npm run firebase:provision-user -- admin admin@example.com "Platform Admin"
 ```
 
-The script creates the Firebase Auth user without a password, assigns the signed
-`role` custom claim, creates the matching Firestore profile, and prints a
-one-time Firebase password-setup link. Share hospital links only through a
-trusted channel. Passwords belong exclusively to Firebase Authentication and
-must never be stored in Firestore, even as application-managed hashes.
+The script creates the Firebase Auth user without a password, creates the
+matching protected Firestore profile, and prints a one-time Firebase
+password-setup link. Share hospital links only through a trusted channel.
+Passwords belong exclusively to Firebase Authentication and must never be
+stored in Firestore, even as application-managed hashes.
+
+The initial admin is simpler: create `info@ayursarga.com` once in Firebase
+Authentication. Its protected `admin` profile is created automatically on the
+first successful `/admin/login`. No password or password hash is written to
+Firestore.
 
 Set `FIREBASE_ADMIN_PROJECT_ID` to the same project ID as
 `NEXT_PUBLIC_FIREBASE_PROJECT_ID` before running the command. In Firebase

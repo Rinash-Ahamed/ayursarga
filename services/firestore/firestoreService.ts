@@ -1,9 +1,7 @@
 "use client";
 
 import {
-  addDoc,
   collection,
-  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -12,10 +10,8 @@ import {
   orderBy,
   query,
   serverTimestamp,
-  setDoc,
   startAfter,
   Timestamp,
-  updateDoc,
   where,
   type DocumentData,
   type FieldPath,
@@ -41,6 +37,7 @@ export type QueryPageOptions = {
   sort?: { field: string | FieldPath; direction?: OrderByDirection };
   pageSize?: number;
   cursor?: QueryDocumentSnapshot<DocumentData> | null;
+  excludeArchived?: boolean;
 };
 
 export type QueryPage<T> = {
@@ -54,27 +51,6 @@ export async function readDocument<T>(collectionPath: string, id: string) {
   return snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as DocumentRecord<T>) : null;
 }
 
-export async function createDocument(
-  collectionPath: string,
-  data: DocumentData,
-  id?: string,
-) {
-  if (id) {
-    await setDoc(doc(getClientFirestore(), collectionPath, id), data);
-    return id;
-  }
-  const reference = await addDoc(collection(getClientFirestore(), collectionPath), data);
-  return reference.id;
-}
-
-export async function updateDocument(collectionPath: string, id: string, data: DocumentData) {
-  await updateDoc(doc(getClientFirestore(), collectionPath, id), data);
-}
-
-export async function deleteDocument(collectionPath: string, id: string) {
-  await deleteDoc(doc(getClientFirestore(), collectionPath, id));
-}
-
 export async function runFilteredQuery<T>(options: QueryPageOptions): Promise<QueryPage<T>> {
   const pageSize = Math.min(Math.max(options.pageSize ?? DEFAULT_PAGE_SIZE, 1), MAX_PAGE_SIZE);
   const constraints: QueryConstraint[] = (options.filters ?? []).map((filter) =>
@@ -85,10 +61,13 @@ export async function runFilteredQuery<T>(options: QueryPageOptions): Promise<Qu
   constraints.push(limitResults(pageSize + 1));
 
   const snapshot = await getDocs(query(collection(getClientFirestore(), options.collectionPath), ...constraints));
-  const visible = snapshot.docs.slice(0, pageSize);
+  const page = snapshot.docs.slice(0, pageSize);
+  const visible = options.excludeArchived === false
+    ? page
+    : page.filter((item) => item.data().status !== "archived" && item.data().archivedAt == null);
   return {
     documents: visible.map((item) => ({ id: item.id, ...item.data() } as DocumentRecord<T>)),
-    cursor: visible.at(-1) ?? null,
+    cursor: page.at(-1) ?? null,
     hasMore: snapshot.docs.length > pageSize,
   };
 }

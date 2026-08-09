@@ -3,9 +3,10 @@
 import type { HospitalDocument } from "@/features/firestore/models";
 import { COLLECTIONS } from "@/constants/firestore";
 import {
-  createDocument, firestoreTimestamp, readDocument, runFilteredQuery, updateDocument,
+  firestoreTimestamp, readDocument, runFilteredQuery,
   type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
+import { createAuditedDocument, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
 
 export type HospitalInput = Pick<HospitalDocument,
   "name" | "description" | "email" | "phone" | "address" | "city" | "state" |
@@ -36,14 +37,29 @@ export function listAllHospitals(options: Pick<QueryPageOptions, "pageSize" | "c
 }
 
 export function createHospital(input: HospitalInput, createdBy: string) {
-  return createDocument(COLLECTIONS.hospitals, {
+  return createAuditedDocument(COLLECTIONS.hospitals, {
     ...input, imageUrl: input.imageUrl || null, createdBy,
-    createdAt: firestoreTimestamp.server(), updatedAt: firestoreTimestamp.server(),
-  });
+    createdAt: firestoreTimestamp.server(), updatedAt: firestoreTimestamp.server(), updatedBy: createdBy,
+    archivedAt: null, archivedBy: null,
+  }, { action: "create", actorRole: "admin" });
 }
 
 export const updateHospital = (id: string, input: Partial<HospitalInput>) =>
-  updateDocument(COLLECTIONS.hospitals, id, { ...input, updatedAt: firestoreTimestamp.server() });
+  updateAuditedDocument(COLLECTIONS.hospitals, id, {
+    ...input, updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
+  }, { action: input.status ? "status_change" : "update", actorRole: "admin" });
 
 export const updateHospitalProfile = (id: string, input: Partial<HospitalProfileInput>) =>
-  updateDocument(COLLECTIONS.hospitals, id, { ...input, updatedAt: firestoreTimestamp.server() });
+  updateAuditedDocument(COLLECTIONS.hospitals, id, {
+    ...input, updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
+  }, { action: "update", actorRole: "hospital" });
+
+export const archiveHospital = (id: string) => updateAuditedDocument(COLLECTIONS.hospitals, id, {
+  status: "archived", isPublic: false, archivedAt: firestoreTimestamp.server(),
+  archivedBy: getAuditActorId(), updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
+}, { action: "archive", actorRole: "admin" });
+
+export const restoreHospital = (id: string) => updateAuditedDocument(COLLECTIONS.hospitals, id, {
+  status: "inactive", isPublic: false, archivedAt: null, archivedBy: null,
+  updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
+}, { action: "restore", actorRole: "admin" });

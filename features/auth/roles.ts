@@ -36,7 +36,7 @@ export function getSafeRoleRedirect(requestedPath: string | null | undefined, ro
 
 export function verifyProfileRole(profile: UserProfile, expectedRole: PortalRole) {
   if (profile.role !== expectedRole) throw new AuthenticationError("role-mismatch");
-  if (profile.status === "inactive") throw new AuthenticationError("account-inactive");
+  if (profile.status === "inactive" || profile.status === "archived") throw new AuthenticationError("account-inactive");
   if (profile.status === "pending") throw new AuthenticationError("account-pending");
   return profile;
 }

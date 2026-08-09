@@ -1,9 +1,16 @@
 import type { Timestamp } from "firebase/firestore";
 import type { PortalRole, UserStatus } from "@/features/auth/contracts";
 
-type AuditedDocument = {
+export type RecordStatus = "active" | "inactive" | "pending" | "archived";
+
+export type AuditedDocument = {
   createdAt: Timestamp;
+  createdBy: string;
   updatedAt: Timestamp;
+  updatedBy: string;
+  archivedAt: Timestamp | null;
+  archivedBy: string | null;
+  lastAuditId: string;
 };
 
 export type UserDocument = AuditedDocument & {
@@ -28,7 +35,6 @@ export type HospitalDocument = AuditedDocument & {
   status: UserStatus;
   isPublic: boolean;
   commissionPercentage: number;
-  createdBy: string;
 };
 
 export type ServiceDocument = AuditedDocument & {
@@ -37,7 +43,7 @@ export type ServiceDocument = AuditedDocument & {
   description: string;
   price: number;
   durationMinutes: number | null;
-  status: "active" | "inactive";
+  status: "active" | "inactive" | "archived";
 };
 
 export const BOOKING_STATUSES = [
@@ -69,9 +75,83 @@ export type BookingDocument = AuditedDocument & {
   completedAt: Timestamp | null;
 };
 
+export type HospitalStaffDocument = AuditedDocument & {
+  uid: string;
+  hospitalId: string;
+  name: string;
+  email: string;
+  status: RecordStatus;
+};
+
+export type DoctorDocument = AuditedDocument & {
+  hospitalId: string;
+  name: string;
+  speciality: string;
+  status: RecordStatus;
+};
+
+export type AvailabilityDocument = AuditedDocument & {
+  hospitalId: string;
+  doctorId: string | null;
+  serviceId: string | null;
+  startsAt: Timestamp;
+  endsAt: Timestamp;
+  status: RecordStatus;
+};
+
+export type PaymentDocument = AuditedDocument & {
+  bookingId: string;
+  consumerId: string;
+  hospitalId: string;
+  providerReference: string;
+  amount: number;
+  currency: string;
+  status: "pending" | "completed" | "failed" | "refunded" | "archived";
+};
+
+export type NotificationDocument = AuditedDocument & {
+  recipientId: string;
+  title: string;
+  message: string;
+  readAt: Timestamp | null;
+  status: "active" | "archived";
+};
+
+export type AuditAction = "create" | "update" | "archive" | "restore" | "status_change";
+
+export type AuditLogDocument = {
+  action: AuditAction;
+  module: string;
+  recordId: string;
+  actorId: string;
+  actorRole: PortalRole;
+  previousValues: Record<string, unknown> | null;
+  updatedValues: Record<string, unknown>;
+  timestamp: Timestamp;
+  source: "web" | "server";
+  device: {
+    userAgent: string | null;
+    platform: string | null;
+    ipAddress: string | null;
+  };
+};
+
+export type SystemSettingDocument = AuditedDocument & {
+  key: string;
+  value: unknown;
+  status: "active" | "archived";
+};
+
 export type FirestoreCollectionMap = {
   users: UserDocument;
   hospitals: HospitalDocument;
   services: ServiceDocument;
   bookings: BookingDocument;
+  hospitalStaff: HospitalStaffDocument;
+  doctors: DoctorDocument;
+  availability: AvailabilityDocument;
+  payments: PaymentDocument;
+  notifications: NotificationDocument;
+  auditLogs: AuditLogDocument;
+  systemSettings: SystemSettingDocument;
 };

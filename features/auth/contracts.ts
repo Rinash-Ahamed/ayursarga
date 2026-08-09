@@ -1,6 +1,6 @@
 export type PortalRole = "admin" | "hospital" | "consumer";
 
-export type UserStatus = "active" | "inactive" | "pending";
+export type UserStatus = "active" | "inactive" | "pending" | "archived";
 
 export type AuthUser = {
   uid: string;

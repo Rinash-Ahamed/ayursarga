@@ -18,13 +18,11 @@ service cloud.firestore {
 
     function isAdmin() {
       return hasActiveProfile()
-        && request.auth.token.role == 'admin'
         && getCurrentUser().role == 'admin';
     }
 
     function isHospital() {
       return hasActiveProfile()
-        && request.auth.token.role == 'hospital'
         && getCurrentUser().role == 'hospital'
         && getCurrentUser().hospitalId != null;
     }
@@ -49,8 +47,35 @@ service cloud.firestore {
     function hasExactUserFields() {
       return request.resource.data.keys().hasOnly([
         'uid', 'name', 'email', 'phone', 'role', 'status', 'hospitalId',
-        'createdAt', 'updatedAt'
+        'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
+        'archivedAt', 'archivedBy', 'lastAuditId'
       ]);
+    }
+
+    function isBootstrapAdminIdentity() {
+      return isSignedIn() && request.auth.token.email == 'info@ayursarga.com';
+    }
+
+    function isAuditedModule(module) {
+      return module in ['users', 'hospitals', 'services', 'bookings'];
+    }
+
+    function hasLinkedAudit(module, recordId) {
+      let auditId = request.resource.data.lastAuditId;
+      let audit = getAfter(/databases/$(database)/documents/auditLogs/$(auditId)).data;
+      return auditId is string
+        && audit.module == module
+        && audit.recordId == recordId
+        && audit.actorId == request.auth.uid
+        && audit.actorRole == getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        && audit.action in ['create', 'update', 'archive', 'restore', 'status_change']
+        && audit.timestamp == request.time
+        && audit.updatedValues.lastAuditId == auditId;
+    }
+
+    function hasCreateAudit(module, recordId) {
+      let audit = getAfter(/databases/$(database)/documents/auditLogs/$(request.resource.data.lastAuditId)).data;
+      return hasLinkedAudit(module, recordId) && audit.action == 'create';
     }
 
     function validHospitalBookingTransition() {
@@ -70,53 +95,78 @@ service cloud.firestore {
         && request.resource.data.name is string
         && request.resource.data.email == request.auth.token.email
         && (request.resource.data.phone == null || request.resource.data.phone is string)
-        && request.resource.data.role == 'consumer'
         && request.resource.data.status == 'active'
         && request.resource.data.hospitalId == null
         && request.resource.data.createdAt == request.time
-        && request.resource.data.updatedAt == request.time;
-      allow update: if isAdmin() || (
-        isDocumentOwner(userId)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'name', 'phone', 'updatedAt'
-        ])
-        && request.resource.data.name is string
-        && (request.resource.data.phone == null || request.resource.data.phone is string)
+        && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.updatedAt == request.time
-      );
-      allow delete: if isAdmin();
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.archivedAt == null
+        && request.resource.data.archivedBy == null
+        && hasCreateAudit('users', userId)
+        && (
+          request.resource.data.role == 'consumer'
+          || (isBootstrapAdminIdentity() && request.resource.data.role == 'admin')
+        );
+      allow update: if hasLinkedAudit('users', userId)
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && (isAdmin() || (
+          isDocumentOwner(userId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'name', 'phone', 'updatedAt', 'updatedBy', 'lastAuditId'
+          ])
+          && request.resource.data.name is string
+          && (request.resource.data.phone == null || request.resource.data.phone is string)
+        ));
+      allow delete: if false;
     }
 
     match /hospitals/{hospitalId} {
       allow read: if isAdmin()
         || belongsToHospital(hospitalId)
         || (resource.data.status == 'active' && resource.data.isPublic == true);
-      allow create, delete: if isAdmin();
-      allow update: if isAdmin() || (
-        belongsToHospital(hospitalId)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'name', 'description', 'email', 'phone', 'address', 'city', 'state',
-          'imageUrl', 'updatedAt'
-        ])
+      allow create: if isAdmin()
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.updatedAt == request.time
-      );
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.archivedAt == null
+        && request.resource.data.archivedBy == null
+        && hasCreateAudit('hospitals', hospitalId);
+      allow update: if hasLinkedAudit('hospitals', hospitalId)
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && (isAdmin() || (
+          belongsToHospital(hospitalId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'name', 'description', 'email', 'phone', 'address', 'city', 'state',
+            'imageUrl', 'updatedAt', 'updatedBy', 'lastAuditId'
+          ])
+        ));
+      allow delete: if false;
     }
 
     match /services/{serviceId} {
       allow read: if isAdmin()
         || belongsToHospital(resource.data.hospitalId)
         || (resource.data.status == 'active' && isApprovedHospital(resource.data.hospitalId));
-      allow create: if isAdmin() || (
-        belongsToHospital(request.resource.data.hospitalId)
+      allow create: if (isAdmin() || belongsToHospital(request.resource.data.hospitalId))
         && request.resource.data.createdAt == request.time
+        && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.updatedAt == request.time
-      );
-      allow update: if isAdmin() || (
-        belongsToHospital(resource.data.hospitalId)
-        && request.resource.data.hospitalId == resource.data.hospitalId
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.archivedAt == null
+        && request.resource.data.archivedBy == null
+        && hasCreateAudit('services', serviceId);
+      allow update: if hasLinkedAudit('services', serviceId)
         && request.resource.data.updatedAt == request.time
-      );
-      allow delete: if isAdmin() || belongsToHospital(resource.data.hospitalId);
+        && request.resource.data.updatedBy == request.auth.uid
+        && (isAdmin() || (
+          belongsToHospital(resource.data.hospitalId)
+          && request.resource.data.hospitalId == resource.data.hospitalId
+        ));
+      allow delete: if false;
     }
 
     match /bookings/{bookingId} {
@@ -129,7 +179,8 @@ service cloud.firestore {
           'consumerId', 'hospitalId', 'serviceId', 'preferredDate', 'preferredTime',
           'confirmedDate', 'confirmedTime', 'status', 'servicePrice',
           'commissionPercentage', 'estimatedCommission', 'consumerNotes',
-          'hospitalNotes', 'createdAt', 'updatedAt', 'confirmedAt', 'completedAt'
+          'hospitalNotes', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
+          'archivedAt', 'archivedBy', 'lastAuditId', 'confirmedAt', 'completedAt'
         ])
         && request.resource.data.consumerId == request.auth.uid
         && request.resource.data.status == 'requested'
@@ -150,29 +201,64 @@ service cloud.firestore {
         && request.resource.data.estimatedCommission
           == request.resource.data.servicePrice * request.resource.data.commissionPercentage / 100
         && request.resource.data.createdAt == request.time
-        && request.resource.data.updatedAt == request.time;
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.archivedAt == null
+        && request.resource.data.archivedBy == null
+        && hasCreateAudit('bookings', bookingId);
 
-      allow update: if isAdmin()
+      allow update: if hasLinkedAudit('bookings', bookingId)
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && (isAdmin()
         || (isConsumer()
           && resource.data.consumerId == request.auth.uid
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'updatedAt', 'updatedBy', 'lastAuditId'
+          ])
           && resource.data.status in ['requested', 'confirmed', 'reschedule_requested']
           && request.resource.data.status == 'cancelled'
-          && request.resource.data.updatedAt == request.time)
+        )
         || (belongsToHospital(resource.data.hospitalId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status', 'confirmedDate', 'confirmedTime', 'hospitalNotes',
-            'confirmedAt', 'completedAt', 'updatedAt'
+            'confirmedAt', 'completedAt', 'updatedAt', 'updatedBy', 'lastAuditId'
           ])
           && validHospitalBookingTransition()
-          && request.resource.data.updatedAt == request.time
           && (request.resource.data.status != 'confirmed'
             || (request.resource.data.confirmedDate != null
               && request.resource.data.confirmedTime != null
               && request.resource.data.confirmedAt == request.time))
           && (request.resource.data.status != 'completed'
-            || request.resource.data.completedAt == request.time));
-      allow delete: if isAdmin();
+            || request.resource.data.completedAt == request.time)));
+      allow delete: if false;
+    }
+
+    match /auditLogs/{auditId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasOnly([
+          'action', 'module', 'recordId', 'actorId', 'actorRole',
+          'previousValues', 'updatedValues', 'timestamp', 'source', 'device'
+        ])
+        && isAuditedModule(request.resource.data.module)
+        && request.resource.data.actorId == request.auth.uid
+        && request.resource.data.actorRole
+          == getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        && request.resource.data.action in ['create', 'update', 'archive', 'restore', 'status_change']
+        && request.resource.data.recordId is string
+        && (request.resource.data.previousValues == null
+          || request.resource.data.previousValues is map)
+        && request.resource.data.updatedValues is map
+        && request.resource.data.updatedValues.lastAuditId == auditId
+        && request.resource.data.timestamp == request.time
+        && request.resource.data.source == 'web'
+        && request.resource.data.device is map
+        && request.resource.data.device.ipAddress == null
+        && getAfter(/databases/$(database)/documents/$(request.resource.data.module)/$(request.resource.data.recordId)).data.lastAuditId
+          == auditId;
+      allow update, delete: if false;
     }
 
     match /{document=**} {

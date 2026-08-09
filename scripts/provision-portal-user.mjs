@@ -24,12 +24,24 @@ if (hospitalId) {
 const authUser = await auth.createUser({ email, displayName: name });
 try {
   const passwordSetupLink = await auth.generatePasswordResetLink(email);
-  await auth.setCustomUserClaims(authUser.uid, { role });
-  await firestore.collection("users").doc(authUser.uid).set({
+  const userReference = firestore.collection("users").doc(authUser.uid);
+  const auditReference = firestore.collection("auditLogs").doc();
+  const userData = {
     uid: authUser.uid, name, email: authUser.email, phone: null, role,
     status: "active", hospitalId,
-    createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
+    createdAt: FieldValue.serverTimestamp(), createdBy: authUser.uid,
+    updatedAt: FieldValue.serverTimestamp(), updatedBy: authUser.uid,
+    archivedAt: null, archivedBy: null, lastAuditId: auditReference.id,
+  };
+  const batch = firestore.batch();
+  batch.set(userReference, userData);
+  batch.set(auditReference, {
+    action: "create", module: "users", recordId: authUser.uid,
+    actorId: authUser.uid, actorRole: role, previousValues: null,
+    updatedValues: userData, timestamp: FieldValue.serverTimestamp(), source: "server",
+    device: { userAgent: null, platform: null, ipAddress: null },
   });
+  await batch.commit();
   console.log(`${role} account created: ${authUser.uid}`);
   console.log(`One-time password setup link: ${passwordSetupLink}`);
 } catch (error) {

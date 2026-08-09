@@ -3,7 +3,7 @@ import { getAuth as getAdminAuth } from "firebase-admin/auth";
 import { FieldValue, getFirestore as getAdminFirestore } from "firebase-admin/firestore";
 import { deleteApp, initializeApp } from "firebase/app";
 import { connectAuthEmulator, getAuth, signInWithEmailAndPassword } from "firebase/auth";
-import { connectFirestoreEmulator, doc, getDoc, getFirestore, serverTimestamp, setDoc, Timestamp, updateDoc } from "firebase/firestore";
+import { collection, connectFirestoreEmulator, deleteDoc, doc, getDoc, getFirestore, serverTimestamp, setDoc, Timestamp, updateDoc, writeBatch } from "firebase/firestore";
 
 const projectId = "demo-ayursarga";
 const password = "Ayursarga-Test-2026";
@@ -22,12 +22,14 @@ const identities = {
 for (const [key, [email, role, hospitalId]] of Object.entries(identities)) {
   const uid = `rules-${key}`;
   await adminAuth.createUser({ uid, email, password });
-  if (role !== "consumer") await adminAuth.setCustomUserClaims(uid, { role });
   await adminDb.collection("users").doc(uid).set({
     uid, name: key, email, phone: null, role, status: "active", hospitalId,
     createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
   });
 }
+
+await adminAuth.createUser({ uid: "rules-bootstrap-admin", email: "info@ayursarga.com", password });
+await adminAuth.createUser({ uid: "rules-untrusted", email: "rules-untrusted@example.test", password });
 
 const hospitalBase = {
   description: "Test", email: "hospital@example.test", phone: "1", address: "A",
@@ -53,6 +55,48 @@ async function signedClient(name, identityKey) {
   await signInWithEmailAndPassword(instance.auth, email, password); return instance;
 }
 
+async function signedClientWithEmail(name, email) {
+  const instance = client(name);
+  await signInWithEmailAndPassword(instance.auth, email, password);
+  return instance;
+}
+
+async function auditedSet(instance, path, data, actorRole, action = "create") {
+  const target = doc(instance.firestore, path);
+  const audit = doc(collection(instance.firestore, "auditLogs"));
+  const updatedValues = { ...data, lastAuditId: audit.id };
+  const batch = writeBatch(instance.firestore);
+  batch.set(target, updatedValues);
+  batch.set(audit, {
+    action, module: path.split("/")[0], recordId: target.id,
+    actorId: instance.auth.currentUser.uid, actorRole,
+    previousValues: null, updatedValues, timestamp: serverTimestamp(), source: "web",
+    device: { userAgent: "rules-test", platform: "emulator", ipAddress: null },
+  });
+  return batch.commit();
+}
+
+async function auditedUpdate(instance, path, changes, actorRole, action = "update") {
+  const target = doc(instance.firestore, path);
+  const current = await getDoc(target);
+  const audit = doc(collection(instance.firestore, "auditLogs"));
+  const updatedValues = {
+    ...changes,
+    updatedAt: serverTimestamp(),
+    updatedBy: instance.auth.currentUser.uid,
+    lastAuditId: audit.id,
+  };
+  const batch = writeBatch(instance.firestore);
+  batch.update(target, updatedValues);
+  batch.set(audit, {
+    action, module: path.split("/")[0], recordId: target.id,
+    actorId: instance.auth.currentUser.uid, actorRole,
+    previousValues: current.data(), updatedValues, timestamp: serverTimestamp(), source: "web",
+    device: { userAgent: "rules-test", platform: "emulator", ipAddress: null },
+  });
+  return batch.commit();
+}
+
 async function succeeds(label, operation) {
   await operation(); console.log(`PASS allow: ${label}`);
 }
@@ -67,6 +111,26 @@ const consumerB = await signedClient("consumer-b", "consumerB");
 const hospitalA = await signedClient("hospital-a", "hospitalA");
 const hospitalB = await signedClient("hospital-b", "hospitalB");
 const admin = await signedClient("admin", "admin");
+const bootstrapAdmin = await signedClientWithEmail("bootstrap-admin", "info@ayursarga.com");
+const untrusted = await signedClientWithEmail("untrusted", "rules-untrusted@example.test");
+
+const bootstrapAdminProfile = {
+  uid: "rules-bootstrap-admin", name: "Ayursarga Admin", email: "info@ayursarga.com",
+  phone: null, role: "admin", status: "active", hospitalId: null,
+  createdAt: serverTimestamp(), createdBy: "rules-bootstrap-admin",
+  updatedAt: serverTimestamp(), updatedBy: "rules-bootstrap-admin",
+  archivedAt: null, archivedBy: null,
+};
+await succeeds("designated email creates its admin profile", () =>
+  auditedSet(bootstrapAdmin, "users/rules-bootstrap-admin", bootstrapAdminProfile, "admin"));
+await fails("untrusted user cannot create an admin profile", () =>
+  auditedSet(untrusted, "users/rules-untrusted", {
+    ...bootstrapAdminProfile,
+    uid: "rules-untrusted",
+    email: "rules-untrusted@example.test",
+  }, "admin"));
+await succeeds("bootstrapped admin reads a consumer", () =>
+  getDoc(doc(bootstrapAdmin.firestore, "users/rules-consumerA")));
 
 await succeeds("public active hospital", () => getDoc(doc(publicClient.firestore, "hospitals/hospital-a")));
 await fails("public private hospital", () => getDoc(doc(publicClient.firestore, "hospitals/hospital-b")));
@@ -74,7 +138,7 @@ await succeeds("public active service at public hospital", () => getDoc(doc(publ
 await fails("public service at private hospital", () => getDoc(doc(publicClient.firestore, "services/service-b")));
 await succeeds("consumer own profile", () => getDoc(doc(consumerA.firestore, "users/rules-consumerA")));
 await fails("consumer other profile", () => getDoc(doc(consumerA.firestore, "users/rules-consumerB")));
-await succeeds("consumer permitted profile update", () => updateDoc(doc(consumerA.firestore, "users/rules-consumerA"), { name: "Consumer A", updatedAt: serverTimestamp() }));
+await succeeds("consumer permitted profile update", () => auditedUpdate(consumerA, "users/rules-consumerA", { name: "Consumer A" }, "consumer"));
 await fails("consumer role escalation", () => updateDoc(doc(consumerA.firestore, "users/rules-consumerA"), { role: "admin", updatedAt: serverTimestamp() }));
 
 const booking = {
@@ -83,19 +147,25 @@ const booking = {
   confirmedDate: null, confirmedTime: null, status: "requested", servicePrice: 1000,
   commissionPercentage: 10, estimatedCommission: 100, consumerNotes: null,
   hospitalNotes: null, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+  createdBy: "rules-consumerA", updatedBy: "rules-consumerA", archivedAt: null, archivedBy: null,
   confirmedAt: null, completedAt: null,
 };
-await succeeds("consumer creates own valid booking", () => setDoc(doc(consumerA.firestore, "bookings/booking-a"), booking));
+await succeeds("consumer creates own valid booking", () => auditedSet(consumerA, "bookings/booking-a", booking, "consumer"));
 await fails("consumer creates booking for another user", () => setDoc(doc(consumerA.firestore, "bookings/booking-invalid"), { ...booking, consumerId: "rules-consumerB" }));
 await succeeds("consumer reads own booking", () => getDoc(doc(consumerA.firestore, "bookings/booking-a")));
 await fails("other consumer reads booking", () => getDoc(doc(consumerB.firestore, "bookings/booking-a")));
 await succeeds("assigned hospital reads booking", () => getDoc(doc(hospitalA.firestore, "bookings/booking-a")));
 await fails("other hospital reads booking", () => getDoc(doc(hospitalB.firestore, "bookings/booking-a")));
-await succeeds("assigned hospital confirms booking", () => updateDoc(doc(hospitalA.firestore, "bookings/booking-a"), { status: "confirmed", confirmedDate: Timestamp.fromDate(new Date("2030-01-02T00:00:00Z")), confirmedTime: "11:00", confirmedAt: serverTimestamp(), updatedAt: serverTimestamp() }));
+await succeeds("assigned hospital confirms booking", () => auditedUpdate(hospitalA, "bookings/booking-a", { status: "confirmed", confirmedDate: Timestamp.fromDate(new Date("2030-01-02T00:00:00Z")), confirmedTime: "11:00", confirmedAt: serverTimestamp() }, "hospital", "status_change"));
 await fails("hospital changes commission", () => updateDoc(doc(hospitalA.firestore, "hospitals/hospital-a"), { commissionPercentage: 1, updatedAt: serverTimestamp() }));
 await fails("hospital edits another hospital service", () => updateDoc(doc(hospitalA.firestore, "services/service-b"), { name: "Changed", updatedAt: serverTimestamp() }));
 await succeeds("admin reads a consumer", () => getDoc(doc(admin.firestore, "users/rules-consumerA")));
-await succeeds("admin changes hospital commission", () => updateDoc(doc(admin.firestore, "hospitals/hospital-a"), { commissionPercentage: 12, updatedAt: serverTimestamp() }));
+await succeeds("admin changes hospital commission", () => auditedUpdate(admin, "hospitals/hospital-a", { commissionPercentage: 12 }, "admin"));
+await fails("admin cannot permanently delete a booking", () => deleteDoc(doc(admin.firestore, "bookings/booking-a")));
+await fails("audit records are immutable", async () => {
+  const logs = await getDoc(doc(admin.firestore, "auditLogs/nonexistent"));
+  return updateDoc(logs.ref, { action: "update" });
+});
 
-await Promise.all([publicClient, consumerA, consumerB, hospitalA, hospitalB, admin].map(({ app }) => deleteApp(app)));
+await Promise.all([publicClient, consumerA, consumerB, hospitalA, hospitalB, admin, bootstrapAdmin, untrusted].map(({ app }) => deleteApp(app)));
 console.log("Firestore rules isolation suite passed.");

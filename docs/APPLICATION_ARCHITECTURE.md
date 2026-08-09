@@ -20,13 +20,20 @@ guards while `firestore.rules` remains the security authority.
 
 ## Current Firestore model
 
-Only these collections exist in the first version:
+The active application uses these collections:
 
 - `users`: identity, role, status, and optional hospital assignment.
 - `hospitals`: public profile, activation/visibility, and agreed commission.
 - `services`: hospital-owned service details and current price.
 - `bookings`: preferred appointment request, hospital response, price and
   commission snapshots, and completion state.
+- `auditLogs`: immutable, admin-readable records linked atomically to critical
+  application writes.
+
+Typed boundaries are also reserved for `hospitalStaff`, `doctors`,
+`availability`, `payments`, `notifications`, and `systemSettings`. They remain
+denied until their application workflows are implemented. Consumer profiles
+remain in `users` to avoid duplicating identity data.
 
 Bookings follow `requested`, `confirmed`, `reschedule_requested`, `rejected`,
 `cancelled`, or `completed`. The booking stores the service price and commission
@@ -42,19 +49,21 @@ single authentication-state listener.
   require an active service owned by that hospital.
 - Consumers can edit only their own name and phone, create bookings only for
   themselves, view their own bookings, and cancel eligible statuses.
-- Hospital users require a matching signed custom claim and profile assignment.
+- Hospital users require a protected hospital profile assignment.
   They can edit permitted profile fields, manage only their services, and move
   only their bookings through allowed workflow transitions. Commission and
   tenant identifiers are immutable to them.
-- Admin users require a matching signed custom claim and active profile and can
-  manage all four current collections.
+- Admin users require an active protected profile and can manage platform data.
+- Client-side permanent deletes are denied. Supported changes require a linked
+  append-only audit record, while archived records remain stored.
 - Everything else is denied.
 
 ## Deliberately deferred
 
-Contracts, leads, multiple hospital staff roles, doctors, availability slots,
-payments, invoices, settlements, automatic commission collection, refunds,
-reviews, notifications, chat, medical records, reports, audit logs, Cloud
+Contracts, leads, hospital staff workflows, doctor workflows, availability
+slots, payment processing, invoices, settlements, automatic commission
+collection, refunds, reviews, notification delivery, chat, medical records,
+reports, audit-log UI, Cloud
 Functions, Firebase Storage, native Capacitor integrations, and advanced PWA
 caching are not part of this version.
 

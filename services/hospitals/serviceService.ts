@@ -3,9 +3,10 @@
 import type { ServiceDocument } from "@/features/firestore/models";
 import { COLLECTIONS } from "@/constants/firestore";
 import {
-  createDocument, firestoreTimestamp, readDocument, runFilteredQuery, updateDocument,
+  firestoreTimestamp, readDocument, runFilteredQuery,
   type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
+import { createAuditedDocument, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
 
 export type ServiceInput = Pick<ServiceDocument,
   "hospitalId" | "name" | "description" | "price" | "durationMinutes" | "status"
@@ -32,9 +33,26 @@ export function listActiveHospitalServices(hospitalId: string, options: Pick<Que
   });
 }
 
-export const createService = (input: ServiceInput) => createDocument(COLLECTIONS.services, {
-  ...input, createdAt: firestoreTimestamp.server(), updatedAt: firestoreTimestamp.server(),
-});
+export const createService = (input: ServiceInput) => {
+  const actorId = getAuditActorId();
+  return createAuditedDocument(COLLECTIONS.services, {
+    ...input, createdAt: firestoreTimestamp.server(), createdBy: actorId,
+    updatedAt: firestoreTimestamp.server(), updatedBy: actorId,
+    archivedAt: null, archivedBy: null,
+  }, { action: "create", actorRole: "hospital" });
+};
 
 export const updateService = (id: string, input: Partial<Omit<ServiceInput, "hospitalId">>) =>
-  updateDocument(COLLECTIONS.services, id, { ...input, updatedAt: firestoreTimestamp.server() });
+  updateAuditedDocument(COLLECTIONS.services, id, {
+    ...input, updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
+  }, { action: input.status ? "status_change" : "update", actorRole: "hospital" });
+
+export const archiveService = (id: string) => updateAuditedDocument(COLLECTIONS.services, id, {
+  status: "archived", archivedAt: firestoreTimestamp.server(), archivedBy: getAuditActorId(),
+  updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
+}, { action: "archive", actorRole: "hospital" });
+
+export const restoreService = (id: string) => updateAuditedDocument(COLLECTIONS.services, id, {
+  status: "inactive", archivedAt: null, archivedBy: null,
+  updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
+}, { action: "restore", actorRole: "hospital" });

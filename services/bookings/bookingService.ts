@@ -4,9 +4,10 @@ import { Timestamp } from "firebase/firestore";
 import type { BookingDocument, BookingStatus } from "@/features/firestore/models";
 import { COLLECTIONS } from "@/constants/firestore";
 import {
-  createDocument, firestoreTimestamp, runFilteredQuery, updateDocument,
+  firestoreTimestamp, runFilteredQuery,
   type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
+import { createAuditedDocument, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
 import { getHospital } from "@/services/hospitals/hospitalService";
 import { getService } from "@/services/hospitals/serviceService";
 
@@ -19,16 +20,18 @@ export async function createBookingRequest(input: BookingRequestInput) {
   const [hospital, service] = await Promise.all([getHospital(input.hospitalId), getService(input.serviceId)]);
   if (!hospital || hospital.status !== "active" || !hospital.isPublic) throw new Error("This hospital is not available.");
   if (!service || service.hospitalId !== hospital.id || service.status !== "active") throw new Error("This service is not available.");
-  return createDocument(COLLECTIONS.bookings, {
+  return createAuditedDocument(COLLECTIONS.bookings, {
     consumerId: input.consumerId, hospitalId: hospital.id, serviceId: service.id,
     preferredDate: Timestamp.fromDate(input.preferredDate), preferredTime: input.preferredTime,
     confirmedDate: null, confirmedTime: null, status: "requested",
     servicePrice: service.price, commissionPercentage: hospital.commissionPercentage,
     estimatedCommission: service.price * hospital.commissionPercentage / 100,
     consumerNotes: input.consumerNotes?.trim() || null, hospitalNotes: null,
-    createdAt: firestoreTimestamp.server(), updatedAt: firestoreTimestamp.server(),
+    createdAt: firestoreTimestamp.server(), createdBy: input.consumerId,
+    updatedAt: firestoreTimestamp.server(), updatedBy: input.consumerId,
+    archivedAt: null, archivedBy: null,
     confirmedAt: null, completedAt: null,
-  });
+  }, { action: "create", actorRole: "consumer" });
 }
 
 function listBookings(filters: QueryPageOptions["filters"], options: Pick<QueryPageOptions, "pageSize" | "cursor"> = {}) {
@@ -44,9 +47,9 @@ export const listHospitalBookings = (hospitalId: string, options?: Pick<QueryPag
   listBookings([{ field: "hospitalId", operator: "==", value: hospitalId }], options);
 export const listAllBookings = (options?: Pick<QueryPageOptions, "pageSize" | "cursor">) => listBookings([], options);
 
-export const cancelConsumerBooking = (id: string) => updateDocument(COLLECTIONS.bookings, id, {
-  status: "cancelled", updatedAt: firestoreTimestamp.server(),
-});
+export const cancelConsumerBooking = (id: string) => updateAuditedDocument(COLLECTIONS.bookings, id, {
+  status: "cancelled", updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
+}, { action: "status_change", actorRole: "consumer" });
 
 export type HospitalBookingUpdate = {
   status: Extract<BookingStatus, "confirmed" | "reschedule_requested" | "rejected" | "completed">;
@@ -62,5 +65,16 @@ export function updateHospitalBooking(id: string, input: HospitalBookingUpdate) 
   if (input.confirmedTime !== undefined) data.confirmedTime = input.confirmedTime;
   if (input.status === "confirmed") data.confirmedAt = firestoreTimestamp.server();
   if (input.status === "completed") data.completedAt = firestoreTimestamp.server();
-  return updateDocument(COLLECTIONS.bookings, id, data);
+  data.updatedBy = getAuditActorId();
+  return updateAuditedDocument(COLLECTIONS.bookings, id, data, { action: "status_change", actorRole: "hospital" });
 }
+
+export const archiveBooking = (id: string) => updateAuditedDocument(COLLECTIONS.bookings, id, {
+  archivedAt: firestoreTimestamp.server(), archivedBy: getAuditActorId(),
+  updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
+}, { action: "archive", actorRole: "admin" });
+
+export const restoreBooking = (id: string) => updateAuditedDocument(COLLECTIONS.bookings, id, {
+  archivedAt: null, archivedBy: null,
+  updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
+}, { action: "restore", actorRole: "admin" });

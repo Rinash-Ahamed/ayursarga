@@ -4,7 +4,7 @@ import type { UserProfile, UserStatus } from "@/features/auth/contracts";
 import { toDate } from "@/utils/date";
 
 const isUserStatus = (value: unknown): value is UserStatus =>
-  value === "active" || value === "inactive" || value === "pending";
+  value === "active" || value === "inactive" || value === "pending" || value === "archived";
 
 export function parseUserProfile(uid: string, value: unknown, fallbackEmail = ""): UserProfile {
   if (!value || typeof value !== "object") throw new AuthenticationError("profile-not-found");
