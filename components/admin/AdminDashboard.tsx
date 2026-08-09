@@ -10,19 +10,19 @@ import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 
 type DashboardStats = {
-  activeHospitals: number;
-  pendingHospitals: number;
-  consumers: number;
-  monthlyBookings: number;
-  monthlyCommission: number;
+  activeHospitals: number | null;
+  pendingHospitals: number | null;
+  consumers: number | null;
+  monthlyBookings: number | null;
+  monthlyCommission: number | null;
 };
 
 const EMPTY_STATS: DashboardStats = {
-  activeHospitals: 0,
-  pendingHospitals: 0,
-  consumers: 0,
-  monthlyBookings: 0,
-  monthlyCommission: 0,
+  activeHospitals: null,
+  pendingHospitals: null,
+  consumers: null,
+  monthlyBookings: null,
+  monthlyCommission: null,
 };
 
 export function AdminDashboard() {
@@ -42,23 +42,32 @@ export function AdminDashboard() {
       { field: "completedAt", operator: "<" as const, value: Timestamp.fromDate(end) },
     ];
 
-    void Promise.all([
+    void Promise.allSettled([
       countDocuments(COLLECTIONS.hospitals, [{ field: "status", operator: "==", value: "active" }]),
       countDocuments(COLLECTIONS.hospitals, [{ field: "status", operator: "==", value: "pending" }]),
       countDocuments(COLLECTIONS.users, [{ field: "role", operator: "==", value: "consumer" }]),
       countDocuments(COLLECTIONS.bookings, createdThisMonth),
       sumDocuments(COLLECTIONS.bookings, "estimatedCommission", completedThisMonth),
-    ]).then(([activeHospitals, pendingHospitals, consumers, monthlyBookings, monthlyCommission]) => {
-      setStats({ activeHospitals, pendingHospitals, consumers, monthlyBookings, monthlyCommission });
-    }).catch(() => {
-      setError("We could not load the dashboard totals. Refresh the page and try again.");
+    ]).then((results) => {
+      const resultValue = (result: PromiseSettledResult<number>) =>
+        result.status === "fulfilled" ? result.value : null;
+      setStats({
+        activeHospitals: resultValue(results[0]),
+        pendingHospitals: resultValue(results[1]),
+        consumers: resultValue(results[2]),
+        monthlyBookings: resultValue(results[3]),
+        monthlyCommission: resultValue(results[4]),
+      });
+      setError(results.some((result) => result.status === "rejected")
+        ? "Some dashboard totals are temporarily unavailable. The available figures are shown below."
+        : null);
     }).finally(() => setIsLoading(false));
   }, []);
 
-  const value = (number: number) => isLoading ? "—" : number.toLocaleString("en-IN");
+  const value = (number: number | null) => isLoading || number === null ? "—" : number.toLocaleString("en-IN");
 
   return <PortalShell role="admin" title="Admin Dashboard">
-    <PortalFeedback error={error} />
+    {error && <div className="portal-dashboard-feedback"><PortalFeedback error={error} /></div>}
     <div className="portal-grid">
       <article className="portal-card portal-stat portal-stat-hospitals">
         <span>Hospitals</span>
@@ -69,7 +78,7 @@ export function AdminDashboard() {
       </article>
       <article className="portal-card portal-stat"><strong>{value(stats.consumers)}</strong><span>Registered consumers</span></article>
       <article className="portal-card portal-stat"><strong>{value(stats.monthlyBookings)}</strong><span>Bookings · {monthLabel}</span></article>
-      <article className="portal-card portal-stat"><strong>{isLoading ? "—" : formatCurrency(stats.monthlyCommission)}</strong><span>Estimated commission · {monthLabel}</span></article>
+      <article className="portal-card portal-stat"><strong>{isLoading || stats.monthlyCommission === null ? "—" : formatCurrency(stats.monthlyCommission)}</strong><span>Estimated commission · {monthLabel}</span></article>
     </div>
   </PortalShell>;
 }

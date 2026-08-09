@@ -45,6 +45,7 @@ export function PortalShell({ role, title, eyebrow, children }: {
         <Link href={ROUTES.consumer.login}>Sign in</Link>
         <Link href={ROUTES.consumer.register}>Register</Link>
       </div>}
+      <small className="portal-version">Ayursarga v{process.env.NEXT_PUBLIC_APP_VERSION}</small>
     </aside>
     <section className="portal-content">
       <header className="portal-page-header">

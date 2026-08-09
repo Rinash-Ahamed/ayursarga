@@ -46,6 +46,7 @@ body.portal-active{ cursor:auto; overflow:auto; height:auto; }
 .portal-account{ margin-top:auto; padding-top:20px; border-top:1px solid rgba(58,61,46,.2); display:grid; gap:5px; color:var(--forest); font-size:12px; font-weight:600; }
 .portal-account small{ overflow:hidden; text-overflow:ellipsis; color:var(--sage); }
 .portal-account button,.portal-account-links a{ width:max-content; margin-top:9px; padding:5px 0; border:0; border-bottom:1px solid rgba(140,114,89,.45); background:none; color:var(--clay-dark); font:inherit; font-weight:700; cursor:pointer; }
+.portal-version{ margin-top:18px; color:var(--sage); font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
 .portal-content{ width:100%; max-width:1240px; padding:clamp(34px,6vw,76px); }
 .portal-page-header{ position:relative; min-height:92px; margin-bottom:34px; padding:0 100px 20px 0; border-bottom:1px solid rgba(58,61,46,.18); }
 .portal-page-header::after{ content:""; position:absolute; right:6px; bottom:-4px; width:54px; height:100px; background:url("/neem-leaf.svg") center/contain no-repeat; opacity:.16; filter:saturate(.55); pointer-events:none; }
@@ -107,6 +108,7 @@ body.portal-active{ cursor:auto; overflow:auto; height:auto; }
 .portal-stat strong{ display:block; color:var(--forest); font-family:var(--font-display); font-size:42px; font-weight:600; line-height:1; }
 .portal-stat span{ margin-top:12px; color:var(--ink); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.09em; }
 .portal-stat-hospitals{ justify-content:flex-start; }
+.portal-dashboard-feedback{ margin-bottom:20px; }
 .portal-stat-hospitals>span{ margin-top:0; }
 .portal-stat-split{ display:grid; grid-template-columns:1fr 1fr; gap:0; margin-top:18px; }
 .portal-stat-split>div{ min-width:0; }
