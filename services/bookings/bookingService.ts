@@ -1,17 +1,17 @@
 "use client";
 
-import { Timestamp } from "firebase/firestore";
+import { Timestamp, type DocumentData } from "firebase/firestore";
 import type { BookingDocument, BookingStatus } from "@/features/firestore/models";
 import { COLLECTIONS } from "@/constants/firestore";
 import {
   firestoreTimestamp, runFilteredQuery,
   type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
-import { createAuditedDocument, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
+import { createAuditedDocument, getArchiveMetadata, getAuditActorId, getRestoreMetadata, updateAuditedDocument } from "@/services/firestore/auditService";
 import { getHospital } from "@/services/hospitals/hospitalService";
 import { getService } from "@/services/hospitals/serviceService";
 
-export type BookingRequestInput = {
+type BookingRequestInput = {
   consumerId: string; hospitalId: string; serviceId: string; preferredDate: Date;
   preferredTime: string; consumerNotes?: string | null;
 };
@@ -47,16 +47,16 @@ export const listHospitalBookings = (hospitalId: string, options?: Pick<QueryPag
   listBookings([{ field: "hospitalId", operator: "==", value: hospitalId }], options);
 export const listAllBookings = (options?: Pick<QueryPageOptions, "pageSize" | "cursor">) => listBookings([], options);
 
-export const cancelConsumerBooking = (id: string) => updateAuditedDocument(COLLECTIONS.bookings, id, {
+export const cancelConsumerBooking = (id: string, previousValues?: DocumentData) => updateAuditedDocument(COLLECTIONS.bookings, id, {
   status: "cancelled", updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
-}, { action: "status_change", actorRole: "consumer" });
+}, { action: "status_change", actorRole: "consumer" }, previousValues);
 
 export type HospitalBookingUpdate = {
   status: Extract<BookingStatus, "confirmed" | "reschedule_requested" | "rejected" | "completed">;
   confirmedDate?: Date | null; confirmedTime?: string | null; hospitalNotes?: string | null;
 };
 
-export function updateHospitalBooking(id: string, input: HospitalBookingUpdate) {
+export function updateHospitalBooking(id: string, input: HospitalBookingUpdate, previousValues?: DocumentData) {
   const data: Record<string, unknown> = {
     status: input.status, hospitalNotes: input.hospitalNotes?.trim() || null,
     updatedAt: firestoreTimestamp.server(),
@@ -66,15 +66,13 @@ export function updateHospitalBooking(id: string, input: HospitalBookingUpdate) 
   if (input.status === "confirmed") data.confirmedAt = firestoreTimestamp.server();
   if (input.status === "completed") data.completedAt = firestoreTimestamp.server();
   data.updatedBy = getAuditActorId();
-  return updateAuditedDocument(COLLECTIONS.bookings, id, data, { action: "status_change", actorRole: "hospital" });
+  return updateAuditedDocument(COLLECTIONS.bookings, id, data, { action: "status_change", actorRole: "hospital" }, previousValues);
 }
 
 export const archiveBooking = (id: string) => updateAuditedDocument(COLLECTIONS.bookings, id, {
-  archivedAt: firestoreTimestamp.server(), archivedBy: getAuditActorId(),
-  updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
+  ...getArchiveMetadata(),
 }, { action: "archive", actorRole: "admin" });
 
 export const restoreBooking = (id: string) => updateAuditedDocument(COLLECTIONS.bookings, id, {
-  archivedAt: null, archivedBy: null,
-  updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
+  ...getRestoreMetadata(),
 }, { action: "restore", actorRole: "admin" });

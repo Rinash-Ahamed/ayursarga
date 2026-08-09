@@ -46,6 +46,10 @@ export type QueryPage<T> = {
   hasMore: boolean;
 };
 
+export function emptyQueryPage<T>(): QueryPage<T> {
+  return { documents: [], cursor: null, hasMore: false };
+}
+
 export async function readDocument<T>(collectionPath: string, id: string) {
   const snapshot = await getDoc(doc(getClientFirestore(), collectionPath, id));
   return snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as DocumentRecord<T>) : null;

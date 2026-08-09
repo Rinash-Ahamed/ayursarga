@@ -3,7 +3,6 @@
 import {
   createUserWithEmailAndPassword,
   deleteUser,
-  onIdTokenChanged,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
@@ -12,7 +11,6 @@ import {
 } from "firebase/auth";
 import type {
   AuthAdapter,
-  AuthUser,
   ConsumerRegistration,
   LoginCredentials,
   PortalRole,
@@ -21,23 +19,12 @@ import { AuthenticationError, toAuthenticationError } from "@/features/auth/erro
 import { isValidPassword } from "@/features/auth/password";
 import { verifyProfileRole } from "@/features/auth/roles";
 import { getClientAuth } from "@/services/auth/client";
+import { loadAuthorizedProfile, subscribeToAuthProfile, toAuthUser } from "@/services/auth/session";
 import {
   clearUserProfileCache,
   createConsumerProfile,
   getUserProfile,
 } from "@/services/users/userService";
-
-const toAuthUser = (user: User): AuthUser => ({
-  uid: user.uid,
-  email: user.email,
-  displayName: user.displayName,
-  emailVerified: user.emailVerified,
-});
-
-async function loadAuthorizedProfile(user: User) {
-  const profile = await getUserProfile(user.uid, user.email ?? "");
-  return verifyProfileRole(profile, profile.role);
-}
 
 async function login(credentials: LoginCredentials, expectedRole?: PortalRole) {
   try {
@@ -109,22 +96,6 @@ export const authService: AuthAdapter = {
     }
   },
   subscribe(listener, onError) {
-    try {
-      return onIdTokenChanged(getClientAuth(), (user) => {
-        if (!user) {
-          listener({ user: null, profile: null });
-          return;
-        }
-        void loadAuthorizedProfile(user)
-          .then((profile) => listener({ user: toAuthUser(user), profile }))
-          .catch((error) => {
-            listener({ user: toAuthUser(user), profile: null });
-            onError(toAuthenticationError(error));
-          });
-      }, (error) => onError(toAuthenticationError(error)));
-    } catch (error) {
-      queueMicrotask(() => onError(toAuthenticationError(error)));
-      return () => undefined;
-    }
+    return subscribeToAuthProfile(listener, onError);
   },
 };

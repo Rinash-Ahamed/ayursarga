@@ -36,20 +36,6 @@ export function RequireRole({
   return authorized ? children : fallback;
 }
 
-export function RequireAuthenticated({ children, fallback = <AuthLoading /> }: { children: ReactNode; fallback?: ReactNode }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const { isAuthenticated, isLoading, role } = useAuth();
-
-  useEffect(() => {
-    if (isLoading || isAuthenticated) return;
-    const login = role ? getRoleLoginPath(role) : getRoleLoginPath("consumer");
-    if (pathname !== login) router.replace(`${login}?next=${encodeURIComponent(pathname)}`);
-  }, [isAuthenticated, isLoading, pathname, role, router]);
-
-  return isAuthenticated ? children : fallback;
-}
-
 export function GuestOnly({ children, fallback = <AuthLoading /> }: { children: ReactNode; fallback?: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();

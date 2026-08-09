@@ -1,22 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { HospitalDocument, ServiceDocument } from "@/features/firestore/models";
-import type { DocumentRecord } from "@/services/firestore/firestoreService";
+import type { DocumentRecord, QueryPageOptions } from "@/services/firestore/firestoreService";
 import { getHospital } from "@/services/hospitals/hospitalService";
 import { listActiveHospitalServices } from "@/services/hospitals/serviceService";
 import { formatCurrency } from "@/utils/currency";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
+import { PortalPagination } from "@/components/portal/PortalPagination";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
 
 export function HospitalDetails({ hospitalId }: { hospitalId: string }) {
   const [hospital, setHospital] = useState<DocumentRecord<HospitalDocument> | null>(null);
-  const [services, setServices] = useState<DocumentRecord<ServiceDocument>[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  useEffect(() => { void Promise.all([getHospital(hospitalId), listActiveHospitalServices(hospitalId, { pageSize: 20 })])
-    .then(([item, page]) => { setHospital(item); setServices(page.documents); })
-    .catch(() => setError("Hospital details could not be loaded.")); }, [hospitalId]);
+  const [hospitalError, setHospitalError] = useState<string | null>(null);
+  const loader = useCallback((cursor: QueryPageOptions["cursor"]) =>
+    listActiveHospitalServices(hospitalId, { pageSize: 20, cursor }), [hospitalId]);
+  const { items: services, error: serviceError, isLoading, hasMore, loadMore } = usePaginatedList<ServiceDocument>(loader, "Services could not be loaded.");
+  const error = hospitalError ?? serviceError;
+  useEffect(() => { void getHospital(hospitalId).then(setHospital)
+    .catch(() => setHospitalError("Hospital details could not be loaded.")); }, [hospitalId]);
   return <PortalShell role="consumer" title={hospital?.name ?? "Hospital details"} eyebrow="Ayursarga hospital">
     <PortalFeedback error={error} empty={!error && !hospital ? "Loading hospital details…" : undefined} />
     {hospital && <><article className="portal-card">
@@ -25,6 +29,6 @@ export function HospitalDetails({ hospitalId }: { hospitalId: string }) {
     <div className="portal-grid">{services.map((service) => <article className="portal-card" key={service.id}>
       <h3>{service.name}</h3><p>{service.description}</p><div className="portal-card-meta"><span>{formatCurrency(service.price)}</span><span>{service.durationMinutes ? `${service.durationMinutes} minutes` : "Duration on request"}</span></div>
       <div className="portal-actions"><Link className="portal-button" href={`/app/bookings/new?hospitalId=${hospitalId}&serviceId=${service.id}`}>Request appointment</Link></div>
-    </article>)}</div></>}
+    </article>)}</div><PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} /></>}
   </PortalShell>;
 }

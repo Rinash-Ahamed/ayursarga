@@ -14,9 +14,9 @@ import { getRoleHomePath, getSafeRoleRedirect } from "@/features/auth/roles";
 import { ROUTES } from "@/config/routes";
 import { authService } from "@/services/auth/authService";
 
-export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
+type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
-export type AuthContextValue = {
+type AuthContextValue = {
   firebaseUser: AuthSnapshot["user"];
   userProfile: AuthSnapshot["profile"];
   role: PortalRole | null;

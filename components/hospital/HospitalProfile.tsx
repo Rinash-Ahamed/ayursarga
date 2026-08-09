@@ -14,7 +14,7 @@ export function HospitalProfile() {
   useEffect(() => { if (id) void getHospital(id).then(setHospital).catch(() => setMessage("Profile could not be loaded.")); }, [id]);
   async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (!id) return;
     const data = new FormData(event.currentTarget); setBusy(true); setMessage(null);
-    try { await updateHospitalProfile(id, { name: String(data.get("name")), description: String(data.get("description")), email: String(data.get("email")), phone: String(data.get("phone")), address: String(data.get("address")), city: String(data.get("city")), state: String(data.get("state")), imageUrl: String(data.get("imageUrl") || "") || null }); setMessage("Hospital profile updated."); }
+    try { await updateHospitalProfile(id, { name: String(data.get("name")), description: String(data.get("description")), email: String(data.get("email")), phone: String(data.get("phone")), address: String(data.get("address")), city: String(data.get("city")), state: String(data.get("state")), imageUrl: String(data.get("imageUrl") || "") || null }, hospital ?? undefined); setMessage("Hospital profile updated."); }
     catch { setMessage("Profile could not be updated."); } finally { setBusy(false); } }
   return <PortalShell role="hospital" title="Hospital Profile">{hospital && <form className="portal-card portal-form" onSubmit={submit}>
     <label>Name<input name="name" defaultValue={hospital.name} required /></label><label>Email<input name="email" type="email" defaultValue={hospital.email} required /></label>

@@ -24,8 +24,6 @@ Validation commands:
 npm run lint
 npm run typecheck
 npm run build
-npm run firebase:test:auth
-npm run firebase:test:rules
 ```
 
 Copy `.env.example` to `.env.local` and add the Firebase Web SDK configuration
@@ -41,7 +39,7 @@ for the existing public contact form.
   booking, audit, and Firestore data access.
 - `features/` contains authentication contracts and typed Firestore models.
 - `firestore.rules` and `firestore.indexes.json` define data isolation and queries.
-- `scripts/` contains emulator verification and controlled privileged-user provisioning.
+- `scripts/` contains controlled privileged-user provisioning.
 
 See [Firebase setup](docs/FIREBASE.md) and
 [application architecture](docs/APPLICATION_ARCHITECTURE.md) for configuration,

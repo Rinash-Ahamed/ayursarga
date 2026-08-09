@@ -1,4 +1,4 @@
-export type AuthErrorCode =
+type AuthErrorCode =
   | "configuration"
   | "invalid-credentials"
   | "email-in-use"
@@ -6,6 +6,7 @@ export type AuthErrorCode =
   | "user-disabled"
   | "too-many-requests"
   | "network"
+  | "database-permission"
   | "profile-not-found"
   | "profile-invalid"
   | "role-mismatch"
@@ -22,6 +23,7 @@ const MESSAGES: Record<AuthErrorCode, string> = {
   "user-disabled": "This account has been disabled. Please contact support.",
   "too-many-requests": "Too many attempts. Please wait and try again.",
   network: "Unable to connect. Check your connection and try again.",
+  "database-permission": "Your account is authenticated but its database access is not configured.",
   "profile-not-found": "Your account profile could not be found.",
   "profile-invalid": "Your account profile is incomplete.",
   "role-mismatch": "This account does not have access to this portal.",
@@ -44,6 +46,9 @@ export function toAuthenticationError(error: unknown): AuthenticationError {
   if (error instanceof Error && "code" in error && typeof error.code === "string") {
     const code: AuthErrorCode = ({
       "auth/invalid-credential": "invalid-credentials",
+      "auth/configuration-not-found": "configuration",
+      "auth/operation-not-allowed": "configuration",
+      "auth/invalid-api-key": "configuration",
       "auth/invalid-email": "invalid-credentials",
       "auth/user-not-found": "invalid-credentials",
       "auth/wrong-password": "invalid-credentials",
@@ -52,6 +57,10 @@ export function toAuthenticationError(error: unknown): AuthenticationError {
       "auth/user-disabled": "user-disabled",
       "auth/too-many-requests": "too-many-requests",
       "auth/network-request-failed": "network",
+      "permission-denied": "database-permission",
+      "firestore/permission-denied": "database-permission",
+      "unavailable": "network",
+      "firestore/unavailable": "network",
       "auth/id-token-expired": "unauthenticated",
       "auth/id-token-revoked": "unauthenticated",
     } as Record<string, AuthErrorCode>)[error.code] ?? "unknown";

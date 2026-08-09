@@ -1,9 +1,9 @@
 import type { Timestamp } from "firebase/firestore";
 import type { PortalRole, UserStatus } from "@/features/auth/contracts";
 
-export type RecordStatus = "active" | "inactive" | "pending" | "archived";
+type RecordStatus = "active" | "inactive" | "pending" | "archived";
 
-export type AuditedDocument = {
+type AuditedDocument = {
   createdAt: Timestamp;
   createdBy: string;
   updatedAt: Timestamp;
@@ -46,16 +46,13 @@ export type ServiceDocument = AuditedDocument & {
   status: "active" | "inactive" | "archived";
 };
 
-export const BOOKING_STATUSES = [
-  "requested",
-  "confirmed",
-  "reschedule_requested",
-  "rejected",
-  "cancelled",
-  "completed",
-] as const;
-
-export type BookingStatus = (typeof BOOKING_STATUSES)[number];
+export type BookingStatus =
+  | "requested"
+  | "confirmed"
+  | "reschedule_requested"
+  | "rejected"
+  | "cancelled"
+  | "completed";
 
 export type BookingDocument = AuditedDocument & {
   consumerId: string;
@@ -140,18 +137,4 @@ export type SystemSettingDocument = AuditedDocument & {
   key: string;
   value: unknown;
   status: "active" | "archived";
-};
-
-export type FirestoreCollectionMap = {
-  users: UserDocument;
-  hospitals: HospitalDocument;
-  services: ServiceDocument;
-  bookings: BookingDocument;
-  hospitalStaff: HospitalStaffDocument;
-  doctors: DoctorDocument;
-  availability: AvailabilityDocument;
-  payments: PaymentDocument;
-  notifications: NotificationDocument;
-  auditLogs: AuditLogDocument;
-  systemSettings: SystemSettingDocument;
 };

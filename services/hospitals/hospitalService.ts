@@ -1,18 +1,19 @@
 "use client";
 
 import type { HospitalDocument } from "@/features/firestore/models";
+import type { DocumentData } from "firebase/firestore";
 import { COLLECTIONS } from "@/constants/firestore";
 import {
   firestoreTimestamp, readDocument, runFilteredQuery,
   type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
-import { createAuditedDocument, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
+import { createAuditedDocument, getArchiveMetadata, getAuditActorId, getRestoreMetadata, updateAuditedDocument } from "@/services/firestore/auditService";
 
-export type HospitalInput = Pick<HospitalDocument,
+type HospitalInput = Pick<HospitalDocument,
   "name" | "description" | "email" | "phone" | "address" | "city" | "state" |
   "imageUrl" | "status" | "isPublic" | "commissionPercentage"
 >;
-export type HospitalProfileInput = Pick<HospitalDocument,
+type HospitalProfileInput = Pick<HospitalDocument,
   "name" | "description" | "email" | "phone" | "address" | "city" | "state" | "imageUrl"
 >;
 
@@ -44,22 +45,20 @@ export function createHospital(input: HospitalInput, createdBy: string) {
   }, { action: "create", actorRole: "admin" });
 }
 
-export const updateHospital = (id: string, input: Partial<HospitalInput>) =>
+export const updateHospital = (id: string, input: Partial<HospitalInput>, previousValues?: DocumentData) =>
   updateAuditedDocument(COLLECTIONS.hospitals, id, {
     ...input, updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
-  }, { action: input.status ? "status_change" : "update", actorRole: "admin" });
+  }, { action: input.status ? "status_change" : "update", actorRole: "admin" }, previousValues);
 
-export const updateHospitalProfile = (id: string, input: Partial<HospitalProfileInput>) =>
+export const updateHospitalProfile = (id: string, input: Partial<HospitalProfileInput>, previousValues?: DocumentData) =>
   updateAuditedDocument(COLLECTIONS.hospitals, id, {
     ...input, updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
-  }, { action: "update", actorRole: "hospital" });
+  }, { action: "update", actorRole: "hospital" }, previousValues);
 
 export const archiveHospital = (id: string) => updateAuditedDocument(COLLECTIONS.hospitals, id, {
-  status: "archived", isPublic: false, archivedAt: firestoreTimestamp.server(),
-  archivedBy: getAuditActorId(), updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
+  status: "archived", isPublic: false, ...getArchiveMetadata(),
 }, { action: "archive", actorRole: "admin" });
 
 export const restoreHospital = (id: string) => updateAuditedDocument(COLLECTIONS.hospitals, id, {
-  status: "inactive", isPublic: false, archivedAt: null, archivedBy: null,
-  updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
+  status: "inactive", isPublic: false, ...getRestoreMetadata(),
 }, { action: "restore", actorRole: "admin" });

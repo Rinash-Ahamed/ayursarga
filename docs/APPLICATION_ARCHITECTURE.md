@@ -15,7 +15,7 @@ their own layouts and are compiled as separate Next.js route segments.
 | Admin auth | `/admin/login`, `/admin/forgot-password` |
 
 `AuthContext` loads and caches one user profile per authenticated session.
-`RequireRole`, `RequireAuthenticated`, and `GuestOnly` provide navigation-level
+`RequireRole` and `GuestOnly` provide navigation-level
 guards while `firestore.rules` remains the security authority.
 
 ## Current Firestore model
@@ -39,9 +39,18 @@ Bookings follow `requested`, `confirmed`, `reschedule_requested`, `rejected`,
 `cancelled`, or `completed`. The booking stores the service price and commission
 percentage at creation so later configuration changes do not alter history.
 
-All list services use limits and cursor-ready pagination. The application uses
-one-time reads; no Firestore realtime listener is used beyond Firebase Auth's
-single authentication-state listener.
+All potentially growing list views use cursor pagination with bounded page
+sizes and a shared `usePaginatedList` hook. Successful updates patch the loaded
+page in memory instead of immediately reading the same documents again.
+Dashboard totals use Firestore count aggregation rather than downloading whole
+collections. The application uses one-time reads; no Firestore realtime
+listener is used beyond Firebase Auth's single authentication-state listener.
+
+Firebase App, Authentication, and Firestore initialization are separated. The
+public route defers its authentication check until the browser is idle, and
+Firestore is loaded only when an authenticated profile or application feature
+actually needs it. User profiles are request-deduplicated and cached once per
+session in `AuthContext`.
 
 ## Security boundary
 

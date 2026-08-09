@@ -28,24 +28,42 @@ export default function Nav() {
   useEffect(() => {
     let active = true;
     let unsubscribe: (() => void) | undefined;
+    let idleId: number | undefined;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
-    void import("@/services/auth/authService").then(({ authService }) => {
-      if (!active) return;
-      unsubscribe = authService.subscribe((snapshot) => {
+    const loadAuthentication = () => {
+      void import("@/services/auth/session").then(({ subscribeToAuthProfile }) => {
         if (!active) return;
-        setAccountRole(snapshot.profile?.status === "active" ? snapshot.profile.role : null);
-        setAuthReady(true);
-      }, () => {
-        if (!active) return;
-        setAccountRole(null);
-        setAuthReady(true);
+        unsubscribe = subscribeToAuthProfile((snapshot) => {
+          if (!active) return;
+          setAccountRole(snapshot.profile?.status === "active" ? snapshot.profile.role : null);
+          setAuthReady(true);
+        }, () => {
+          if (!active) return;
+          setAccountRole(null);
+          setAuthReady(true);
+        });
+      }).catch(() => {
+        if (active) setAuthReady(true);
       });
-    }).catch(() => {
-      if (active) setAuthReady(true);
-    });
+    };
+
+    const scheduleAuthentication = () => {
+      if ("requestIdleCallback" in window) {
+        idleId = window.requestIdleCallback(loadAuthentication, { timeout: 1500 });
+      } else {
+        timeoutId = globalThis.setTimeout(loadAuthentication, 0);
+      }
+    };
+
+    if (document.readyState === "complete") scheduleAuthentication();
+    else window.addEventListener("load", scheduleAuthentication, { once: true });
 
     return () => {
       active = false;
+      window.removeEventListener("load", scheduleAuthentication);
+      if (idleId !== undefined) window.cancelIdleCallback(idleId);
+      if (timeoutId !== undefined) globalThis.clearTimeout(timeoutId);
       unsubscribe?.();
     };
   }, []);
@@ -68,7 +86,9 @@ export default function Nav() {
   }, []);
 
   useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = open ? "hidden" : "";
+    return () => { document.body.style.overflow = previousOverflow; };
   }, [open]);
 
   return (

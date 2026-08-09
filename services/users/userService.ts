@@ -3,6 +3,7 @@
 import type { User } from "firebase/auth";
 import { COLLECTIONS } from "@/constants/firestore";
 import type { ConsumerRegistration, UserProfile } from "@/features/auth/contracts";
+import type { UserDocument } from "@/features/firestore/models";
 import { isBootstrapAdminEmail } from "@/features/auth/bootstrap";
 import { AuthenticationError } from "@/features/auth/errors";
 import { parseUserProfile } from "@/features/auth/profile";
@@ -14,7 +15,8 @@ import {
 } from "@/services/firestore/firestoreService";
 import {
   createAuditedDocument,
-  getAuditActorId,
+  getArchiveMetadata,
+  getRestoreMetadata,
   updateAuditedDocument,
 } from "@/services/firestore/auditService";
 
@@ -31,9 +33,9 @@ export async function getUserProfile(uid: string, fallbackEmail = "", force = fa
 
   const request = readDocument<Record<string, unknown>>(COLLECTIONS.users, uid)
     .then(async (existingDocument) => {
-      let document = existingDocument;
+      let document: Record<string, unknown> | null = existingDocument;
       if (!document && isBootstrapAdminEmail(fallbackEmail)) {
-        await createAuditedDocument(COLLECTIONS.users, {
+        const bootstrapProfile = {
           uid,
           name: "Ayursarga Admin",
           email: fallbackEmail.trim().toLowerCase(),
@@ -47,8 +49,9 @@ export async function getUserProfile(uid: string, fallbackEmail = "", force = fa
           updatedBy: uid,
           archivedAt: null,
           archivedBy: null,
-        }, { action: "create", actorRole: "admin" }, uid);
-        document = await readDocument<Record<string, unknown>>(COLLECTIONS.users, uid);
+        };
+        await createAuditedDocument(COLLECTIONS.users, bootstrapProfile, { action: "create", actorRole: "admin" }, uid);
+        document = bootstrapProfile;
       }
       if (!document) throw new AuthenticationError("profile-not-found");
       const profile = parseUserProfile(uid, document, fallbackEmail);
@@ -78,8 +81,19 @@ export async function createConsumerProfile(user: User, input: ConsumerRegistrat
     archivedAt: null,
     archivedBy: null,
   }, { action: "create", actorRole: "consumer" }, user.uid);
-
-  return getUserProfile(user.uid, user.email ?? input.email.trim(), true);
+  const profile: UserProfile = {
+    uid: user.uid,
+    name,
+    email: user.email ?? input.email.trim(),
+    phone: input.phone?.trim() || null,
+    role: "consumer",
+    status: "active",
+    hospitalId: null,
+    createdAt: null,
+    updatedAt: null,
+  };
+  profileCache.set(user.uid, profile);
+  return profile;
 }
 
 export async function updateUserProfile(
@@ -93,8 +107,13 @@ export async function updateUserProfile(
   if (typeof changes.name === "string") allowedChanges.name = changes.name.trim();
   if (changes.phone !== undefined) allowedChanges.phone = changes.phone?.trim() || null;
   const role = profileCache.get(uid)?.role ?? "consumer";
-  await updateAuditedDocument(COLLECTIONS.users, uid, allowedChanges, { action: "update", actorRole: role });
-  return getUserProfile(uid, "", true);
+  await updateAuditedDocument(
+    COLLECTIONS.users,
+    uid,
+    allowedChanges,
+    { action: "update", actorRole: role },
+    profileCache.get(uid),
+  );
 }
 
 export function clearUserProfileCache(uid?: string) {
@@ -108,7 +127,7 @@ export function clearUserProfileCache(uid?: string) {
 }
 
 export function listUsers(options: Pick<QueryPageOptions, "pageSize" | "cursor"> = {}) {
-  return runFilteredQuery<Record<string, unknown>>({
+  return runFilteredQuery<UserDocument>({
     collectionPath: COLLECTIONS.users,
     sort: { field: "createdAt", direction: "desc" },
     ...options,
@@ -116,11 +135,9 @@ export function listUsers(options: Pick<QueryPageOptions, "pageSize" | "cursor">
 }
 
 export const archiveUser = (uid: string) => updateAuditedDocument(COLLECTIONS.users, uid, {
-  status: "archived", archivedAt: firestoreTimestamp.server(), archivedBy: getAuditActorId(),
-  updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
+  status: "archived", ...getArchiveMetadata(),
 }, { action: "archive", actorRole: "admin" });
 
 export const restoreUser = (uid: string) => updateAuditedDocument(COLLECTIONS.users, uid, {
-  status: "inactive", archivedAt: null, archivedBy: null,
-  updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
+  status: "inactive", ...getRestoreMetadata(),
 }, { action: "restore", actorRole: "admin" });

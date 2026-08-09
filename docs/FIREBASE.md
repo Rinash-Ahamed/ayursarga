@@ -40,8 +40,6 @@ FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
 Run `npm run firebase:emulators` in one terminal and `npm run dev` in another.
 The Emulator UI is available at `http://127.0.0.1:4000`.
 The Firestore emulator requires a local Java runtime; Auth and Hosting do not.
-Run `npm run firebase:test:auth` for an isolated Auth emulator verification of
-registration, email/password login, password reset, and cleanup.
 
 ## Privileged account provisioning
 

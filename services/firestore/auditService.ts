@@ -26,6 +26,25 @@ export function getAuditActorId() {
   return uid;
 }
 
+export function getArchiveMetadata() {
+  const actorId = getAuditActorId();
+  return {
+    archivedAt: serverTimestamp(),
+    archivedBy: actorId,
+    updatedAt: serverTimestamp(),
+    updatedBy: actorId,
+  };
+}
+
+export function getRestoreMetadata() {
+  return {
+    archivedAt: null,
+    archivedBy: null,
+    updatedAt: serverTimestamp(),
+    updatedBy: getAuditActorId(),
+  };
+}
+
 function getDeviceMetadata() {
   if (typeof navigator === "undefined") {
     return { userAgent: null, platform: null, ipAddress: null };
@@ -80,31 +99,45 @@ export async function updateAuditedDocument(
   id: string,
   changes: DocumentData,
   context: AuditContext,
+  previousValues?: DocumentData,
 ) {
   const firestore = getClientFirestore();
   const target = doc(firestore, collectionPath, id);
-  const current = await getDoc(target);
-  if (!current.exists()) throw new Error("The requested record could not be found.");
+  let previous = previousValues;
+  if (!previous) {
+    const current = await getDoc(target);
+    if (!current.exists()) throw new Error("The requested record could not be found.");
+    previous = current.data();
+  } else if ("id" in previous) {
+    previous = { ...previous };
+    delete previous.id;
+  }
 
   const audit = doc(collection(firestore, COLLECTIONS.auditLogs));
   const updatedValues = { ...changes, lastAuditId: audit.id };
   const batch = writeBatch(firestore);
   batch.update(target, updatedValues);
-  batch.set(audit, auditEntry(collectionPath, id, context, current.data(), updatedValues));
+  batch.set(audit, auditEntry(collectionPath, id, context, previous, updatedValues));
   await batch.commit();
 }
 
-type AuditLogQuery = Pick<QueryPageOptions, "pageSize" | "cursor"> & {
-  module?: string;
-  recordId?: string;
-  actorId?: string;
-};
+type AuditLogScope =
+  | { actorId: string; module?: never; recordId?: never }
+  | { actorId?: never; module: string; recordId: string }
+  | { actorId?: never; module?: never; recordId?: never };
+
+type AuditLogQuery = Pick<QueryPageOptions, "pageSize" | "cursor"> & AuditLogScope;
 
 export function listAuditLogs(options: AuditLogQuery = {}) {
   const filters: QueryFilter[] = [];
-  if (options.module) filters.push({ field: "module", operator: "==", value: options.module });
-  if (options.recordId) filters.push({ field: "recordId", operator: "==", value: options.recordId });
-  if (options.actorId) filters.push({ field: "actorId", operator: "==", value: options.actorId });
+  if (options.actorId) {
+    filters.push({ field: "actorId", operator: "==", value: options.actorId });
+  } else if (options.module && options.recordId) {
+    filters.push(
+      { field: "module", operator: "==", value: options.module },
+      { field: "recordId", operator: "==", value: options.recordId },
+    );
+  }
   return runFilteredQuery<AuditLogDocument>({
     collectionPath: COLLECTIONS.auditLogs,
     filters,

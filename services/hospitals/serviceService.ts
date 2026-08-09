@@ -1,14 +1,15 @@
 "use client";
 
 import type { ServiceDocument } from "@/features/firestore/models";
+import type { DocumentData } from "firebase/firestore";
 import { COLLECTIONS } from "@/constants/firestore";
 import {
   firestoreTimestamp, readDocument, runFilteredQuery,
   type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
-import { createAuditedDocument, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
+import { createAuditedDocument, getArchiveMetadata, getAuditActorId, getRestoreMetadata, updateAuditedDocument } from "@/services/firestore/auditService";
 
-export type ServiceInput = Pick<ServiceDocument,
+type ServiceInput = Pick<ServiceDocument,
   "hospitalId" | "name" | "description" | "price" | "durationMinutes" | "status"
 >;
 
@@ -42,17 +43,15 @@ export const createService = (input: ServiceInput) => {
   }, { action: "create", actorRole: "hospital" });
 };
 
-export const updateService = (id: string, input: Partial<Omit<ServiceInput, "hospitalId">>) =>
+export const updateService = (id: string, input: Partial<Omit<ServiceInput, "hospitalId">>, previousValues?: DocumentData) =>
   updateAuditedDocument(COLLECTIONS.services, id, {
     ...input, updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
-  }, { action: input.status ? "status_change" : "update", actorRole: "hospital" });
+  }, { action: input.status ? "status_change" : "update", actorRole: "hospital" }, previousValues);
 
 export const archiveService = (id: string) => updateAuditedDocument(COLLECTIONS.services, id, {
-  status: "archived", archivedAt: firestoreTimestamp.server(), archivedBy: getAuditActorId(),
-  updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
+  status: "archived", ...getArchiveMetadata(),
 }, { action: "archive", actorRole: "hospital" });
 
 export const restoreService = (id: string) => updateAuditedDocument(COLLECTIONS.services, id, {
-  status: "inactive", archivedAt: null, archivedBy: null,
-  updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
+  status: "inactive", ...getRestoreMetadata(),
 }, { action: "restore", actorRole: "hospital" });

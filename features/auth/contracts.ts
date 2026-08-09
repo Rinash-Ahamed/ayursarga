@@ -36,7 +36,7 @@ export type AuthSnapshot = {
   profile: UserProfile | null;
 };
 
-export type AuthStateListener = (snapshot: AuthSnapshot) => void;
+type AuthStateListener = (snapshot: AuthSnapshot) => void;
 
 export interface AuthAdapter {
   login(credentials: LoginCredentials, expectedRole?: PortalRole): Promise<UserProfile>;
