@@ -13,6 +13,7 @@ import { AuthenticationError, toAuthenticationError } from "@/features/auth/erro
 import { getRoleHomePath, getSafeRoleRedirect } from "@/features/auth/roles";
 import { ROUTES } from "@/config/routes";
 import { authService } from "@/services/auth/authService";
+import { useSessionIdleTimeout } from "@/hooks/useSessionIdleTimeout";
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
@@ -98,6 +99,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }), [run]);
 
   const clearError = useCallback(() => setError(null), []);
+
+  const expireIdleSession = useCallback(async () => {
+    await authService.logout().catch(() => undefined);
+    setSnapshot({ user: null, profile: null });
+    setStatus("unauthenticated");
+    setProcessing(false);
+    setError(null);
+  }, []);
+
+  useSessionIdleTimeout(
+    status === "authenticated" && Boolean(snapshot.user && snapshot.profile),
+    expireIdleSession,
+  );
+
   const value = useMemo<AuthContextValue>(() => ({
     firebaseUser: snapshot.user,
     userProfile: snapshot.profile,

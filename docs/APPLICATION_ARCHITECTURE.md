@@ -17,6 +17,9 @@ their own layouts and are compiled as separate Next.js route segments.
 `AuthContext` loads and caches one user profile per authenticated session.
 `RequireRole` and `GuestOnly` provide navigation-level
 guards while `firestore.rules` remains the security authority.
+Authenticated portal sessions are signed out after 15 minutes without keyboard,
+pointer, touch, or scroll activity. Returning to a backgrounded tab also checks
+the elapsed idle time before allowing the session to continue.
 
 ## Current Firestore model
 
