@@ -7,6 +7,7 @@ import { getHospital, updateHospitalProfile } from "@/services/hospitals/hospita
 import { hospitalFormValues, validateHospitalFields, type HospitalValidationErrors } from "@/features/hospitals/validation";
 import { useAuth } from "@/hooks/useAuth";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { IndiaStateSelect } from "@/components/forms/IndiaStateSelect";
 
 export function HospitalProfile() {
   const { userProfile } = useAuth();
@@ -18,7 +19,7 @@ export function HospitalProfile() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (id) void getHospital(id).then(setHospital).catch(() => setError("Profile could not be loaded."));
+    if (id) void getHospital(id).then(setHospital).catch(() => setError("We could not load the hospital profile. Refresh the page and try again."));
   }, [id]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -30,7 +31,7 @@ export function HospitalProfile() {
     setMessage(null);
     setError(null);
     if (!validation.isValid) {
-      setError("Review the highlighted hospital details before saving.");
+      setError("Please check the highlighted fields, then save the profile again.");
       return;
     }
 
@@ -48,9 +49,9 @@ export function HospitalProfile() {
       };
       await updateHospitalProfile(id, profile, hospital);
       setHospital((current) => current ? { ...current, ...profile } : current);
-      setMessage("Hospital profile updated.");
+      setMessage("The hospital profile has been updated.");
     } catch {
-      setError("Profile could not be updated.");
+      setError("We could not save the hospital profile. Check the details and try again.");
     } finally {
       setBusy(false);
     }
@@ -61,7 +62,7 @@ export function HospitalProfile() {
     <label>Email *<input name="email" type="email" defaultValue={hospital.email} required maxLength={160} aria-invalid={Boolean(fieldErrors.email)} />{fieldErrors.email && <span className="portal-field-error">{fieldErrors.email}</span>}</label>
     <label>Phone *<input name="phone" type="tel" defaultValue={hospital.phone} required minLength={7} maxLength={25} aria-invalid={Boolean(fieldErrors.phone)} />{fieldErrors.phone && <span className="portal-field-error">{fieldErrors.phone}</span>}</label>
     <label>City *<input name="city" defaultValue={hospital.city} required minLength={2} maxLength={80} aria-invalid={Boolean(fieldErrors.city)} />{fieldErrors.city && <span className="portal-field-error">{fieldErrors.city}</span>}</label>
-    <label>State *<input name="state" defaultValue={hospital.state} required minLength={2} maxLength={80} aria-invalid={Boolean(fieldErrors.state)} />{fieldErrors.state && <span className="portal-field-error">{fieldErrors.state}</span>}</label>
+    <label>State *<IndiaStateSelect name="state" defaultValue={hospital.state} required aria-invalid={Boolean(fieldErrors.state)} />{fieldErrors.state && <span className="portal-field-error">{fieldErrors.state}</span>}</label>
     <label>Image URL <small>Optional</small><input name="imageUrl" type="url" defaultValue={hospital.imageUrl ?? ""} maxLength={500} aria-invalid={Boolean(fieldErrors.imageUrl)} />{fieldErrors.imageUrl && <span className="portal-field-error">{fieldErrors.imageUrl}</span>}</label>
     <label className="full">Address *<input name="address" defaultValue={hospital.address} required minLength={10} maxLength={300} aria-invalid={Boolean(fieldErrors.address)} />{fieldErrors.address && <span className="portal-field-error">{fieldErrors.address}</span>}</label>
     <label className="full">Description<textarea name="description" defaultValue={hospital.description} maxLength={2000} aria-invalid={Boolean(fieldErrors.description)} />{fieldErrors.description && <span className="portal-field-error">{fieldErrors.description}</span>}</label>

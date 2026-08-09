@@ -1,4 +1,5 @@
 import { isValidEmail, toTrimmedString } from "@/utils/text";
+import { isIndiaStateOrUnionTerritory } from "@/constants/indiaStates";
 
 export type HospitalFields = {
   name: string;
@@ -41,6 +42,9 @@ export function validateHospitalFields(input: Record<string, unknown>) {
   const commissionPercentage = typeof input.commissionPercentage === "number"
     ? input.commissionPercentage
     : Number(input.commissionPercentage);
+  const normalizedCommission = Number.isFinite(commissionPercentage)
+    ? Math.round(commissionPercentage * 100) / 100
+    : commissionPercentage;
   const errors: HospitalValidationErrors = {};
 
   if (name.length < 2) errors.name = "Enter a hospital name of at least 2 characters.";
@@ -48,7 +52,7 @@ export function validateHospitalFields(input: Record<string, unknown>) {
   if (!PHONE_PATTERN.test(phone)) errors.phone = "Enter a valid phone number using 7 to 25 digits or common phone symbols.";
   if (address.length < 10) errors.address = "Enter the hospital's complete street address.";
   if (city.length < 2) errors.city = "Enter a valid city or locality.";
-  if (state.length < 2) errors.state = "Enter a valid state.";
+  if (!isIndiaStateOrUnionTerritory(state)) errors.state = "Select a valid Indian state or union territory.";
   if (description && description.length < 20) errors.description = "Either leave the description empty or provide at least 20 characters.";
   if (!Number.isFinite(commissionPercentage) || commissionPercentage < 0 || commissionPercentage > 100) {
     errors.commissionPercentage = "Commission must be between 0 and 100 percent.";
@@ -56,7 +60,7 @@ export function validateHospitalFields(input: Record<string, unknown>) {
   if (rawImageUrl && !imageUrl) errors.imageUrl = "Enter a complete image URL beginning with http:// or https://.";
 
   const data: HospitalFields = {
-    name, email, phone, address, city, state, description, imageUrl, commissionPercentage,
+    name, email, phone, address, city, state, description, imageUrl, commissionPercentage: normalizedCommission,
   };
   return { data, errors, isValid: Object.keys(errors).length === 0 };
 }

@@ -18,7 +18,7 @@ export function HospitalBookings() {
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) => hospitalId
     ? listHospitalBookings(hospitalId, { pageSize: 20, cursor })
     : Promise.resolve(emptyQueryPage<BookingDocument>()), [hospitalId]);
-  const { items, error: loadError, isLoading, hasMore, reload, loadMore } = usePaginatedList<BookingDocument>(loader, "Bookings could not be loaded.");
+  const { items, error: loadError, isLoading, hasMore, reload, loadMore } = usePaginatedList<BookingDocument>(loader, "We could not load the bookings. Refresh the page and try again.");
   const error = actionError ?? loadError;
   async function act(item: DocumentRecord<BookingDocument>, status: HospitalBookingUpdate["status"]) {
     const update: HospitalBookingUpdate = { status };
@@ -28,9 +28,9 @@ export function HospitalBookings() {
       update.confirmedDate = new Date(`${date}T00:00:00`); update.confirmedTime = time;
     }
     update.hospitalNotes = window.prompt("Hospital note (optional)", item.hospitalNotes ?? "") || null;
-    setBusy(item.id); try { await updateHospitalBooking(item.id, update, item); await reload(); } catch { setActionError("Booking status could not be updated."); } finally { setBusy(null); }
+    setBusy(item.id); try { await updateHospitalBooking(item.id, update, item); await reload(); } catch { setActionError("We could not update this booking. Review the details and try again."); } finally { setBusy(null); }
   }
-  return <PortalShell role="hospital" title="Bookings"><PortalFeedback error={error} empty={!error && !isLoading && items.length === 0 ? "There are no booking requests." : undefined} /><div className="portal-list">{items.map((item) => <article className="portal-card" key={item.id}>
+  return <PortalShell role="hospital" title="Bookings"><PortalFeedback error={error} empty={!error && !isLoading && items.length === 0 ? "No booking requests yet. New requests from consumers will appear here." : undefined} /><div className="portal-list">{items.map((item) => <article className="portal-card" key={item.id}>
     <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}><h3>{formatCurrency(item.servicePrice)}</h3><span className="portal-status">{formatStatus(item.status)}</span></div>
     <p>Preferred: {item.preferredDate.toDate().toLocaleDateString("en-IN")} at {item.preferredTime}</p>{item.consumerNotes && <p>Consumer note: {item.consumerNotes}</p>}
     <div className="portal-actions">{item.status === "requested" && <><button className="portal-button" disabled={busy === item.id} onClick={() => void act(item, "confirmed")}>Confirm</button><button className="portal-button secondary" onClick={() => void act(item, "reschedule_requested")}>Reschedule</button><button className="portal-button secondary" onClick={() => void act(item, "rejected")}>Reject</button></>}{item.status === "reschedule_requested" && <button className="portal-button" onClick={() => void act(item, "confirmed")}>Confirm</button>}{item.status === "confirmed" && <><button className="portal-button" onClick={() => void act(item, "completed")}>Mark completed</button><button className="portal-button secondary" onClick={() => void act(item, "reschedule_requested")}>Reschedule</button></>}</div>

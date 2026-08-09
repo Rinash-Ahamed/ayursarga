@@ -18,7 +18,7 @@ export function BookingRequestForm({ hospitalId, serviceId }: { hospitalId: stri
         preferredDate: new Date(`${String(data.get("date"))}T00:00:00`), preferredTime: String(data.get("time")),
         consumerNotes: String(data.get("notes") || "") });
       router.replace("/app/bookings");
-    } catch (caught) { setError(caught instanceof Error ? caught.message : "The request could not be submitted."); }
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "We could not send your appointment request. Check the details and try again."); }
     finally { setBusy(false); }
   }
   return <PortalShell role="consumer" title="Request an appointment" eyebrow="Booking request">

@@ -6,11 +6,13 @@ import {
   getDoc,
   getDocs,
   getCountFromServer,
+  endAt,
   limit as limitResults,
   orderBy,
   query,
   serverTimestamp,
   startAfter,
+  startAt,
   Timestamp,
   where,
   type DocumentData,
@@ -37,6 +39,8 @@ export type QueryPageOptions = {
   sort?: { field: string | FieldPath; direction?: OrderByDirection };
   pageSize?: number;
   cursor?: QueryDocumentSnapshot<DocumentData> | null;
+  startAtValues?: unknown[];
+  endAtValues?: unknown[];
   excludeArchived?: boolean;
 };
 
@@ -62,6 +66,8 @@ export async function runFilteredQuery<T>(options: QueryPageOptions): Promise<Qu
 
   if (options.sort) constraints.push(orderBy(options.sort.field, options.sort.direction));
   if (options.cursor) constraints.push(startAfter(options.cursor));
+  else if (options.startAtValues?.length) constraints.push(startAt(...options.startAtValues));
+  if (options.endAtValues?.length) constraints.push(endAt(...options.endAtValues));
   constraints.push(limitResults(pageSize + 1));
 
   const snapshot = await getDocs(query(collection(getClientFirestore(), options.collectionPath), ...constraints));

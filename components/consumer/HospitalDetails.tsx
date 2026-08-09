@@ -17,10 +17,10 @@ export function HospitalDetails({ hospitalId }: { hospitalId: string }) {
   const [hospitalError, setHospitalError] = useState<string | null>(null);
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) =>
     listActiveHospitalServices(hospitalId, { pageSize: 20, cursor }), [hospitalId]);
-  const { items: services, error: serviceError, isLoading, hasMore, loadMore } = usePaginatedList<ServiceDocument>(loader, "Services could not be loaded.");
+  const { items: services, error: serviceError, isLoading, hasMore, loadMore } = usePaginatedList<ServiceDocument>(loader, "We could not load this hospital's services. Refresh the page and try again.");
   const error = hospitalError ?? serviceError;
   useEffect(() => { void getHospital(hospitalId).then(setHospital)
-    .catch(() => setHospitalError("Hospital details could not be loaded.")); }, [hospitalId]);
+    .catch(() => setHospitalError("We could not load this hospital. Return to the hospital list and try again.")); }, [hospitalId]);
   return <PortalShell role="consumer" title={hospital?.name ?? "Hospital details"} eyebrow="Ayursarga hospital">
     <PortalFeedback error={error} empty={!error && !hospital ? "Loading hospital details…" : undefined} />
     {hospital && <><article className="portal-card">

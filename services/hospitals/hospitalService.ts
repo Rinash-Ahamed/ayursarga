@@ -29,10 +29,19 @@ export function listPublicHospitals(options: Pick<QueryPageOptions, "pageSize" |
   });
 }
 
-export function listAllHospitals(options: Pick<QueryPageOptions, "pageSize" | "cursor"> = {}) {
+export function listAllHospitals(options: Pick<QueryPageOptions, "pageSize" | "cursor"> = {}, searchTerm = "") {
+  const trimmedSearch = searchTerm.trim();
+  const namePrefix = trimmedSearch
+    ? `${trimmedSearch.charAt(0).toUpperCase()}${trimmedSearch.slice(1)}`
+    : "";
   return runFilteredQuery<HospitalDocument>({
     collectionPath: COLLECTIONS.hospitals,
-    sort: { field: "createdAt", direction: "desc" }, ...options,
+    sort: namePrefix
+      ? { field: "name", direction: "asc" }
+      : { field: "createdAt", direction: "desc" },
+    startAtValues: namePrefix ? [namePrefix] : undefined,
+    endAtValues: namePrefix ? [`${namePrefix}\uf8ff`] : undefined,
+    ...options,
   });
 }
 
@@ -80,7 +89,7 @@ export function recordHospitalContractGeneration(id: string, previous: DocumentD
 
 export function confirmHospitalContractSigning(id: string, previous: DocumentData) {
   if (previous.contractStatus !== "generated") {
-    throw new Error("Generate the contract before confirming its signature.");
+    throw new Error("Select Generate Contract PDF before confirming that the contract has been signed.");
   }
   const actorId = getAuditActorId();
   return updateAuditedDocument(COLLECTIONS.hospitals, id, {
@@ -94,7 +103,7 @@ export function confirmHospitalContractSigning(id: string, previous: DocumentDat
 
 export function activateHospital(id: string, previous: DocumentData, contractUrlInput: string) {
   if (previous.contractStatus !== "signed" || !previous.contractSignedAt) {
-    throw new Error("The signed contract must be confirmed before activation.");
+    throw new Error("Confirm that the hospital has signed the contract before activating it.");
   }
   const contractUrl = contractUrlInput.trim();
   if (contractUrl.length > 500) throw new Error("The signed contract URL must be 500 characters or fewer.");
@@ -125,9 +134,9 @@ export const updateHospitalProfile = (id: string, input: Partial<HospitalProfile
     ...input, updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
   }, { action: "update", actorRole: "hospital" }, previousValues);
 
-export const archiveHospital = (id: string) => updateAuditedDocument(COLLECTIONS.hospitals, id, {
+export const archiveHospital = (id: string, previousValues?: DocumentData) => updateAuditedDocument(COLLECTIONS.hospitals, id, {
   status: "archived", isPublic: false, ...getArchiveMetadata(),
-}, { action: "archive", actorRole: "admin" });
+}, { action: "archive", actorRole: "admin" }, previousValues);
 
 export const restoreHospital = (id: string) => updateAuditedDocument(COLLECTIONS.hospitals, id, {
   status: "inactive", isPublic: false, ...getRestoreMetadata(),

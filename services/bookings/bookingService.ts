@@ -18,8 +18,8 @@ type BookingRequestInput = {
 
 export async function createBookingRequest(input: BookingRequestInput) {
   const [hospital, service] = await Promise.all([getHospital(input.hospitalId), getService(input.serviceId)]);
-  if (!hospital || hospital.status !== "active" || !hospital.isPublic) throw new Error("This hospital is not available.");
-  if (!service || service.hospitalId !== hospital.id || service.status !== "active") throw new Error("This service is not available.");
+  if (!hospital || hospital.status !== "active" || !hospital.isPublic) throw new Error("This hospital is not accepting appointment requests right now. Choose another hospital and try again.");
+  if (!service || service.hospitalId !== hospital.id || service.status !== "active") throw new Error("This service is not accepting appointment requests right now. Return to the hospital page and choose another service.");
   return createAuditedDocument(COLLECTIONS.bookings, {
     consumerId: input.consumerId, hospitalId: hospital.id, serviceId: service.id,
     preferredDate: Timestamp.fromDate(input.preferredDate), preferredTime: input.preferredTime,

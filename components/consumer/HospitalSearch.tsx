@@ -13,7 +13,7 @@ import { usePaginatedList } from "@/hooks/usePaginatedList";
 export function HospitalSearch() {
   const [search, setSearch] = useState("");
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) => listPublicHospitals({ pageSize: 20, cursor }), []);
-  const { items, error, isLoading, hasMore, loadMore } = usePaginatedList<HospitalDocument>(loader, "Hospitals could not be loaded.");
+  const { items, error, isLoading, hasMore, loadMore } = usePaginatedList<HospitalDocument>(loader, "We could not load the hospitals. Refresh the page and try again.");
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     return term ? items.filter((item) => `${item.name} ${item.city} ${item.state}`.toLowerCase().includes(term)) : items;
@@ -23,7 +23,7 @@ export function HospitalSearch() {
       <label className="portal-form"><span className="full">Search the current page by hospital, city, or state
         <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search hospitals" /></span></label>
     </div>
-    <PortalFeedback error={error} empty={!error && !isLoading && visible.length === 0 ? "No active public hospitals are available yet." : undefined} />
+    <PortalFeedback error={error} empty={!error && !isLoading && visible.length === 0 ? (search.trim() ? "No hospitals match your search. Try another hospital, city, or state." : "No hospitals are available yet. Please check again soon.") : undefined} />
     <div className="portal-grid">{visible.map((hospital) => <article className="portal-card" key={hospital.id}>
       <span className="portal-status">{hospital.city}, {hospital.state}</span>
       <h2 style={{ marginTop: 14 }}>{hospital.name}</h2><p>{hospital.description}</p>

@@ -1,21 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import type { HospitalDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import {
   activateHospital,
+  archiveHospital,
   confirmHospitalContractSigning,
   deactivateHospital,
   getHospital,
   recordHospitalContractGeneration,
+  updateHospital,
 } from "@/services/hospitals/hospitalService";
 import { buildHospitalContractHtml } from "@/features/hospitals/contractTemplate";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { formatStatus } from "@/utils/text";
 import { toDate } from "@/utils/date";
+import { hospitalFormValues, validateHospitalFields, type HospitalValidationErrors } from "@/features/hospitals/validation";
+import { IndiaStateSelect } from "@/components/forms/IndiaStateSelect";
 
 function formatDate(value: unknown) {
   const date = toDate(value);
@@ -29,20 +33,22 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [contractUrl, setContractUrl] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<HospitalValidationErrors>({});
 
   const reload = useCallback(async () => {
     const record = await getHospital(hospitalId);
     setHospital(record);
     setContractUrl(record?.contractUrl ?? "");
     setLoading(false);
-    if (!record) setError("Hospital could not be found.");
+    if (!record) setError("We could not find this hospital. Return to the hospital list and choose another record.");
     return record;
   }, [hospitalId]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       void reload().catch(() => {
-        setError("Hospital details could not be loaded.");
+        setError("We could not load these hospital details. Refresh the page and try again.");
         setLoading(false);
       });
     }, 0);
@@ -59,7 +65,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
       await reload();
       setMessage(success);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "The hospital could not be updated.");
+      setError(caught instanceof Error ? caught.message : "We could not complete that step. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -69,7 +75,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     if (!hospital || busy) return;
     const contractWindow = window.open("", "_blank");
     if (!contractWindow) {
-      setError("Allow pop-ups for Ayursarga to view and save the contract PDF.");
+      setError("Allow pop-ups for Ayursarga, then select Generate Contract PDF again.");
       return;
     }
     contractWindow.opener = null;
@@ -81,22 +87,79 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         contractWindow.document.write(buildHospitalContractHtml(record));
         contractWindow.document.close();
       }
-    }, "Contract generated and recorded in the audit log.");
+    }, "The contract is ready. In the new window, select Print / Save as PDF to download it.");
+  }
+
+  async function saveHospitalDetails(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!hospital || busy) return;
+    const validation = validateHospitalFields({
+      ...hospitalFormValues(new FormData(event.currentTarget)),
+      imageUrl: hospital.imageUrl,
+      commissionPercentage: hospital.commissionPercentage,
+    });
+    setFieldErrors(validation.errors);
+    setError(null);
+    setMessage(null);
+    if (!validation.isValid) {
+      setError("Please check the highlighted fields, then save the details again.");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      await updateHospital(hospital.id, {
+        name: validation.data.name,
+        email: validation.data.email,
+        phone: validation.data.phone,
+        address: validation.data.address,
+        city: validation.data.city,
+        state: validation.data.state,
+        description: validation.data.description,
+      }, hospital);
+      await reload();
+      setEditing(false);
+      setFieldErrors({});
+      setMessage("The hospital details have been updated.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "We could not save the hospital details. Please try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   const contractStatus = hospital?.contractStatus ?? "not_generated";
   return <PortalShell role="admin" title="Hospital Details">
     <div className="portal-actions portal-page-actions"><Link className="portal-button secondary" href="/admin/hospitals">Back to hospitals</Link></div>
-    <PortalFeedback error={error} empty={!error && !loading && !hospital ? "Hospital could not be found." : undefined} />
+    <PortalFeedback error={error} empty={!error && !loading && !hospital ? "Return to Hospitals and choose a hospital to continue." : undefined} />
     {message && <p className="portal-form-success">{message}</p>}
     {hospital && <>
       <article className="portal-card">
         <div className="portal-row-heading"><h2>{hospital.name}</h2><span className="portal-status">{formatStatus(hospital.status)}</span></div>
-        <p>{hospital.description}</p>
-        <div className="portal-card-meta">
-          <span>{hospital.email}</span><span>{hospital.phone}</span><span>{hospital.city}, {hospital.state}</span><span>Commission {hospital.commissionPercentage}%</span><span>{hospital.isPublic ? "Public" : "Private"}</span>
-        </div>
-        <p>{hospital.address}</p>
+        {editing ? <form className="portal-form portal-edit-form" onSubmit={saveHospitalDetails} noValidate>
+          <label>Hospital name *<input name="name" defaultValue={hospital.name} required minLength={2} maxLength={120} aria-invalid={Boolean(fieldErrors.name)} />{fieldErrors.name && <span className="portal-field-error">{fieldErrors.name}</span>}</label>
+          <label>Official email *<input name="email" type="email" defaultValue={hospital.email} required maxLength={160} aria-invalid={Boolean(fieldErrors.email)} />{fieldErrors.email && <span className="portal-field-error">{fieldErrors.email}</span>}</label>
+          <label>Phone *<input name="phone" type="tel" defaultValue={hospital.phone} required minLength={7} maxLength={25} aria-invalid={Boolean(fieldErrors.phone)} />{fieldErrors.phone && <span className="portal-field-error">{fieldErrors.phone}</span>}</label>
+          <label>City / locality *<input name="city" defaultValue={hospital.city} required minLength={2} maxLength={80} aria-invalid={Boolean(fieldErrors.city)} />{fieldErrors.city && <span className="portal-field-error">{fieldErrors.city}</span>}</label>
+          <label>State *<IndiaStateSelect name="state" defaultValue={hospital.state} required aria-invalid={Boolean(fieldErrors.state)} />{fieldErrors.state && <span className="portal-field-error">{fieldErrors.state}</span>}</label>
+          <label className="full">Complete address *<input name="address" defaultValue={hospital.address} required minLength={10} maxLength={300} aria-invalid={Boolean(fieldErrors.address)} />{fieldErrors.address && <span className="portal-field-error">{fieldErrors.address}</span>}</label>
+          <label className="full">Description<textarea name="description" defaultValue={hospital.description} maxLength={2000} aria-invalid={Boolean(fieldErrors.description)} />{fieldErrors.description && <span className="portal-field-error">{fieldErrors.description}</span>}</label>
+          <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save details"}</button><button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditing(false); setFieldErrors({}); setError(null); }}>Cancel</button></div>
+        </form> : <>
+          <p>{hospital.description || "No description provided."}</p>
+          <div className="portal-card-meta">
+            <span>{hospital.email}</span><span>{hospital.phone}</span><span>{hospital.city}, {hospital.state}</span><span>Commission {hospital.commissionPercentage}%</span><span>{hospital.isPublic ? "Public" : "Private"}</span>
+          </div>
+          <p>{hospital.address}</p>
+          {hospital.status !== "archived" && <div className="portal-actions">
+            <button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditing(true); setError(null); setMessage(null); }}>Edit hospital</button>
+            <button className="portal-button danger" type="button" disabled={busy} onClick={() => {
+              if (window.confirm("Remove this hospital from the normal hospital list? Its details and history will still be kept safely.")) {
+                void runAction((record) => archiveHospital(record.id, record), "The hospital has been removed from the normal list. Its details and history are still safely stored.");
+              }
+            }}>Delete hospital</button>
+          </div>}
+        </>}
       </article>
 
       <article className="portal-card portal-contract-card">
@@ -112,20 +175,20 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         <div className="portal-actions">
           {hospital.status === "pending" && <button className="portal-button secondary" type="button" disabled={busy} onClick={generateContract}>{contractStatus === "not_generated" ? "Generate Contract PDF" : "View / Regenerate Contract PDF"}</button>}
           {hospital.status === "pending" && contractStatus === "generated" && <button className="portal-button secondary" type="button" disabled={busy} onClick={() => {
-            if (window.confirm("Confirm that the hospital has signed the contract?")) void runAction((record) => confirmHospitalContractSigning(record.id, record), "Contract signature confirmed.");
+            if (window.confirm("Have you received the signed contract from this hospital?")) void runAction((record) => confirmHospitalContractSigning(record.id, record), "The signed contract has been confirmed. Add its URL to activate the hospital.");
           }}>Confirm signed contract</button>}
           {hospital.status === "pending" && contractStatus === "signed" && <button className="portal-button" type="button" disabled={busy} onClick={() => {
             if (!contractUrl.trim()) {
-              setError("Add the signed contract URL before activating the hospital.");
+              setError("Paste the signed contract URL below before activating the hospital.");
               return;
             }
-            if (window.confirm("Activate this hospital and make it publicly discoverable?")) void runAction((record) => activateHospital(record.id, record, contractUrl), "Hospital activated.");
+            if (window.confirm("Activate this hospital and show it to consumers?")) void runAction((record) => activateHospital(record.id, record, contractUrl), "The hospital is now active and visible to consumers.");
           }}>Activate hospital</button>}
           {hospital.status === "active" && <button className="portal-button secondary" type="button" disabled={busy} onClick={() => {
-            if (window.confirm("Deactivate this hospital and remove it from public discovery?")) void runAction((record) => deactivateHospital(record.id, record), "Hospital deactivated.");
+            if (window.confirm("Deactivate this hospital and hide it from consumers?")) void runAction((record) => deactivateHospital(record.id, record), "The hospital is now inactive and hidden from consumers.");
           }}>Deactivate hospital</button>}
         </div>
-        <p>Activation is available only after the generated contract is confirmed as signed. Every step is written to the immutable audit log.</p>
+        <p>Start by generating the contract. After the hospital returns the signed copy, confirm it here and paste the signed contract URL. You can then activate the hospital for consumers.</p>
       </article>
     </>}
   </PortalShell>;

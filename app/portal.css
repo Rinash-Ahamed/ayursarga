@@ -71,6 +71,7 @@ body.portal-active{ cursor:auto; overflow:auto; height:auto; }
 .portal-row-heading{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
 .portal-page-actions{ margin-bottom:18px; }
 .portal-contract-card{ margin-top:18px; }
+.portal-edit-form{ margin-top:22px; }
 .portal-date-grid{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:22px 0; }
 .portal-date-grid div{ padding:14px; border-radius:12px; background:var(--cream-2); }
 .portal-date-grid span,.portal-date-grid strong{ display:block; }
@@ -79,6 +80,9 @@ body.portal-active{ cursor:auto; overflow:auto; height:auto; }
 .portal-contract-url{ display:grid; gap:7px; margin:18px 0; color:var(--sage); font-size:11px; }
 .portal-contract-url input{ width:100%; padding:12px 14px; border:1px solid rgba(58,61,46,.2); border-radius:10px; background:rgba(255,255,255,.35); color:var(--ink); font:inherit; font-size:13px; }
 .portal-inline-link{ color:var(--clay-dark); text-decoration:underline; text-underline-offset:3px; }
+.portal-button.danger{ border-color:rgba(139,94,60,.35); background:rgba(139,94,60,.08); color:var(--rust); }
+.portal-search{ display:grid; gap:7px; margin-bottom:22px; color:var(--sage); font-size:11px; }
+.portal-search input{ width:min(100%,420px); padding:12px 14px; border:1px solid rgba(58,61,46,.2); border-radius:10px; background:rgba(255,255,255,.35); color:var(--ink); font:inherit; font-size:13px; }
 .portal-stat strong{ display:block; color:var(--forest); font-family:var(--font-display); font-size:38px; font-weight:400; }
 .portal-stat span{ color:var(--sage); font-size:11px; text-transform:uppercase; letter-spacing:.09em; }
 @media(max-width:760px){ .portal-workspace{ grid-template-columns:1fr; } .portal-sidebar{ position:static; height:auto; padding:22px; } .portal-wordmark{ margin-bottom:18px; } .portal-sidebar nav{ display:flex; overflow:auto; } .portal-sidebar nav a{ white-space:nowrap; } .portal-account{ margin-top:18px; } .portal-content{ padding:34px 22px 60px; } .portal-form{ grid-template-columns:1fr; } .portal-date-grid{ grid-template-columns:1fr 1fr; } }
