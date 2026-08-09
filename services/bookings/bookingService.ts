@@ -45,7 +45,25 @@ export const listConsumerBookings = (consumerId: string, options?: Pick<QueryPag
   listBookings([{ field: "consumerId", operator: "==", value: consumerId }], options);
 export const listHospitalBookings = (hospitalId: string, options?: Pick<QueryPageOptions, "pageSize" | "cursor">) =>
   listBookings([{ field: "hospitalId", operator: "==", value: hospitalId }], options);
-export const listAllBookings = (options?: Pick<QueryPageOptions, "pageSize" | "cursor">) => listBookings([], options);
+
+export type AdminBookingFilters = {
+  hospitalId?: string;
+  status?: BookingStatus;
+  createdFrom?: Date;
+  createdBefore?: Date;
+};
+
+export function listAdminBookings(
+  input: AdminBookingFilters,
+  options?: Pick<QueryPageOptions, "pageSize" | "cursor">,
+) {
+  const filters: NonNullable<QueryPageOptions["filters"]> = [];
+  if (input.hospitalId) filters.push({ field: "hospitalId", operator: "==", value: input.hospitalId });
+  if (input.status) filters.push({ field: "status", operator: "==", value: input.status });
+  if (input.createdFrom) filters.push({ field: "createdAt", operator: ">=", value: Timestamp.fromDate(input.createdFrom) });
+  if (input.createdBefore) filters.push({ field: "createdAt", operator: "<", value: Timestamp.fromDate(input.createdBefore) });
+  return listBookings(filters, options);
+}
 
 export const cancelConsumerBooking = (id: string, previousValues?: DocumentData) => updateAuditedDocument(COLLECTIONS.bookings, id, {
   status: "cancelled", updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
