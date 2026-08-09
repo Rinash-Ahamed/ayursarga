@@ -25,6 +25,6 @@ export function AuthFormShell({
       <p className="portal-auth-description">{description}</p>
       {children}
     </section>
-    <Link href={ROUTES.public.home} className="portal-return">← Return to the public website</Link>
+    <Link href={ROUTES.public.home} className="portal-return">Return to the public website</Link>
   </main>;
 }

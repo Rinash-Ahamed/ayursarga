@@ -39,7 +39,7 @@ export function LoginForm({ role, requestedPath }: { role: PortalRole; requested
       <label>Email address<input name="email" type="email" autoComplete="email" required /></label>
       <PasswordField label="Password" name="password" autoComplete="current-password" required />
       {(error || localError) && <p className="portal-form-error" role="alert">{localError || error?.message}</p>}
-      <button type="submit" disabled={isLoading}>{isLoading ? "Signing in…" : "Sign in"}<span aria-hidden="true">→</span></button>
+      <button type="submit" disabled={isLoading}>{isLoading ? "Signing in..." : "Sign in"}</button>
     </form>
     <div className="portal-auth-links">
       <Link href={forgotPath}>Forgot password?</Link>
