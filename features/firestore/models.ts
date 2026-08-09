@@ -35,6 +35,14 @@ export type HospitalDocument = AuditedDocument & {
   status: UserStatus;
   isPublic: boolean;
   commissionPercentage: number;
+  contractStatus: "not_generated" | "generated" | "signed";
+  contractGeneratedAt: Timestamp | null;
+  contractGeneratedBy: string | null;
+  contractSignedAt: Timestamp | null;
+  contractSignedBy: string | null;
+  contractUrl: string | null;
+  activatedAt: Timestamp | null;
+  activatedBy: string | null;
 };
 
 export type ServiceDocument = AuditedDocument & {
@@ -114,7 +122,15 @@ export type NotificationDocument = AuditedDocument & {
   status: "active" | "archived";
 };
 
-export type AuditAction = "create" | "update" | "archive" | "restore" | "status_change";
+export type AuditAction =
+  | "create"
+  | "update"
+  | "archive"
+  | "restore"
+  | "status_change"
+  | "contract_generated"
+  | "contract_signed"
+  | "hospital_activated";
 
 export type AuditLogDocument = {
   action: AuditAction;

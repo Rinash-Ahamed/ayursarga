@@ -4,24 +4,70 @@ import { useEffect, useState, type FormEvent } from "react";
 import type { HospitalDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import { getHospital, updateHospitalProfile } from "@/services/hospitals/hospitalService";
+import { hospitalFormValues, validateHospitalFields, type HospitalValidationErrors } from "@/features/hospitals/validation";
 import { useAuth } from "@/hooks/useAuth";
 import { PortalShell } from "@/components/portal/PortalShell";
 
 export function HospitalProfile() {
-  const { userProfile } = useAuth(); const id = userProfile?.hospitalId;
+  const { userProfile } = useAuth();
+  const id = userProfile?.hospitalId;
   const [hospital, setHospital] = useState<DocumentRecord<HospitalDocument> | null>(null);
-  const [message, setMessage] = useState<string | null>(null); const [busy, setBusy] = useState(false);
-  useEffect(() => { if (id) void getHospital(id).then(setHospital).catch(() => setMessage("Profile could not be loaded.")); }, [id]);
-  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (!id) return;
-    const data = new FormData(event.currentTarget); setBusy(true); setMessage(null);
-    try { await updateHospitalProfile(id, { name: String(data.get("name")), description: String(data.get("description")), email: String(data.get("email")), phone: String(data.get("phone")), address: String(data.get("address")), city: String(data.get("city")), state: String(data.get("state")), imageUrl: String(data.get("imageUrl") || "") || null }, hospital ?? undefined); setMessage("Hospital profile updated."); }
-    catch { setMessage("Profile could not be updated."); } finally { setBusy(false); } }
-  return <PortalShell role="hospital" title="Hospital Profile">{hospital && <form className="portal-card portal-form" onSubmit={submit}>
-    <label>Name<input name="name" defaultValue={hospital.name} required /></label><label>Email<input name="email" type="email" defaultValue={hospital.email} required /></label>
-    <label>Phone<input name="phone" defaultValue={hospital.phone} required /></label><label>City<input name="city" defaultValue={hospital.city} required /></label>
-    <label>State<input name="state" defaultValue={hospital.state} required /></label><label>Image URL<input name="imageUrl" type="url" defaultValue={hospital.imageUrl ?? ""} /></label>
-    <label className="full">Address<input name="address" defaultValue={hospital.address} required /></label><label className="full">Description<textarea name="description" defaultValue={hospital.description} required /></label>
-    <p className="full">Commission: {hospital.commissionPercentage}% · Visibility and commission are controlled by Ayursarga admin.</p>
-    {message && <p className="portal-form-success full">{message}</p>}<div className="portal-actions full"><button className="portal-button" disabled={busy}>Save profile</button></div>
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<HospitalValidationErrors>({});
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (id) void getHospital(id).then(setHospital).catch(() => setError("Profile could not be loaded."));
+  }, [id]);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!id || !hospital) return;
+    const values = hospitalFormValues(new FormData(event.currentTarget));
+    const validation = validateHospitalFields({ ...values, commissionPercentage: hospital.commissionPercentage });
+    setFieldErrors(validation.errors);
+    setMessage(null);
+    setError(null);
+    if (!validation.isValid) {
+      setError("Review the highlighted hospital details before saving.");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const profile = {
+        name: validation.data.name,
+        email: validation.data.email,
+        phone: validation.data.phone,
+        address: validation.data.address,
+        city: validation.data.city,
+        state: validation.data.state,
+        description: validation.data.description,
+        imageUrl: validation.data.imageUrl,
+      };
+      await updateHospitalProfile(id, profile, hospital);
+      setHospital((current) => current ? { ...current, ...profile } : current);
+      setMessage("Hospital profile updated.");
+    } catch {
+      setError("Profile could not be updated.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <PortalShell role="hospital" title="Hospital Profile">{hospital && <form className="portal-card portal-form" onSubmit={submit} noValidate>
+    <label>Name *<input name="name" defaultValue={hospital.name} required minLength={2} maxLength={120} aria-invalid={Boolean(fieldErrors.name)} />{fieldErrors.name && <span className="portal-field-error">{fieldErrors.name}</span>}</label>
+    <label>Email *<input name="email" type="email" defaultValue={hospital.email} required maxLength={160} aria-invalid={Boolean(fieldErrors.email)} />{fieldErrors.email && <span className="portal-field-error">{fieldErrors.email}</span>}</label>
+    <label>Phone *<input name="phone" type="tel" defaultValue={hospital.phone} required minLength={7} maxLength={25} aria-invalid={Boolean(fieldErrors.phone)} />{fieldErrors.phone && <span className="portal-field-error">{fieldErrors.phone}</span>}</label>
+    <label>City *<input name="city" defaultValue={hospital.city} required minLength={2} maxLength={80} aria-invalid={Boolean(fieldErrors.city)} />{fieldErrors.city && <span className="portal-field-error">{fieldErrors.city}</span>}</label>
+    <label>State *<input name="state" defaultValue={hospital.state} required minLength={2} maxLength={80} aria-invalid={Boolean(fieldErrors.state)} />{fieldErrors.state && <span className="portal-field-error">{fieldErrors.state}</span>}</label>
+    <label>Image URL <small>Optional</small><input name="imageUrl" type="url" defaultValue={hospital.imageUrl ?? ""} maxLength={500} aria-invalid={Boolean(fieldErrors.imageUrl)} />{fieldErrors.imageUrl && <span className="portal-field-error">{fieldErrors.imageUrl}</span>}</label>
+    <label className="full">Address *<input name="address" defaultValue={hospital.address} required minLength={10} maxLength={300} aria-invalid={Boolean(fieldErrors.address)} />{fieldErrors.address && <span className="portal-field-error">{fieldErrors.address}</span>}</label>
+    <label className="full">Description<textarea name="description" defaultValue={hospital.description} maxLength={2000} aria-invalid={Boolean(fieldErrors.description)} />{fieldErrors.description && <span className="portal-field-error">{fieldErrors.description}</span>}</label>
+    <p className="full">Commission: {hospital.commissionPercentage}% · Visibility, commission and approval are controlled by Ayursarga Admin.</p>
+    {error && <p className="portal-form-error full" role="alert">{error}</p>}
+    {message && <p className="portal-form-success full">{message}</p>}
+    <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save profile"}</button></div>
   </form>}</PortalShell>;
 }

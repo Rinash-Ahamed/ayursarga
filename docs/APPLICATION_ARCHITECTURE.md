@@ -11,7 +11,7 @@ their own layouts and are compiled as separate Next.js route segments.
 | Consumer auth | `/app/login`, `/app/register`, `/app/forgot-password` |
 | Hospital | `/hospital`, `/hospital/profile`, `/hospital/services`, `/hospital/bookings` |
 | Hospital auth | `/hospital/login`, `/hospital/forgot-password` |
-| Admin | `/admin`, `/admin/hospitals`, `/admin/users`, `/admin/bookings` |
+| Admin | `/admin`, `/admin/hospitals`, `/admin/hospitals/[hospitalId]`, `/admin/users`, `/admin/bookings` |
 | Admin auth | `/admin/login`, `/admin/forgot-password` |
 
 `AuthContext` loads and caches one user profile per authenticated session.
@@ -54,6 +54,22 @@ public route defers its authentication check until the browser is idle, and
 Firestore is loaded only when an authenticated profile or application feature
 actually needs it. User profiles are request-deduplicated and cached once per
 session in `AuthContext`.
+
+## Hospital onboarding
+
+Admin-created hospitals always begin as private `pending` records. Current
+mandatory fields are hospital name, official email, phone, complete address,
+city/locality, state, and commission percentage. Description is optional. The
+same validation rules are shared by the Admin creation form,
+hospital profile form, and service boundary.
+
+The Admin hospital-details route records contract generation, signed-contract
+confirmation, and activation as distinct audited actions. Activation is
+available only after the contract state is `signed` and Admin supplies the
+signed-contract URL; it writes `contractUrl` and `activatedAt` and makes the hospital public atomically. `createdAt`, `contractSignedAt`, and
+`activatedAt` are displayed in the details view. The current contract HTML is a
+clearly marked development template and is isolated in
+`features/hospitals/contractTemplate.ts` for replacement with approved text.
 
 ## Security boundary
 

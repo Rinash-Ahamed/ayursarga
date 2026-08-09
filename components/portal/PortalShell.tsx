@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import type { PortalRole } from "@/features/auth/contracts";
@@ -29,7 +30,10 @@ export function PortalShell({ role, title, eyebrow, children }: {
   const { userProfile, logout, isLoading } = useAuth();
   return <main className="portal-workspace">
     <aside className="portal-sidebar">
-      <Link href="/" className="portal-wordmark">Ayursarga</Link>
+      <Link href="/" className="portal-wordmark" aria-label="Return to Ayursarga home">
+        <Image src="/mainlogo.png" alt="" width={44} height={44} quality={90} sizes="44px" />
+        <span>Ayursarga</span>
+      </Link>
       <nav aria-label={`${role} navigation`}>
         {NAVIGATION[role].map(([label, href]) =>
           <Link key={href} href={href} aria-current={pathname === href ? "page" : undefined}>{label}</Link>)}

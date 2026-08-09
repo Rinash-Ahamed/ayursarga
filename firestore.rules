@@ -52,6 +52,43 @@ service cloud.firestore {
       ]);
     }
 
+    function hasExactHospitalFields() {
+      return request.resource.data.keys().hasOnly([
+        'name', 'description', 'email', 'phone', 'address', 'city', 'state',
+        'imageUrl', 'status', 'isPublic', 'commissionPercentage',
+        'contractStatus', 'contractGeneratedAt', 'contractGeneratedBy',
+        'contractSignedAt', 'contractSignedBy', 'contractUrl', 'activatedAt', 'activatedBy',
+        'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
+        'archivedAt', 'archivedBy', 'lastAuditId'
+      ]);
+    }
+
+    function hasValidRequiredHospitalFields() {
+      return request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 2000
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 160
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() >= 7
+        && request.resource.data.phone.size() <= 25
+        && request.resource.data.address is string
+        && request.resource.data.address.size() >= 10
+        && request.resource.data.address.size() <= 300
+        && request.resource.data.city is string
+        && request.resource.data.city.size() >= 2
+        && request.resource.data.city.size() <= 80
+        && request.resource.data.state is string
+        && request.resource.data.state.size() >= 2
+        && request.resource.data.state.size() <= 80
+        && (request.resource.data.imageUrl == null || request.resource.data.imageUrl is string)
+        && request.resource.data.commissionPercentage is number
+        && request.resource.data.commissionPercentage >= 0
+        && request.resource.data.commissionPercentage <= 100;
+    }
+
     function isBootstrapAdminIdentity() {
       return isSignedIn() && request.auth.token.email == 'info@ayursarga.com';
     }
@@ -68,7 +105,8 @@ service cloud.firestore {
         && audit.recordId == recordId
         && audit.actorId == request.auth.uid
         && audit.actorRole == getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
-        && audit.action in ['create', 'update', 'archive', 'restore', 'status_change']
+        && audit.action in ['create', 'update', 'archive', 'restore', 'status_change',
+          'contract_generated', 'contract_signed', 'hospital_activated']
         && audit.timestamp == request.time
         && audit.updatedValues.lastAuditId == auditId;
     }
@@ -76,6 +114,79 @@ service cloud.firestore {
     function hasCreateAudit(module, recordId) {
       let audit = getAfter(/databases/$(database)/documents/auditLogs/$(request.resource.data.lastAuditId)).data;
       return hasLinkedAudit(module, recordId) && audit.action == 'create';
+    }
+
+    function linkedAuditAction() {
+      return getAfter(/databases/$(database)/documents/auditLogs/$(request.resource.data.lastAuditId)).data.action;
+    }
+
+    function validAdminHospitalUpdate() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let action = linkedAuditAction();
+      return (action == 'update'
+          && changed.hasOnly([
+            'name', 'description', 'email', 'phone', 'address', 'city', 'state',
+            'imageUrl', 'commissionPercentage', 'updatedAt', 'updatedBy', 'lastAuditId'
+          ]))
+        || (action == 'status_change'
+          && resource.data.status == 'active'
+          && request.resource.data.status == 'inactive'
+          && request.resource.data.isPublic == false
+          && changed.hasOnly(['status', 'isPublic', 'updatedAt', 'updatedBy', 'lastAuditId']))
+        || (action == 'contract_generated'
+          && resource.data.status == 'pending'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.contractStatus in ['generated', 'signed']
+          && request.resource.data.contractGeneratedAt == request.time
+          && request.resource.data.contractGeneratedBy == request.auth.uid
+          && changed.hasOnly([
+            'contractStatus', 'contractGeneratedAt', 'contractGeneratedBy',
+            'contractSignedAt', 'contractSignedBy', 'contractUrl', 'activatedAt', 'activatedBy',
+            'updatedAt', 'updatedBy', 'lastAuditId'
+          ]))
+        || (action == 'contract_signed'
+          && resource.data.status == 'pending'
+          && resource.data.contractStatus == 'generated'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.contractStatus == 'signed'
+          && request.resource.data.contractSignedAt == request.time
+          && request.resource.data.contractSignedBy == request.auth.uid
+          && changed.hasOnly([
+            'contractStatus', 'contractSignedAt', 'contractSignedBy',
+            'updatedAt', 'updatedBy', 'lastAuditId'
+          ]))
+        || (action == 'hospital_activated'
+          && resource.data.status == 'pending'
+          && resource.data.contractStatus == 'signed'
+          && resource.data.contractSignedAt != null
+          && request.resource.data.status == 'active'
+          && request.resource.data.isPublic == true
+          && request.resource.data.contractStatus == 'signed'
+          && request.resource.data.contractUrl is string
+          && request.resource.data.contractUrl.size() > 8
+          && request.resource.data.contractUrl.size() <= 500
+          && request.resource.data.contractUrl.matches('https?://.+')
+          && request.resource.data.activatedAt == request.time
+          && request.resource.data.activatedBy == request.auth.uid
+          && changed.hasOnly([
+            'status', 'isPublic', 'contractUrl', 'activatedAt', 'activatedBy',
+            'updatedAt', 'updatedBy', 'lastAuditId'
+          ]))
+        || (action == 'archive'
+          && request.resource.data.status == 'archived'
+          && request.resource.data.isPublic == false
+          && changed.hasOnly([
+            'status', 'isPublic', 'archivedAt', 'archivedBy',
+            'updatedAt', 'updatedBy', 'lastAuditId'
+          ]))
+        || (action == 'restore'
+          && resource.data.status == 'archived'
+          && request.resource.data.status == 'inactive'
+          && request.resource.data.isPublic == false
+          && changed.hasOnly([
+            'status', 'isPublic', 'archivedAt', 'archivedBy',
+            'updatedAt', 'updatedBy', 'lastAuditId'
+          ]));
     }
 
     function validHospitalBookingTransition() {
@@ -127,6 +238,18 @@ service cloud.firestore {
         || belongsToHospital(hospitalId)
         || (resource.data.status == 'active' && resource.data.isPublic == true);
       allow create: if isAdmin()
+        && hasExactHospitalFields()
+        && hasValidRequiredHospitalFields()
+        && request.resource.data.status == 'pending'
+        && request.resource.data.isPublic == false
+        && request.resource.data.contractStatus == 'not_generated'
+        && request.resource.data.contractGeneratedAt == null
+        && request.resource.data.contractGeneratedBy == null
+        && request.resource.data.contractSignedAt == null
+        && request.resource.data.contractSignedBy == null
+        && request.resource.data.contractUrl == null
+        && request.resource.data.activatedAt == null
+        && request.resource.data.activatedBy == null
         && request.resource.data.createdAt == request.time
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.updatedAt == request.time
@@ -137,7 +260,7 @@ service cloud.firestore {
       allow update: if hasLinkedAudit('hospitals', hospitalId)
         && request.resource.data.updatedAt == request.time
         && request.resource.data.updatedBy == request.auth.uid
-        && (isAdmin() || (
+        && ((isAdmin() && validAdminHospitalUpdate()) || (
           belongsToHospital(hospitalId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name', 'description', 'email', 'phone', 'address', 'city', 'state',
@@ -246,7 +369,8 @@ service cloud.firestore {
         && request.resource.data.actorId == request.auth.uid
         && request.resource.data.actorRole
           == getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
-        && request.resource.data.action in ['create', 'update', 'archive', 'restore', 'status_change']
+        && request.resource.data.action in ['create', 'update', 'archive', 'restore', 'status_change',
+          'contract_generated', 'contract_signed', 'hospital_activated']
         && request.resource.data.recordId is string
         && (request.resource.data.previousValues == null
           || request.resource.data.previousValues is map)

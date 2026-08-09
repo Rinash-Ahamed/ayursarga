@@ -49,6 +49,12 @@ Firestore batch. Each record points to the associated entry through
 Audit entries contain action, module, record ID, authenticated actor and role,
 previous values, changed values, server timestamp, and available device data.
 
+Hospital approval also records `contract_generated`, `contract_signed`, and
+`hospital_activated` actions. Hospital documents retain `contractStatus`,
+generation/signing actor and timestamp fields, and activation actor and
+timestamp fields. Rules require a Pending hospital and a confirmed signed
+contract before allowing the Active/Public transition.
+
 Audit logs are readable only by active admins and cannot be updated or deleted
 through client rules. Client code deliberately stores `ipAddress: null`: a
 browser cannot provide a trustworthy source IP. Trusted IP enrichment and
