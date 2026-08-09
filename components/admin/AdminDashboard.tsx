@@ -11,7 +11,7 @@ export function AdminDashboard() {
   const [stats, setStats] = useState({ hospitals: 0, users: 0, bookings: 0, commission: 0 });
   useEffect(() => { void Promise.all([
     countDocuments(COLLECTIONS.hospitals, [{ field: "status", operator: "!=", value: "archived" }]),
-    countDocuments(COLLECTIONS.users, [{ field: "status", operator: "!=", value: "archived" }]),
+    countDocuments(COLLECTIONS.users, [{ field: "role", operator: "==", value: "consumer" }]),
     countDocuments(COLLECTIONS.bookings),
     runFilteredQuery<BookingDocument>({ collectionPath: COLLECTIONS.bookings, filters: [{ field: "status", operator: "==", value: "completed" }], sort: { field: "createdAt", direction: "desc" }, pageSize: 20 }),
   ]).then(([hospitals, users, bookings, completed]) => setStats({ hospitals, users, bookings, commission: completed.documents.reduce((sum, item) => sum + item.estimatedCommission, 0) })).catch(() => undefined); }, []);
