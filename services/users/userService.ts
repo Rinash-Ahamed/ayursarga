@@ -126,9 +126,10 @@ export function clearUserProfileCache(uid?: string) {
   profileRequests.clear();
 }
 
-export function listUsers(options: Pick<QueryPageOptions, "pageSize" | "cursor"> = {}) {
+export function listUsers(role: "consumer" | "hospital", options: Pick<QueryPageOptions, "pageSize" | "cursor"> = {}) {
   return runFilteredQuery<UserDocument>({
     collectionPath: COLLECTIONS.users,
+    filters: [{ field: "role", operator: "==", value: role }],
     sort: { field: "createdAt", direction: "desc" },
     ...options,
   });
