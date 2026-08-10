@@ -99,7 +99,7 @@ export function HospitalsManager() {
     <PortalFeedback error={error} empty={!error && !isLoading && items.length === 0 ? "No hospitals yet. Select Add Hospital to create the first one." : undefined} />
     <div className="portal-list">{items.map((item) => <article className="portal-card" key={item.id}>
       <div className="portal-row-heading"><h3>{item.name}</h3><span className="portal-status" data-status={item.status}>{formatStatus(item.status)}</span></div>
-      <p>{item.city}, {item.state} · Commission {item.commissionPercentage}% · {item.isPublic ? "Public" : "Private"}</p>
+      <p>{item.city}, {item.state} · Commission {item.commissionPercentage}%</p>
       <div className="portal-actions">
         <Link className="portal-button" href={`/admin/hospitals/${encodeURIComponent(item.id)}`}>View details</Link>
       </div>

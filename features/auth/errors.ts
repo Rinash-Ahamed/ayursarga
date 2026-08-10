@@ -52,6 +52,7 @@ export function toAuthenticationError(error: unknown): AuthenticationError {
       "auth/invalid-email": "invalid-credentials",
       "auth/user-not-found": "invalid-credentials",
       "auth/wrong-password": "invalid-credentials",
+      "auth/requires-recent-login": "invalid-credentials",
       "auth/email-already-in-use": "email-in-use",
       "auth/weak-password": "weak-password",
       "auth/user-disabled": "user-disabled",

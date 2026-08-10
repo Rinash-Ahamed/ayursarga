@@ -3,10 +3,13 @@
 import {
   createUserWithEmailAndPassword,
   deleteUser,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
+  updatePassword,
   type User,
 } from "firebase/auth";
 import type {
@@ -78,6 +81,20 @@ export const authService: AuthAdapter = {
   async resetPassword(email: string) {
     try {
       await sendPasswordResetEmail(getClientAuth(), email.trim());
+    } catch (error) {
+      throw toAuthenticationError(error);
+    }
+  },
+  async changePassword(currentPassword: string, newPassword: string) {
+    try {
+      if (!isValidPassword(newPassword)) throw new AuthenticationError("weak-password");
+      const user = getClientAuth().currentUser;
+      if (!user?.email) throw new AuthenticationError("unauthenticated");
+      await reauthenticateWithCredential(
+        user,
+        EmailAuthProvider.credential(user.email, currentPassword),
+      );
+      await updatePassword(user, newPassword);
     } catch (error) {
       throw toAuthenticationError(error);
     }

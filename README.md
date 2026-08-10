@@ -88,6 +88,18 @@ The preservation and audit design is documented in
 - The Hospital Profile must not expose Image URL, commission, contract, audit,
   activation, visibility, or other Admin-management controls.
 
+### Hospital login lifecycle
+
+- Activating a hospital provisions or reconnects its Firebase Authentication
+  account using the official hospital email and sends a secure Firebase password
+  setup link. No default password or password hash is stored in Firestore.
+- Admin can resend the same secure setup/reset email from Hospital Details.
+  Hospital users can also use Forgot password and can change their password from
+  the authenticated Hospital portal after confirming their current password.
+- The provisioning API uses the Firebase Admin SDK on the trusted server. Its
+  runtime must have Application Default Credentials; do not expose service
+  account credentials through `NEXT_PUBLIC_*` variables or commit them.
+
 See [AGENTS.md](AGENTS.md) for implementation guardrails that future coding
 work must preserve.
 

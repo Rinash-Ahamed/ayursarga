@@ -35,6 +35,11 @@ service cloud.firestore {
       return isHospital() && getCurrentUser().hospitalId == hospitalId;
     }
 
+    function hasOperationalHospitalAccess(hospitalId) {
+      return belongsToHospital(hospitalId)
+        && get(/databases/$(database)/documents/hospitals/$(hospitalId)).data.status != 'archived';
+    }
+
     function isDocumentOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
@@ -235,7 +240,7 @@ service cloud.firestore {
 
     match /hospitals/{hospitalId} {
       allow read: if isAdmin()
-        || belongsToHospital(hospitalId)
+        || hasOperationalHospitalAccess(hospitalId)
         || (resource.data.status == 'active' && resource.data.isPublic == true);
       allow create: if isAdmin()
         && hasExactHospitalFields()
@@ -262,7 +267,7 @@ service cloud.firestore {
         && request.resource.data.updatedBy == request.auth.uid
         && hasValidRequiredHospitalFields()
         && ((isAdmin() && validAdminHospitalUpdate()) || (
-          belongsToHospital(hospitalId)
+          hasOperationalHospitalAccess(hospitalId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name', 'description', 'email', 'phone', 'address', 'city', 'state',
             'updatedAt', 'updatedBy', 'lastAuditId'
@@ -273,9 +278,9 @@ service cloud.firestore {
 
     match /services/{serviceId} {
       allow read: if isAdmin()
-        || belongsToHospital(resource.data.hospitalId)
+        || hasOperationalHospitalAccess(resource.data.hospitalId)
         || (resource.data.status == 'active' && isApprovedHospital(resource.data.hospitalId));
-      allow create: if (isAdmin() || belongsToHospital(request.resource.data.hospitalId))
+      allow create: if (isAdmin() || hasOperationalHospitalAccess(request.resource.data.hospitalId))
         && request.resource.data.createdAt == request.time
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.updatedAt == request.time
@@ -287,7 +292,7 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time
         && request.resource.data.updatedBy == request.auth.uid
         && (isAdmin() || (
-          belongsToHospital(resource.data.hospitalId)
+          hasOperationalHospitalAccess(resource.data.hospitalId)
           && request.resource.data.hospitalId == resource.data.hospitalId
         ));
       allow delete: if false;
@@ -296,7 +301,7 @@ service cloud.firestore {
     match /bookings/{bookingId} {
       allow read: if isAdmin()
         || (isConsumer() && resource.data.consumerId == request.auth.uid)
-        || belongsToHospital(resource.data.hospitalId);
+        || hasOperationalHospitalAccess(resource.data.hospitalId);
 
       allow create: if isConsumer()
         && request.resource.data.keys().hasOnly([
@@ -344,7 +349,7 @@ service cloud.firestore {
           && resource.data.status in ['requested', 'confirmed', 'reschedule_requested']
           && request.resource.data.status == 'cancelled'
         )
-        || (belongsToHospital(resource.data.hospitalId)
+        || (hasOperationalHospitalAccess(resource.data.hospitalId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status', 'confirmedDate', 'confirmedTime', 'hospitalNotes',
             'confirmedAt', 'completedAt', 'updatedAt', 'updatedBy', 'lastAuditId'

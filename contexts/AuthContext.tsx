@@ -29,6 +29,7 @@ type AuthContextValue = {
   registerConsumer(input: ConsumerRegistration): Promise<UserProfile>;
   logout(): Promise<void>;
   resetPassword(email: string): Promise<void>;
+  changePassword(currentPassword: string, newPassword: string): Promise<void>;
   refreshUserProfile(): Promise<UserProfile | null>;
   clearError(): void;
 };
@@ -92,6 +93,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resetPassword = useCallback((email: string) =>
     run(() => authService.resetPassword(email)), [run]);
 
+  const changePassword = useCallback((currentPassword: string, newPassword: string) =>
+    run(() => authService.changePassword(currentPassword, newPassword)), [run]);
+
   const refreshUserProfile = useCallback(() => run(async () => {
     const profile = await authService.getCurrentProfile(true);
     setSnapshot((current) => ({ ...current, profile }));
@@ -125,9 +129,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     registerConsumer,
     logout,
     resetPassword,
+    changePassword,
     refreshUserProfile,
     clearError,
-  }), [clearError, error, login, logout, processing, refreshUserProfile, registerConsumer, resetPassword, snapshot, status]);
+  }), [changePassword, clearError, error, login, logout, processing, refreshUserProfile, registerConsumer, resetPassword, snapshot, status]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

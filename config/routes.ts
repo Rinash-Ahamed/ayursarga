@@ -15,6 +15,7 @@ export const ROUTES = {
     profile: "/hospital/profile",
     services: "/hospital/services",
     bookings: "/hospital/bookings",
+    changePassword: "/hospital/change-password",
     login: "/hospital/login",
     forgotPassword: "/hospital/forgot-password",
   },

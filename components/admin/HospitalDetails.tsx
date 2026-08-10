@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import type { HospitalDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
@@ -20,13 +21,21 @@ import { formatStatus } from "@/utils/text";
 import { toDate } from "@/utils/date";
 import { hospitalFormValues, validateHospitalFields, type HospitalValidationErrors } from "@/features/hospitals/validation";
 import { IndiaStateSelect } from "@/components/forms/IndiaStateSelect";
+import { sendHospitalLoginSetup } from "@/services/auth/hospitalAccountService";
 
 function formatDate(value: unknown) {
   const date = toDate(value);
   return date ? new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(date) : "Not yet";
 }
 
+function isOnOrAfter(value: unknown, minimum: unknown) {
+  const date = toDate(value);
+  const minimumDate = toDate(minimum);
+  return Boolean(date && minimumDate && date.getTime() >= minimumDate.getTime());
+}
+
 export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
+  const router = useRouter();
   const [hospital, setHospital] = useState<DocumentRecord<HospitalDocument> | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -37,13 +46,22 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   const [fieldErrors, setFieldErrors] = useState<HospitalValidationErrors>({});
 
   const reload = useCallback(async () => {
+    setLoading(true);
+    setHospital(null);
+    setContractUrl("");
     const record = await getHospital(hospitalId);
+    if (record?.status === "archived") {
+      setHospital(null);
+      setLoading(false);
+      router.replace("/admin/hospitals");
+      return null;
+    }
     setHospital(record);
     setContractUrl(record?.contractUrl ?? "");
     setLoading(false);
     if (!record) setError("We could not find this hospital. Return to the hospital list and choose another record.");
     return record;
-  }, [hospitalId]);
+  }, [hospitalId, router]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -65,6 +83,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
       await reload();
       setMessage(success);
     } catch (caught) {
+      await reload().catch(() => setLoading(false));
       setError(caught instanceof Error ? caught.message : "We could not complete that step. Please try again.");
     } finally {
       setBusy(false);
@@ -129,6 +148,15 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   }
 
   const contractStatus = hospital?.contractStatus ?? "not_generated";
+  const generatedAt = hospital && contractStatus !== "not_generated" && isOnOrAfter(hospital.contractGeneratedAt, hospital.createdAt)
+    ? hospital.contractGeneratedAt
+    : null;
+  const signedAt = hospital && contractStatus === "signed" && isOnOrAfter(hospital.contractSignedAt, hospital.createdAt)
+    ? hospital.contractSignedAt
+    : null;
+  const activatedAt = hospital && hospital.status === "active" && signedAt && isOnOrAfter(hospital.activatedAt, signedAt)
+    ? hospital.activatedAt
+    : null;
   return <PortalShell role="admin" title="Hospital Details">
     <div className="portal-actions portal-page-actions"><Link className="portal-button secondary" href="/admin/hospitals">Back to hospitals</Link></div>
     <PortalFeedback error={error} empty={!error && !loading && !hospital ? "Return to Hospitals and choose a hospital to continue." : undefined} />
@@ -148,13 +176,13 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         </form> : <>
           <p>{hospital.description || "No description provided."}</p>
           <div className="portal-card-meta">
-            <span>{hospital.email}</span><span>{hospital.phone}</span><span>{hospital.city}, {hospital.state}</span><span>Commission {hospital.commissionPercentage}%</span><span>{hospital.isPublic ? "Public" : "Private"}</span>
+            <span>{hospital.email}</span><span>{hospital.phone}</span><span>{hospital.city}, {hospital.state}</span><span>Commission {hospital.commissionPercentage}%</span>
           </div>
           <p>{hospital.address}</p>
           {hospital.status !== "archived" && <div className="portal-actions">
             <button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditing(true); setError(null); setMessage(null); }}>Edit hospital</button>
             <button className="portal-button danger" type="button" disabled={busy} onClick={() => {
-              if (window.confirm("Remove this hospital from the normal hospital list? Its details and history will still be kept safely.")) {
+              if (window.confirm("Remove this hospital from all normal application views? Its protected history will remain stored. If the hospital is added again, it will start as Pending and require a new signed contract.")) {
                 void runAction((record) => archiveHospital(record.id, record), "The hospital has been removed from the normal list. Its details and history are still safely stored.");
               }
             }}>Delete hospital</button>
@@ -166,9 +194,9 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         <div className="portal-row-heading"><h2>Contract and approval</h2><span className="portal-status" data-status={contractStatus}>{formatStatus(contractStatus)}</span></div>
         <div className="portal-date-grid">
           <div><span>Created date</span><strong>{formatDate(hospital.createdAt)}</strong></div>
-          <div><span>Contract generated</span><strong>{formatDate(hospital.contractGeneratedAt)}</strong></div>
-          <div><span>Signed date</span><strong>{formatDate(hospital.contractSignedAt)}</strong></div>
-          <div><span>Active date</span><strong>{formatDate(hospital.activatedAt)}</strong></div>
+          <div><span>Contract generated</span><strong>{formatDate(generatedAt)}</strong></div>
+          <div><span>Signed date</span><strong>{formatDate(signedAt)}</strong></div>
+          <div><span>Active date</span><strong>{formatDate(activatedAt)}</strong></div>
         </div>
         {hospital.contractUrl && <p>Signed contract: <a className="portal-inline-link" href={hospital.contractUrl} target="_blank" rel="noreferrer">View contract</a></p>}
         {hospital.status === "pending" && contractStatus === "signed" && <label className="portal-contract-url">Signed contract URL *<input type="url" value={contractUrl} onChange={(event) => setContractUrl(event.target.value)} placeholder="https://" required /></label>}
@@ -182,8 +210,16 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
               setError("Paste the signed contract URL below before activating the hospital.");
               return;
             }
-            if (window.confirm("Activate this hospital and show it to consumers?")) void runAction((record) => activateHospital(record.id, record, contractUrl), "The hospital is now active and visible to consumers.");
+            if (window.confirm("Activate this hospital, show it to consumers, and send its secure login setup email?")) void runAction(async (record) => {
+              await activateHospital(record.id, record, contractUrl);
+              await sendHospitalLoginSetup(record.id);
+            }, `The hospital is active. A secure password setup link was sent to ${hospital.email}.`);
           }}>Activate hospital</button>}
+          {hospital.status === "active" && <button className="portal-button" type="button" disabled={busy} onClick={() => {
+            if (window.confirm(`Send a secure password setup/reset link to ${hospital.email}?`)) void runAction(async (record) => {
+              await sendHospitalLoginSetup(record.id);
+            }, `A secure password setup/reset link was sent to ${hospital.email}.`);
+          }}>Send login setup / reset</button>}
           {hospital.status === "active" && <button className="portal-button secondary" type="button" disabled={busy} onClick={() => {
             if (window.confirm("Deactivate this hospital and hide it from consumers?")) void runAction((record) => deactivateHospital(record.id, record), "The hospital is now inactive and hidden from consumers.");
           }}>Deactivate hospital</button>}

@@ -24,6 +24,11 @@ implementation work unless the project owner explicitly changes a decision.
   Consumer roles.
 - Public registration always creates a Consumer. Hospital and Admin accounts
   are created only through a controlled privileged process.
+- Hospital activation provisions or reconnects one Firebase Authentication
+  account for the hospital's official email and sends a Firebase password setup
+  link. Never introduce a shared default password or store passwords in
+  Firestore. Admin may resend the setup/reset link; Hospital users may change
+  their password only after re-authentication.
 - Protect every portal page with its matching `RequireRole`. Unauthorized users
   must be redirected to their correct portal; unauthenticated users go to the
   relevant login page.

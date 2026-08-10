@@ -16,6 +16,7 @@ const NAVIGATION = {
   hospital: [
     ["Dashboard", ROUTES.hospital.home], ["Hospital Profile", ROUTES.hospital.profile],
     ["Services", ROUTES.hospital.services], ["Bookings", ROUTES.hospital.bookings],
+    ["Change Password", ROUTES.hospital.changePassword],
   ],
   consumer: [
     ["Hospital Search", ROUTES.consumer.home], ["My Bookings", ROUTES.consumer.bookings],

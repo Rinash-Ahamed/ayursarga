@@ -43,6 +43,7 @@ export interface AuthAdapter {
   registerConsumer(input: ConsumerRegistration): Promise<UserProfile>;
   logout(): Promise<void>;
   resetPassword(email: string): Promise<void>;
+  changePassword(currentPassword: string, newPassword: string): Promise<void>;
   getCurrentUser(): AuthUser | null;
   getCurrentProfile(force?: boolean): Promise<UserProfile | null>;
   subscribe(listener: AuthStateListener, onError: (error: Error) => void): () => void;
