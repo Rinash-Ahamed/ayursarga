@@ -13,6 +13,7 @@ import { PortalPagination } from "@/components/portal/PortalPagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { formatStatus } from "@/utils/text";
 import { IndiaStateSelect } from "@/components/forms/IndiaStateSelect";
+import { PortalToast } from "@/components/portal/PortalToast";
 
 function FieldError({ field, errors }: { field: HospitalField; errors: HospitalValidationErrors }) {
   return errors[field] ? <span className="portal-field-error" role="alert">{errors[field]}</span> : null;
@@ -21,6 +22,7 @@ function FieldError({ field, errors }: { field: HospitalField; errors: HospitalV
 export function HospitalsManager() {
   const { firebaseUser } = useAuth();
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<HospitalValidationErrors>({});
   const [busy, setBusy] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -37,6 +39,7 @@ export function HospitalsManager() {
     const validation = validateHospitalFields(hospitalFormValues(new FormData(form)));
     setFieldErrors(validation.errors);
     setActionError(null);
+    setActionMessage(null);
     if (!validation.isValid) {
       setActionError("Please check the highlighted fields, then try creating the hospital again.");
       return;
@@ -49,6 +52,7 @@ export function HospitalsManager() {
       setFieldErrors({});
       await reload();
       setShowCreateForm(false);
+      setActionMessage("The hospital has been created with Pending status.");
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : "We could not create the hospital. Please try again.");
     } finally {
@@ -66,6 +70,7 @@ export function HospitalsManager() {
         onClick={() => {
           setShowCreateForm((visible) => !visible);
           setActionError(null);
+          setActionMessage(null);
           setFieldErrors({});
         }}
       >{showCreateForm ? "Close form" : "Add Hospital"}</button>
@@ -80,7 +85,7 @@ export function HospitalsManager() {
       <label>State *<IndiaStateSelect name="state" required aria-invalid={Boolean(fieldErrors.state)} /><FieldError field="state" errors={fieldErrors} /></label>
       <label>Commission % *<input name="commission" type="number" min="0" max="100" step="0.01" required aria-invalid={Boolean(fieldErrors.commissionPercentage)} /><FieldError field="commissionPercentage" errors={fieldErrors} /></label>
       <label className="full">Complete address *<input name="address" required minLength={10} maxLength={300} aria-invalid={Boolean(fieldErrors.address)} /><FieldError field="address" errors={fieldErrors} /></label>
-      <label className="full">Description<textarea name="description" maxLength={2000} aria-invalid={Boolean(fieldErrors.description)} /><FieldError field="description" errors={fieldErrors} /></label>
+      <label className="full">Description<textarea name="description" maxLength={2000} /></label>
       <div className="portal-actions full">
         <button className="portal-button" disabled={busy}>{busy ? "Creating..." : "Create hospital"}</button>
         <button className="portal-button secondary" type="button" disabled={busy} onClick={(event) => {
@@ -97,6 +102,7 @@ export function HospitalsManager() {
     </label>
 
     <PortalFeedback error={error} empty={!error && !isLoading && items.length === 0 ? "No hospitals yet. Select Add Hospital to create the first one." : undefined} />
+    <PortalToast message={actionMessage} />
     <div className="portal-list">{items.map((item) => <article className="portal-card" key={item.id}>
       <div className="portal-row-heading"><h3>{item.name}</h3><span className="portal-status" data-status={item.status}>{formatStatus(item.status)}</span></div>
       <p>{item.city}, {item.state} · Commission {item.commissionPercentage}%</p>

@@ -18,6 +18,7 @@ export type UserDocument = AuditedDocument & {
   name: string;
   email: string;
   phone: string | null;
+  address: string | null;
   role: PortalRole;
   status: UserStatus;
   hospitalId: string | null;
@@ -64,6 +65,10 @@ export type BookingStatus =
 
 export type BookingDocument = AuditedDocument & {
   consumerId: string;
+  consumerName: string;
+  consumerEmail: string;
+  consumerPhone: string;
+  consumerAddress: string;
   hospitalId: string;
   serviceId: string;
   preferredDate: Timestamp;

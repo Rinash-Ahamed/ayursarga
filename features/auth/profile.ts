@@ -19,6 +19,7 @@ export function parseUserProfile(uid: string, value: unknown, fallbackEmail = ""
     name: typeof data.name === "string" ? data.name : "",
     email: typeof data.email === "string" ? data.email : fallbackEmail,
     phone: typeof data.phone === "string" ? data.phone : null,
+    address: typeof data.address === "string" ? data.address : null,
     role: data.role,
     status: data.status,
     hospitalId: typeof data.hospitalId === "string" ? data.hospitalId : null,

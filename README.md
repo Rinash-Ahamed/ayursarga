@@ -71,6 +71,10 @@ The preservation and audit design is documented in
   settings—must not be rendered in Consumer or Hospital interfaces.
 - Consumer and Hospital user lists are segregated in the Admin portal. Admin
   accounts are managed separately.
+- Consumers use Google Authentication only. After first sign-in they must add a
+  phone number and contact address; these are contact data and are not verified
+  through SMS. A booking snapshots these details for its assigned Hospital,
+  while Hospitals remain unable to browse Consumer profiles directly.
 - The confirmed scope for this phase keeps the current Firestore collection
   structure. A duplicate public/private hospital collection is not required
   while Firebase project access is limited to trusted administrators. If a
@@ -97,8 +101,9 @@ The preservation and audit design is documented in
   Hospital users can also use Forgot password and can change their password from
   the authenticated Hospital portal after confirming their current password.
 - The provisioning API uses the Firebase Admin SDK on the trusted server. Its
-  runtime must have Application Default Credentials; do not expose service
-  account credentials through `NEXT_PUBLIC_*` variables or commit them.
+  runtime must have the server-only `FIREBASE_ADMIN_CLIENT_EMAIL` and
+  `FIREBASE_ADMIN_PRIVATE_KEY` variables locally and on Vercel. Do not expose
+  these through `NEXT_PUBLIC_*` variables or commit them.
 
 See [AGENTS.md](AGENTS.md) for implementation guardrails that future coding
 work must preserve.

@@ -5,16 +5,19 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { createBookingRequest } from "@/services/bookings/bookingService";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { PortalToast } from "@/components/portal/PortalToast";
 
 export function BookingRequestForm({ hospitalId, serviceId }: { hospitalId: string; serviceId: string }) {
-  const { firebaseUser } = useAuth();
+  const { firebaseUser, userProfile } = useAuth();
   const router = useRouter();
   const [busy, setBusy] = useState(false); const [error, setError] = useState<string | null>(null);
   async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); if (!firebaseUser) return;
+    event.preventDefault(); if (!firebaseUser || !userProfile?.phone || !userProfile.address) return;
     const data = new FormData(event.currentTarget); setBusy(true); setError(null);
     try {
-      await createBookingRequest({ consumerId: firebaseUser.uid, hospitalId, serviceId,
+      await createBookingRequest({ consumerId: firebaseUser.uid, consumerName: userProfile.name,
+        consumerEmail: userProfile.email, consumerPhone: userProfile.phone, consumerAddress: userProfile.address,
+        hospitalId, serviceId,
         preferredDate: new Date(`${String(data.get("date"))}T00:00:00`), preferredTime: String(data.get("time")),
         consumerNotes: String(data.get("notes") || "") });
       router.replace("/app/bookings");
@@ -26,7 +29,7 @@ export function BookingRequestForm({ hospitalId, serviceId }: { hospitalId: stri
       <label>Preferred date<input name="date" type="date" min={new Date().toISOString().slice(0, 10)} required /></label>
       <label>Preferred time<input name="time" type="time" required /></label>
       <label className="full">Notes (optional)<textarea name="notes" maxLength={500} /></label>
-      {error && <p className="portal-form-error full" role="alert">{error}</p>}
+      <PortalToast message={error} tone="error" />
       <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Sending…" : "Send request"}</button></div>
     </form>
   </PortalShell>;

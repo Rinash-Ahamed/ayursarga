@@ -51,7 +51,7 @@ service cloud.firestore {
 
     function hasExactUserFields() {
       return request.resource.data.keys().hasOnly([
-        'uid', 'name', 'email', 'phone', 'role', 'status', 'hospitalId',
+        'uid', 'name', 'email', 'phone', 'address', 'role', 'status', 'hospitalId',
         'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
         'archivedAt', 'archivedBy', 'lastAuditId'
       ]);
@@ -211,6 +211,7 @@ service cloud.firestore {
         && request.resource.data.name is string
         && request.resource.data.email == request.auth.token.email
         && (request.resource.data.phone == null || request.resource.data.phone is string)
+        && (request.resource.data.address == null || request.resource.data.address is string)
         && request.resource.data.status == 'active'
         && request.resource.data.hospitalId == null
         && request.resource.data.createdAt == request.time
@@ -221,7 +222,8 @@ service cloud.firestore {
         && request.resource.data.archivedBy == null
         && hasCreateAudit('users', userId)
         && (
-          request.resource.data.role == 'consumer'
+          (request.resource.data.role == 'consumer'
+            && request.auth.token.firebase.sign_in_provider == 'google.com')
           || (isBootstrapAdminIdentity() && request.resource.data.role == 'admin')
         );
       allow update: if hasLinkedAudit('users', userId)
@@ -230,10 +232,19 @@ service cloud.firestore {
         && (isAdmin() || (
           isDocumentOwner(userId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'name', 'phone', 'updatedAt', 'updatedBy', 'lastAuditId'
+            'name', 'phone', 'address', 'updatedAt', 'updatedBy', 'lastAuditId'
           ])
           && request.resource.data.name is string
           && (request.resource.data.phone == null || request.resource.data.phone is string)
+          && (request.resource.data.address == null || request.resource.data.address is string)
+          && (resource.data.role != 'consumer' || (
+            request.resource.data.phone is string
+            && request.resource.data.phone.size() >= 7
+            && request.resource.data.phone.size() <= 25
+            && request.resource.data.address is string
+            && request.resource.data.address.size() >= 10
+            && request.resource.data.address.size() <= 300
+          ))
         ));
       allow delete: if false;
     }
@@ -305,13 +316,24 @@ service cloud.firestore {
 
       allow create: if isConsumer()
         && request.resource.data.keys().hasOnly([
-          'consumerId', 'hospitalId', 'serviceId', 'preferredDate', 'preferredTime',
+          'consumerId', 'consumerName', 'consumerEmail', 'consumerPhone',
+          'consumerAddress', 'hospitalId', 'serviceId', 'preferredDate', 'preferredTime',
           'confirmedDate', 'confirmedTime', 'status', 'servicePrice',
           'commissionPercentage', 'estimatedCommission', 'consumerNotes',
           'hospitalNotes', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
           'archivedAt', 'archivedBy', 'lastAuditId', 'confirmedAt', 'completedAt'
         ])
         && request.resource.data.consumerId == request.auth.uid
+        && request.resource.data.consumerName == getCurrentUser().name
+        && request.resource.data.consumerEmail == getCurrentUser().email
+        && request.resource.data.consumerPhone == getCurrentUser().phone
+        && request.resource.data.consumerPhone is string
+        && request.resource.data.consumerPhone.size() >= 7
+        && request.resource.data.consumerPhone.size() <= 25
+        && request.resource.data.consumerAddress == getCurrentUser().address
+        && request.resource.data.consumerAddress is string
+        && request.resource.data.consumerAddress.size() >= 10
+        && request.resource.data.consumerAddress.size() <= 300
         && request.resource.data.status == 'requested'
         && request.resource.data.confirmedDate == null
         && request.resource.data.confirmedTime == null

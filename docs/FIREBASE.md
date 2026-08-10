@@ -7,12 +7,16 @@ Suite. Cloud Functions and Firebase Storage are intentionally not configured.
 ## Project setup
 
 1. Create a Firebase project on the Spark plan and register a Web app.
-2. Enable Email/Password in Authentication > Sign-in method.
+2. Enable Email/Password for Admin and Hospital accounts and Google for
+   Consumers in Authentication > Sign-in method. Configure the Google provider
+   support email and add the production and preview domains under Authorized
+   domains.
 3. Create the default Cloud Firestore database and choose the required region.
 4. Copy `.env.example` to `.env.local` and replace the four
    `NEXT_PUBLIC_FIREBASE_*` placeholders from the Web app configuration.
-5. For production Admin SDK access, use Application Default Credentials. Never
-   commit a service-account JSON file or expose it through `NEXT_PUBLIC_*`.
+5. Add the service account's `client_email` and `private_key` using the
+   server-only variables documented below. Never commit a service-account JSON
+   file or expose Admin credentials through `NEXT_PUBLIC_*`.
 6. Replace the demo alias with the real project using `firebase use --add`
    before deploying Firestore rules.
 7. Deploy the rules and composite indexes with
@@ -47,7 +51,7 @@ Admin Hospital Details page now provisions or reconnects the hospital's
 Firebase Authentication account and protected `users/{uid}` profile, then sends
 a Firebase password-setup email to its official email address. Admin can resend
 that setup/reset email from the same page. The trusted Next.js runtime must have
-Application Default Credentials for the provisioning API.
+the server-only Firebase Admin variables for the provisioning API.
 
 The command-line provisioning script remains available only for controlled
 recovery or initial privileged-account setup. Provision the first admin without
@@ -67,12 +71,30 @@ Authentication. Its protected `admin` profile is created automatically on the
 first successful `/admin/login`. No password or password hash is written to
 Firestore.
 
-The server reads the project ID from `NEXT_PUBLIC_FIREBASE_PROJECT_ID`; its
-credential is supplied by the deployment environment through Application
-Default Credentials, never a browser-visible variable. In Firebase
+The server reads the project ID from `NEXT_PUBLIC_FIREBASE_PROJECT_ID` and its
+credential from `FIREBASE_ADMIN_CLIENT_EMAIL` and
+`FIREBASE_ADMIN_PRIVATE_KEY`. These are server-only variables and must never be
+browser-visible. Use the same variables in `.env.local` and Vercel. In Firebase
 Authentication settings, enforce a minimum length of eight characters and
 require a numeric character so password-setup and reset flows use the same
 server-side policy as the application.
+
+### Vercel Admin credentials
+
+Add these two server-only variables to `.env.local` and under Vercel Project
+Settings > Environment Variables:
+
+```dotenv
+FIREBASE_ADMIN_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project-id.iam.gserviceaccount.com
+FIREBASE_ADMIN_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+```
+
+Use `client_email` and `private_key` from the downloaded service-account JSON.
+Mark both variables Sensitive for Production and Preview, retain the existing
+`NEXT_PUBLIC_FIREBASE_PROJECT_ID`, and redeploy after saving them. The server
+accepts either escaped `\n` characters or the original multiline private key.
+Do not add the JSON file itself to the repository or paste the whole JSON into
+a browser-visible variable.
 
 ## Hosting constraint
 

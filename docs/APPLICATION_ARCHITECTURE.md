@@ -7,8 +7,8 @@ their own layouts and are compiled as separate Next.js route segments.
 
 | Area | Routes |
 | --- | --- |
-| Consumer | `/app`, `/app/hospitals/[hospitalId]`, `/app/bookings/new`, `/app/bookings`, `/app/profile` |
-| Consumer auth | `/app/login`, `/app/register`, `/app/forgot-password` |
+| Consumer | `/app`, `/app/hospitals/[hospitalId]`, `/app/bookings/new`, `/app/bookings`, `/app/profile`, `/app/complete-profile` |
+| Consumer auth | `/app/login` and `/app/register` use Google; the legacy forgot-password URL redirects to login |
 | Hospital | `/hospital`, `/hospital/profile`, `/hospital/services`, `/hospital/bookings` |
 | Hospital auth | `/hospital/login`, `/hospital/forgot-password` |
 | Admin | `/admin`, `/admin/hospitals`, `/admin/hospitals/[hospitalId]`, `/admin/users`, `/admin/bookings` |
@@ -28,8 +28,8 @@ The active application uses these collections:
 - `users`: identity, role, status, and optional hospital assignment.
 - `hospitals`: public profile, activation/visibility, and agreed commission.
 - `services`: hospital-owned service details and current price.
-- `bookings`: preferred appointment request, hospital response, price and
-  commission snapshots, and completion state.
+- `bookings`: preferred appointment request, Hospital response, price,
+  commission, and Consumer contact snapshots, and completion state.
 - `auditLogs`: immutable, admin-readable records linked atomically to critical
   application writes.
 
@@ -41,6 +41,9 @@ remain in `users` to avoid duplicating identity data.
 Bookings follow `requested`, `confirmed`, `reschedule_requested`, `rejected`,
 `cancelled`, or `completed`. The booking stores the service price and commission
 percentage at creation so later configuration changes do not alter history.
+It also snapshots the Consumer's name, Google email, phone, and contact address
+so the assigned Hospital can contact that Consumer without receiving general
+access to the `users` collection.
 
 All potentially growing list views use cursor pagination with bounded page
 sizes and a shared `usePaginatedList` hook. Successful updates patch the loaded
@@ -75,8 +78,10 @@ clearly marked development template and is isolated in
 
 - Public reads require an active, public hospital; public service reads also
   require an active service owned by that hospital.
-- Consumers can edit only their own name and phone, create bookings only for
-  themselves, view their own bookings, and cancel eligible statuses.
+- Consumers authenticate with Google and can edit only their own name, phone,
+  and contact address. Phone and address are mandatory after first sign-in but
+  are not SMS-verified. Consumers create bookings only for themselves, view
+  their own bookings, and cancel eligible statuses.
 - Hospital users require a protected hospital profile assignment.
   They can edit permitted profile fields, manage only their services, and move
   only their bookings through allowed workflow transitions. Commission and

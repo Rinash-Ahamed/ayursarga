@@ -34,6 +34,12 @@ export function getSafeRoleRedirect(requestedPath: string | null | undefined, ro
   return requestedPath;
 }
 
+export function isConsumerProfileComplete(profile: UserProfile | null | undefined) {
+  return profile?.role === "consumer"
+    && Boolean(profile.phone?.trim())
+    && Boolean(profile.address?.trim());
+}
+
 export function verifyProfileRole(profile: UserProfile, expectedRole: PortalRole) {
   if (profile.role !== expectedRole) throw new AuthenticationError("role-mismatch");
   if (profile.status === "inactive" || profile.status === "archived") throw new AuthenticationError("account-inactive");

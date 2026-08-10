@@ -31,7 +31,7 @@ export function UsersList() {
       ? `No ${groupLabel.toLowerCase()} users yet. New ${groupLabel.toLowerCase()} accounts will appear here.`
       : undefined} />
     <div className="portal-list">{items.map((item) => <article className="portal-row" key={item.id}>
-      <div><h3>{item.name}</h3><p>{item.email}{item.hospitalId ? ` · Hospital ${item.hospitalId}` : ""}</p></div>
+      <div><h3>{item.name}</h3><p>{item.email}{item.phone ? ` · ${item.phone}` : ""}{item.hospitalId ? ` · Hospital ${item.hospitalId}` : ""}</p>{group === "consumer" && item.address && <p>{item.address}</p>}</div>
       <span className="portal-status" data-status={item.status}>{item.status}</span>
     </article>)}</div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />

@@ -13,6 +13,8 @@ type AuthErrorCode =
   | "account-inactive"
   | "account-pending"
   | "unauthenticated"
+  | "sign-in-cancelled"
+  | "provider-conflict"
   | "unknown";
 
 const MESSAGES: Record<AuthErrorCode, string> = {
@@ -30,6 +32,8 @@ const MESSAGES: Record<AuthErrorCode, string> = {
   "account-inactive": "This account is currently inactive. Please contact support.",
   "account-pending": "This account is awaiting approval.",
   unauthenticated: "Please sign in to continue.",
+  "sign-in-cancelled": "Google sign-in was cancelled. Please try again when you are ready.",
+  "provider-conflict": "This email is already connected to another Ayursarga sign-in method. Please contact support.",
   unknown: "Authentication could not be completed. Please try again.",
 };
 
@@ -64,6 +68,11 @@ export function toAuthenticationError(error: unknown): AuthenticationError {
       "firestore/unavailable": "network",
       "auth/id-token-expired": "unauthenticated",
       "auth/id-token-revoked": "unauthenticated",
+      "auth/popup-closed-by-user": "sign-in-cancelled",
+      "auth/cancelled-popup-request": "sign-in-cancelled",
+      "auth/account-exists-with-different-credential": "provider-conflict",
+      "auth/unauthorized-domain": "configuration",
+      "auth/popup-blocked": "configuration",
     } as Record<string, AuthErrorCode>)[error.code] ?? "unknown";
 
     return new AuthenticationError(code, { cause: error });

@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { PasswordField } from "@/components/auth/PasswordField";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { PortalToast } from "@/components/portal/PortalToast";
 import { isValidPassword } from "@/features/auth/password";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -48,8 +49,8 @@ export function HospitalChangePasswordForm() {
       <div className="full"><PasswordField label="Current password" name="currentPassword" autoComplete="current-password" required /></div>
       <div><PasswordField label="New password" name="newPassword" autoComplete="new-password" showRequirements required /></div>
       <div><PasswordField label="Confirm new password" name="confirmation" autoComplete="new-password" required /></div>
-      {(localError || error) && <p className="portal-form-error full" role="alert">{localError || error?.message}</p>}
-      {message && <p className="portal-form-success full" role="status">{message}</p>}
+      <PortalToast message={localError || error?.message} tone="error" />
+      <PortalToast message={message} />
       <div className="portal-actions full"><button className="portal-button" disabled={isLoading}>{isLoading ? "Changing..." : "Change password"}</button></div>
     </form>
   </PortalShell>;

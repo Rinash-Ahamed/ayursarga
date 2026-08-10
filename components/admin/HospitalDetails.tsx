@@ -17,6 +17,7 @@ import {
 import { buildHospitalContractHtml } from "@/features/hospitals/contractTemplate";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
+import { PortalToast } from "@/components/portal/PortalToast";
 import { formatStatus } from "@/utils/text";
 import { toDate } from "@/utils/date";
 import { hospitalFormValues, validateHospitalFields, type HospitalValidationErrors } from "@/features/hospitals/validation";
@@ -160,7 +161,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   return <PortalShell role="admin" title="Hospital Details">
     <div className="portal-actions portal-page-actions"><Link className="portal-button secondary" href="/admin/hospitals">Back to hospitals</Link></div>
     <PortalFeedback error={error} empty={!error && !loading && !hospital ? "Return to Hospitals and choose a hospital to continue." : undefined} />
-    {message && <p className="portal-form-success">{message}</p>}
+    <PortalToast message={message} />
     {hospital && <>
       <article className="portal-card">
         <div className="portal-row-heading"><h2>{hospital.name}</h2><span className="portal-status" data-status={hospital.status}>{formatStatus(hospital.status)}</span></div>
@@ -171,7 +172,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
           <label>City / locality *<input name="city" defaultValue={hospital.city} required minLength={2} maxLength={80} aria-invalid={Boolean(fieldErrors.city)} />{fieldErrors.city && <span className="portal-field-error">{fieldErrors.city}</span>}</label>
           <label>State *<IndiaStateSelect name="state" defaultValue={hospital.state} required aria-invalid={Boolean(fieldErrors.state)} />{fieldErrors.state && <span className="portal-field-error">{fieldErrors.state}</span>}</label>
           <label className="full">Complete address *<input name="address" defaultValue={hospital.address} required minLength={10} maxLength={300} aria-invalid={Boolean(fieldErrors.address)} />{fieldErrors.address && <span className="portal-field-error">{fieldErrors.address}</span>}</label>
-          <label className="full">Description<textarea name="description" defaultValue={hospital.description} maxLength={2000} aria-invalid={Boolean(fieldErrors.description)} />{fieldErrors.description && <span className="portal-field-error">{fieldErrors.description}</span>}</label>
+          <label className="full">Description<textarea name="description" defaultValue={hospital.description} maxLength={2000} /></label>
           <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save details"}</button><button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditing(false); setFieldErrors({}); setError(null); }}>Cancel</button></div>
         </form> : <>
           <p>{hospital.description || "No description provided."}</p>

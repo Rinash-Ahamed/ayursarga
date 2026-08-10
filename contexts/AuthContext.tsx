@@ -4,13 +4,12 @@ import { createContext, useCallback, useEffect, useMemo, useState, type ReactNod
 import { useRouter } from "next/navigation";
 import type {
   AuthSnapshot,
-  ConsumerRegistration,
   LoginCredentials,
   PortalRole,
   UserProfile,
 } from "@/features/auth/contracts";
 import { AuthenticationError, toAuthenticationError } from "@/features/auth/errors";
-import { getRoleHomePath, getSafeRoleRedirect } from "@/features/auth/roles";
+import { getSafeRoleRedirect, isConsumerProfileComplete } from "@/features/auth/roles";
 import { ROUTES } from "@/config/routes";
 import { authService } from "@/services/auth/authService";
 import { useSessionIdleTimeout } from "@/hooks/useSessionIdleTimeout";
@@ -26,7 +25,7 @@ type AuthContextValue = {
   isLoading: boolean;
   error: AuthenticationError | null;
   login(credentials: LoginCredentials, expectedRole?: PortalRole, requestedPath?: string | null): Promise<UserProfile>;
-  registerConsumer(input: ConsumerRegistration): Promise<UserProfile>;
+  loginConsumerWithGoogle(requestedPath?: string | null): Promise<UserProfile>;
   logout(): Promise<void>;
   resetPassword(email: string): Promise<void>;
   changePassword(currentPassword: string, newPassword: string): Promise<void>;
@@ -74,12 +73,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return profile;
     }), [router, run]);
 
-  const registerConsumer = useCallback((input: ConsumerRegistration) =>
+  const loginConsumerWithGoogle = useCallback((requestedPath?: string | null) =>
     run(async () => {
-      const profile = await authService.registerConsumer(input);
+      const profile = await authService.loginConsumerWithGoogle();
       setSnapshot((current) => ({ ...current, profile }));
       setStatus("authenticated");
-      router.replace(getRoleHomePath(profile.role));
+      router.replace(isConsumerProfileComplete(profile)
+        ? getSafeRoleRedirect(requestedPath, profile.role)
+        : ROUTES.consumer.completeProfile);
       return profile;
     }), [router, run]);
 
@@ -126,13 +127,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading: status === "loading" || processing,
     error,
     login,
-    registerConsumer,
+    loginConsumerWithGoogle,
     logout,
     resetPassword,
     changePassword,
     refreshUserProfile,
     clearError,
-  }), [changePassword, clearError, error, login, logout, processing, refreshUserProfile, registerConsumer, resetPassword, snapshot, status]);
+  }), [changePassword, clearError, error, login, loginConsumerWithGoogle, logout, processing, refreshUserProfile, resetPassword, snapshot, status]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

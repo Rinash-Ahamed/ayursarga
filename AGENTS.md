@@ -22,8 +22,12 @@ implementation work unless the project owner explicitly changes a decision.
 - Use the single shared Firebase authentication context and services. Do not
   create separate authentication implementations for Admin, Hospital, and
   Consumer roles.
-- Public registration always creates a Consumer. Hospital and Admin accounts
-  are created only through a controlled privileged process.
+- Consumers authenticate only through Google. Their first sign-in creates a
+  Consumer profile and requires a phone number and contact address before the
+  Consumer application can be used. Phone is contact data only; do not add SMS
+  verification without a later explicit decision. Hospital and Admin accounts
+  use email/password and are created only through a controlled privileged
+  process.
 - Hospital activation provisions or reconnects one Firebase Authentication
   account for the hospital's official email and sends a Firebase password setup
   link. Never introduce a shared default password or store passwords in
@@ -82,7 +86,10 @@ implementation work unless the project owner explicitly changes a decision.
   valid signed-contract URL. Preserve created, signed, and activated dates and
   audit each transition.
 - Consumer booking creation snapshots service price and commission values for
-  historical consistency. Booking state changes must follow the transitions in
+  historical consistency. It also snapshots the Consumer's name, Google email,
+  phone, and contact address so only Admin and the assigned Hospital can use
+  those details for that booking. Do not grant Hospitals general read access to
+  Consumer profiles. Booking state changes must follow the transitions in
   `firestore.rules`.
 - Keep list reads bounded and cursor-paginated. Prefer Firestore count/sum
   aggregations for dashboard totals and deploy required indexes deliberately.

@@ -8,6 +8,7 @@ import { hospitalFormValues, validateHospitalFields, type HospitalValidationErro
 import { useAuth } from "@/hooks/useAuth";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { IndiaStateSelect } from "@/components/forms/IndiaStateSelect";
+import { PortalToast } from "@/components/portal/PortalToast";
 
 export function HospitalProfile() {
   const { userProfile } = useAuth();
@@ -64,9 +65,9 @@ export function HospitalProfile() {
     <label>City / locality *<input name="city" defaultValue={hospital.city} required minLength={2} maxLength={80} aria-invalid={Boolean(fieldErrors.city)} />{fieldErrors.city && <span className="portal-field-error">{fieldErrors.city}</span>}</label>
     <label>State *<IndiaStateSelect name="state" defaultValue={hospital.state} required aria-invalid={Boolean(fieldErrors.state)} />{fieldErrors.state && <span className="portal-field-error">{fieldErrors.state}</span>}</label>
     <label className="full">Complete address *<input name="address" defaultValue={hospital.address} required minLength={10} maxLength={300} aria-invalid={Boolean(fieldErrors.address)} />{fieldErrors.address && <span className="portal-field-error">{fieldErrors.address}</span>}</label>
-    <label className="full">Description<textarea name="description" defaultValue={hospital.description} maxLength={2000} aria-invalid={Boolean(fieldErrors.description)} />{fieldErrors.description && <span className="portal-field-error">{fieldErrors.description}</span>}</label>
-    {error && <p className="portal-form-error full" role="alert">{error}</p>}
-    {message && <p className="portal-form-success full">{message}</p>}
+    <label className="full">Description<textarea name="description" defaultValue={hospital.description} maxLength={2000} /></label>
+    <PortalToast message={error} tone="error" />
+    <PortalToast message={message} />
     <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save profile"}</button></div>
   </form>}</PortalShell>;
 }

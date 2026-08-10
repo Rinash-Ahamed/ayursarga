@@ -1,20 +1,17 @@
 "use client";
 
 import {
-  createUserWithEmailAndPassword,
-  deleteUser,
   EmailAuthProvider,
+  GoogleAuthProvider,
   reauthenticateWithCredential,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
-  updateProfile,
   updatePassword,
-  type User,
 } from "firebase/auth";
 import type {
   AuthAdapter,
-  ConsumerRegistration,
   LoginCredentials,
   PortalRole,
 } from "@/features/auth/contracts";
@@ -25,7 +22,7 @@ import { getClientAuth } from "@/services/auth/client";
 import { loadAuthorizedProfile, subscribeToAuthProfile, toAuthUser } from "@/services/auth/session";
 import {
   clearUserProfileCache,
-  createConsumerProfile,
+  createGoogleConsumerProfile,
   getUserProfile,
 } from "@/services/users/userService";
 
@@ -48,27 +45,26 @@ async function login(credentials: LoginCredentials, expectedRole?: PortalRole) {
   }
 }
 
-async function registerConsumer(input: ConsumerRegistration) {
-  let user: User | null = null;
+async function loginConsumerWithGoogle() {
   try {
-    if (!isValidPassword(input.password)) throw new AuthenticationError("weak-password");
-    const credential = await createUserWithEmailAndPassword(
-      getClientAuth(),
-      input.email.trim(),
-      input.password,
-    );
-    user = credential.user;
-    await updateProfile(user, { displayName: input.name.trim() });
-    return await createConsumerProfile(user, input);
+    const credential = await signInWithPopup(getClientAuth(), new GoogleAuthProvider());
+    let profile;
+    try {
+      profile = await getUserProfile(credential.user.uid, credential.user.email ?? "", true);
+    } catch (error) {
+      if (!(error instanceof AuthenticationError) || error.code !== "profile-not-found") throw error;
+      profile = await createGoogleConsumerProfile(credential.user);
+    }
+    return verifyProfileRole(profile, "consumer");
   } catch (error) {
-    if (user) await deleteUser(user).catch(() => undefined);
+    await signOut(getClientAuth()).catch(() => undefined);
     throw toAuthenticationError(error);
   }
 }
 
 export const authService: AuthAdapter = {
   login,
-  registerConsumer,
+  loginConsumerWithGoogle,
   async logout() {
     try {
       const uid = getClientAuth().currentUser?.uid;

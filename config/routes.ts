@@ -6,6 +6,7 @@ export const ROUTES = {
     home: "/app",
     bookings: "/app/bookings",
     profile: "/app/profile",
+    completeProfile: "/app/complete-profile",
     login: "/app/login",
     register: "/app/register",
     forgotPassword: "/app/forgot-password",

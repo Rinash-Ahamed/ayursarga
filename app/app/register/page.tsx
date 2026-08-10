@@ -1,6 +1,6 @@
 import { GuestOnly } from "@/components/auth/RequireRole";
-import { RegisterConsumerForm } from "@/components/auth/RegisterConsumerForm";
+import { ConsumerGoogleAuthForm } from "@/components/auth/ConsumerGoogleAuthForm";
 
 export default function ConsumerRegistrationPage() {
-  return <GuestOnly><RegisterConsumerForm /></GuestOnly>;
+  return <GuestOnly><ConsumerGoogleAuthForm mode="register" /></GuestOnly>;
 }

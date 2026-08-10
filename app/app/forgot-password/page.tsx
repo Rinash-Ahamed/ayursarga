@@ -1,6 +1,6 @@
-import { GuestOnly } from "@/components/auth/RequireRole";
-import { ForgotPasswordForm } from "@/components/auth/ForgotPasswordForm";
+import { redirect } from "next/navigation";
+import { ROUTES } from "@/config/routes";
 
 export default function ConsumerForgotPasswordPage() {
-  return <GuestOnly><ForgotPasswordForm role="consumer" /></GuestOnly>;
+  redirect(ROUTES.consumer.login);
 }

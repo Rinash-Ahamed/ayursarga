@@ -14,6 +14,7 @@ export type UserProfile = {
   name: string;
   email: string;
   phone: string | null;
+  address: string | null;
   role: PortalRole;
   status: UserStatus;
   hospitalId: string | null;
@@ -26,11 +27,6 @@ export type LoginCredentials = {
   password: string;
 };
 
-export type ConsumerRegistration = LoginCredentials & {
-  name: string;
-  phone?: string;
-};
-
 export type AuthSnapshot = {
   user: AuthUser | null;
   profile: UserProfile | null;
@@ -40,7 +36,7 @@ type AuthStateListener = (snapshot: AuthSnapshot) => void;
 
 export interface AuthAdapter {
   login(credentials: LoginCredentials, expectedRole?: PortalRole): Promise<UserProfile>;
-  registerConsumer(input: ConsumerRegistration): Promise<UserProfile>;
+  loginConsumerWithGoogle(): Promise<UserProfile>;
   logout(): Promise<void>;
   resetPassword(email: string): Promise<void>;
   changePassword(currentPassword: string, newPassword: string): Promise<void>;

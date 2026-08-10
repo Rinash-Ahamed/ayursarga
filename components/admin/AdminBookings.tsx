@@ -119,7 +119,7 @@ export function AdminBookings() {
       ? (hasFilters ? "No bookings match these filters. Adjust or clear the filters and try again." : "No bookings yet. New appointment requests will appear here.")
       : undefined} />
     <div className="portal-list">{items.map((item) => <article className="portal-row" key={item.id}>
-      <div><h3>{formatCurrency(item.servicePrice)}</h3><p>Estimated commission {formatCurrency(item.estimatedCommission)} · Hospital {selectedHospital?.id === item.hospitalId ? selectedHospital.name : item.hospitalId}</p></div>
+      <div><h3>{item.consumerName || "Consumer"} · {formatCurrency(item.servicePrice)}</h3><p>{item.consumerPhone || "No contact number"} · Estimated commission {formatCurrency(item.estimatedCommission)} · Hospital {selectedHospital?.id === item.hospitalId ? selectedHospital.name : item.hospitalId}</p></div>
       <span className="portal-status" data-status={item.status}>{formatStatus(item.status)}</span>
     </article>)}</div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />

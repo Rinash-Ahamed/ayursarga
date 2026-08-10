@@ -13,7 +13,8 @@ import { getService } from "@/services/hospitals/serviceService";
 
 type BookingRequestInput = {
   consumerId: string; hospitalId: string; serviceId: string; preferredDate: Date;
-  preferredTime: string; consumerNotes?: string | null;
+  preferredTime: string; consumerNotes?: string | null; consumerName: string;
+  consumerEmail: string; consumerPhone: string; consumerAddress: string;
 };
 
 export async function createBookingRequest(input: BookingRequestInput) {
@@ -21,7 +22,10 @@ export async function createBookingRequest(input: BookingRequestInput) {
   if (!hospital || hospital.status !== "active" || !hospital.isPublic) throw new Error("This hospital is not accepting appointment requests right now. Choose another hospital and try again.");
   if (!service || service.hospitalId !== hospital.id || service.status !== "active") throw new Error("This service is not accepting appointment requests right now. Return to the hospital page and choose another service.");
   return createAuditedDocument(COLLECTIONS.bookings, {
-    consumerId: input.consumerId, hospitalId: hospital.id, serviceId: service.id,
+    consumerId: input.consumerId,
+    consumerName: input.consumerName.trim(), consumerEmail: input.consumerEmail.trim().toLowerCase(),
+    consumerPhone: input.consumerPhone.trim(), consumerAddress: input.consumerAddress.trim(),
+    hospitalId: hospital.id, serviceId: service.id,
     preferredDate: Timestamp.fromDate(input.preferredDate), preferredTime: input.preferredTime,
     confirmedDate: null, confirmedTime: null, status: "requested",
     servicePrice: service.price, commissionPercentage: hospital.commissionPercentage,

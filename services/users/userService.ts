@@ -2,7 +2,7 @@
 
 import type { User } from "firebase/auth";
 import { COLLECTIONS } from "@/constants/firestore";
-import type { ConsumerRegistration, UserProfile } from "@/features/auth/contracts";
+import type { UserProfile } from "@/features/auth/contracts";
 import type { UserDocument } from "@/features/firestore/models";
 import { isBootstrapAdminEmail } from "@/features/auth/bootstrap";
 import { AuthenticationError } from "@/features/auth/errors";
@@ -40,6 +40,7 @@ export async function getUserProfile(uid: string, fallbackEmail = "", force = fa
           name: "Ayursarga Admin",
           email: fallbackEmail.trim().toLowerCase(),
           phone: null,
+          address: null,
           role: "admin",
           status: "active",
           hospitalId: null,
@@ -64,13 +65,14 @@ export async function getUserProfile(uid: string, fallbackEmail = "", force = fa
   return request;
 }
 
-export async function createConsumerProfile(user: User, input: ConsumerRegistration) {
-  const name = input.name.trim();
+export async function createGoogleConsumerProfile(user: User) {
+  const name = user.displayName?.trim() || user.email?.split("@")[0] || "Ayursarga Consumer";
   await createAuditedDocument(COLLECTIONS.users, {
     uid: user.uid,
     name,
-    email: user.email ?? input.email.trim(),
-    phone: input.phone?.trim() || null,
+    email: user.email ?? "",
+    phone: null,
+    address: null,
     role: "consumer",
     status: "active",
     hospitalId: null,
@@ -84,8 +86,9 @@ export async function createConsumerProfile(user: User, input: ConsumerRegistrat
   const profile: UserProfile = {
     uid: user.uid,
     name,
-    email: user.email ?? input.email.trim(),
-    phone: input.phone?.trim() || null,
+    email: user.email ?? "",
+    phone: null,
+    address: null,
     role: "consumer",
     status: "active",
     hospitalId: null,
@@ -98,7 +101,7 @@ export async function createConsumerProfile(user: User, input: ConsumerRegistrat
 
 export async function updateUserProfile(
   uid: string,
-  changes: { name?: string; phone?: string | null },
+  changes: { name?: string; phone?: string | null; address?: string | null },
 ) {
   const allowedChanges: Record<string, unknown> = {
     updatedAt: firestoreTimestamp.server(),
@@ -106,6 +109,7 @@ export async function updateUserProfile(
   };
   if (typeof changes.name === "string") allowedChanges.name = changes.name.trim();
   if (changes.phone !== undefined) allowedChanges.phone = changes.phone?.trim() || null;
+  if (changes.address !== undefined) allowedChanges.address = changes.address?.trim() || null;
   const role = profileCache.get(uid)?.role ?? "consumer";
   await updateAuditedDocument(
     COLLECTIONS.users,

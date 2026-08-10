@@ -53,7 +53,6 @@ export function validateHospitalFields(input: Record<string, unknown>) {
   if (address.length < 10) errors.address = "Enter the hospital's complete street address.";
   if (city.length < 2) errors.city = "Enter a valid city or locality.";
   if (!isIndiaStateOrUnionTerritory(state)) errors.state = "Select a valid Indian state or union territory.";
-  if (description && description.length < 20) errors.description = "Either leave the description empty or provide at least 20 characters.";
   if (!Number.isFinite(commissionPercentage) || commissionPercentage < 0 || commissionPercentage > 100) {
     errors.commissionPercentage = "Commission must be between 0 and 100 percent.";
   }

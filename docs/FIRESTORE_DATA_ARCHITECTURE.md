@@ -6,16 +6,17 @@ The application keeps the existing top-level `services` collection to preserve
 working routes, queries, and indexes. Relationships use stable IDs rather than
 duplicating records or introducing deeply nested documents.
 
-- `users`: authentication profile and role. Consumer details live here under
-  `role: "consumer"`; a duplicate `consumers` collection is intentionally not
-  created.
+- `users`: authentication profile and role. Consumer name, Google email, phone,
+  and contact address live here under `role: "consumer"`; a duplicate
+  `consumers` collection is intentionally not created.
 - `hospitals`: hospital profile, visibility, status, and commission settings.
 - `hospitalStaff`: future hospital-to-user staff assignments.
 - `doctors`: future hospital doctor profiles.
 - `services`: hospital services linked by `hospitalId`.
 - `availability`: future doctor/service availability linked by IDs.
-- `bookings`: consumer, hospital, and service references plus immutable price
-  and commission snapshots.
+- `bookings`: Consumer, Hospital, and service references plus immutable price,
+  commission, and Consumer contact snapshots. Only Admin, the Consumer owner,
+  and the assigned Hospital can read the booking.
 - `payments`: future provider transaction references; no payment workflow is
   implemented yet.
 - `notifications`: future user notifications.

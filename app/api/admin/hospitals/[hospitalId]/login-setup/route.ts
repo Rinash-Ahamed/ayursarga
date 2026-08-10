@@ -78,6 +78,7 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
       name,
       email,
       phone: null,
+      address: null,
       role: "hospital",
       status: "active",
       hospitalId,
