@@ -260,11 +260,12 @@ service cloud.firestore {
       allow update: if hasLinkedAudit('hospitals', hospitalId)
         && request.resource.data.updatedAt == request.time
         && request.resource.data.updatedBy == request.auth.uid
+        && hasValidRequiredHospitalFields()
         && ((isAdmin() && validAdminHospitalUpdate()) || (
           belongsToHospital(hospitalId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name', 'description', 'email', 'phone', 'address', 'city', 'state',
-            'imageUrl', 'updatedAt', 'updatedBy', 'lastAuditId'
+            'updatedAt', 'updatedBy', 'lastAuditId'
           ])
         ));
       allow delete: if false;

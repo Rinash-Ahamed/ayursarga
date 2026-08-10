@@ -47,6 +47,50 @@ security, collection schemas, route boundaries, and deliberately deferred work.
 The preservation and audit design is documented in
 [Firestore data architecture](docs/FIRESTORE_DATA_ARCHITECTURE.md).
 
+## Confirmed operating decisions
+
+### Data preservation
+
+- Application code must never permanently delete operational Firestore data.
+  Users, hospitals, services, bookings, and their history use archive/soft-delete
+  metadata and remain available for audit and restoration.
+- Firestore client rules deny document deletion for active application
+  collections. Audit logs are append-only and Admin-readable.
+- No Firestore TTL or other automatic record-deletion policy is configured.
+- Firebase Console, project-owner, and service-account access is restricted to
+  trusted platform administrators. Privileged Admin SDK work bypasses client
+  rules and must preserve the same archive and audit guarantees.
+
+### Role and privacy boundary
+
+- Consumer, Hospital, and Admin routes and navigation remain separate. Every
+  protected page uses the appropriate role guard; Firestore rules remain the
+  data-access authority.
+- Admin controls and management details—including commission management,
+  contract workflow, signing/activation controls, audit data, and platform
+  settings—must not be rendered in Consumer or Hospital interfaces.
+- Consumer and Hospital user lists are segregated in the Admin portal. Admin
+  accounts are managed separately.
+- The confirmed scope for this phase keeps the current Firestore collection
+  structure. A duplicate public/private hospital collection is not required
+  while Firebase project access is limited to trusted administrators. If a
+  future requirement demands field-level hiding from an otherwise readable
+  Firestore document, introduce a reviewed public/private document split;
+  Firestore rules cannot mask individual fields within a permitted read.
+
+### Hospital field ownership
+
+- Hospital users may edit hospital name, official email, phone, city/locality,
+  state, complete address, and optional description for their assigned hospital.
+- Only Admin controls commission, approval/status, public visibility, contract
+  generation/signing details, the signed-contract URL, activation, and archive
+  actions.
+- The Hospital Profile must not expose Image URL, commission, contract, audit,
+  activation, visibility, or other Admin-management controls.
+
+See [AGENTS.md](AGENTS.md) for implementation guardrails that future coding
+work must preserve.
+
 ## Deployment note
 
 The contact form uses the Node.js `/api/contact` route. Do not replace the

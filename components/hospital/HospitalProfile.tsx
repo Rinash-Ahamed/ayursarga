@@ -45,7 +45,6 @@ export function HospitalProfile() {
         city: validation.data.city,
         state: validation.data.state,
         description: validation.data.description,
-        imageUrl: validation.data.imageUrl,
       };
       await updateHospitalProfile(id, profile, hospital);
       setHospital((current) => current ? { ...current, ...profile } : current);
@@ -58,15 +57,14 @@ export function HospitalProfile() {
   }
 
   return <PortalShell role="hospital" title="Hospital Profile">{hospital && <form className="portal-card portal-form" onSubmit={submit} noValidate>
-    <label>Name *<input name="name" defaultValue={hospital.name} required minLength={2} maxLength={120} aria-invalid={Boolean(fieldErrors.name)} />{fieldErrors.name && <span className="portal-field-error">{fieldErrors.name}</span>}</label>
-    <label>Email *<input name="email" type="email" defaultValue={hospital.email} required maxLength={160} aria-invalid={Boolean(fieldErrors.email)} />{fieldErrors.email && <span className="portal-field-error">{fieldErrors.email}</span>}</label>
+    <p className="full portal-form-note">Complete every field marked with * before saving the hospital profile.</p>
+    <label>Hospital name *<input name="name" defaultValue={hospital.name} required minLength={2} maxLength={120} aria-invalid={Boolean(fieldErrors.name)} />{fieldErrors.name && <span className="portal-field-error">{fieldErrors.name}</span>}</label>
+    <label>Official email *<input name="email" type="email" defaultValue={hospital.email} required maxLength={160} aria-invalid={Boolean(fieldErrors.email)} />{fieldErrors.email && <span className="portal-field-error">{fieldErrors.email}</span>}</label>
     <label>Phone *<input name="phone" type="tel" defaultValue={hospital.phone} required minLength={7} maxLength={25} aria-invalid={Boolean(fieldErrors.phone)} />{fieldErrors.phone && <span className="portal-field-error">{fieldErrors.phone}</span>}</label>
-    <label>City *<input name="city" defaultValue={hospital.city} required minLength={2} maxLength={80} aria-invalid={Boolean(fieldErrors.city)} />{fieldErrors.city && <span className="portal-field-error">{fieldErrors.city}</span>}</label>
+    <label>City / locality *<input name="city" defaultValue={hospital.city} required minLength={2} maxLength={80} aria-invalid={Boolean(fieldErrors.city)} />{fieldErrors.city && <span className="portal-field-error">{fieldErrors.city}</span>}</label>
     <label>State *<IndiaStateSelect name="state" defaultValue={hospital.state} required aria-invalid={Boolean(fieldErrors.state)} />{fieldErrors.state && <span className="portal-field-error">{fieldErrors.state}</span>}</label>
-    <label>Image URL <small>Optional</small><input name="imageUrl" type="url" defaultValue={hospital.imageUrl ?? ""} maxLength={500} aria-invalid={Boolean(fieldErrors.imageUrl)} />{fieldErrors.imageUrl && <span className="portal-field-error">{fieldErrors.imageUrl}</span>}</label>
-    <label className="full">Address *<input name="address" defaultValue={hospital.address} required minLength={10} maxLength={300} aria-invalid={Boolean(fieldErrors.address)} />{fieldErrors.address && <span className="portal-field-error">{fieldErrors.address}</span>}</label>
+    <label className="full">Complete address *<input name="address" defaultValue={hospital.address} required minLength={10} maxLength={300} aria-invalid={Boolean(fieldErrors.address)} />{fieldErrors.address && <span className="portal-field-error">{fieldErrors.address}</span>}</label>
     <label className="full">Description<textarea name="description" defaultValue={hospital.description} maxLength={2000} aria-invalid={Boolean(fieldErrors.description)} />{fieldErrors.description && <span className="portal-field-error">{fieldErrors.description}</span>}</label>
-    <p className="full">Commission: {hospital.commissionPercentage}% · Visibility, commission and approval are controlled by Ayursarga Admin.</p>
     {error && <p className="portal-form-error full" role="alert">{error}</p>}
     {message && <p className="portal-form-success full">{message}</p>}
     <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save profile"}</button></div>

@@ -13,7 +13,7 @@ import { createAuditedDocument, getArchiveMetadata, getAuditActorId, getRestoreM
 
 type HospitalAdminUpdate = Partial<HospitalFields & Pick<HospitalDocument, "status" | "isPublic">>;
 type HospitalProfileInput = Pick<HospitalDocument,
-  "name" | "description" | "email" | "phone" | "address" | "city" | "state" | "imageUrl"
+  "name" | "description" | "email" | "phone" | "address" | "city" | "state"
 >;
 
 export const getHospital = (id: string) => readDocument<HospitalDocument>(COLLECTIONS.hospitals, id);
