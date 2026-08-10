@@ -8,6 +8,7 @@ import { formatCurrency } from "@/utils/currency";
 import { formatMonthYear, getCalendarMonthRange } from "@/utils/date";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
+import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 
 type DashboardStats = {
   activeHospitals: number | null;
@@ -66,7 +67,10 @@ export function AdminDashboard() {
 
   const value = (number: number | null) => isLoading || number === null ? "—" : number.toLocaleString("en-IN");
 
+  const hasDashboardData = Object.values(stats).some((number) => number !== null);
+
   return <PortalShell role="admin" title="Admin Dashboard">
+    <PortalLoadGuard loading={isLoading} error={error} hasData={hasDashboardData} fallbackHref="/" loadingMessage="Loading dashboard totals…" />
     {error && <div className="portal-dashboard-feedback"><PortalFeedback error={error} /></div>}
     <div className="portal-grid">
       <article className="portal-card portal-stat portal-stat-hospitals">

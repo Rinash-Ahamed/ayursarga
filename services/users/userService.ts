@@ -10,6 +10,7 @@ import { parseUserProfile } from "@/features/auth/profile";
 import {
   firestoreTimestamp,
   readDocument,
+  readDocumentsByIds,
   runFilteredQuery,
   type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
@@ -137,6 +138,11 @@ export function listUsers(role: "consumer" | "hospital", options: Pick<QueryPage
     sort: { field: "createdAt", direction: "desc" },
     ...options,
   });
+}
+
+export async function getUserDisplayNames(uids: string[]) {
+  const users = await readDocumentsByIds<Pick<UserDocument, "name">>(COLLECTIONS.users, uids);
+  return new Map(users.map((user) => [user.id, user.name]));
 }
 
 export const archiveUser = (uid: string) => updateAuditedDocument(COLLECTIONS.users, uid, {

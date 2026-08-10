@@ -8,6 +8,7 @@ import {
   getCountFromServer,
   getAggregateFromServer,
   endAt,
+  documentId,
   limit as limitResults,
   orderBy,
   query,
@@ -59,6 +60,21 @@ export function emptyQueryPage<T>(): QueryPage<T> {
 export async function readDocument<T>(collectionPath: string, id: string) {
   const snapshot = await getDoc(doc(getClientFirestore(), collectionPath, id));
   return snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as DocumentRecord<T>) : null;
+}
+
+export async function readDocumentsByIds<T>(collectionPath: string, ids: string[]) {
+  const uniqueIds = [...new Set(ids.filter(Boolean))];
+  if (uniqueIds.length === 0) return [];
+  const groups: string[][] = [];
+  for (let index = 0; index < uniqueIds.length; index += 30) groups.push(uniqueIds.slice(index, index + 30));
+  const snapshots = await Promise.all(groups.map((group) => getDocs(query(
+    collection(getClientFirestore(), collectionPath),
+    where(documentId(), "in", group),
+  ))));
+  return snapshots.flatMap((snapshot) => snapshot.docs.map((item) => ({
+    id: item.id,
+    ...item.data(),
+  } as DocumentRecord<T>)));
 }
 
 export async function runFilteredQuery<T>(options: QueryPageOptions): Promise<QueryPage<T>> {

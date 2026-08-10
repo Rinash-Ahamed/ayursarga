@@ -14,6 +14,7 @@ import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { formatStatus } from "@/utils/text";
 import { IndiaStateSelect } from "@/components/forms/IndiaStateSelect";
 import { PortalToast } from "@/components/portal/PortalToast";
+import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 
 function FieldError({ field, errors }: { field: HospitalField; errors: HospitalValidationErrors }) {
   return errors[field] ? <span className="portal-field-error" role="alert">{errors[field]}</span> : null;
@@ -61,6 +62,7 @@ export function HospitalsManager() {
   }
 
   return <PortalShell role="admin" title="Hospitals">
+    <PortalLoadGuard loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/admin" loadingMessage="Loading hospitals…" />
     <div className="portal-actions portal-page-actions">
       <button
         className="portal-button"

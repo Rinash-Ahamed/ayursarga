@@ -55,11 +55,15 @@ The preservation and audit design is documented in
   Users, hospitals, services, bookings, and their history use archive/soft-delete
   metadata and remain available for audit and restoration.
 - Firestore client rules deny document deletion for active application
-  collections. Audit logs are append-only and Admin-readable.
+  collections. Audit logs are Admin-readable and cannot be changed through the
+  client SDK. As an explicit platform-owner exception, an active Admin may use
+  the protected Admin portal action to permanently clear the audit log through
+  the verified server endpoint.
 - No Firestore TTL or other automatic record-deletion policy is configured.
 - Firebase Console, project-owner, and service-account access is restricted to
   trusted platform administrators. Privileged Admin SDK work bypasses client
-  rules and must preserve the same archive and audit guarantees.
+  rules and must preserve the same archive and audit guarantees, except for the
+  narrowly scoped audit-log clearing endpoint described above.
 
 ### Role and privacy boundary
 

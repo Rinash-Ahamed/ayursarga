@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
-import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from "@/services/firebase/admin";
+import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 
 export const runtime = "nodejs";
 
@@ -8,24 +8,9 @@ function response(payload: Record<string, unknown>, status = 200) {
   return NextResponse.json(payload, { status, headers: { "Cache-Control": "no-store" } });
 }
 
-function bearerToken(request: Request) {
-  const authorization = request.headers.get("authorization") ?? "";
-  return authorization.startsWith("Bearer ") ? authorization.slice(7).trim() : "";
-}
-
 export async function POST(request: Request, context: { params: Promise<{ hospitalId: string }> }) {
   try {
-    const token = bearerToken(request);
-    if (!token) return response({ error: "Admin authentication is required." }, 401);
-
-    const auth = getFirebaseAdminAuth();
-    const firestore = getFirebaseAdminFirestore();
-    const decoded = await auth.verifyIdToken(token, true);
-    const adminSnapshot = await firestore.collection("users").doc(decoded.uid).get();
-    const adminProfile = adminSnapshot.data();
-    if (!adminSnapshot.exists || adminProfile?.role !== "admin" || adminProfile.status !== "active") {
-      return response({ error: "Only an active Admin can prepare a Hospital login." }, 403);
-    }
+    const { uid: adminUid, auth, firestore } = await requireActiveAdmin(request);
 
     const { hospitalId } = await context.params;
     const hospitalReference = firestore.collection("hospitals").doc(hospitalId);
@@ -69,7 +54,7 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
       status: "active",
       hospitalId,
       updatedAt: now,
-      updatedBy: decoded.uid,
+      updatedBy: adminUid,
       archivedAt: null,
       archivedBy: null,
       lastAuditId: auditReference.id,
@@ -83,9 +68,9 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
       status: "active",
       hospitalId,
       createdAt: now,
-      createdBy: decoded.uid,
+      createdBy: adminUid,
       updatedAt: now,
-      updatedBy: decoded.uid,
+      updatedBy: adminUid,
       archivedAt: null,
       archivedBy: null,
       lastAuditId: auditReference.id,
@@ -97,7 +82,7 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
       action,
       module: "users",
       recordId: authUser.uid,
-      actorId: decoded.uid,
+      actorId: adminUid,
       actorRole: "admin",
       previousValues: previous,
       updatedValues: userData,
@@ -113,6 +98,7 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
 
     return response({ ok: true, email });
   } catch (error) {
+    if (error instanceof AdminAuthorizationError) return response({ error: error.message }, error.status);
     console.error("Hospital login setup failed", error instanceof Error ? error.message : error);
     return response({ error: "Hospital login setup is unavailable. Check the server Firebase Admin configuration and try again." }, 503);
   }

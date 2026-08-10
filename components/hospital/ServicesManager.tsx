@@ -11,6 +11,7 @@ import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalPagination } from "@/components/portal/PortalPagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { PortalToast } from "@/components/portal/PortalToast";
+import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 
 export function ServicesManager() {
   const { userProfile } = useAuth(); const id = userProfile?.hospitalId;
@@ -32,7 +33,7 @@ export function ServicesManager() {
     setBusy(true); setActionError(null); setActionMessage(null); try { const changes = { name, price: Number(price), description }; await updateService(item.id, changes, item); patchItem(item.id, changes); setActionMessage("The service has been updated."); }
     catch { setActionError("We could not save the service changes. Check the details and try again."); } finally { setBusy(false); }
   }
-  return <PortalShell role="hospital" title="Services"><form className="portal-card portal-form" onSubmit={submit} style={{ marginBottom: 26 }}>
+  return <PortalShell role="hospital" title="Services"><PortalLoadGuard loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/hospital" loadingMessage="Loading hospital services…" /><form className="portal-card portal-form" onSubmit={submit} style={{ marginBottom: 26 }}>
     <label>Service name<input name="name" required /></label><label>Price (INR)<input name="price" type="number" min="0" step="0.01" required /></label>
     <label>Duration (minutes)<input name="duration" type="number" min="1" /></label><label className="full">Description<textarea name="description" required /></label>
     <div className="portal-actions full"><button className="portal-button" disabled={busy}>Add service</button></div></form>

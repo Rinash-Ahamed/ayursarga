@@ -9,6 +9,7 @@ import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalPagination } from "@/components/portal/PortalPagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 
 export function HospitalSearch() {
   const [search, setSearch] = useState("");
@@ -19,11 +20,12 @@ export function HospitalSearch() {
     return term ? items.filter((item) => `${item.name} ${item.city} ${item.state}`.toLowerCase().includes(term)) : items;
   }, [items, search]);
   return <PortalShell role="consumer" title="Find Ayurvedic care" eyebrow="Hospital discovery">
+    <PortalLoadGuard loading={isLoading} error={error} hasData={items.length > 0} fallbackHref="/" loadingMessage="Finding Ayurvedic hospitals…" />
     <div className="portal-card" style={{ marginBottom: 22 }}>
       <label className="portal-form"><span className="full">Search the current page by hospital, city, or state
         <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search hospitals" /></span></label>
     </div>
-    <PortalFeedback error={error} empty={!error && !isLoading && visible.length === 0 ? (search.trim() ? "No hospitals match your search. Try another hospital, city, or state." : "No hospitals are available yet. Please check again soon.") : undefined} />
+    <PortalFeedback error={items.length > 0 ? error : null} empty={!error && !isLoading && visible.length === 0 ? (search.trim() ? "No hospitals match your search. Try another hospital, city, or state." : "No hospitals are available yet. Please check again soon.") : undefined} />
     <div className="portal-grid">{visible.map((hospital) => <article className="portal-card" key={hospital.id}>
       <span className="portal-status">{hospital.city}, {hospital.state}</span>
       <h2 style={{ marginTop: 14 }}>{hospital.name}</h2><p>{hospital.description}</p>

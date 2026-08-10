@@ -12,6 +12,7 @@ import { formatStatus } from "@/utils/text";
 import { PortalPagination } from "@/components/portal/PortalPagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { PortalToast } from "@/components/portal/PortalToast";
+import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 
 export function HospitalBookings() {
   const { userProfile } = useAuth(); const hospitalId = userProfile?.hospitalId;
@@ -32,7 +33,7 @@ export function HospitalBookings() {
     update.hospitalNotes = window.prompt("Hospital note (optional)", item.hospitalNotes ?? "") || null;
     setBusy(item.id); setActionError(null); setActionMessage(null); try { await updateHospitalBooking(item.id, update, item); await reload(); setActionMessage("The booking has been updated."); } catch { setActionError("We could not update this booking. Review the details and try again."); } finally { setBusy(null); }
   }
-  return <PortalShell role="hospital" title="Bookings"><PortalFeedback error={error} empty={!error && !isLoading && items.length === 0 ? "No booking requests yet. New requests from consumers will appear here." : undefined} /><PortalToast message={actionMessage} /><div className="portal-list">{items.map((item) => <article className="portal-card" key={item.id}>
+  return <PortalShell role="hospital" title="Bookings"><PortalLoadGuard loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/hospital" loadingMessage="Loading booking requests…" /><PortalFeedback error={error} empty={!error && !isLoading && items.length === 0 ? "No booking requests yet. New requests from consumers will appear here." : undefined} /><PortalToast message={actionMessage} /><div className="portal-list">{items.map((item) => <article className="portal-card" key={item.id}>
     <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}><h3>{formatCurrency(item.servicePrice)}</h3><span className="portal-status" data-status={item.status}>{formatStatus(item.status)}</span></div>
     <p><strong>{item.consumerName || "Consumer"}</strong> · {item.consumerPhone || "Phone not recorded"} · {item.consumerEmail || "Email not recorded"}</p>
     <p>Contact address: {item.consumerAddress || "Not recorded on this earlier booking"}</p>

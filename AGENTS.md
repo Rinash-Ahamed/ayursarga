@@ -47,14 +47,18 @@ implementation work unless the project owner explicitly changes a decision.
 - Use audited archive/restore transitions. Preserve document IDs and the
   standard `created*`, `updated*`, `archived*`, and `lastAuditId` metadata.
 - Firestore rules must keep permanent client deletion denied. Audit logs remain
-  append-only, immutable through normal application access, and readable only
-  by active Admin users.
+  append-only through the client SDK and readable only by active Admin users.
+  The project owner has explicitly authorized one exception: an active Admin
+  may permanently clear `auditLogs` through the verified server endpoint and
+  its confirmation-protected Admin UI. Never expose that operation to Hospital
+  or Consumer users and never broaden it to operational records.
 - Critical creates, updates, archive/restore operations, status changes,
   contract actions, and booking changes must write their audit record in the
   same atomic batch.
 - Firebase Console and service-account access are trusted-Admin-only. Admin SDK
   code bypasses Firestore rules, so any future privileged script must implement
-  the same preservation and audit policy explicitly.
+  the same preservation and audit policy explicitly; the audit-clear endpoint
+  above is the only approved exception.
 - Do not enable Firebase TTL. Do not introduce Cloud Functions or Storage unless
   a later phase explicitly authorizes them.
 

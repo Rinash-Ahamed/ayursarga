@@ -20,7 +20,8 @@ duplicating records or introducing deeply nested documents.
 - `payments`: future provider transaction references; no payment workflow is
   implemented yet.
 - `notifications`: future user notifications.
-- `auditLogs`: centralized append-only activity history.
+- `auditLogs`: centralized activity history, append-only through the client SDK
+  and visible only to active Admin users.
 - `systemSettings`: future platform configuration.
 
 Reserved future collections are denied by default until their services and
@@ -56,12 +57,17 @@ generation/signing actor and timestamp fields, and activation actor and
 timestamp fields. Rules require a Pending hospital and a confirmed signed
 contract before allowing the Active/Public transition.
 
-Audit logs are readable only by active admins and cannot be updated or deleted
-through client rules. Client code deliberately stores `ipAddress: null`: a
+Audit logs are readable only by active Admins and cannot be updated or deleted
+through client rules. The platform owner has approved one narrow exception:
+the Admin audit page may permanently clear this collection through a server
+endpoint that verifies the caller's Firebase ID token and active Admin profile.
+Hospital and Consumer users cannot call or see this control. Client code
+deliberately stores `ipAddress: null`: a
 browser cannot provide a trustworthy source IP. Trusted IP enrichment and
 backend-guaranteed logs for out-of-band Admin SDK operations require a future
 server/Cloud Function phase.
 
 Admin SDK operations bypass Firestore Security Rules by design. Every controlled
 Admin SDK script must therefore preserve records and create a server-sourced
-audit entry in the same batch.
+audit entry in the same batch, except for the explicitly approved audit-log
+clearing endpoint. That exception must never be reused for operational data.

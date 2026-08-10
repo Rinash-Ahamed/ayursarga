@@ -12,6 +12,7 @@ const NAVIGATION = {
   admin: [
     ["Dashboard", ROUTES.admin.home], ["Hospitals", ROUTES.admin.hospitals],
     ["Users", ROUTES.admin.users], ["Bookings", ROUTES.admin.bookings],
+    ["Audit Logs", ROUTES.admin.audits],
   ],
   hospital: [
     ["Dashboard", ROUTES.hospital.home], ["Hospital Profile", ROUTES.hospital.profile],

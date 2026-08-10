@@ -11,7 +11,7 @@ their own layouts and are compiled as separate Next.js route segments.
 | Consumer auth | `/app/login` and `/app/register` use Google; the legacy forgot-password URL redirects to login |
 | Hospital | `/hospital`, `/hospital/profile`, `/hospital/services`, `/hospital/bookings` |
 | Hospital auth | `/hospital/login`, `/hospital/forgot-password` |
-| Admin | `/admin`, `/admin/hospitals`, `/admin/hospitals/[hospitalId]`, `/admin/users`, `/admin/bookings` |
+| Admin | `/admin`, `/admin/hospitals`, `/admin/hospitals/[hospitalId]`, `/admin/users`, `/admin/bookings`, `/admin/audits` |
 | Admin auth | `/admin/login`, `/admin/forgot-password` |
 
 `AuthContext` loads and caches one user profile per authenticated session.
@@ -30,8 +30,9 @@ The active application uses these collections:
 - `services`: hospital-owned service details and current price.
 - `bookings`: preferred appointment request, Hospital response, price,
   commission, and Consumer contact snapshots, and completion state.
-- `auditLogs`: immutable, admin-readable records linked atomically to critical
-  application writes.
+- `auditLogs`: Admin-readable records linked atomically to critical application
+  writes. Client updates and deletes are denied; an active Admin can explicitly
+  clear the collection through the protected server endpoint.
 
 Typed boundaries are also reserved for `hospitalStaff`, `doctors`,
 `availability`, `payments`, `notifications`, and `systemSettings`. They remain
@@ -51,6 +52,18 @@ page in memory instead of immediately reading the same documents again.
 Dashboard totals use Firestore count aggregation rather than downloading whole
 collections. The application uses one-time reads; no Firestore realtime
 listener is used beyond Firebase Auth's single authentication-state listener.
+
+Admin, Hospital, and Consumer routes have lightweight route-level loading and
+error boundaries. Initial client-side data reads use the shared portal load
+guard so slow requests retain clear loading feedback. An initial-load failure
+shows the three-second error toast and returns to the previous page; failures
+after content is available keep that content visible so pagination or action
+errors do not discard the user's current work.
+
+The Admin audit view shows only the newest 20 records per page using cursor
+pagination. It renders a compact activity summary and resolves the current
+page's actor names with one bounded document-ID query; internal record IDs,
+device metadata, and raw before/after payloads are not exposed in the UI.
 
 Firebase App, Authentication, and Firestore initialization are separated. The
 public route defers its authentication check until the browser is idle, and
@@ -88,7 +101,9 @@ clearly marked development template and is isolated in
   tenant identifiers are immutable to them.
 - Admin users require an active protected profile and can manage platform data.
 - Client-side permanent deletes are denied. Supported changes require a linked
-  append-only audit record, while archived records remain stored.
+  append-only audit record, while archived records remain stored. The sole
+  permanent-deletion exception is the owner-approved Admin audit-log clearing
+  endpoint; it does not apply to operational collections.
 - Everything else is denied.
 
 ## Deliberately deferred
@@ -96,7 +111,7 @@ clearly marked development template and is isolated in
 Contracts, leads, hospital staff workflows, doctor workflows, availability
 slots, payment processing, invoices, settlements, automatic commission
 collection, refunds, reviews, notification delivery, chat, medical records,
-reports, audit-log UI, Cloud
+reports, Cloud
 Functions, Firebase Storage, native Capacitor integrations, and advanced PWA
 caching are not part of this version.
 

@@ -11,17 +11,23 @@ import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalPagination } from "@/components/portal/PortalPagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 
 export function HospitalDetails({ hospitalId }: { hospitalId: string }) {
   const [hospital, setHospital] = useState<DocumentRecord<HospitalDocument> | null>(null);
   const [hospitalError, setHospitalError] = useState<string | null>(null);
+  const [hospitalLoading, setHospitalLoading] = useState(true);
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) =>
     listActiveHospitalServices(hospitalId, { pageSize: 20, cursor }), [hospitalId]);
   const { items: services, error: serviceError, isLoading, hasMore, loadMore } = usePaginatedList<ServiceDocument>(loader, "We could not load this hospital's services. Refresh the page and try again.");
   const error = hospitalError ?? serviceError;
-  useEffect(() => { void getHospital(hospitalId).then(setHospital)
-    .catch(() => setHospitalError("We could not load this hospital. Return to the hospital list and try again.")); }, [hospitalId]);
+  useEffect(() => { void getHospital(hospitalId).then((record) => {
+    setHospital(record);
+    if (!record) setHospitalError("This hospital is no longer available.");
+  }).catch(() => setHospitalError("We could not load this hospital."))
+    .finally(() => setHospitalLoading(false)); }, [hospitalId]);
   return <PortalShell role="consumer" title={hospital?.name ?? "Hospital details"} eyebrow="Ayursarga hospital">
+    <PortalLoadGuard loading={hospitalLoading || (isLoading && !hospital)} error={hospitalError} hasData={Boolean(hospital)} fallbackHref="/app" loadingMessage="Loading hospital details…" />
     <PortalFeedback error={error} empty={!error && !hospital ? "Loading hospital details…" : undefined} />
     {hospital && <><article className="portal-card">
       <p>{hospital.description}</p><div className="portal-card-meta"><span>{hospital.address}</span><span>{hospital.city}, {hospital.state}</span><span>{hospital.phone}</span></div>

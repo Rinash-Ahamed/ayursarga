@@ -12,6 +12,7 @@ import { formatStatus } from "@/utils/text";
 import { PortalPagination } from "@/components/portal/PortalPagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { PortalToast } from "@/components/portal/PortalToast";
+import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 
 export function ConsumerBookings() {
   const { firebaseUser } = useAuth();
@@ -23,7 +24,7 @@ export function ConsumerBookings() {
   const { items, error: loadError, isLoading, hasMore, loadMore, patchItem } = usePaginatedList<BookingDocument>(loader, "We could not load your bookings. Refresh the page and try again.");
   const error = actionError ?? loadError;
   async function cancel(item: DocumentRecord<BookingDocument>) { setBusy(item.id); setActionError(null); setActionMessage(null); try { await cancelConsumerBooking(item.id, item); patchItem(item.id, { status: "cancelled" }); setActionMessage("The booking has been cancelled."); } catch { setActionError("We could not cancel this booking. Refresh the page and try again."); } finally { setBusy(null); } }
-  return <PortalShell role="consumer" title="My bookings"><PortalFeedback error={error} empty={!error && !isLoading && items.length === 0 ? "You have no bookings yet. Find a hospital to request your first appointment." : undefined} /><PortalToast message={actionMessage} />
+  return <PortalShell role="consumer" title="My bookings"><PortalLoadGuard loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/app" loadingMessage="Loading your bookings…" /><PortalFeedback error={actionError ?? (items.length > 0 ? loadError : null)} empty={!error && !isLoading && items.length === 0 ? "You have no bookings yet. Find a hospital to request your first appointment." : undefined} /><PortalToast message={actionMessage} />
     <div className="portal-list">{items.map((booking) => <article className="portal-row" key={booking.id}><div><h3>{formatCurrency(booking.servicePrice)}</h3><p>{booking.preferredDate.toDate().toLocaleDateString("en-IN")} at {booking.preferredTime}</p></div><div><span className="portal-status" data-status={booking.status}>{formatStatus(booking.status)}</span>{["requested", "confirmed", "reschedule_requested"].includes(booking.status) && <div className="portal-actions"><button className="portal-button secondary" disabled={busy === booking.id} onClick={() => void cancel(booking)}>Cancel</button></div>}</div></article>)}</div><PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
   </PortalShell>;
 }

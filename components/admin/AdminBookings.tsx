@@ -12,6 +12,7 @@ import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { formatStatus } from "@/utils/text";
 import { PortalPagination } from "@/components/portal/PortalPagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 
 const BOOKING_STATUSES: readonly BookingStatus[] = [
   "requested", "confirmed", "reschedule_requested", "completed", "cancelled", "rejected",
@@ -79,6 +80,7 @@ export function AdminBookings() {
   }
 
   return <PortalShell role="admin" title="Bookings">
+    <PortalLoadGuard loading={isLoading} error={error} hasData={items.length > 0} fallbackHref="/admin" loadingMessage="Loading bookings…" />
     <section className="portal-card portal-booking-filters" aria-label="Booking filters">
       <div className="portal-filter-field portal-hospital-filter">
         <label htmlFor="booking-hospital-search">Hospital</label>
@@ -115,7 +117,7 @@ export function AdminBookings() {
         <button type="button" className="portal-button secondary" disabled={!hasFilters} onClick={clearFilters}>Clear filters</button>
       </div>
     </section>
-    <PortalFeedback error={error} empty={!error && !isLoading && items.length === 0
+    <PortalFeedback error={items.length > 0 ? error : null} empty={!error && !isLoading && items.length === 0
       ? (hasFilters ? "No bookings match these filters. Adjust or clear the filters and try again." : "No bookings yet. New appointment requests will appear here.")
       : undefined} />
     <div className="portal-list">{items.map((item) => <article className="portal-row" key={item.id}>

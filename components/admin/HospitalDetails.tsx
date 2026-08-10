@@ -18,6 +18,7 @@ import { buildHospitalContractHtml } from "@/features/hospitals/contractTemplate
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalToast } from "@/components/portal/PortalToast";
+import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 import { formatStatus } from "@/utils/text";
 import { toDate } from "@/utils/date";
 import { hospitalFormValues, validateHospitalFields, type HospitalValidationErrors } from "@/features/hospitals/validation";
@@ -159,6 +160,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     ? hospital.activatedAt
     : null;
   return <PortalShell role="admin" title="Hospital Details">
+    <PortalLoadGuard loading={loading} error={error} hasData={Boolean(hospital)} fallbackHref="/admin/hospitals" loadingMessage="Loading hospital details…" />
     <div className="portal-actions portal-page-actions"><Link className="portal-button secondary" href="/admin/hospitals">Back to hospitals</Link></div>
     <PortalFeedback error={error} empty={!error && !loading && !hospital ? "Return to Hospitals and choose a hospital to continue." : undefined} />
     <PortalToast message={message} />

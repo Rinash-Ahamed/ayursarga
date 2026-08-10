@@ -25,6 +25,7 @@ export const ROUTES = {
     hospitals: "/admin/hospitals",
     users: "/admin/users",
     bookings: "/admin/bookings",
+    audits: "/admin/audits",
     login: "/admin/login",
     forgotPassword: "/admin/forgot-password",
   },
