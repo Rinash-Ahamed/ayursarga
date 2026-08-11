@@ -12,7 +12,7 @@ export function BookingRequestForm({ hospitalId, serviceId }: { hospitalId: stri
   const router = useRouter();
   const [busy, setBusy] = useState(false); const [error, setError] = useState<string | null>(null);
   async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); if (!firebaseUser || !userProfile?.phone || !userProfile.address) return;
+    event.preventDefault(); if (!firebaseUser || !userProfile?.phone) return;
     const data = new FormData(event.currentTarget); setBusy(true); setError(null);
     try {
       await createBookingRequest({ consumerId: firebaseUser.uid, consumerName: userProfile.name,

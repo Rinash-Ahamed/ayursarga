@@ -14,7 +14,7 @@ import { getService } from "@/services/hospitals/serviceService";
 type BookingRequestInput = {
   consumerId: string; hospitalId: string; serviceId: string; preferredDate: Date;
   preferredTime: string; consumerNotes?: string | null; consumerName: string;
-  consumerEmail: string; consumerPhone: string; consumerAddress: string;
+  consumerEmail: string; consumerPhone: string; consumerAddress: string | null;
 };
 
 export async function createBookingRequest(input: BookingRequestInput) {
@@ -24,7 +24,7 @@ export async function createBookingRequest(input: BookingRequestInput) {
   return createAuditedDocument(COLLECTIONS.bookings, {
     consumerId: input.consumerId,
     consumerName: input.consumerName.trim(), consumerEmail: input.consumerEmail.trim().toLowerCase(),
-    consumerPhone: input.consumerPhone.trim(), consumerAddress: input.consumerAddress.trim(),
+    consumerPhone: input.consumerPhone.trim(), consumerAddress: input.consumerAddress?.trim() || null,
     hospitalId: hospital.id, serviceId: service.id,
     preferredDate: Timestamp.fromDate(input.preferredDate), preferredTime: input.preferredTime,
     confirmedDate: null, confirmedTime: null, status: "requested",

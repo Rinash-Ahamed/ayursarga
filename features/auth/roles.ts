@@ -36,8 +36,7 @@ export function getSafeRoleRedirect(requestedPath: string | null | undefined, ro
 
 export function isConsumerProfileComplete(profile: UserProfile | null | undefined) {
   return profile?.role === "consumer"
-    && Boolean(profile.phone?.trim())
-    && Boolean(profile.address?.trim());
+    && Boolean(profile.phone?.trim());
 }
 
 export function verifyProfileRole(profile: UserProfile, expectedRole: PortalRole) {

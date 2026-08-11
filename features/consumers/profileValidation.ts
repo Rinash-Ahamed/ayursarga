@@ -9,6 +9,5 @@ export function validateConsumerContact(input: { name: unknown; phone: unknown; 
   const errors: Partial<Record<"name" | "phone" | "address", string>> = {};
   if (name.length < 2) errors.name = "Enter your full name.";
   if (!PHONE_PATTERN.test(phone)) errors.phone = "Enter a valid contact number using 7 to 25 digits or common phone symbols.";
-  if (address.length < 10) errors.address = "Enter your complete contact address.";
-  return { data: { name, phone, address }, errors, isValid: Object.keys(errors).length === 0 };
+  return { data: { name, phone, address: address || null }, errors, isValid: Object.keys(errors).length === 0 };
 }

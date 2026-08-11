@@ -23,8 +23,8 @@ implementation work unless the project owner explicitly changes a decision.
   create separate authentication implementations for Admin, Hospital, and
   Consumer roles.
 - Consumers authenticate only through Google. Their first sign-in creates a
-  Consumer profile and requires a phone number and contact address before the
-  Consumer application can be used. Phone is contact data only; do not add SMS
+  Consumer profile and requires a phone number before the Consumer application
+  can be used; address is optional. Phone is contact data only; do not add SMS
   verification without a later explicit decision. Hospital and Admin accounts
   use email/password and are created only through a controlled privileged
   process.
@@ -92,7 +92,7 @@ implementation work unless the project owner explicitly changes a decision.
 - Consumer booking creation snapshots service price and commission values for
   historical consistency. It also snapshots the Consumer's name, Google email,
   phone, and contact address so only Admin and the assigned Hospital can use
-  those details for that booking. Do not grant Hospitals general read access to
+  the available details for that booking. Do not grant Hospitals general read access to
   Consumer profiles. Booking state changes must follow the transitions in
   `firestore.rules`.
 - Keep list reads bounded and cursor-paginated. Prefer Firestore count/sum

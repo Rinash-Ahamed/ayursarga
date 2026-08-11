@@ -58,7 +58,7 @@ export function ConsumerProfile({ completion = false }: { completion?: boolean }
       {completion && <p className="portal-form-note full">Add the contact details that a Hospital may use after you request an appointment.</p>}
       <label>Name *<input name="name" defaultValue={userProfile?.name} required minLength={2} maxLength={120} aria-invalid={Boolean(fieldErrors.name)} />{fieldErrors.name && <span className="portal-field-error">{fieldErrors.name}</span>}</label>
       <label>Phone *<input name="phone" type="tel" autoComplete="tel" defaultValue={userProfile?.phone ?? ""} required minLength={7} maxLength={25} aria-invalid={Boolean(fieldErrors.phone)} />{fieldErrors.phone && <span className="portal-field-error">{fieldErrors.phone}</span>}</label>
-      <label className="full">Contact address *<textarea name="address" autoComplete="street-address" defaultValue={userProfile?.address ?? ""} required minLength={10} maxLength={300} aria-invalid={Boolean(fieldErrors.address)} />{fieldErrors.address && <span className="portal-field-error">{fieldErrors.address}</span>}</label>
+      <label className="full">Address<textarea name="address" autoComplete="street-address" defaultValue={userProfile?.address ?? ""} maxLength={300} aria-invalid={Boolean(fieldErrors.address)} />{fieldErrors.address && <span className="portal-field-error">{fieldErrors.address}</span>}</label>
       <label className="full">Google account email<input value={userProfile?.email ?? ""} disabled /></label>
       <PortalToast message={error} tone="error" />
       <PortalToast message={message} />

@@ -7,7 +7,7 @@ working routes, queries, and indexes. Relationships use stable IDs rather than
 duplicating records or introducing deeply nested documents.
 
 - `users`: authentication profile and role. Consumer name, Google email, phone,
-  and contact address live here under `role: "consumer"`; a duplicate
+  and optional address live here under `role: "consumer"`; a duplicate
   `consumers` collection is intentionally not created.
 - `hospitals`: hospital profile, visibility, status, and commission settings.
 - `hospitalStaff`: future hospital-to-user staff assignments.

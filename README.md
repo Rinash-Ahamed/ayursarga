@@ -76,8 +76,8 @@ The preservation and audit design is documented in
 - Consumer and Hospital user lists are segregated in the Admin portal. Admin
   accounts are managed separately.
 - Consumers use Google Authentication only. After first sign-in they must add a
-  phone number and contact address; these are contact data and are not verified
-  through SMS. A booking snapshots these details for its assigned Hospital,
+  phone number; an address is optional. These are contact data and are not verified
+  through SMS. A booking snapshots the available details for its assigned Hospital,
   while Hospitals remain unable to browse Consumer profiles directly.
 - The confirmed scope for this phase keeps the current Firestore collection
   structure. A duplicate public/private hospital collection is not required

@@ -241,9 +241,10 @@ service cloud.firestore {
             request.resource.data.phone is string
             && request.resource.data.phone.size() >= 7
             && request.resource.data.phone.size() <= 25
-            && request.resource.data.address is string
-            && request.resource.data.address.size() >= 10
-            && request.resource.data.address.size() <= 300
+            && (request.resource.data.address == null || (
+              request.resource.data.address is string
+              && request.resource.data.address.size() <= 300
+            ))
           ))
         ));
       allow delete: if false;
@@ -331,9 +332,10 @@ service cloud.firestore {
         && request.resource.data.consumerPhone.size() >= 7
         && request.resource.data.consumerPhone.size() <= 25
         && request.resource.data.consumerAddress == getCurrentUser().address
-        && request.resource.data.consumerAddress is string
-        && request.resource.data.consumerAddress.size() >= 10
-        && request.resource.data.consumerAddress.size() <= 300
+        && (request.resource.data.consumerAddress == null || (
+          request.resource.data.consumerAddress is string
+          && request.resource.data.consumerAddress.size() <= 300
+        ))
         && request.resource.data.status == 'requested'
         && request.resource.data.confirmedDate == null
         && request.resource.data.confirmedTime == null

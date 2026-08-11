@@ -42,7 +42,7 @@ remain in `users` to avoid duplicating identity data.
 Bookings follow `requested`, `confirmed`, `reschedule_requested`, `rejected`,
 `cancelled`, or `completed`. The booking stores the service price and commission
 percentage at creation so later configuration changes do not alter history.
-It also snapshots the Consumer's name, Google email, phone, and contact address
+It also snapshots the Consumer's name, Google email, phone, and optional address
 so the assigned Hospital can contact that Consumer without receiving general
 access to the `users` collection.
 
@@ -92,8 +92,8 @@ clearly marked development template and is isolated in
 - Public reads require an active, public hospital; public service reads also
   require an active service owned by that hospital.
 - Consumers authenticate with Google and can edit only their own name, phone,
-  and contact address. Phone and address are mandatory after first sign-in but
-  are not SMS-verified. Consumers create bookings only for themselves, view
+  and address. Phone is mandatory after first sign-in, while address is optional;
+  neither field is SMS-verified. Consumers create bookings only for themselves, view
   their own bookings, and cancel eligible statuses.
 - Hospital users require a protected hospital profile assignment.
   They can edit permitted profile fields, manage only their services, and move

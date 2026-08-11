@@ -68,7 +68,7 @@ export type BookingDocument = AuditedDocument & {
   consumerName: string;
   consumerEmail: string;
   consumerPhone: string;
-  consumerAddress: string;
+  consumerAddress: string | null;
   hospitalId: string;
   serviceId: string;
   preferredDate: Timestamp;
