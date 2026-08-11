@@ -91,9 +91,9 @@ implementation work unless the project owner explicitly changes a decision.
   audit each transition.
 - Consumer booking creation snapshots service price and commission values for
   historical consistency. It also snapshots the Consumer's name, Google email,
-  phone, and contact address so only Admin and the assigned Hospital can use
-  the available details for that booking. Do not grant Hospitals general read access to
-  Consumer profiles. Booking state changes must follow the transitions in
+  phone, and optional address so only Admin and the assigned Hospital can use
+  the available details for that booking. Do not grant Hospitals general read
+  access to Consumer profiles. Booking state changes must follow the transitions in
   `firestore.rules`.
 - Keep list reads bounded and cursor-paginated. Prefer Firestore count/sum
   aggregations for dashboard totals and deploy required indexes deliberately.
