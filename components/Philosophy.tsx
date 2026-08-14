@@ -37,7 +37,7 @@ export default function Philosophy() {
         </FadeUp>
         <div className="process-grid">
           {STEPS.map(([title, body], index) => (
-            <FadeUp as="article" className="process-card" delay={index * 0.06} key={title}>
+            <FadeUp id={index === 0 ? "discover-hospitals" : undefined} as="article" className="process-card" delay={index * 0.06} key={title}>
               <div className="process-card-heading"><StepIcon index={index} /></div><h3>{title}</h3><p>{body}</p>
             </FadeUp>
           ))}

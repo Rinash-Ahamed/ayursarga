@@ -84,18 +84,21 @@ export function RevealWords({ text, className = "" }: { text: string; className?
 
 export function FadeUp({
   children,
+  id,
   className = "",
   delay = 0,
   as = "div",
   onSubmit,
 }: {
   children: ReactNode;
+  id?: string;
   className?: string;
   delay?: number;
   as?: MotionTagName;
   onSubmit?: FormEventHandler<HTMLFormElement>;
 }) {
   const animationProps = {
+    id,
     className,
     initial: { opacity: 0, y: 36 },
     whileInView: { opacity: 1, y: 0 },

@@ -5,9 +5,9 @@ import Image from "next/image";
 import { ROUTES } from "@/config/routes";
 
 const LINKS = [
-  { href: "#how-it-works", label: "How It Works" },
+  { href: "#discover-hospitals", label: "How It Works" },
   { href: "/app", label: "Search Hospitals" },
-  { href: "#wellness", label: "Wellness" },
+  { href: "#family-wellness", label: "Wellness" },
   { href: "#why-ayursarga", label: "Why Ayursarga" },
   { href: "#partners", label: "For Hospitals" },
 ];
