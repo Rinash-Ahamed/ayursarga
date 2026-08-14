@@ -15,11 +15,22 @@ type ServiceInput = Pick<ServiceDocument,
 
 export const getService = (id: string) => readDocument<ServiceDocument>(COLLECTIONS.services, id);
 
-export function listHospitalServices(hospitalId: string, options: Pick<QueryPageOptions, "pageSize" | "cursor"> = {}) {
+export function listHospitalServices(
+  hospitalId: string,
+  options: Pick<QueryPageOptions, "pageSize" | "cursor"> = {},
+  searchTerm = "",
+) {
+  const trimmedSearch = searchTerm.trim();
+  const namePrefix = trimmedSearch
+    ? `${trimmedSearch.charAt(0).toUpperCase()}${trimmedSearch.slice(1)}`
+    : "";
   return runFilteredQuery<ServiceDocument>({
     collectionPath: COLLECTIONS.services,
     filters: [{ field: "hospitalId", operator: "==", value: hospitalId }],
-    sort: { field: "name", direction: "asc" }, ...options,
+    sort: { field: "name", direction: "asc" },
+    startAtValues: namePrefix ? [namePrefix] : undefined,
+    endAtValues: namePrefix ? [`${namePrefix}\uf8ff`] : undefined,
+    ...options,
   });
 }
 

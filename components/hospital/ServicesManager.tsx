@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, type FormEvent } from "react";
+import { useCallback, useDeferredValue, useState, type FormEvent } from "react";
 import type { ServiceDocument } from "@/features/firestore/models";
 import { emptyQueryPage, type DocumentRecord, type QueryPageOptions } from "@/services/firestore/firestoreService";
 import { archiveService, createService, listHospitalServices, updateService } from "@/services/hospitals/serviceService";
@@ -59,9 +59,11 @@ export function ServicesManager() {
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search.trim());
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) => hospitalId
-    ? listHospitalServices(hospitalId, { pageSize: 20, cursor })
-    : Promise.resolve(emptyQueryPage<ServiceDocument>()), [hospitalId]);
+    ? listHospitalServices(hospitalId, { pageSize: 20, cursor }, deferredSearch)
+    : Promise.resolve(emptyQueryPage<ServiceDocument>()), [deferredSearch, hospitalId]);
   const { items, error: loadError, isLoading, hasMore, reload, loadMore, patchItem, removeItem } = usePaginatedList<ServiceDocument>(
     loader,
     "We could not load your services. Refresh the page and try again.",
@@ -141,7 +143,10 @@ export function ServicesManager() {
       <ServiceFields />
       <div className="portal-actions full"><button className="portal-button" disabled={busyId !== null}>{busyId === "create" ? "Adding..." : "Add service"}</button></div>
     </form>
-    <PortalFeedback error={items.length > 0 ? loadError : null} empty={!loadError && !isLoading && items.length === 0 ? "No services yet. Complete the form above to add your first service." : undefined} />
+    <label className="portal-search">Search services
+      <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by service name" autoComplete="off" />
+    </label>
+    <PortalFeedback error={items.length > 0 ? loadError : null} empty={!loadError && !isLoading && items.length === 0 ? (deferredSearch ? "No services match this search." : "No services yet. Complete the form above to add your first service.") : undefined} />
     <PortalToast message={actionMessage} />
     <PortalToast message={actionError} tone="error" />
     <div className="portal-list">

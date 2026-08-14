@@ -50,8 +50,25 @@ function listBookings(filters: QueryPageOptions["filters"], options: Pick<QueryP
 
 export const listConsumerBookings = (consumerId: string, options?: Pick<QueryPageOptions, "pageSize" | "cursor">) =>
   listBookings([{ field: "consumerId", operator: "==", value: consumerId }], options);
-export const listHospitalBookings = (hospitalId: string, options?: Pick<QueryPageOptions, "pageSize" | "cursor">) =>
-  listBookings([{ field: "hospitalId", operator: "==", value: hospitalId }], options);
+export type HospitalBookingFilters = {
+  status?: BookingStatus;
+  createdFrom?: Date;
+  createdBefore?: Date;
+};
+
+export function listHospitalBookings(
+  hospitalId: string,
+  input: HospitalBookingFilters = {},
+  options?: Pick<QueryPageOptions, "pageSize" | "cursor">,
+) {
+  const filters: NonNullable<QueryPageOptions["filters"]> = [
+    { field: "hospitalId", operator: "==", value: hospitalId },
+  ];
+  if (input.status) filters.push({ field: "status", operator: "==", value: input.status });
+  if (input.createdFrom) filters.push({ field: "createdAt", operator: ">=", value: Timestamp.fromDate(input.createdFrom) });
+  if (input.createdBefore) filters.push({ field: "createdAt", operator: "<", value: Timestamp.fromDate(input.createdBefore) });
+  return listBookings(filters, options);
+}
 
 export type AdminBookingFilters = {
   hospitalId?: string;
