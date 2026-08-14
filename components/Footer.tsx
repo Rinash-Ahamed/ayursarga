@@ -21,7 +21,7 @@ export default function Footer() {
           <p>Discover approved Ayurvedic hospitals, understand their care, and request an appointment with confidence.</p>
         </div>
         <div className="footer-invitation-actions">
-          <a href={ROUTES.consumer.home}>Find hospitals</a>
+          <a href={ROUTES.consumer.home}>Search hospitals</a>
           <a href="#contact">Request guidance</a>
         </div>
       </motion.section>
@@ -52,7 +52,7 @@ export default function Footer() {
 
         <nav className="footer-column" aria-label="Consumer links">
           <h3>For consumers</h3>
-          <a href={ROUTES.consumer.home}>Find hospitals</a>
+          <a href={ROUTES.consumer.home}>Search hospitals</a>
           <a href={ROUTES.consumer.register}>Register</a>
           <a href={ROUTES.consumer.login}>Consumer login</a>
           <a href={ROUTES.consumer.bookings}>My bookings</a>

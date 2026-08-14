@@ -6,7 +6,7 @@ import { ROUTES } from "@/config/routes";
 
 const LINKS = [
   { href: "#how-it-works", label: "How It Works" },
-  { href: "/app", label: "Find Hospitals" },
+  { href: "/app", label: "Search Hospitals" },
   { href: "#wellness", label: "Wellness" },
   { href: "#why-ayursarga", label: "Why Ayursarga" },
   { href: "#partners", label: "For Hospitals" },
@@ -55,11 +55,10 @@ export default function Nav() {
             ))}
           </nav>
           <div className="nav-account-actions">
-            <a className="nav-register" href={ROUTES.consumer.register}>Register</a>
             <details className="nav-login">
               <summary>Login</summary>
               <div className="nav-login-menu">
-                <a href={ROUTES.consumer.login}><span>Consumer</span><small>Discover and book care</small></a>
+                <a href={ROUTES.consumer.login}><span>My Ayursarga</span><small>Discover and book care</small></a>
                 <a href={ROUTES.hospital.login}><span>Hospital</span><small>Manage services and bookings</small></a>
                 <a href={ROUTES.admin.login}><span>Admin</span><small>Platform administration</small></a>
               </div>
@@ -86,10 +85,9 @@ export default function Nav() {
             {l.label}
           </a>
         ))}
-        <a className="mobile-register-link" href={ROUTES.consumer.register} onClick={() => setOpen(false)}>Register</a>
         <div className="mobile-login-group">
           <span>Login</span>
-          <a href={ROUTES.consumer.login} onClick={() => setOpen(false)}>Consumer</a>
+          <a href={ROUTES.consumer.login} onClick={() => setOpen(false)}>My Ayursarga</a>
           <a href={ROUTES.hospital.login} onClick={() => setOpen(false)}>Hospital</a>
           <a href={ROUTES.admin.login} onClick={() => setOpen(false)}>Admin</a>
         </div>

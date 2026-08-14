@@ -120,12 +120,6 @@ em{ font-style: italic; color: var(--clay-dark); }
 }
 .nav-links a:hover::after{ width:100%; }
 .nav-account-actions{ display:flex; align-items:center; gap:9px; }
-.nav-register{
-  min-width:104px; padding:11px 17px; border:1px solid rgba(58,61,46,.38); border-radius:100px;
-  color:var(--forest); font-size:11px; letter-spacing:.06em; text-align:center; text-transform:uppercase;
-  transition:background .25s var(--ease-out),color .25s var(--ease-out),border-color .25s var(--ease-out);
-}
-.nav-register:hover{ border-color:var(--forest); background:rgba(249,245,234,.72); }
 .nav-login{ position:relative; }
 .nav-login summary{
   min-width:112px; padding:12px 20px; border-radius:100px; list-style:none;
@@ -160,7 +154,6 @@ em{ font-style: italic; color: var(--clay-dark); }
 .mobile-login-group{ margin-top:8px; min-width:min(300px,calc(100vw - 44px)); display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
 .mobile-login-group>span{ grid-column:1/-1; color:var(--gold); font-family:var(--font-body); font-size:10px; letter-spacing:.16em; text-align:center; text-transform:uppercase; }
 #mobile-menu .mobile-login-group a{ padding:12px 8px; border:1px solid rgba(249,245,234,.35); border-radius:100px; color:var(--cream); font-family:var(--font-body); font-size:10px; letter-spacing:.05em; text-align:center; text-transform:uppercase; }
-#mobile-menu .mobile-register-link{ margin-top:8px; min-width:min(300px,calc(100vw - 44px)); padding:14px 20px; border-radius:100px; background:var(--cream); color:var(--forest); font-family:var(--font-body); font-size:11px; letter-spacing:.09em; text-align:center; text-transform:uppercase; }
 
 @media (max-width:900px){
   .nav-links, .nav-account-actions{ display:none; }
@@ -225,6 +218,7 @@ em{ font-style: italic; color: var(--clay-dark); }
    Sections - generic
    ========================================================================== */
 .section{ position:relative; padding: var(--section-pad) 0; }
+.section#how-it-works,.section#wellness{ padding-top:clamp(32px,3vw,44px); }
 .section-inner{ max-width:1320px; margin:0 auto; padding:0 40px; position:relative; z-index:2; }
 .section-title{ font-family:var(--font-display); font-weight:400; font-size:clamp(30px,4.4vw,58px); line-height:1.12; color:var(--forest); margin-bottom:20px; }
 .section-title span, h2 span{ display:block; overflow:hidden; }

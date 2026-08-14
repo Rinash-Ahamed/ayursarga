@@ -37,7 +37,7 @@ export default function Hero({ ready }: { ready: boolean }) {
           Discover active Ayurvedic hospitals in Kerala, compare their services and request an appointment—with personal guidance whenever you need it.
         </motion.p>
         <motion.div className="hero-ctas" initial={{ opacity: 0, y: 20 }} animate={ready ? { opacity: 1, y: 0 } : {}} transition={{ delay: 1, duration: .7 }}>
-          <MagneticButton href="/app" className="btn-magnetic btn-primary">Find Hospitals</MagneticButton>
+          <MagneticButton href="/app" className="btn-magnetic btn-primary">Search Hospitals</MagneticButton>
           <MagneticButton href="#contact" className="btn-magnetic btn-secondary">Book a Consultation</MagneticButton>
           <a href="#matching" className="btn-text">Help Me Choose &darr;</a>
         </motion.div>

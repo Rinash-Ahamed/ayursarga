@@ -35,10 +35,14 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
       if (!target) return;
 
       const content = target.querySelector<HTMLElement>(":scope > .section-inner") ?? target;
-      const navigationHeight = document.getElementById("site-nav")?.getBoundingClientRect().height ?? 0;
+      const navigation = document.getElementById("site-nav");
+      const navigationContentHeight = navigation?.querySelector<HTMLElement>(".nav-inner")?.getBoundingClientRect().height;
+      const navigationHeight = navigationContentHeight
+        ? navigationContentHeight + 28
+        : navigation?.getBoundingClientRect().height ?? 0;
       const rootScrollPadding = Number.parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
       const alignContentToHeader = hash === "#how-it-works" || hash === "#wellness";
-      const visibleGap = 20 + (alignContentToHeader ? 0 : rootScrollPadding);
+      const visibleGap = (alignContentToHeader ? 8 : 20) + (alignContentToHeader ? 0 : rootScrollPadding);
       const targetOffset = -(navigationHeight + visibleGap);
       // Lenis already subtracts the root scroll-padding for element targets.
       const lenisOffset = targetOffset + rootScrollPadding;
