@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import SmoothScroll from "@/components/SmoothScroll";
 import Preloader from "@/components/Preloader";
 import ProgressFlame from "@/components/ProgressFlame";
+import WhatsAppBubble from "@/components/WhatsAppBubble";
 import ScrollLife from "@/components/ScrollLife";
 import Nav from "@/components/Nav";
 import Hero from "@/components/Hero";
@@ -35,6 +36,7 @@ export default function PageShell() {
       <div className="grain-overlay" />
       <ParticleField />
       <ProgressFlame />
+      <WhatsAppBubble />
       <ScrollLife />
       <Nav />
 

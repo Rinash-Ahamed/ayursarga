@@ -13,8 +13,8 @@ const STEPS = [
 
 export default function Philosophy() {
   return (
-    <section id="how-it-works" className="section">
-      <div className="section-inner">
+    <section className="section">
+      <div id="how-it-works" className="section-inner">
         <RevealWords text="How It Works" className="eyebrow" />
         <RevealLines as="h2" className="section-title" lines={["From hospital search", "to appointment request."]} />
         <FadeUp as="p" className="section-intro">

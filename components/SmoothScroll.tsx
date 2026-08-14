@@ -31,13 +31,7 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
 
       const content = target.querySelector<HTMLElement>(":scope > .section-inner") ?? target;
       const navigationHeight = document.getElementById("site-nav")?.getBoundingClientRect().height ?? 0;
-      const contentRect = content.getBoundingClientRect();
-      const availableHeight = Math.max(window.innerHeight - navigationHeight, 0);
-      const centeredSpace = contentRect.height < availableHeight
-        ? (availableHeight - contentRect.height) / 2
-        : 16;
-      const destination = window.scrollY + contentRect.top - navigationHeight - centeredSpace;
-      const scrollTop = Math.max(0, destination);
+      const offset = -(navigationHeight + 20);
       const complete = () => {
         window.history.replaceState(null, "", hash);
         target.focus({ preventScroll: true });
@@ -45,8 +39,12 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
 
       event.preventDefault();
       if (lenis) {
-        lenis.scrollTo(scrollTop, { duration: 1.05, onComplete: complete });
+        lenis.scrollTo(hash === "#hero" ? 0 : content, { offset, duration: 1.05, onComplete: complete });
       } else {
+        const contentRect = content.getBoundingClientRect();
+        const scrollTop = hash === "#hero"
+          ? 0
+          : Math.max(0, window.scrollY + contentRect.top + offset);
         window.scrollTo({ top: scrollTop, behavior: "auto" });
         complete();
       }
