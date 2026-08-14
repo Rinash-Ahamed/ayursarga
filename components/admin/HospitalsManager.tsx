@@ -5,20 +5,16 @@ import { useCallback, useDeferredValue, useState, type FormEvent } from "react";
 import type { HospitalDocument } from "@/features/firestore/models";
 import type { QueryPageOptions } from "@/services/firestore/firestoreService";
 import { createHospital, listAllHospitals } from "@/services/hospitals/hospitalService";
-import { hospitalFormValues, validateHospitalFields, type HospitalField, type HospitalValidationErrors } from "@/features/hospitals/validation";
+import { hospitalFormValues, validateHospitalFields, type HospitalValidationErrors } from "@/features/hospitals/validation";
 import { useAuth } from "@/hooks/useAuth";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalPagination } from "@/components/portal/PortalPagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { formatStatus } from "@/utils/text";
-import { IndiaStateSelect } from "@/components/forms/IndiaStateSelect";
+import { HospitalFormFields } from "@/components/forms/HospitalFormFields";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
-
-function FieldError({ field, errors }: { field: HospitalField; errors: HospitalValidationErrors }) {
-  return errors[field] ? <span className="portal-field-error" role="alert">{errors[field]}</span> : null;
-}
 
 export function HospitalsManager() {
   const { firebaseUser } = useAuth();
@@ -80,14 +76,7 @@ export function HospitalsManager() {
 
     {showCreateForm && <form id="add-hospital-form" className="portal-card portal-form" onSubmit={submit} noValidate style={{ marginBottom: 26 }}>
       <p className="full portal-form-note">Complete every field marked with * before creating the hospital.</p>
-      <label>Hospital name *<input name="name" required minLength={2} maxLength={120} aria-invalid={Boolean(fieldErrors.name)} /><FieldError field="name" errors={fieldErrors} /></label>
-      <label>Official email *<input name="email" type="email" required maxLength={160} aria-invalid={Boolean(fieldErrors.email)} /><FieldError field="email" errors={fieldErrors} /></label>
-      <label>Phone *<input name="phone" type="tel" required minLength={7} maxLength={25} aria-invalid={Boolean(fieldErrors.phone)} /><FieldError field="phone" errors={fieldErrors} /></label>
-      <label>City / locality *<input name="city" required minLength={2} maxLength={80} aria-invalid={Boolean(fieldErrors.city)} /><FieldError field="city" errors={fieldErrors} /></label>
-      <label>State *<IndiaStateSelect name="state" required aria-invalid={Boolean(fieldErrors.state)} /><FieldError field="state" errors={fieldErrors} /></label>
-      <label>Commission % *<input name="commission" type="number" min="0" max="100" step="0.01" required aria-invalid={Boolean(fieldErrors.commissionPercentage)} /><FieldError field="commissionPercentage" errors={fieldErrors} /></label>
-      <label className="full">Complete address *<input name="address" required minLength={10} maxLength={300} aria-invalid={Boolean(fieldErrors.address)} /><FieldError field="address" errors={fieldErrors} /></label>
-      <label className="full">Description<textarea name="description" maxLength={2000} /></label>
+      <HospitalFormFields errors={fieldErrors} includeCommission />
       <div className="portal-actions full">
         <button className="portal-button" disabled={busy}>{busy ? "Creating..." : "Create hospital"}</button>
         <button className="portal-button secondary" type="button" disabled={busy} onClick={(event) => {

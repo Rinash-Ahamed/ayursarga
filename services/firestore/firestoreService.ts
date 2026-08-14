@@ -16,7 +16,6 @@ import {
   startAfter,
   startAt,
   sum,
-  Timestamp,
   where,
   type DocumentData,
   type FieldPath,
@@ -120,10 +119,5 @@ export async function sumDocuments(
 }
 
 export const firestoreTimestamp = {
-  now: () => Timestamp.now(),
   server: () => serverTimestamp(),
-  toDate: (value: unknown) => {
-    if (value instanceof Timestamp) return value.toDate();
-    return null;
-  },
 };

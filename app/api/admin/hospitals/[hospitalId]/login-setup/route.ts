@@ -1,11 +1,12 @@
-import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
+import { apiHealth, apiJson } from "@/services/api/server";
+import { isFirebaseAdminReady } from "@/services/firebase/admin";
 
 export const runtime = "nodejs";
 
-function response(payload: Record<string, unknown>, status = 200) {
-  return NextResponse.json(payload, { status, headers: { "Cache-Control": "no-store" } });
+export function GET() {
+  return apiHealth("/api/admin/hospitals/[hospitalId]/login-setup", [{ name: "firebaseAdmin", ready: isFirebaseAdminReady() }]);
 }
 
 export async function POST(request: Request, context: { params: Promise<{ hospitalId: string }> }) {
@@ -17,12 +18,12 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
     const hospitalSnapshot = await hospitalReference.get();
     const hospital = hospitalSnapshot.data();
     if (!hospitalSnapshot.exists || hospital?.status !== "active") {
-      return response({ error: "Activate the hospital before preparing its login." }, 409);
+      return apiJson({ error: "Activate the hospital before preparing its login." }, 409);
     }
 
     const email = String(hospital.email ?? "").trim().toLowerCase();
     const name = String(hospital.name ?? "").trim();
-    if (!email || !name) return response({ error: "The hospital name and official email are required." }, 409);
+    if (!email || !name) return apiJson({ error: "The hospital name and official email are required." }, 409);
 
     let authUser;
     try {
@@ -36,12 +37,12 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
     const userSnapshot = await userReference.get();
     const previous = userSnapshot.data() ?? null;
     if (previous && previous.role !== "hospital") {
-      return response({ error: "This email already belongs to a different Ayursarga account." }, 409);
+      return apiJson({ error: "This email already belongs to a different Ayursarga account." }, 409);
     }
     if (previous?.hospitalId && previous.hospitalId !== hospitalId && previous.status === "active") {
       const previousHospital = await firestore.collection("hospitals").doc(previous.hospitalId).get();
       if (previousHospital.exists && previousHospital.data()?.status !== "archived") {
-        return response({ error: "This Hospital login is already connected to another active hospital." }, 409);
+        return apiJson({ error: "This Hospital login is already connected to another active hospital." }, 409);
       }
     }
 
@@ -96,10 +97,10 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
     });
     await batch.commit();
 
-    return response({ ok: true, email });
+    return apiJson({ ok: true, email });
   } catch (error) {
-    if (error instanceof AdminAuthorizationError) return response({ error: error.message }, error.status);
+    if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
     console.error("Hospital login setup failed", error instanceof Error ? error.message : error);
-    return response({ error: "Hospital login setup is unavailable. Check the server Firebase Admin configuration and try again." }, 503);
+    return apiJson({ error: "Hospital login setup is unavailable. Check the server Firebase Admin configuration and try again." }, 503);
   }
 }

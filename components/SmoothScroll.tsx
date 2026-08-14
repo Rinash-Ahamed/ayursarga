@@ -7,12 +7,17 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
+const wheelEasing = (t: number) => 1 - Math.pow(1 - t, 4);
+const anchorEasing = (t: number) => t < 0.5
+  ? 4 * t * t * t
+  : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
 export default function SmoothScroll({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const lenis = reduced ? null : new Lenis({
-      duration: 0.72,
-      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      duration: 0.95,
+      easing: wheelEasing,
       smoothWheel: true,
       syncTouch: false,
       wheelMultiplier: 1,
@@ -31,7 +36,12 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
 
       const content = target.querySelector<HTMLElement>(":scope > .section-inner") ?? target;
       const navigationHeight = document.getElementById("site-nav")?.getBoundingClientRect().height ?? 0;
-      const offset = -(navigationHeight + 20);
+      const rootScrollPadding = Number.parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
+      const alignContentToHeader = hash === "#how-it-works" || hash === "#wellness";
+      const visibleGap = 20 + (alignContentToHeader ? 0 : rootScrollPadding);
+      const targetOffset = -(navigationHeight + visibleGap);
+      // Lenis already subtracts the root scroll-padding for element targets.
+      const lenisOffset = targetOffset + rootScrollPadding;
       const complete = () => {
         window.history.replaceState(null, "", hash);
         target.focus({ preventScroll: true });
@@ -39,12 +49,17 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
 
       event.preventDefault();
       if (lenis) {
-        lenis.scrollTo(hash === "#hero" ? 0 : content, { offset, duration: 1.05, onComplete: complete });
+        lenis.scrollTo(hash === "#hero" ? 0 : content, {
+          offset: lenisOffset,
+          duration: 1.25,
+          easing: anchorEasing,
+          onComplete: complete,
+        });
       } else {
         const contentRect = content.getBoundingClientRect();
         const scrollTop = hash === "#hero"
           ? 0
-          : Math.max(0, window.scrollY + contentRect.top + offset);
+          : Math.max(0, window.scrollY + contentRect.top + targetOffset);
         window.scrollTo({ top: scrollTop, behavior: "auto" });
         complete();
       }

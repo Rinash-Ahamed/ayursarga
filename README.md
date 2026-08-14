@@ -32,7 +32,7 @@ for the existing public contact form.
 
 ## Structure
 
-- `app/` contains the public website, route-specific portal layouts, and contact API.
+- `app/` contains the public website, route-specific portal layouts, application APIs, and health endpoints.
 - `components/` contains the existing public experience and focused portal UI.
 - `contexts/` and `hooks/` expose the shared authentication state.
 - `services/` contains Firebase client, authentication, user, hospital, service,
@@ -117,3 +117,19 @@ work must preserve.
 The contact form uses the Node.js `/api/contact` route. Do not replace the
 current Node-capable deployment with a static-only Firebase Hosting deployment
 unless that endpoint is deliberately moved to another approved service.
+
+## API health checks
+
+`GET /api/health` reports readiness for every current API route without reading
+or writing Firestore records, sending email, or exposing credentials. It returns
+HTTP `200` when all required server configuration is ready and HTTP `503` when
+one or more API dependencies are unavailable.
+
+Each API also supports its own lightweight `GET` readiness check:
+
+- `/api/contact`
+- `/api/admin/audits`
+- `/api/admin/hospitals/{hospitalId}/login-setup`
+
+The checks validate local server configuration and SDK initialization only.
+They intentionally avoid billable database reads and external email delivery.

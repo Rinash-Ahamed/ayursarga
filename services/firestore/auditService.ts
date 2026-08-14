@@ -36,15 +36,6 @@ export function getArchiveMetadata() {
   };
 }
 
-export function getRestoreMetadata() {
-  return {
-    archivedAt: null,
-    archivedBy: null,
-    updatedAt: serverTimestamp(),
-    updatedBy: getAuditActorId(),
-  };
-}
-
 function getDeviceMetadata() {
   if (typeof navigator === "undefined") {
     return { userAgent: null, platform: null, ipAddress: null };

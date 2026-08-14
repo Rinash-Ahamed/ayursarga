@@ -71,6 +71,13 @@ Firestore is loaded only when an authenticated profile or application feature
 actually needs it. User profiles are request-deduplicated and cached once per
 session in `AuthContext`.
 
+Server APIs share one no-store JSON response helper, and authenticated client
+requests share one token/error-handling utility. Contact mail transport is
+isolated from its route handler and reused by the route health check. The public
+`GET /api/health` endpoint reports configuration readiness for all APIs, while
+each API route exposes a matching lightweight `GET` check. Health checks do not
+send mail or perform Firestore reads or writes.
+
 ## Hospital onboarding
 
 Admin-created hospitals always begin as private `pending` records. Current

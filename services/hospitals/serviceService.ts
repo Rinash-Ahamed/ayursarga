@@ -7,7 +7,7 @@ import {
   firestoreTimestamp, readDocument, runFilteredQuery,
   type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
-import { createAuditedDocument, getArchiveMetadata, getAuditActorId, getRestoreMetadata, updateAuditedDocument } from "@/services/firestore/auditService";
+import { createAuditedDocument, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
 
 type ServiceInput = Pick<ServiceDocument,
   "hospitalId" | "name" | "description" | "price" | "durationMinutes" | "status"
@@ -47,11 +47,3 @@ export const updateService = (id: string, input: Partial<Omit<ServiceInput, "hos
   updateAuditedDocument(COLLECTIONS.services, id, {
     ...input, updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
   }, { action: input.status ? "status_change" : "update", actorRole: "hospital" }, previousValues);
-
-export const archiveService = (id: string) => updateAuditedDocument(COLLECTIONS.services, id, {
-  status: "archived", ...getArchiveMetadata(),
-}, { action: "archive", actorRole: "hospital" });
-
-export const restoreService = (id: string) => updateAuditedDocument(COLLECTIONS.services, id, {
-  status: "inactive", ...getRestoreMetadata(),
-}, { action: "restore", actorRole: "hospital" });

@@ -7,7 +7,7 @@ import {
   firestoreTimestamp, runFilteredQuery,
   type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
-import { createAuditedDocument, getArchiveMetadata, getAuditActorId, getRestoreMetadata, updateAuditedDocument } from "@/services/firestore/auditService";
+import { createAuditedDocument, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
 import { getHospital } from "@/services/hospitals/hospitalService";
 import { getService } from "@/services/hospitals/serviceService";
 
@@ -90,11 +90,3 @@ export function updateHospitalBooking(id: string, input: HospitalBookingUpdate, 
   data.updatedBy = getAuditActorId();
   return updateAuditedDocument(COLLECTIONS.bookings, id, data, { action: "status_change", actorRole: "hospital" }, previousValues);
 }
-
-export const archiveBooking = (id: string) => updateAuditedDocument(COLLECTIONS.bookings, id, {
-  ...getArchiveMetadata(),
-}, { action: "archive", actorRole: "admin" });
-
-export const restoreBooking = (id: string) => updateAuditedDocument(COLLECTIONS.bookings, id, {
-  ...getRestoreMetadata(),
-}, { action: "restore", actorRole: "admin" });

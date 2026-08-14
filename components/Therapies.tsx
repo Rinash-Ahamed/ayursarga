@@ -18,7 +18,7 @@ const PATHS = [
 ];
 
 export default function Therapies() {
-  return <section className="section"><div id="wellness" className="section-inner">
+  return <section id="wellness" className="section"><div className="section-inner">
     <RevealWords text="Wellness Paths" className="eyebrow" />
     <RevealLines as="h2" className="section-title" lines={["Care for where", "you are now."]} />
     <p className="section-intro">From maternal care to deep rejuvenation, explore programmes selected around your goals - not a generic package list.</p>

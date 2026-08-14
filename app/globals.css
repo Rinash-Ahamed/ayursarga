@@ -324,8 +324,10 @@ button{ cursor:pointer; }
 .process-grid{ display:grid; grid-template-columns:repeat(5,1fr); border-top:1px solid rgba(58,61,46,.14); margin-top:64px; }
 .process-card{ padding:34px 24px 20px 0; position:relative; }
 .process-card:not(:last-child){ border-right:1px solid rgba(58,61,46,.22); margin-right:24px; }
-.process-number{ font-family:var(--font-display); color:var(--clay); font-size:14px; }
-.process-card h3{ font-family:var(--font-display); font-weight:400; color:var(--forest); font-size:21px; line-height:1.25; margin:30px 0 12px; }
+.process-card-heading{ display:flex; align-items:center; justify-content:center; }
+.process-icon{ width:40px; height:40px; flex:0 0 40px; display:grid; place-items:center; border:1px solid rgba(140,114,89,.32); border-radius:50%; background:rgba(241,234,218,.72); color:var(--clay-dark); }
+.process-icon svg{ width:23px; height:23px; }
+.process-card h3{ font-family:var(--font-display); font-weight:400; color:var(--forest); font-size:21px; line-height:1.25; margin:22px 0 12px; }
 .process-card p{ color:var(--sage); font-size:13.5px; font-weight:500; line-height:1.7; }
 
 .match-section{ background:linear-gradient(145deg,#303328 0%,#3a3d2e 55%,#454333 100%); }
@@ -389,6 +391,9 @@ button{ cursor:pointer; }
 .partner-panel{ background:var(--cream-2); border:1px solid rgba(58,61,46,.2); border-radius:30px; padding:clamp(40px,7vw,90px); display:grid; grid-template-columns:1fr 1fr; gap:80px; align-items:center; overflow:hidden; box-shadow:0 14px 38px rgba(58,61,46,.07); }
 .partner-copy{ align-self:start; }
 .partner-intro{ max-width:520px; margin:10px 0 30px; text-align:left; text-wrap:balance; }
+.partner-visual-column{ display:grid; gap:22px; }
+.partner-image{ aspect-ratio:3/2; overflow:hidden; border:1px solid rgba(58,61,46,.2); border-radius:22px; box-shadow:0 16px 34px rgba(58,61,46,.12); }
+.partner-image img{ width:100%; height:100%; object-fit:cover; }
 .partner-points{ list-style:none; display:grid; grid-template-columns:1fr 1fr; gap:14px; }
 .partner-points li{ background:rgba(249,245,234,.95); border:1px solid rgba(58,61,46,.2); border-radius:14px; padding:18px; font-size:13px; color:var(--forest); }
 .partner-points span{ color:var(--clay-dark); margin-right:10px; }

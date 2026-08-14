@@ -16,8 +16,6 @@ import {
 } from "@/services/firestore/firestoreService";
 import {
   createAuditedDocument,
-  getArchiveMetadata,
-  getRestoreMetadata,
   updateAuditedDocument,
 } from "@/services/firestore/auditService";
 
@@ -144,11 +142,3 @@ export async function getUserDisplayNames(uids: string[]) {
   const users = await readDocumentsByIds<Pick<UserDocument, "name">>(COLLECTIONS.users, uids);
   return new Map(users.map((user) => [user.id, user.name]));
 }
-
-export const archiveUser = (uid: string) => updateAuditedDocument(COLLECTIONS.users, uid, {
-  status: "archived", ...getArchiveMetadata(),
-}, { action: "archive", actorRole: "admin" });
-
-export const restoreUser = (uid: string) => updateAuditedDocument(COLLECTIONS.users, uid, {
-  status: "inactive", ...getRestoreMetadata(),
-}, { action: "restore", actorRole: "admin" });

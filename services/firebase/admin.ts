@@ -19,6 +19,15 @@ function getFirebaseAdminApp() {
   });
 }
 
+export function isFirebaseAdminReady() {
+  try {
+    getFirebaseAdminApp();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function getFirebaseAdminAuth() {
   return getAuth(getFirebaseAdminApp());
 }

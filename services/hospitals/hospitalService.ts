@@ -9,7 +9,7 @@ import {
   firestoreTimestamp, readDocument, runFilteredQuery,
   type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
-import { createAuditedDocument, getArchiveMetadata, getAuditActorId, getRestoreMetadata, updateAuditedDocument } from "@/services/firestore/auditService";
+import { createAuditedDocument, getArchiveMetadata, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
 
 type HospitalAdminUpdate = Partial<HospitalFields & Pick<HospitalDocument, "status" | "isPublic">>;
 type HospitalProfileInput = Pick<HospitalDocument,
@@ -137,7 +137,3 @@ export const updateHospitalProfile = (id: string, input: Partial<HospitalProfile
 export const archiveHospital = (id: string, previousValues?: DocumentData) => updateAuditedDocument(COLLECTIONS.hospitals, id, {
   status: "archived", isPublic: false, ...getArchiveMetadata(),
 }, { action: "archive", actorRole: "admin" }, previousValues);
-
-export const restoreHospital = (id: string) => updateAuditedDocument(COLLECTIONS.hospitals, id, {
-  status: "inactive", isPublic: false, ...getRestoreMetadata(),
-}, { action: "restore", actorRole: "admin" });
