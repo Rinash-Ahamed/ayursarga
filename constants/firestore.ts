@@ -1,6 +1,7 @@
 export const COLLECTIONS = {
   users: "users",
   hospitals: "hospitals",
+  hospitalCapacity: "hospitalCapacity",
   hospitalStaff: "hospitalStaff",
   doctors: "doctors",
   services: "services",

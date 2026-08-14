@@ -11,7 +11,7 @@ import { PortalToast } from "@/components/portal/PortalToast";
 
 const COPY = {
   admin: { eyebrow: "Administration", title: "Admin login", description: "Secure access for authorised Ayursarga administrators." },
-  hospital: { eyebrow: "Hospital portal", title: "Hospital login", description: "Access your centre, care team and future booking operations." },
+  hospital: { eyebrow: "Hospital portal", title: "Hospital login", description: "Sign in with the official email connected to your activated Ayursarga hospital account." },
 } as const;
 
 export function LoginForm({ role, requestedPath }: { role: Exclude<PortalRole, "consumer">; requestedPath?: string | null }) {
@@ -41,6 +41,7 @@ export function LoginForm({ role, requestedPath }: { role: Exclude<PortalRole, "
     </form>
     <div className="portal-auth-links">
       <Link href={forgotPath}>Forgot password?</Link>
+      {role === "hospital" && <Link href="/#contact">Need hospital access? Contact Ayursarga</Link>}
     </div>
   </AuthFormShell>;
 }

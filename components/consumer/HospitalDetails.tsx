@@ -12,6 +12,8 @@ import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalPagination } from "@/components/portal/PortalPagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
+import { getHospitalRating } from "@/features/hospitals/ratings";
+import { formatServiceDuration } from "@/utils/duration";
 
 export function HospitalDetails({ hospitalId }: { hospitalId: string }) {
   const [hospital, setHospital] = useState<DocumentRecord<HospitalDocument> | null>(null);
@@ -26,14 +28,15 @@ export function HospitalDetails({ hospitalId }: { hospitalId: string }) {
     if (!record) setHospitalError("This hospital is no longer available.");
   }).catch(() => setHospitalError("We could not load this hospital."))
     .finally(() => setHospitalLoading(false)); }, [hospitalId]);
+  const rating = hospital ? getHospitalRating(hospital) : null;
   return <PortalShell role="consumer" title={hospital?.name ?? "Hospital details"} eyebrow="Ayursarga hospital">
     <PortalLoadGuard loading={hospitalLoading || (isLoading && !hospital)} error={hospitalError} hasData={Boolean(hospital)} fallbackHref="/app" loadingMessage="Loading hospital details…" />
     <PortalFeedback error={error} empty={!error && !hospital ? "Loading hospital details…" : undefined} />
     {hospital && <><article className="portal-card">
-      <p>{hospital.description}</p><div className="portal-card-meta"><span>{hospital.address}</span><span>{hospital.city}, {hospital.state}</span><span>{hospital.phone}</span></div>
+      <p>{hospital.description}</p><div className="portal-card-meta"><span>{hospital.address}</span><span>{hospital.city}, {hospital.state}</span><span>{hospital.phone}</span><span>{rating?.count ? `${rating.average.toFixed(1)} stars · ${rating.category}` : "New on Ayursarga · Not yet rated"}</span></div>
     </article><h2 style={{ margin: "34px 0 18px", color: "var(--forest)", fontFamily: "var(--font-display)", fontWeight: 400 }}>Active services</h2>
     <div className="portal-grid">{services.map((service) => <article className="portal-card" key={service.id}>
-      <h3>{service.name}</h3><p>{service.description}</p><div className="portal-card-meta"><span>{formatCurrency(service.price)}</span><span>{service.durationMinutes ? `${service.durationMinutes} minutes` : "Duration on request"}</span></div>
+      <h3>{service.name}</h3><p>{service.description}</p><div className="portal-card-meta"><span>{formatCurrency(service.price)}</span><span>{formatServiceDuration(service.durationMinutes, service.durationUnit)}</span></div>
       <div className="portal-actions"><Link className="portal-button" href={`/app/bookings/new?hospitalId=${hospitalId}&serviceId=${service.id}`}>Request appointment</Link></div>
     </article>)}</div><PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} /></>}
   </PortalShell>;

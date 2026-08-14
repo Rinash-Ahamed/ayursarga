@@ -42,6 +42,9 @@ export function usePaginatedList<T>(loader: PageLoader<T>, errorMessage: string)
   const patchItem = useCallback((id: string, changes: Partial<T>) => {
     setItems((current) => current.map((item) => item.id === id ? { ...item, ...changes } : item));
   }, []);
+  const removeItem = useCallback((id: string) => {
+    setItems((current) => current.filter((item) => item.id !== id));
+  }, []);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => { void reload(); }, 0);
@@ -51,5 +54,5 @@ export function usePaginatedList<T>(loader: PageLoader<T>, errorMessage: string)
     };
   }, [reload]);
 
-  return { items, error, isLoading, hasMore, reload, loadMore, patchItem };
+  return { items, error, isLoading, hasMore, reload, loadMore, patchItem, removeItem };
 }

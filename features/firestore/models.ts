@@ -1,5 +1,6 @@
 import type { Timestamp } from "firebase/firestore";
 import type { PortalRole, UserStatus } from "@/features/auth/contracts";
+import type { DurationUnit } from "@/utils/duration";
 
 type RecordStatus = "active" | "inactive" | "pending" | "archived";
 
@@ -36,6 +37,8 @@ export type HospitalDocument = AuditedDocument & {
   status: UserStatus;
   isPublic: boolean;
   commissionPercentage: number;
+  ratingAverage?: number;
+  ratingCount?: number;
   contractStatus: "not_generated" | "generated" | "signed";
   contractGeneratedAt: Timestamp | null;
   contractGeneratedBy: string | null;
@@ -52,6 +55,7 @@ export type ServiceDocument = AuditedDocument & {
   description: string;
   price: number;
   durationMinutes: number | null;
+  durationUnit?: DurationUnit | null;
   status: "active" | "inactive" | "archived";
 };
 
@@ -62,6 +66,8 @@ export type BookingStatus =
   | "rejected"
   | "cancelled"
   | "completed";
+
+export type TreatmentStatus = "not_started" | "started" | "ongoing" | "completed";
 
 export type BookingDocument = AuditedDocument & {
   consumerId: string;
@@ -76,6 +82,7 @@ export type BookingDocument = AuditedDocument & {
   confirmedDate: Timestamp | null;
   confirmedTime: string | null;
   status: BookingStatus;
+  treatmentStatus?: TreatmentStatus;
   servicePrice: number;
   commissionPercentage: number;
   estimatedCommission: number;
@@ -83,6 +90,17 @@ export type BookingDocument = AuditedDocument & {
   hospitalNotes: string | null;
   confirmedAt: Timestamp | null;
   completedAt: Timestamp | null;
+  treatmentStartedAt?: Timestamp | null;
+  treatmentCompletedAt?: Timestamp | null;
+  rating?: number | null;
+  ratedAt?: Timestamp | null;
+};
+
+export type HospitalCapacityDocument = AuditedDocument & {
+  hospitalId: string;
+  totalRooms: number;
+  occupiedRooms: number;
+  status: "active" | "archived";
 };
 
 export type HospitalStaffDocument = AuditedDocument & {

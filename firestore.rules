@@ -60,7 +60,7 @@ service cloud.firestore {
     function hasExactHospitalFields() {
       return request.resource.data.keys().hasOnly([
         'name', 'description', 'email', 'phone', 'address', 'city', 'state',
-        'imageUrl', 'status', 'isPublic', 'commissionPercentage',
+        'imageUrl', 'status', 'isPublic', 'commissionPercentage', 'ratingAverage', 'ratingCount',
         'contractStatus', 'contractGeneratedAt', 'contractGeneratedBy',
         'contractSignedAt', 'contractSignedBy', 'contractUrl', 'activatedAt', 'activatedBy',
         'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
@@ -94,12 +94,33 @@ service cloud.firestore {
         && request.resource.data.commissionPercentage <= 100;
     }
 
+    function hasValidServiceFields() {
+      let durationMinutes = request.resource.data.durationMinutes;
+      let durationUnit = request.resource.data.get('durationUnit', null);
+      return request.resource.data.keys().hasOnly([
+          'hospitalId', 'name', 'description', 'price', 'durationMinutes', 'durationUnit', 'status',
+          'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
+          'archivedAt', 'archivedBy', 'lastAuditId'
+        ])
+        && request.resource.data.hospitalId is string
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 160
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 2000
+        && request.resource.data.price is number
+        && request.resource.data.price >= 0
+        && (durationMinutes == null || (durationMinutes is int && durationMinutes > 0))
+        && (durationUnit == null || durationUnit in ['minutes', 'hours', 'days'])
+        && request.resource.data.status in ['active', 'inactive', 'archived'];
+    }
+
     function isBootstrapAdminIdentity() {
       return isSignedIn() && request.auth.token.email == 'info@ayursarga.com';
     }
 
     function isAuditedModule(module) {
-      return module in ['users', 'hospitals', 'services', 'bookings'];
+      return module in ['users', 'hospitals', 'services', 'bookings', 'hospitalCapacity'];
     }
 
     function hasLinkedAudit(module, recordId) {
@@ -200,7 +221,25 @@ service cloud.firestore {
         || (resource.data.status == 'reschedule_requested'
           && request.resource.data.status in ['confirmed', 'rejected'])
         || (resource.data.status == 'confirmed'
-          && request.resource.data.status in ['reschedule_requested', 'completed']);
+          && request.resource.data.status == 'reschedule_requested');
+    }
+
+    function validHospitalTreatmentTransition() {
+      let previous = resource.data.get('treatmentStatus', 'not_started');
+      let next = request.resource.data.treatmentStatus;
+      return resource.data.status == 'confirmed'
+        && ((previous == 'not_started'
+            && next == 'started'
+            && request.resource.data.status == 'confirmed'
+            && request.resource.data.treatmentStartedAt == request.time)
+          || (previous == 'started'
+            && next == 'ongoing'
+            && request.resource.data.status == 'confirmed')
+          || (previous in ['started', 'ongoing']
+            && next == 'completed'
+            && request.resource.data.status == 'completed'
+            && request.resource.data.completedAt == request.time
+            && request.resource.data.treatmentCompletedAt == request.time));
     }
 
     match /users/{userId} {
@@ -259,6 +298,8 @@ service cloud.firestore {
         && hasValidRequiredHospitalFields()
         && request.resource.data.status == 'pending'
         && request.resource.data.isPublic == false
+        && request.resource.data.ratingAverage == 0
+        && request.resource.data.ratingCount == 0
         && request.resource.data.contractStatus == 'not_generated'
         && request.resource.data.contractGeneratedAt == null
         && request.resource.data.contractGeneratedBy == null
@@ -293,6 +334,11 @@ service cloud.firestore {
         || hasOperationalHospitalAccess(resource.data.hospitalId)
         || (resource.data.status == 'active' && isApprovedHospital(resource.data.hospitalId));
       allow create: if (isAdmin() || hasOperationalHospitalAccess(request.resource.data.hospitalId))
+        && hasValidServiceFields()
+        && ((request.resource.data.durationMinutes == null
+            && request.resource.data.get('durationUnit', null) == null)
+          || (request.resource.data.durationMinutes != null
+            && request.resource.data.get('durationUnit', null) != null))
         && request.resource.data.createdAt == request.time
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.updatedAt == request.time
@@ -301,6 +347,7 @@ service cloud.firestore {
         && request.resource.data.archivedBy == null
         && hasCreateAudit('services', serviceId);
       allow update: if hasLinkedAudit('services', serviceId)
+        && hasValidServiceFields()
         && request.resource.data.updatedAt == request.time
         && request.resource.data.updatedBy == request.auth.uid
         && (isAdmin() || (
@@ -322,7 +369,9 @@ service cloud.firestore {
           'confirmedDate', 'confirmedTime', 'status', 'servicePrice',
           'commissionPercentage', 'estimatedCommission', 'consumerNotes',
           'hospitalNotes', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
-          'archivedAt', 'archivedBy', 'lastAuditId', 'confirmedAt', 'completedAt'
+          'archivedAt', 'archivedBy', 'lastAuditId', 'confirmedAt', 'completedAt',
+          'treatmentStatus', 'treatmentStartedAt', 'treatmentCompletedAt',
+          'rating', 'ratedAt'
         ])
         && request.resource.data.consumerId == request.auth.uid
         && request.resource.data.consumerName == getCurrentUser().name
@@ -342,6 +391,11 @@ service cloud.firestore {
         && request.resource.data.hospitalNotes == null
         && request.resource.data.confirmedAt == null
         && request.resource.data.completedAt == null
+        && request.resource.data.treatmentStatus == 'not_started'
+        && request.resource.data.treatmentStartedAt == null
+        && request.resource.data.treatmentCompletedAt == null
+        && request.resource.data.rating == null
+        && request.resource.data.ratedAt == null
         && isApprovedHospital(request.resource.data.hospitalId)
         && get(/databases/$(database)/documents/services/$(request.resource.data.serviceId)).data.hospitalId
           == request.resource.data.hospitalId
@@ -371,20 +425,66 @@ service cloud.firestore {
             'status', 'updatedAt', 'updatedBy', 'lastAuditId'
           ])
           && resource.data.status in ['requested', 'confirmed', 'reschedule_requested']
+          && resource.data.get('treatmentStatus', 'not_started') == 'not_started'
           && request.resource.data.status == 'cancelled'
         )
         || (hasOperationalHospitalAccess(resource.data.hospitalId)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'status', 'confirmedDate', 'confirmedTime', 'hospitalNotes',
-            'confirmedAt', 'completedAt', 'updatedAt', 'updatedBy', 'lastAuditId'
-          ])
-          && validHospitalBookingTransition()
-          && (request.resource.data.status != 'confirmed'
-            || (request.resource.data.confirmedDate != null
-              && request.resource.data.confirmedTime != null
-              && request.resource.data.confirmedAt == request.time))
-          && (request.resource.data.status != 'completed'
-            || request.resource.data.completedAt == request.time)));
+          && ((request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status', 'confirmedDate', 'confirmedTime', 'hospitalNotes',
+              'confirmedAt', 'updatedAt', 'updatedBy', 'lastAuditId'
+            ])
+            && validHospitalBookingTransition()
+            && (request.resource.data.status != 'confirmed'
+              || (request.resource.data.confirmedDate != null
+                && request.resource.data.confirmedTime != null
+                && request.resource.data.confirmedAt == request.time)))
+          || (request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status', 'treatmentStatus', 'treatmentStartedAt',
+              'completedAt', 'treatmentCompletedAt',
+              'updatedAt', 'updatedBy', 'lastAuditId'
+            ])
+            && validHospitalTreatmentTransition()))));
+      allow delete: if false;
+    }
+
+    match /hospitalCapacity/{hospitalId} {
+      allow read: if isAdmin() || hasOperationalHospitalAccess(hospitalId);
+      allow create: if hasOperationalHospitalAccess(hospitalId)
+        && request.resource.data.keys().hasOnly([
+          'hospitalId', 'totalRooms', 'occupiedRooms', 'status',
+          'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
+          'archivedAt', 'archivedBy', 'lastAuditId'
+        ])
+        && request.resource.data.hospitalId == hospitalId
+        && request.resource.data.totalRooms is int
+        && request.resource.data.totalRooms >= 0
+        && request.resource.data.totalRooms <= 10000
+        && request.resource.data.occupiedRooms is int
+        && request.resource.data.occupiedRooms >= 0
+        && request.resource.data.occupiedRooms <= request.resource.data.totalRooms
+        && request.resource.data.status == 'active'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.archivedAt == null
+        && request.resource.data.archivedBy == null
+        && hasCreateAudit('hospitalCapacity', hospitalId);
+      allow update: if hasOperationalHospitalAccess(hospitalId)
+        && hasLinkedAudit('hospitalCapacity', hospitalId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'totalRooms', 'occupiedRooms', 'updatedAt', 'updatedBy', 'lastAuditId'
+        ])
+        && request.resource.data.hospitalId == resource.data.hospitalId
+        && request.resource.data.status == 'active'
+        && request.resource.data.totalRooms is int
+        && request.resource.data.totalRooms >= 0
+        && request.resource.data.totalRooms <= 10000
+        && request.resource.data.occupiedRooms is int
+        && request.resource.data.occupiedRooms >= 0
+        && request.resource.data.occupiedRooms <= request.resource.data.totalRooms
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid;
       allow delete: if false;
     }
 

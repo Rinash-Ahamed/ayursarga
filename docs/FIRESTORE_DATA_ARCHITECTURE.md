@@ -10,13 +10,16 @@ duplicating records or introducing deeply nested documents.
   and optional address live here under `role: "consumer"`; a duplicate
   `consumers` collection is intentionally not created.
 - `hospitals`: hospital profile, visibility, status, and commission settings.
+- `hospitalCapacity`: internal treatment-room totals and current occupancy,
+  readable only by Admin and the assigned Hospital.
 - `hospitalStaff`: future hospital-to-user staff assignments.
 - `doctors`: future hospital doctor profiles.
 - `services`: hospital services linked by `hospitalId`.
 - `availability`: future doctor/service availability linked by IDs.
 - `bookings`: Consumer, Hospital, and service references plus immutable price,
-  commission, and Consumer contact snapshots. Only Admin, the Consumer owner,
-  and the assigned Hospital can read the booking.
+  commission, Consumer contact snapshots, treatment progress, and an optional
+  verified rating. Only Admin, the Consumer owner, and the assigned Hospital
+  can read the booking.
 - `payments`: future provider transaction references; no payment workflow is
   implemented yet.
 - `notifications`: future user notifications.
@@ -63,9 +66,8 @@ the Admin audit page may permanently clear this collection through a server
 endpoint that verifies the caller's Firebase ID token and active Admin profile.
 Hospital and Consumer users cannot call or see this control. Client code
 deliberately stores `ipAddress: null`: a
-browser cannot provide a trustworthy source IP. Trusted IP enrichment and
-backend-guaranteed logs for out-of-band Admin SDK operations require a future
-server/Cloud Function phase.
+browser cannot provide a trustworthy source IP. Verified server endpoints may
+record forwarded IP and user-agent data when available.
 
 Admin SDK operations bypass Firestore Security Rules by design. Every controlled
 Admin SDK script must therefore preserve records and create a server-sourced

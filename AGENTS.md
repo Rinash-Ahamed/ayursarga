@@ -95,6 +95,15 @@ implementation work unless the project owner explicitly changes a decision.
   the available details for that booking. Do not grant Hospitals general read
   access to Consumer profiles. Booking state changes must follow the transitions in
   `firestore.rules`.
+- Keep appointment status separate from treatment progress. Hospital treatment
+  progress follows `not_started` → `started` → `ongoing` → `completed` (with a
+  direct `started` → `completed` option), and every transition is audited.
+- Hospital room occupancy belongs in the single audited
+  `hospitalCapacity/{hospitalId}` document. It is internal to Admin and the
+  assigned Hospital; do not copy it into public Hospital data.
+- Star ratings are verified booking ratings: one immutable 1–5 rating per
+  completed booking by that booking's Consumer. Aggregate rating fields are
+  updated only by the verified server endpoint, never directly by Hospital UI.
 - Keep list reads bounded and cursor-paginated. Prefer Firestore count/sum
   aggregations for dashboard totals and deploy required indexes deliberately.
   Do not load complete collections or add realtime listeners without a genuine

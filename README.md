@@ -4,8 +4,8 @@ Ayursarga is a Next.js App Router application containing the existing public
 Ayurvedic-care website and three route-separated application areas:
 
 - `/app` — consumer hospital discovery and booking requests
-- `/hospital` — hospital profile, services, and booking management
-- `/admin` — platform hospitals, users, bookings, and commission visibility
+- `/hospital` — hospital profile, services, booking/treatment progress, and room occupancy management
+- `/admin` — platform hospitals, Hospital package visibility, users, bookings, ratings, and commission visibility
 
 The application uses TypeScript, React, Firebase Authentication, Cloud
 Firestore, GSAP, Lenis, and Framer Motion. The public website and portal modules
@@ -40,6 +40,16 @@ for the existing public contact form.
 - `features/` contains authentication contracts and typed Firestore models.
 - `firestore.rules` and `firestore.indexes.json` define data isolation and queries.
 - `scripts/` contains controlled privileged-user provisioning.
+
+Hospital packages reuse the existing `services` collection. Internal room
+occupancy uses one audited `hospitalCapacity/{hospitalId}` record and is not
+exposed through the public Hospital document. Bookings keep appointment status
+separate from `treatmentStatus` (`not_started`, `started`, `ongoing`, or
+`completed`). A Consumer can submit one verified 1–5 star rating only after a
+completed booking; the server records it on the booking and transactionally
+updates the Hospital rating aggregate.
+Service durations accept minutes, hours, or days while retaining a normalized
+`durationMinutes` value for reliable querying and a preferred display unit.
 
 See [Firebase setup](docs/FIREBASE.md) and
 [application architecture](docs/APPLICATION_ARCHITECTURE.md) for configuration,
@@ -130,6 +140,7 @@ Each API also supports its own lightweight `GET` readiness check:
 - `/api/contact`
 - `/api/admin/audits`
 - `/api/admin/hospitals/{hospitalId}/login-setup`
+- `/api/consumer/bookings/{bookingId}/rating`
 
 The checks validate local server configuration and SDK initialization only.
 They intentionally avoid billable database reads and external email delivery.

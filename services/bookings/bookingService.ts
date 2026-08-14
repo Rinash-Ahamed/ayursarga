@@ -1,7 +1,8 @@
 "use client";
 
 import { Timestamp, type DocumentData } from "firebase/firestore";
-import type { BookingDocument, BookingStatus } from "@/features/firestore/models";
+import type { BookingDocument, BookingStatus, TreatmentStatus } from "@/features/firestore/models";
+import { getTreatmentStatus } from "@/features/bookings/treatmentStatus";
 import { COLLECTIONS } from "@/constants/firestore";
 import {
   firestoreTimestamp, runFilteredQuery,
@@ -10,6 +11,7 @@ import {
 import { createAuditedDocument, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
 import { getHospital } from "@/services/hospitals/hospitalService";
 import { getService } from "@/services/hospitals/serviceService";
+import { authorizedApiRequest } from "@/services/api/client";
 
 type BookingRequestInput = {
   consumerId: string; hospitalId: string; serviceId: string; preferredDate: Date;
@@ -27,14 +29,15 @@ export async function createBookingRequest(input: BookingRequestInput) {
     consumerPhone: input.consumerPhone.trim(), consumerAddress: input.consumerAddress?.trim() || null,
     hospitalId: hospital.id, serviceId: service.id,
     preferredDate: Timestamp.fromDate(input.preferredDate), preferredTime: input.preferredTime,
-    confirmedDate: null, confirmedTime: null, status: "requested",
+    confirmedDate: null, confirmedTime: null, status: "requested", treatmentStatus: "not_started",
     servicePrice: service.price, commissionPercentage: hospital.commissionPercentage,
     estimatedCommission: service.price * hospital.commissionPercentage / 100,
     consumerNotes: input.consumerNotes?.trim() || null, hospitalNotes: null,
     createdAt: firestoreTimestamp.server(), createdBy: input.consumerId,
     updatedAt: firestoreTimestamp.server(), updatedBy: input.consumerId,
     archivedAt: null, archivedBy: null,
-    confirmedAt: null, completedAt: null,
+    confirmedAt: null, completedAt: null, treatmentStartedAt: null, treatmentCompletedAt: null,
+    rating: null, ratedAt: null,
   }, { action: "create", actorRole: "consumer" });
 }
 
@@ -74,7 +77,7 @@ export const cancelConsumerBooking = (id: string, previousValues?: DocumentData)
 }, { action: "status_change", actorRole: "consumer" }, previousValues);
 
 export type HospitalBookingUpdate = {
-  status: Extract<BookingStatus, "confirmed" | "reschedule_requested" | "rejected" | "completed">;
+  status: Extract<BookingStatus, "confirmed" | "reschedule_requested" | "rejected">;
   confirmedDate?: Date | null; confirmedTime?: string | null; hospitalNotes?: string | null;
 };
 
@@ -86,7 +89,58 @@ export function updateHospitalBooking(id: string, input: HospitalBookingUpdate, 
   if (input.confirmedDate !== undefined) data.confirmedDate = input.confirmedDate ? Timestamp.fromDate(input.confirmedDate) : null;
   if (input.confirmedTime !== undefined) data.confirmedTime = input.confirmedTime;
   if (input.status === "confirmed") data.confirmedAt = firestoreTimestamp.server();
-  if (input.status === "completed") data.completedAt = firestoreTimestamp.server();
   data.updatedBy = getAuditActorId();
   return updateAuditedDocument(COLLECTIONS.bookings, id, data, { action: "status_change", actorRole: "hospital" }, previousValues);
+}
+
+const NEXT_TREATMENT_STATUS: Record<TreatmentStatus, readonly TreatmentStatus[]> = {
+  not_started: ["started"],
+  started: ["ongoing", "completed"],
+  ongoing: ["completed"],
+  completed: [],
+};
+
+export function updateTreatmentProgress(
+  id: string,
+  treatmentStatus: Exclude<TreatmentStatus, "not_started">,
+  previousValues: DocumentData,
+) {
+  if (previousValues.status !== "confirmed" && previousValues.status !== "completed") {
+    throw new Error("Confirm the booking before updating treatment progress.");
+  }
+  const currentStatus = getTreatmentStatus(previousValues as BookingDocument);
+  if (!NEXT_TREATMENT_STATUS[currentStatus].includes(treatmentStatus)) {
+    throw new Error("This treatment status change is not available.");
+  }
+  const changes: Record<string, unknown> = {
+    treatmentStatus,
+    updatedAt: firestoreTimestamp.server(),
+    updatedBy: getAuditActorId(),
+  };
+  if (treatmentStatus === "started") changes.treatmentStartedAt = firestoreTimestamp.server();
+  if (treatmentStatus === "completed") {
+    changes.status = "completed";
+    changes.completedAt = firestoreTimestamp.server();
+    changes.treatmentCompletedAt = firestoreTimestamp.server();
+  }
+  return updateAuditedDocument(
+    COLLECTIONS.bookings,
+    id,
+    changes,
+    { action: "status_change", actorRole: "hospital" },
+    previousValues,
+  );
+}
+
+export function rateCompletedBooking(bookingId: string, rating: number) {
+  return authorizedApiRequest<{ ok: true; rating: number; ratingAverage: number; ratingCount: number }>(
+    `/api/consumer/bookings/${encodeURIComponent(bookingId)}/rating`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rating }),
+      signedOutMessage: "Sign in to rate your completed treatment.",
+      failureMessage: "We could not save the rating. Please try again.",
+    },
+  );
 }
