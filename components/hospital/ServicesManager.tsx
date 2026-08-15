@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useDeferredValue, useState, type FormEvent } from "react";
+import { useCallback, useState, type FormEvent } from "react";
 import type { ServiceDocument } from "@/features/firestore/models";
 import { emptyQueryPage, type DocumentRecord, type QueryPageOptions } from "@/services/firestore/firestoreService";
 import { archiveService, createService, listHospitalServices, updateService } from "@/services/hospitals/serviceService";
@@ -9,6 +9,7 @@ import { durationToMinutes, durationValueFromMinutes, formatServiceDuration, inf
 import { formatStatus } from "@/utils/text";
 import { useAuth } from "@/hooks/useAuth";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalPagination } from "@/components/portal/PortalPagination";
@@ -60,7 +61,7 @@ export function ServicesManager() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const deferredSearch = useDeferredValue(search.trim());
+  const deferredSearch = useDebouncedValue(search.trim(), 300);
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) => hospitalId
     ? listHospitalServices(hospitalId, { pageSize: 20, cursor }, deferredSearch)
     : Promise.resolve(emptyQueryPage<ServiceDocument>()), [deferredSearch, hospitalId]);

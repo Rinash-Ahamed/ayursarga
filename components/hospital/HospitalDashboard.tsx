@@ -28,7 +28,7 @@ export function HospitalDashboard() {
   useEffect(() => {
     if (!hospitalId) return;
     let active = true;
-    void Promise.all([
+    void Promise.allSettled([
         countDocuments(COLLECTIONS.services, [{ field: "hospitalId", operator: "==", value: hospitalId }]),
         countDocuments(COLLECTIONS.bookings, [{ field: "hospitalId", operator: "==", value: hospitalId }]),
         countDocuments(COLLECTIONS.bookings, [{ field: "hospitalId", operator: "==", value: hospitalId }, { field: "status", operator: "==", value: "requested" }]),
@@ -36,13 +36,20 @@ export function HospitalDashboard() {
         getHospitalCapacity(hospitalId),
       ]).then(([services, bookings, requested, treatments, roomCapacity]) => {
       if (!active) return;
-      setCounts({ services, bookings, requested, treatments });
-      setCapacity(roomCapacity);
-      setTotalRooms(String(roomCapacity?.totalRooms ?? 0));
-      setOccupiedRooms(String(roomCapacity?.occupiedRooms ?? 0));
-    }).catch(() => {
-      if (!active) return;
-      setError("We could not load the Hospital dashboard. Refresh the page and try again.");
+      setCounts({
+        services: services.status === "fulfilled" ? services.value : 0,
+        bookings: bookings.status === "fulfilled" ? bookings.value : 0,
+        requested: requested.status === "fulfilled" ? requested.value : 0,
+        treatments: treatments.status === "fulfilled" ? treatments.value : 0,
+      });
+      if (roomCapacity.status === "fulfilled") {
+        setCapacity(roomCapacity.value);
+        setTotalRooms(String(roomCapacity.value?.totalRooms ?? 0));
+        setOccupiedRooms(String(roomCapacity.value?.occupiedRooms ?? 0));
+      }
+      if ([services, bookings, requested, treatments, roomCapacity].some((result) => result.status === "rejected")) {
+        setError("Some Hospital dashboard information could not be loaded. The available totals are shown.");
+      }
     }).finally(() => {
       if (!active) return;
       setLoading(false);

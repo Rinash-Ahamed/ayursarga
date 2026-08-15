@@ -44,19 +44,28 @@ export function RequireRole({
   return mayRender ? children : fallback;
 }
 
-export function GuestOnly({ children, fallback = <AuthLoading /> }: { children: ReactNode; fallback?: ReactNode }) {
+export function GuestOnly({
+  children,
+  fallback = <AuthLoading />,
+  role: targetRole,
+}: {
+  children: ReactNode;
+  fallback?: ReactNode;
+  role?: PortalRole;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated, isLoading, role, userProfile } = useAuth();
+  const sameRoleSession = Boolean(isAuthenticated && role && (!targetRole || role === targetRole));
 
   useEffect(() => {
-    if (isLoading || !isAuthenticated || !role) return;
+    if (isLoading || !sameRoleSession || !role) return;
     const target = role === "consumer" && !isConsumerProfileComplete(userProfile)
       ? ROUTES.consumer.completeProfile
       : getRoleHomePath(role);
     if (pathname !== target) router.replace(target);
-  }, [isAuthenticated, isLoading, pathname, role, router, userProfile]);
+  }, [isLoading, pathname, role, router, sameRoleSession, userProfile]);
 
-  if (isLoading || isAuthenticated) return fallback;
+  if (isLoading || sameRoleSession) return fallback;
   return children;
 }
