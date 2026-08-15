@@ -46,8 +46,10 @@ async function login(credentials: LoginCredentials, expectedRole?: PortalRole) {
 }
 
 async function loginConsumerWithGoogle() {
+  const auth = getClientAuth();
+  const previousUser = auth.currentUser;
   try {
-    const credential = await signInWithPopup(getClientAuth(), new GoogleAuthProvider());
+    const credential = await signInWithPopup(auth, new GoogleAuthProvider());
     let profile;
     try {
       profile = await getUserProfile(credential.user.uid, credential.user.email ?? "", true);
@@ -57,8 +59,12 @@ async function loginConsumerWithGoogle() {
     }
     return verifyProfileRole(profile, "consumer");
   } catch (error) {
-    await signOut(getClientAuth()).catch(() => undefined);
-    throw toAuthenticationError(error);
+    const authError = toAuthenticationError(error);
+    const currentUser = auth.currentUser;
+    if (currentUser && currentUser.uid !== previousUser?.uid) {
+      await signOut(auth).catch(() => undefined);
+    }
+    throw authError;
   }
 }
 

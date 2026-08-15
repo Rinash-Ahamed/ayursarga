@@ -233,7 +233,7 @@ em{ font-style: italic; color: var(--clay-dark); }
 /* ==========================================================================
    Contact
    ========================================================================== */
-#contact{ text-align:center; overflow:hidden; }
+#contact{ text-align:center; overflow:hidden; padding-top:clamp(32px,3vw,44px); }
 .contact-glow{
   position:absolute; bottom:-30%; left:50%; transform:translateX(-50%); width:900px; height:900px; z-index:0;
   background: radial-gradient(circle, rgba(168,142,117,.28), transparent 65%);
