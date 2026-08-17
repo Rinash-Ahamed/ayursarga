@@ -34,7 +34,7 @@ export default function ProgressFlame() {
           ref={pathRef}
           d="M30 4 C44 26 50 46 38 68 C34 76 26 76 22 68 C10 46 16 26 30 4 Z"
           fill="none"
-          stroke="#A88E75"
+          stroke="#B8872F"
           strokeWidth="2.5"
           strokeLinecap="round"
         />

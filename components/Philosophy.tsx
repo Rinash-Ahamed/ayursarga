@@ -32,8 +32,8 @@ export default function Philosophy() {
           Find suitable Ayurvedic hospitals, understand their services and request care through one clear, manageable process.
         </FadeUp>
         <FadeUp className="maternal-editorial">
-          <Image src="/mother-newborn-ayurveda.png" alt="Mother resting with her newborn at an Ayurvedic retreat" width={1536} height={1024} sizes="(max-width: 900px) 100vw, 70vw" quality={82} />
-          <div><span>Care, considered</span><p>Explore hospital services for mother, child and the practical needs around them.</p></div>
+          <Image src="/how-it-works-ayurvedic-guidance.png" alt="Ayurvedic doctor guiding a family through a care plan" width={1536} height={1024} sizes="(max-width: 900px) 100vw, 70vw" quality={86} />
+          <div><span>Care, considered</span><p>Understand hospital services with calm guidance before you request care.</p></div>
         </FadeUp>
         <div className="process-grid">
           {STEPS.map(([title, body], index) => (

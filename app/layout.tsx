@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: "Discover active Ayurvedic hospitals in Kerala, compare their services and request appointments through Ayursarga.",
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#F9F5EA" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#FFFDF7" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return <html lang="en"><head>
