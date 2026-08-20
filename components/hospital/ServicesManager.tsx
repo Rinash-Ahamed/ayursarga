@@ -15,6 +15,7 @@ import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalPagination } from "@/components/portal/PortalPagination";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
+import { PortalDialog } from "@/components/portal/PortalDialog";
 
 type ServiceValues = Pick<ServiceDocument, "name" | "description" | "price" | "durationMinutes" | "durationUnit">;
 
@@ -60,6 +61,7 @@ export function ServicesManager() {
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [serviceToRemove, setServiceToRemove] = useState<DocumentRecord<ServiceDocument> | null>(null);
   const [search, setSearch] = useState("");
   const deferredSearch = useDebouncedValue(search.trim(), 300);
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) => hospitalId
@@ -124,13 +126,13 @@ export function ServicesManager() {
   }
 
   async function removeService(item: DocumentRecord<ServiceDocument>) {
-    if (!window.confirm(`Delete “${item.name}” from normal service views? Its history will remain safely archived.`)) return;
     beginAction(item.id);
     try {
       await archiveService(item.id, item);
       removeItem(item.id);
       if (editingId === item.id) setEditingId(null);
       setActionMessage("The service has been deleted from normal views and safely archived.");
+      setServiceToRemove(null);
     } catch {
       setActionError("We could not delete this service. Refresh the page and try again.");
     } finally {
@@ -165,5 +167,6 @@ export function ServicesManager() {
         </article>)}
     </div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
+    <PortalDialog open={Boolean(serviceToRemove)} tone="danger" title="Delete this service?" message={serviceToRemove ? `${serviceToRemove.name} will be removed from normal service views. Its history will remain safely archived.` : undefined} confirmLabel="Delete service" busy={busyId !== null} onCancel={() => setServiceToRemove(null)} onConfirm={() => { if (serviceToRemove) void removeService(serviceToRemove); }} />
   </PortalShell>;
 }

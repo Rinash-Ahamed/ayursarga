@@ -10,6 +10,7 @@ import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
+import { PortalDialog } from "@/components/portal/PortalDialog";
 import { formatStatus } from "@/utils/text";
 import { toDate } from "@/utils/date";
 
@@ -45,6 +46,7 @@ export function AdminAuditLogs() {
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [reloadVersion, setReloadVersion] = useState(0);
   const requestVersion = useRef(0);
   const cursor = pageCursors[pageIndex] ?? null;
@@ -100,8 +102,6 @@ export function AdminAuditLogs() {
 
   async function clearAudits() {
     if (busy) return;
-    const confirmation = window.prompt("This permanently deletes every audit record. Type CLEAR to continue.");
-    if (confirmation !== "CLEAR") return;
     setBusy(true);
     setActionError(null);
     setMessage(null);
@@ -111,6 +111,7 @@ export function AdminAuditLogs() {
       setPageCursors([null]);
       setReloadVersion((current) => current + 1);
       setMessage(`${deletedCount} audit ${deletedCount === 1 ? "record" : "records"} permanently cleared.`);
+      setClearDialogOpen(false);
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : "We could not clear the audit log.");
     } finally {
@@ -119,7 +120,7 @@ export function AdminAuditLogs() {
   }
 
   return <PortalShell role="admin" title="Audit Logs">
-    <PortalLoadGuard loading={isLoading} error={loadError} hasData={false} fallbackHref="/admin" loadingMessage="Loading recent activity…" />
+    <PortalLoadGuard loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/admin" loadingMessage="Loading recent activity…" />
     <div className="portal-audit-heading">
       <p>Showing the newest platform activity, 20 records per page.</p>
       <button className="portal-button danger" type="button" disabled={busy || isLoading || items.length === 0} onClick={() => void clearAudits()}>
@@ -144,5 +145,6 @@ export function AdminAuditLogs() {
       <span>Page {pageIndex + 1}</span>
       <button type="button" className="portal-button secondary" disabled={!hasMore || isLoading} onClick={nextPage}>Next</button>
     </div>}
+    <PortalDialog open={clearDialogOpen} tone="danger" title="Clear all audit history?" message="This permanently removes every audit record. This action cannot be undone." confirmLabel="Clear audit history" busy={busy} onCancel={() => setClearDialogOpen(false)} onConfirm={() => void clearAudits()} />
   </PortalShell>;
 }

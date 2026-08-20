@@ -19,6 +19,7 @@ import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
+import { PortalDialog } from "@/components/portal/PortalDialog";
 import { formatStatus } from "@/utils/text";
 import { toDate } from "@/utils/date";
 import { hospitalFormValues, validateHospitalFields, type HospitalValidationErrors } from "@/features/hospitals/validation";
@@ -37,6 +38,8 @@ function isOnOrAfter(value: unknown, minimum: unknown) {
   return Boolean(date && minimumDate && date.getTime() >= minimumDate.getTime());
 }
 
+type PendingHospitalAction = "archive" | "sign" | "activate" | "setup" | "deactivate";
+
 export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   const router = useRouter();
   const [hospital, setHospital] = useState<DocumentRecord<HospitalDocument> | null>(null);
@@ -47,6 +50,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   const [contractUrl, setContractUrl] = useState("");
   const [editing, setEditing] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<HospitalValidationErrors>({});
+  const [pendingAction, setPendingAction] = useState<PendingHospitalAction | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -91,6 +95,21 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function confirmPendingAction() {
+    if (!hospital || !pendingAction) return;
+    if (pendingAction === "archive") await runAction((record) => archiveHospital(record.id, record), "The hospital has been removed from the normal list. Its details and history are still safely stored.");
+    if (pendingAction === "sign") await runAction((record) => confirmHospitalContractSigning(record.id, record), "The signed contract has been confirmed. Add its URL to activate the hospital.");
+    if (pendingAction === "activate") await runAction(async (record) => {
+      await activateHospital(record.id, record, contractUrl);
+      await sendHospitalLoginSetup(record.id);
+    }, `The hospital is active. A secure password setup link was sent to ${hospital.email}.`);
+    if (pendingAction === "setup") await runAction(async (record) => {
+      await sendHospitalLoginSetup(record.id);
+    }, `A secure password setup/reset link was sent to ${hospital.email}.`);
+    if (pendingAction === "deactivate") await runAction((record) => deactivateHospital(record.id, record), "The hospital is now inactive and hidden from consumers.");
+    setPendingAction(null);
   }
 
   function generateContract() {
@@ -160,6 +179,15 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   const activatedAt = hospital && hospital.status === "active" && signedAt && isOnOrAfter(hospital.activatedAt, signedAt)
     ? hospital.activatedAt
     : null;
+  const actionDialog = pendingAction === "archive"
+    ? { title: "Remove this hospital?", message: "It will be hidden from normal application views. Its protected history will remain stored.", confirmLabel: "Remove hospital", tone: "danger" as const }
+    : pendingAction === "sign"
+      ? { title: "Confirm signed contract?", message: "Confirm that the signed contract has been received from this hospital.", confirmLabel: "Confirm contract", tone: "default" as const }
+      : pendingAction === "activate"
+        ? { title: "Activate this hospital?", message: "The hospital will become visible to consumers and receive a secure login setup email.", confirmLabel: "Activate hospital", tone: "default" as const }
+        : pendingAction === "setup"
+          ? { title: "Send login setup link?", message: `A secure password setup/reset link will be sent to ${hospital?.email ?? "this hospital"}.`, confirmLabel: "Send setup link", tone: "default" as const }
+          : { title: "Deactivate this hospital?", message: "The hospital will be hidden from consumers while its operational history remains stored.", confirmLabel: "Deactivate hospital", tone: "default" as const };
   return <PortalShell role="admin" title="Hospital Details">
     <PortalLoadGuard loading={loading} error={error} hasData={Boolean(hospital)} fallbackHref="/admin/hospitals" loadingMessage="Loading hospital details…" />
     <div className="portal-actions portal-page-actions"><Link className="portal-button secondary" href="/admin/hospitals">Back to hospitals</Link></div>
@@ -179,11 +207,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
           <p>{hospital.address}</p>
           {hospital.status !== "archived" && <div className="portal-actions">
             <button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditing(true); setError(null); setMessage(null); }}>Edit hospital</button>
-            <button className="portal-button danger" type="button" disabled={busy} onClick={() => {
-              if (window.confirm("Remove this hospital from all normal application views? Its protected history will remain stored. If the hospital is added again, it will start as Pending and require a new signed contract.")) {
-                void runAction((record) => archiveHospital(record.id, record), "The hospital has been removed from the normal list. Its details and history are still safely stored.");
-              }
-            }}>Delete hospital</button>
+            <button className="portal-button danger" type="button" disabled={busy} onClick={() => setPendingAction("archive")}>Delete hospital</button>
           </div>}
         </>}
       </article>
@@ -200,31 +224,21 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         {hospital.status === "pending" && contractStatus === "signed" && <label className="portal-contract-url">Signed contract URL *<input type="url" value={contractUrl} onChange={(event) => setContractUrl(event.target.value)} placeholder="https://" required /></label>}
         <div className="portal-actions">
           {hospital.status === "pending" && <button className="portal-button secondary" type="button" disabled={busy} onClick={generateContract}>{contractStatus === "not_generated" ? "Generate Contract PDF" : "View / Regenerate Contract PDF"}</button>}
-          {hospital.status === "pending" && contractStatus === "generated" && <button className="portal-button secondary" type="button" disabled={busy} onClick={() => {
-            if (window.confirm("Have you received the signed contract from this hospital?")) void runAction((record) => confirmHospitalContractSigning(record.id, record), "The signed contract has been confirmed. Add its URL to activate the hospital.");
-          }}>Confirm signed contract</button>}
+          {hospital.status === "pending" && contractStatus === "generated" && <button className="portal-button secondary" type="button" disabled={busy} onClick={() => setPendingAction("sign")}>Confirm signed contract</button>}
           {hospital.status === "pending" && contractStatus === "signed" && <button className="portal-button" type="button" disabled={busy} onClick={() => {
             if (!contractUrl.trim()) {
               setError("Paste the signed contract URL below before activating the hospital.");
               return;
             }
-            if (window.confirm("Activate this hospital, show it to consumers, and send its secure login setup email?")) void runAction(async (record) => {
-              await activateHospital(record.id, record, contractUrl);
-              await sendHospitalLoginSetup(record.id);
-            }, `The hospital is active. A secure password setup link was sent to ${hospital.email}.`);
+            setPendingAction("activate");
           }}>Activate hospital</button>}
-          {hospital.status === "active" && <button className="portal-button" type="button" disabled={busy} onClick={() => {
-            if (window.confirm(`Send a secure password setup/reset link to ${hospital.email}?`)) void runAction(async (record) => {
-              await sendHospitalLoginSetup(record.id);
-            }, `A secure password setup/reset link was sent to ${hospital.email}.`);
-          }}>Send login setup / reset</button>}
-          {hospital.status === "active" && <button className="portal-button secondary" type="button" disabled={busy} onClick={() => {
-            if (window.confirm("Deactivate this hospital and hide it from consumers?")) void runAction((record) => deactivateHospital(record.id, record), "The hospital is now inactive and hidden from consumers.");
-          }}>Deactivate hospital</button>}
+          {hospital.status === "active" && <button className="portal-button" type="button" disabled={busy} onClick={() => setPendingAction("setup")}>Send login setup / reset</button>}
+          {hospital.status === "active" && <button className="portal-button secondary" type="button" disabled={busy} onClick={() => setPendingAction("deactivate")}>Deactivate hospital</button>}
         </div>
         <p>Start by generating the contract. After the hospital returns the signed copy, confirm it here and paste the signed contract URL. You can then activate the hospital for consumers.</p>
       </article>
       <AdminHospitalPackages hospitalId={hospital.id} />
     </>}
+    <PortalDialog open={Boolean(pendingAction)} title={actionDialog.title} message={actionDialog.message} tone={actionDialog.tone} confirmLabel={actionDialog.confirmLabel} busy={busy} onCancel={() => setPendingAction(null)} onConfirm={() => void confirmPendingAction()} />
   </PortalShell>;
 }
