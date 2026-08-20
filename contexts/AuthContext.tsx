@@ -78,9 +78,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const profile = await authService.loginConsumerWithGoogle();
       setSnapshot((current) => ({ ...current, profile }));
       setStatus("authenticated");
+      const safeRequestedPath = getSafeRoleRedirect(requestedPath, profile.role);
       router.replace(isConsumerProfileComplete(profile)
-        ? getSafeRoleRedirect(requestedPath, profile.role)
-        : ROUTES.consumer.completeProfile);
+        ? safeRequestedPath
+        : safeRequestedPath === ROUTES.consumer.home
+          ? ROUTES.consumer.completeProfile
+          : `${ROUTES.consumer.completeProfile}?next=${encodeURIComponent(safeRequestedPath)}`);
       return profile;
     }), [router, run]);
 

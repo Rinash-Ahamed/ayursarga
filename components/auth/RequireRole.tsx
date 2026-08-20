@@ -12,10 +12,12 @@ export function RequireRole({
   role,
   children,
   fallback = <AuthLoading />,
+  requestedPath,
 }: {
   role: PortalRole;
   children: ReactNode;
   fallback?: ReactNode;
+  requestedPath?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -33,13 +35,14 @@ export function RequireRole({
     if (authorized) return;
     if (!userProfile) {
       const login = getRoleLoginPath(role);
-      const target = pathname === login ? login : `${login}?next=${encodeURIComponent(pathname)}`;
+      const returnPath = requestedPath ?? pathname;
+      const target = pathname === login ? login : `${login}?next=${encodeURIComponent(returnPath)}`;
       if (pathname !== login) router.replace(target);
       return;
     }
     const target = getRoleHomePath(userProfile.role);
     if (pathname !== target) router.replace(target);
-  }, [authorized, isLoading, needsConsumerProfile, pathname, role, router, status, userProfile]);
+  }, [authorized, isLoading, needsConsumerProfile, pathname, requestedPath, role, router, status, userProfile]);
 
   return mayRender ? children : fallback;
 }

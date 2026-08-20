@@ -21,6 +21,12 @@ import type { MatchProfile } from "@/lib/matchProfile";
 
 // Particle field uses browser animation APIs - load client-only, no SSR.
 const ParticleField = dynamic(() => import("@/components/ParticleField"), { ssr: false });
+const PublicHospitalSearch = dynamic(() => import("@/components/PublicHospitalSearch"), {
+  ssr: false,
+  loading: () => <section id="search-centers" className="section public-center-search" tabIndex={-1}>
+    <div className="section-inner"><div className="public-search-status" role="status">Preparing center search...</div></div>
+  </section>,
+});
 
 export default function PageShell() {
   const [ready, setReady] = useState(false);
@@ -43,6 +49,7 @@ export default function PageShell() {
       <SmoothScroll>
         <main>
           <Hero ready={ready} />
+          <PublicHospitalSearch />
           <Philosophy />
           <BotanicalTransition tone="cream-to-forest" />
           <Journey onComplete={setMatchProfile} />

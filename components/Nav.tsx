@@ -6,7 +6,7 @@ import { ROUTES } from "@/config/routes";
 
 const LINKS = [
   { href: "#discover-hospitals", label: "How It Works" },
-  { href: "/app", label: "Search Hospitals" },
+  { href: "#search-centers", label: "Search Hospitals" },
   { href: "#family-wellness", label: "Wellness" },
   { href: "#why-ayursarga", label: "Why Ayursarga" },
   { href: "#partners", label: "For Hospitals" },
