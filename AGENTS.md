@@ -101,9 +101,9 @@ implementation work unless the project owner explicitly changes a decision.
 - Hospital room occupancy belongs in the single audited
   `hospitalCapacity/{hospitalId}` document. It is internal to Admin and the
   assigned Hospital; do not copy it into public Hospital data.
-- Star ratings are verified booking ratings: one immutable 1–5 rating per
-  completed booking by that booking's Consumer. Aggregate rating fields are
-  updated only by the verified server endpoint, never directly by Hospital UI.
+- Hospital and booking ratings are intentionally out of scope. Do not add
+  rating fields, filters, controls, aggregates, or rating APIs unless the
+  project owner explicitly introduces a future rating phase.
 - Keep list reads bounded and cursor-paginated. Prefer Firestore count/sum
   aggregations for dashboard totals and deploy required indexes deliberately.
   Do not load complete collections or add realtime listeners without a genuine

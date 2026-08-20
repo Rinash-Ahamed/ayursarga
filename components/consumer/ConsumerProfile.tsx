@@ -4,12 +4,12 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalToast } from "@/components/portal/PortalToast";
-import { ROUTES } from "@/config/routes";
+import { getSafeRoleRedirect } from "@/features/auth/roles";
 import { validateConsumerContact } from "@/features/consumers/profileValidation";
 import { useAuth } from "@/hooks/useAuth";
 import { updateUserProfile } from "@/services/users/userService";
 
-export function ConsumerProfile({ completion = false }: { completion?: boolean }) {
+export function ConsumerProfile({ completion = false, requestedPath }: { completion?: boolean; requestedPath?: string }) {
   const router = useRouter();
   const { firebaseUser, userProfile, refreshUserProfile } = useAuth();
   const [message, setMessage] = useState<string | null>(null);
@@ -38,7 +38,7 @@ export function ConsumerProfile({ completion = false }: { completion?: boolean }
       await updateUserProfile(firebaseUser.uid, validation.data);
       await refreshUserProfile();
       if (completion) {
-        router.replace(ROUTES.consumer.home);
+        router.replace(getSafeRoleRedirect(requestedPath, "consumer"));
       } else {
         setMessage("Your contact details have been updated.");
       }

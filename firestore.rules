@@ -60,7 +60,7 @@ service cloud.firestore {
     function hasExactHospitalFields() {
       return request.resource.data.keys().hasOnly([
         'name', 'description', 'email', 'phone', 'address', 'city', 'state',
-        'imageUrl', 'status', 'isPublic', 'commissionPercentage', 'ratingAverage', 'ratingCount',
+        'imageUrl', 'status', 'isPublic', 'commissionPercentage',
         'contractStatus', 'contractGeneratedAt', 'contractGeneratedBy',
         'contractSignedAt', 'contractSignedBy', 'contractUrl', 'activatedAt', 'activatedBy',
         'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
@@ -298,8 +298,6 @@ service cloud.firestore {
         && hasValidRequiredHospitalFields()
         && request.resource.data.status == 'pending'
         && request.resource.data.isPublic == false
-        && request.resource.data.ratingAverage == 0
-        && request.resource.data.ratingCount == 0
         && request.resource.data.contractStatus == 'not_generated'
         && request.resource.data.contractGeneratedAt == null
         && request.resource.data.contractGeneratedBy == null
@@ -370,8 +368,7 @@ service cloud.firestore {
           'commissionPercentage', 'estimatedCommission', 'consumerNotes',
           'hospitalNotes', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
           'archivedAt', 'archivedBy', 'lastAuditId', 'confirmedAt', 'completedAt',
-          'treatmentStatus', 'treatmentStartedAt', 'treatmentCompletedAt',
-          'rating', 'ratedAt'
+          'treatmentStatus', 'treatmentStartedAt', 'treatmentCompletedAt'
         ])
         && request.resource.data.consumerId == request.auth.uid
         && request.resource.data.consumerName == getCurrentUser().name
@@ -394,8 +391,6 @@ service cloud.firestore {
         && request.resource.data.treatmentStatus == 'not_started'
         && request.resource.data.treatmentStartedAt == null
         && request.resource.data.treatmentCompletedAt == null
-        && request.resource.data.rating == null
-        && request.resource.data.ratedAt == null
         && isApprovedHospital(request.resource.data.hospitalId)
         && get(/databases/$(database)/documents/services/$(request.resource.data.serviceId)).data.hospitalId
           == request.resource.data.hospitalId

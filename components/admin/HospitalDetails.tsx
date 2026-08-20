@@ -25,7 +25,6 @@ import { hospitalFormValues, validateHospitalFields, type HospitalValidationErro
 import { HospitalFormFields } from "@/components/forms/HospitalFormFields";
 import { sendHospitalLoginSetup } from "@/services/auth/hospitalAccountService";
 import { AdminHospitalPackages } from "@/components/admin/HospitalPackages";
-import { getHospitalRating } from "@/features/hospitals/ratings";
 
 function formatDate(value: unknown) {
   const date = toDate(value);
@@ -161,7 +160,6 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   const activatedAt = hospital && hospital.status === "active" && signedAt && isOnOrAfter(hospital.activatedAt, signedAt)
     ? hospital.activatedAt
     : null;
-  const rating = hospital ? getHospitalRating(hospital) : null;
   return <PortalShell role="admin" title="Hospital Details">
     <PortalLoadGuard loading={loading} error={error} hasData={Boolean(hospital)} fallbackHref="/admin/hospitals" loadingMessage="Loading hospital details…" />
     <div className="portal-actions portal-page-actions"><Link className="portal-button secondary" href="/admin/hospitals">Back to hospitals</Link></div>
@@ -176,7 +174,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         </form> : <>
           <p>{hospital.description || "No description provided."}</p>
           <div className="portal-card-meta">
-            <span>{hospital.email}</span><span>{hospital.phone}</span><span>{hospital.city}, {hospital.state}</span><span>Commission {hospital.commissionPercentage}%</span><span>{rating?.count ? `${rating.average.toFixed(1)} stars from ${rating.count} verified ratings` : "Not yet rated"}</span>
+            <span>{hospital.email}</span><span>{hospital.phone}</span><span>{hospital.city}, {hospital.state}</span><span>Commission {hospital.commissionPercentage}%</span>
           </div>
           <p>{hospital.address}</p>
           {hospital.status !== "archived" && <div className="portal-actions">

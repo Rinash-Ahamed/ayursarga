@@ -1,15 +1,39 @@
 "use client";
 
 import { FadeUp, RevealLines, RevealWords } from "./Reveal";
-import Image from "next/image";
 
 const STEPS = [
-  ["Discover approved hospitals", "Explore Ayurvedic hospitals offering care paths suited to different wellness needs."],
-  ["Compare treatments and care", "Review active treatments, programme details, transparent prices and practical hospital information."],
-  ["Request your consultation", "Sign in, choose your preferred date and time, and share any notes about the care you seek."],
-  ["Receive hospital guidance", "The hospital can confirm your request or suggest another suitable time for your consultation."],
-  ["Follow your wellness journey", "Track each appointment update securely from your Ayursarga consumer account."],
-];
+  {
+    label: "Discover",
+    title: "Explore approved centers",
+    body: "Search active Ayurvedic centers by name, city, or state and understand the kind of care each center offers.",
+    outcome: "No account is needed to explore",
+  },
+  {
+    label: "Understand",
+    title: "Review services clearly",
+    body: "Open a center to review its active treatments, descriptions, duration, listed price, and practical contact information.",
+    outcome: "Compare at your own pace",
+  },
+  {
+    label: "Choose",
+    title: "Select suitable care",
+    body: "Choose the center and service you want to discuss. Ayursarga keeps your selection ready while you sign in securely.",
+    outcome: "Google sign-in begins only here",
+  },
+  {
+    label: "Request",
+    title: "Share your preference",
+    body: "Send your preferred date, time, and any helpful notes. This is an appointment request, not an automatic confirmation.",
+    outcome: "Sent directly to your chosen center",
+  },
+  {
+    label: "Continue",
+    title: "Receive and track the response",
+    body: "The center can confirm, decline, or propose another time. Follow each update securely inside My Ayursarga.",
+    outcome: "Clinical guidance remains with the center",
+  },
+] as const;
 
 function StepIcon({ index }: { index: number }) {
   const paths = [
@@ -26,22 +50,34 @@ export default function Philosophy() {
   return (
     <section id="how-it-works" className="section">
       <div className="section-inner">
-        <RevealWords text="How It Works" className="eyebrow" />
-        <RevealLines as="h2" className="section-title" lines={["From hospital search", "to appointment request."]} />
-        <FadeUp as="p" className="section-intro">
-          Find suitable Ayurvedic hospitals, understand their services and request care through one clear, manageable process.
-        </FadeUp>
-        <FadeUp className="maternal-editorial">
-          <Image src="/how-it-works-ayurvedic-guidance.png" alt="Ayurvedic doctor guiding a family through a care plan" width={1536} height={1024} sizes="(max-width: 900px) 100vw, 70vw" quality={82} />
-          <div><span>Care, considered</span><p>Understand hospital services with calm guidance before you request care.</p></div>
-        </FadeUp>
-        <div className="process-grid">
-          {STEPS.map(([title, body], index) => (
-            <FadeUp id={index === 0 ? "discover-hospitals" : undefined} as="article" className="process-card" delay={index * 0.06} key={title}>
-              <div className="process-card-heading"><StepIcon index={index} /></div><h3>{title}</h3><p>{body}</p>
+        <div className="process-intro-layout">
+          <div>
+            <RevealWords text="How Ayursarga Works" className="eyebrow" />
+            <RevealLines as="h2" className="section-title" lines={["A clear path from", "discovery to care."]} />
+            <FadeUp as="p" className="section-intro">
+              Ayursarga brings center discovery, service information, appointment requests, and hospital responses into one calm and transparent journey.
             </FadeUp>
-          ))}
+          </div>
+          <FadeUp className="process-principles">
+            <div><strong>Explore first</strong><span>Browse centers and services before signing in.</span></div>
+            <div><strong>Request with clarity</strong><span>Your chosen center reviews every appointment request.</span></div>
+            <div><strong>Care stays clinical</strong><span>Qualified center physicians confirm treatment suitability.</span></div>
+          </FadeUp>
         </div>
+
+        <ol className="process-journey" aria-label="The Ayursarga care journey">
+          {STEPS.map(({ label, title, body, outcome }, index) => (
+            <li id={index === 0 ? "discover-hospitals" : undefined} key={title}>
+              <FadeUp as="article" className="process-card" delay={index * 0.05}>
+                <div className="process-card-heading"><StepIcon index={index} /></div>
+                <span className="process-stage">{label}</span>
+                <h3>{title}</h3>
+                <p>{body}</p>
+                <span className="process-outcome"><span aria-hidden="true">&#10003;</span>{outcome}</span>
+              </FadeUp>
+            </li>
+          ))}
+        </ol>
       </div>
     </section>
   );

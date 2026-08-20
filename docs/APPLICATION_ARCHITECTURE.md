@@ -30,8 +30,7 @@ The active application uses these collections:
 - `services`: hospital-owned service details and current price.
 - `hospitalCapacity`: one internal, audited room-occupancy record per Hospital.
 - `bookings`: preferred appointment request, Hospital response, price,
-  commission, Consumer contact snapshots, treatment progress, completion, and
-  an optional verified post-completion rating.
+  commission, Consumer contact snapshots, treatment progress, and completion.
 - `auditLogs`: Admin-readable records linked atomically to critical application
   writes. Client updates and deletes are denied; an active Admin can explicitly
   clear the collection through the protected server endpoint.
@@ -48,9 +47,7 @@ It also snapshots the Consumer's name, Google email, phone, and optional address
 so the assigned Hospital can contact that Consumer without receiving general
 access to the `users` collection.
 Treatment progress is tracked separately as `not_started`, `started`,
-`ongoing`, or `completed`. One verified 1–5 rating may be submitted by the
-booking's Consumer after completion. The protected rating API atomically saves
-the booking rating, updates the Hospital aggregate, and writes both audit logs.
+`ongoing`, or `completed`.
 
 All potentially growing list views use cursor pagination with bounded page
 sizes and a shared `usePaginatedList` hook. Successful updates patch the loaded

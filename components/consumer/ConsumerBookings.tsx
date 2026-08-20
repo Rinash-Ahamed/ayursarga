@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import type { BookingDocument } from "@/features/firestore/models";
 import { getTreatmentStatus } from "@/features/bookings/treatmentStatus";
 import { emptyQueryPage, type DocumentRecord, type QueryPageOptions } from "@/services/firestore/firestoreService";
-import { cancelConsumerBooking, listConsumerBookings, rateCompletedBooking } from "@/services/bookings/bookingService";
+import { cancelConsumerBooking, listConsumerBookings } from "@/services/bookings/bookingService";
 import { formatCurrency } from "@/utils/currency";
 import { formatStatus } from "@/utils/text";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,19 +42,6 @@ export function ConsumerBookings() {
     }
   }
 
-  async function rate(item: DocumentRecord<BookingDocument>, rating: number) {
-    setBusy(item.id); setActionError(null); setActionMessage(null);
-    try {
-      await rateCompletedBooking(item.id, rating);
-      patchItem(item.id, { rating });
-      setActionMessage(`Thank you. Your ${rating}-star rating has been recorded.`);
-    } catch (caught) {
-      setActionError(caught instanceof Error ? caught.message : "We could not save your rating. Try again.");
-    } finally {
-      setBusy(null);
-    }
-  }
-
   return <PortalShell role="consumer" title="My bookings">
     <PortalLoadGuard loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/app" loadingMessage="Loading your bookings…" />
     <PortalFeedback error={items.length > 0 ? loadError : null} empty={!error && !isLoading && items.length === 0 ? "You have no bookings yet. Find a hospital to request your first appointment." : undefined} />
@@ -68,18 +55,11 @@ export function ConsumerBookings() {
           {booking.status === "confirmed" || booking.status === "completed"
             ? <p>Treatment: {formatStatus(getTreatmentStatus(booking))}</p>
             : null}
-          {booking.status === "completed" && booking.rating
-            ? <p className="portal-rating-summary" aria-label={`${booking.rating} out of 5 stars`}>{"★".repeat(booking.rating)}<span>{booking.rating}/5</span></p>
-            : null}
         </div>
         <div>
           <span className="portal-status" data-status={booking.status}>{formatStatus(booking.status)}</span>
           {["requested", "confirmed", "reschedule_requested"].includes(booking.status) && getTreatmentStatus(booking) === "not_started" && <div className="portal-actions">
             <button className="portal-button secondary" disabled={busy === booking.id} onClick={() => void cancel(booking)}>Cancel</button>
-          </div>}
-          {booking.status === "completed" && !booking.rating && <div className="portal-rating-control" aria-label="Rate this completed treatment">
-            <span>Rate your treatment</span>
-            <div>{[1, 2, 3, 4, 5].map((rating) => <button key={rating} type="button" disabled={busy === booking.id} aria-label={`${rating} star${rating === 1 ? "" : "s"}`} onClick={() => void rate(booking, rating)}>★</button>)}</div>
           </div>}
         </div>
       </article>)}

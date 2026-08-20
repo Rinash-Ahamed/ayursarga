@@ -9,6 +9,8 @@ import {
 } from "@/services/firestore/firestoreService";
 import { createAuditedDocument, getArchiveMetadata, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
 
+export { listPublicHospitalServices as listActiveHospitalServices } from "@/services/hospitals/publicHospitalService";
+
 type ServiceInput = Pick<ServiceDocument,
   "hospitalId" | "name" | "description" | "price" | "durationMinutes" | "durationUnit" | "status"
 >;
@@ -31,17 +33,6 @@ export function listHospitalServices(
     startAtValues: namePrefix ? [namePrefix] : undefined,
     endAtValues: namePrefix ? [`${namePrefix}\uf8ff`] : undefined,
     ...options,
-  });
-}
-
-export function listActiveHospitalServices(hospitalId: string, options: Pick<QueryPageOptions, "pageSize" | "cursor"> = {}) {
-  return runFilteredQuery<ServiceDocument>({
-    collectionPath: COLLECTIONS.services,
-    filters: [
-      { field: "hospitalId", operator: "==", value: hospitalId },
-      { field: "status", operator: "==", value: "active" },
-    ],
-    sort: { field: "name", direction: "asc" }, ...options,
   });
 }
 

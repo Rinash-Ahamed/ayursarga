@@ -11,23 +11,14 @@ import {
 } from "@/services/firestore/firestoreService";
 import { createAuditedDocument, getArchiveMetadata, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
 
+export { listPublicHospitals } from "@/services/hospitals/publicHospitalService";
+
 type HospitalAdminUpdate = Partial<HospitalFields & Pick<HospitalDocument, "status" | "isPublic">>;
 type HospitalProfileInput = Pick<HospitalDocument,
   "name" | "description" | "email" | "phone" | "address" | "city" | "state"
 >;
 
 export const getHospital = (id: string) => readDocument<HospitalDocument>(COLLECTIONS.hospitals, id);
-
-export function listPublicHospitals(options: Pick<QueryPageOptions, "pageSize" | "cursor"> = {}) {
-  return runFilteredQuery<HospitalDocument>({
-    collectionPath: COLLECTIONS.hospitals,
-    filters: [
-      { field: "isPublic", operator: "==", value: true },
-      { field: "status", operator: "==", value: "active" },
-    ],
-    sort: { field: "name", direction: "asc" }, ...options,
-  });
-}
 
 export function listAllHospitals(options: Pick<QueryPageOptions, "pageSize" | "cursor"> = {}, searchTerm = "") {
   const trimmedSearch = searchTerm.trim();
@@ -52,8 +43,6 @@ export function createHospital(input: HospitalFields, createdBy: string) {
     ...validation.data,
     status: "pending",
     isPublic: false,
-    ratingAverage: 0,
-    ratingCount: 0,
     contractStatus: "not_generated",
     contractGeneratedAt: null,
     contractGeneratedBy: null,

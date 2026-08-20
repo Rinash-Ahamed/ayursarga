@@ -1,6 +1,7 @@
 export const ROUTES = {
   public: {
     home: "/",
+    centers: "/centers",
   },
   consumer: {
     home: "/app",

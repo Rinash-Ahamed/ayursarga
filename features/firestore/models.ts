@@ -37,8 +37,6 @@ export type HospitalDocument = AuditedDocument & {
   status: UserStatus;
   isPublic: boolean;
   commissionPercentage: number;
-  ratingAverage?: number;
-  ratingCount?: number;
   contractStatus: "not_generated" | "generated" | "signed";
   contractGeneratedAt: Timestamp | null;
   contractGeneratedBy: string | null;
@@ -92,8 +90,6 @@ export type BookingDocument = AuditedDocument & {
   completedAt: Timestamp | null;
   treatmentStartedAt?: Timestamp | null;
   treatmentCompletedAt?: Timestamp | null;
-  rating?: number | null;
-  ratedAt?: Timestamp | null;
 };
 
 export type HospitalCapacityDocument = AuditedDocument & {

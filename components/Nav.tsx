@@ -6,15 +6,16 @@ import { ROUTES } from "@/config/routes";
 
 const LINKS = [
   { href: "#discover-hospitals", label: "How It Works" },
-  { href: "/app", label: "Search Hospitals" },
+  { href: ROUTES.public.centers, label: "Search Hospitals" },
   { href: "#family-wellness", label: "Wellness" },
   { href: "#why-ayursarga", label: "Why Ayursarga" },
   { href: "#partners", label: "For Hospitals" },
 ];
 
-export default function Nav() {
+export default function Nav({ sectionPrefix = "", solid = false }: { sectionPrefix?: string; solid?: boolean }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const linkHref = (href: string) => href.startsWith("#") ? `${sectionPrefix}${href}` : href;
 
   useEffect(() => {
     let frame = 0;
@@ -41,15 +42,15 @@ export default function Nav() {
 
   return (
     <>
-      <header id="site-nav" className={scrolled ? "scrolled" : ""}>
+      <header id="site-nav" className={scrolled || solid ? "scrolled" : ""}>
         <div className="nav-inner">
-          <a href="#hero" className="nav-mark">
+          <a href={sectionPrefix ? "/" : "#hero"} className="nav-mark">
             <Image src="/mainlogo.png" alt="Ayursarga" width={56} height={56} priority loading="eager" quality={90} sizes="56px" />
             <span>Ayursarga</span>
           </a>
           <nav className="nav-links">
             {LINKS.map((l) => (
-              <a key={l.href} href={l.href}>
+              <a key={l.href} href={linkHref(l.href)}>
                 {l.label}
               </a>
             ))}
@@ -81,7 +82,7 @@ export default function Nav() {
 
       <div id="mobile-menu" className={open ? "open" : ""}>
         {LINKS.map((l) => (
-          <a key={l.href} href={l.href} onClick={() => setOpen(false)}>
+          <a key={l.href} href={linkHref(l.href)} onClick={() => setOpen(false)}>
             {l.label}
           </a>
         ))}

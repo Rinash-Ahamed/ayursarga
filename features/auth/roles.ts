@@ -26,6 +26,14 @@ export function getRoleLoginPath(role: PortalRole) {
   return ROLE_LOGIN_PATHS[role];
 }
 
+export function getRoleLoginRedirect(role: PortalRole, requestedPath?: string | null) {
+  const login = getRoleLoginPath(role);
+  const safeRequestedPath = getSafeRoleRedirect(requestedPath, role);
+  return safeRequestedPath === getRoleHomePath(role)
+    ? login
+    : `${login}?next=${encodeURIComponent(safeRequestedPath)}`;
+}
+
 export function getSafeRoleRedirect(requestedPath: string | null | undefined, role: PortalRole) {
   const home = getRoleHomePath(role);
   const login = getRoleLoginPath(role);
