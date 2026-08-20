@@ -116,19 +116,10 @@ body.portal-active{ cursor:auto; overflow:auto; height:auto; }
 .portal-service-row>div:first-child{ min-width:0; flex:1 1 auto; }
 .portal-service-controls{ flex:0 0 auto; display:grid; justify-items:end; gap:2px; }
 .portal-service-status[data-status="active"]{ border-color:var(--forest); background:var(--forest); color:var(--cream); }
-.portal-discovery-filters{ display:grid; grid-template-columns:minmax(0,1.6fr) minmax(200px,.7fr); gap:16px; margin-bottom:22px; }
+.portal-discovery-filters{ display:grid; grid-template-columns:minmax(0,1fr); gap:16px; margin-bottom:22px; }
 .portal-discovery-filters label{ display:grid; gap:8px; color:var(--forest); font-size:11px; font-weight:700; }
 .portal-discovery-filters input,.portal-discovery-filters select{ min-width:0; width:100%; padding:13px 14px; border:1px solid rgba(58,61,46,.4); border-radius:10px; background:#fff; color:var(--ink); font:inherit; font-size:13px; }
 .portal-discovery-filters input:focus,.portal-discovery-filters select:focus{ outline:none; border-color:var(--forest); background:#fff; box-shadow:0 0 0 3px rgba(168,142,117,.25); }
-.portal-rating-category{ color:var(--clay-dark); font-size:10px; font-weight:800; letter-spacing:.04em; }
-.portal-rating-summary{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; color:var(--clay-dark)!important; font-size:15px!important; letter-spacing:.08em; }
-.portal-rating-summary span{ color:var(--ink); font-size:11px; font-weight:700; letter-spacing:0; }
-.portal-rating-control{ display:grid; justify-items:end; gap:7px; margin-top:14px; }
-.portal-rating-control>span{ color:var(--forest); font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.07em; }
-.portal-rating-control>div{ display:flex; gap:3px; }
-.portal-rating-control button{ width:32px; height:32px; border:1px solid rgba(140,114,89,.42); border-radius:50%; background:var(--cream-2); color:var(--clay-dark); font-size:16px; cursor:pointer; transition:background-color .18s,border-color .18s,color .18s; }
-.portal-rating-control button:hover:not(:disabled),.portal-rating-control button:focus-visible{ border-color:var(--forest); background:var(--forest); color:var(--cream); }
-.portal-rating-control button:disabled{ opacity:.5; cursor:not-allowed; }
 .portal-edit-form{ margin-top:22px; }
 .portal-date-grid{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:22px 0; }
 .portal-date-grid div{ padding:15px; border:1px solid rgba(58,61,46,.2); border-radius:12px; background:var(--cream-2); }

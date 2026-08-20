@@ -17,9 +17,8 @@ duplicating records or introducing deeply nested documents.
 - `services`: hospital services linked by `hospitalId`.
 - `availability`: future doctor/service availability linked by IDs.
 - `bookings`: Consumer, Hospital, and service references plus immutable price,
-  commission, Consumer contact snapshots, treatment progress, and an optional
-  verified rating. Only Admin, the Consumer owner, and the assigned Hospital
-  can read the booking.
+  commission, Consumer contact snapshots, and treatment progress. Only Admin,
+  the Consumer owner, and the assigned Hospital can read the booking.
 - `payments`: future provider transaction references; no payment workflow is
   implemented yet.
 - `notifications`: future user notifications.

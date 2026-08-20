@@ -11,7 +11,6 @@ export function GET() {
     "/api/contact": emailReady ? "ok" : "degraded",
     "/api/admin/audits": firebaseAdminReady ? "ok" : "degraded",
     "/api/admin/hospitals/[hospitalId]/login-setup": firebaseAdminReady ? "ok" : "degraded",
-    "/api/consumer/bookings/[bookingId]/rating": firebaseAdminReady ? "ok" : "degraded",
   };
   const ready = Object.values(routes).every((status) => status === "ok");
 

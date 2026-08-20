@@ -15,6 +15,7 @@ import Therapies from "@/components/Therapies";
 import Sanctuary from "@/components/Sanctuary";
 import Voices from "@/components/Voices";
 import Contact from "@/components/Contact";
+import GeneralQuestions from "@/components/GeneralQuestions";
 import Footer from "@/components/Footer";
 import BotanicalTransition from "@/components/BotanicalTransition";
 import type { MatchProfile } from "@/lib/matchProfile";
@@ -53,6 +54,7 @@ export default function PageShell() {
           <Voices />
           <BotanicalTransition tone="cream" />
           <Contact matchProfile={matchProfile} />
+          <GeneralQuestions />
         </main>
         <Footer />
       </SmoothScroll>

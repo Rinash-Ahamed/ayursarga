@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import type { HospitalDocument, ServiceDocument } from "@/features/firestore/models";
-import { getHospitalRating, matchesRatingFilter, type RatingFilter } from "@/features/hospitals/ratings";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import {
   listPublicHospitals,
@@ -26,7 +25,6 @@ type ServicePageState = {
 
 export default function PublicHospitalSearch() {
   const [search, setSearch] = useState("");
-  const [ratingFilter, setRatingFilter] = useState<RatingFilter>("all");
   const [expandedHospitalId, setExpandedHospitalId] = useState<string | null>(null);
   const [servicePages, setServicePages] = useState<Record<string, ServicePageState>>({});
   const hospitalLoader = useCallback(
@@ -42,9 +40,9 @@ export default function PublicHospitalSearch() {
     const term = search.trim().toLowerCase();
     return hospitals.filter((hospital) => {
       const searchable = `${hospital.name} ${hospital.city} ${hospital.state}`.toLowerCase();
-      return (!term || searchable.includes(term)) && matchesRatingFilter(hospital, ratingFilter);
+      return !term || searchable.includes(term);
     });
-  }, [hospitals, ratingFilter, search]);
+  }, [hospitals, search]);
 
   async function loadServices(hospitalId: string, append: boolean) {
     const currentPage = servicePages[hospitalId];
@@ -117,43 +115,25 @@ export default function PublicHospitalSearch() {
               placeholder="Search Ayurvedic centers"
             />
           </label>
-          <label>
-            <span>Rating</span>
-            <select value={ratingFilter} onChange={(event) => setRatingFilter(event.target.value as RatingFilter)}>
-              <option value="all">All centers</option>
-              <option value="4_plus">4 stars and above</option>
-              <option value="3_plus">3 stars and above</option>
-              <option value="unrated">New centers</option>
-            </select>
-          </label>
         </div>
 
         {isLoading && hospitals.length === 0 && <div className="public-search-status" role="status">Finding approved Ayurvedic centers...</div>}
         {error && <div className="public-search-status error" role="alert">{error}</div>}
         {!isLoading && !error && visibleHospitals.length === 0 && (
-          <div className="public-search-status">No centers match your search. Try another name, city, state or rating.</div>
+          <div className="public-search-status">No centers match your search. Try another name, city or state.</div>
         )}
 
         <div className="public-center-grid">
           {visibleHospitals.map((hospital) => {
-            const rating = getHospitalRating(hospital);
             const isExpanded = expandedHospitalId === hospital.id;
             const servicePage = servicePages[hospital.id];
             return (
               <article className="public-center-card" key={hospital.id}>
                 <div className="public-center-card-topline">
                   <span>{hospital.city}, {hospital.state}</span>
-                  <span>{rating.category}</span>
                 </div>
                 <h3>{hospital.name}</h3>
                 {hospital.description && <p>{hospital.description}</p>}
-                <div className="public-center-rating" aria-label={rating.count
-                  ? `${rating.average.toFixed(1)} out of 5 from ${rating.count} ratings`
-                  : "Not yet rated"}>
-                  {rating.count
-                    ? <><strong>{"\u2605".repeat(Math.round(rating.average))}</strong><span>{rating.average.toFixed(1)} ({rating.count})</span></>
-                    : <span>Awaiting its first verified rating</span>}
-                </div>
                 <button
                   type="button"
                   className="public-center-toggle"

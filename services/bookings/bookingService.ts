@@ -11,7 +11,6 @@ import {
 import { createAuditedDocument, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
 import { getHospital } from "@/services/hospitals/hospitalService";
 import { getService } from "@/services/hospitals/serviceService";
-import { authorizedApiRequest } from "@/services/api/client";
 
 type BookingRequestInput = {
   consumerId: string; hospitalId: string; serviceId: string; preferredDate: Date;
@@ -37,7 +36,6 @@ export async function createBookingRequest(input: BookingRequestInput) {
     updatedAt: firestoreTimestamp.server(), updatedBy: input.consumerId,
     archivedAt: null, archivedBy: null,
     confirmedAt: null, completedAt: null, treatmentStartedAt: null, treatmentCompletedAt: null,
-    rating: null, ratedAt: null,
   }, { action: "create", actorRole: "consumer" });
 }
 
@@ -146,18 +144,5 @@ export function updateTreatmentProgress(
     changes,
     { action: "status_change", actorRole: "hospital" },
     previousValues,
-  );
-}
-
-export function rateCompletedBooking(bookingId: string, rating: number) {
-  return authorizedApiRequest<{ ok: true; rating: number; ratingAverage: number; ratingCount: number }>(
-    `/api/consumer/bookings/${encodeURIComponent(bookingId)}/rating`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rating }),
-      signedOutMessage: "Sign in to rate your completed treatment.",
-      failureMessage: "We could not save the rating. Please try again.",
-    },
   );
 }

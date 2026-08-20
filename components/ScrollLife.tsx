@@ -10,7 +10,7 @@ export default function ScrollLife() {
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const context = gsap.context(() => {
-      gsap.utils.toArray<HTMLElement>(".maternal-editorial > img, .family-story > img").forEach((image) => {
+      gsap.utils.toArray<HTMLElement>(".family-story > img").forEach((image) => {
         gsap.fromTo(image, { scale: 1.06, yPercent: -3 }, {
           scale: 1.06,
           yPercent: 3,

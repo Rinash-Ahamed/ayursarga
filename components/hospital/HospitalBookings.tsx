@@ -126,7 +126,6 @@ export function HospitalBookings() {
         <p>Preferred: {item.preferredDate.toDate().toLocaleDateString("en-IN")} at {item.preferredTime}</p>
         {item.consumerNotes && <p>Patient note: {item.consumerNotes}</p>}
         {item.status === "confirmed" || item.status === "completed" ? <p>Treatment: <span className="portal-status" data-status={getTreatmentStatus(item)}>{formatStatus(getTreatmentStatus(item))}</span></p> : null}
-        {item.rating ? <p>Patient rating: {item.rating}/5 stars</p> : null}
         <div className="portal-actions">
           {item.status === "requested" && <><button className="portal-button" disabled={busy === item.id} onClick={() => void act(item, "confirmed")}>Confirm</button><button className="portal-button secondary" disabled={busy === item.id} onClick={() => void act(item, "reschedule_requested")}>Reschedule</button><button className="portal-button secondary" disabled={busy === item.id} onClick={() => void act(item, "rejected")}>Reject</button></>}
           {item.status === "reschedule_requested" && <button className="portal-button" disabled={busy === item.id} onClick={() => void act(item, "confirmed")}>Confirm</button>}

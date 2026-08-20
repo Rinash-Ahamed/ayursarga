@@ -43,8 +43,6 @@ export function createHospital(input: HospitalFields, createdBy: string) {
     ...validation.data,
     status: "pending",
     isPublic: false,
-    ratingAverage: 0,
-    ratingCount: 0,
     contractStatus: "not_generated",
     contractGeneratedAt: null,
     contractGeneratedBy: null,
