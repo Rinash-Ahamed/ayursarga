@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { gsap } from "gsap";
 import MagneticButton from "./MagneticButton";
 
 const CORE_VALUES = [
@@ -14,33 +13,32 @@ const CORE_VALUES = [
 ] as const;
 
 export default function Hero({ ready }: { ready: boolean }) {
-  const glowRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLElement>(null);
   const [activeValue, setActiveValue] = useState(0);
+  const [isHeroVisible, setIsHeroVisible] = useState(true);
   const shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !glowRef.current) return;
-    const moveX = gsap.quickTo(glowRef.current, "x", { duration: 1.2, ease: "power3.out" });
-    const moveY = gsap.quickTo(glowRef.current, "y", { duration: 1.2, ease: "power3.out" });
-    const onMove = (event: PointerEvent) => {
-      moveX((event.clientX / window.innerWidth - 0.5) * 40);
-      moveY((event.clientY / window.innerHeight - 0.5) * 30);
-    };
-    window.addEventListener("pointermove", onMove, { passive: true });
-    return () => window.removeEventListener("pointermove", onMove);
+    const hero = heroRef.current;
+    if (!hero || !("IntersectionObserver" in window)) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsHeroVisible(entry.isIntersecting),
+      { threshold: 0.05 },
+    );
+    observer.observe(hero);
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
-    if (shouldReduceMotion) return;
+    if (shouldReduceMotion || !isHeroVisible) return;
     const interval = window.setInterval(() => {
       setActiveValue((current) => (current + 1) % CORE_VALUES.length);
     }, 3600);
     return () => window.clearInterval(interval);
-  }, [shouldReduceMotion]);
+  }, [isHeroVisible, shouldReduceMotion]);
 
   return (
-    <section id="hero">
-      <div className="hero-glow" ref={glowRef} /><div className="hero-rays" />
+    <section id="hero" ref={heroRef}>
       <div className="hero-content">
         <motion.p className="eyebrow" initial={{ opacity: 0, y: 14 }} animate={ready ? { opacity: 1, y: 0 } : {}} transition={{ delay: 0.25 }}>Ayurvedic care, guided with trust</motion.p>
         <h1>
@@ -56,7 +54,9 @@ export default function Hero({ ready }: { ready: boolean }) {
           Discover approved Ayurvedic hospitals, compare suitable wellness services and request care with human guidance whenever you need it.
         </motion.p>
         <motion.div className="hero-ctas" initial={{ opacity: 0, y: 20 }} animate={ready ? { opacity: 1, y: 0 } : {}} transition={{ delay: 1, duration: 0.7 }}>
-          <a href="#search-centers" className="hero-search-button">Search for Centers</a>
+          <MagneticButton href="#search-centers" className="btn-magnetic hero-search-button">
+            Search for Ayurvedic Center
+          </MagneticButton>
           <div className="hero-support-actions">
             <MagneticButton href="#contact" className="btn-magnetic btn-secondary">Talk to Ayursarga</MagneticButton>
             <a href="#matching" className="btn-text">Help Me Choose &darr;</a>

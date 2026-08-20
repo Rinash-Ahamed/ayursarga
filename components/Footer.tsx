@@ -30,7 +30,7 @@ export default function Footer() {
         <motion.div className="footer-brand-column" {...reveal}>
           <a href="#hero" className="footer-mark" aria-label="Return to the Ayursarga home section">
             <span className="footer-logo-wrap">
-              <Image src="/mainlogo.png" alt="" width={58} height={58} quality={90} sizes="58px" />
+              <Image src="/mainlogo.png" alt="" width={58} height={58} loading="eager" quality={90} sizes="58px" />
             </span>
             <span>Ayursarga</span>
           </a>

@@ -33,7 +33,7 @@ export function PortalShell({ role, title, eyebrow, children }: {
   return <main className="portal-workspace">
     <aside className="portal-sidebar">
       <Link href="/" className="portal-wordmark" aria-label="Return to Ayursarga home">
-        <Image src="/mainlogo.png" alt="" width={44} height={44} quality={90} sizes="44px" />
+        <Image src="/mainlogo.png" alt="" width={44} height={44} loading="eager" quality={90} sizes="44px" />
         <span>Ayursarga</span>
       </Link>
       <nav aria-label={`${role} navigation`}>

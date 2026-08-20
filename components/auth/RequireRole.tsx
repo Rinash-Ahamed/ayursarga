@@ -3,7 +3,7 @@
 import { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { PortalRole } from "@/features/auth/contracts";
-import { getRoleHomePath, getRoleLoginPath, isConsumerProfileComplete } from "@/features/auth/roles";
+import { getRoleHomePath, getRoleLoginRedirect, isConsumerProfileComplete } from "@/features/auth/roles";
 import { ROUTES } from "@/config/routes";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthLoading } from "@/components/auth/AuthLoading";
@@ -33,14 +33,7 @@ export function RequireRole({
       return;
     }
     if (authorized) return;
-    if (!userProfile) {
-      const login = getRoleLoginPath(role);
-      const returnPath = requestedPath ?? pathname;
-      const target = pathname === login ? login : `${login}?next=${encodeURIComponent(returnPath)}`;
-      if (pathname !== login) router.replace(target);
-      return;
-    }
-    const target = getRoleHomePath(userProfile.role);
+    const target = getRoleLoginRedirect(role, requestedPath ?? pathname);
     if (pathname !== target) router.replace(target);
   }, [authorized, isLoading, needsConsumerProfile, pathname, requestedPath, role, router, status, userProfile]);
 
