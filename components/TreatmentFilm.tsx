@@ -36,8 +36,7 @@ export default function TreatmentFilm() {
       const inactiveVideo = activeSlotRef.current === 0 ? secondVideoRef.current : firstVideoRef.current;
       if (!activeVideo) return;
       if (entry.isIntersecting && !userPaused.current) {
-        // Keep the initial page light, then buffer both cross-fade slots shortly
-        // before the film reaches the viewport.
+        // Wait until the film is visible before buffering either cross-fade slot.
         if (!mediaPrepared.current) {
           mediaPrepared.current = true;
           activeVideo.preload = "auto";
@@ -53,7 +52,7 @@ export default function TreatmentFilm() {
         inactiveVideo?.pause();
         setPlaying(false);
       }
-    }, { threshold: .01, rootMargin: "300px 0px" });
+    }, { threshold: .01, rootMargin: "0px" });
     observer.observe(container);
     return () => {
       observer.disconnect();

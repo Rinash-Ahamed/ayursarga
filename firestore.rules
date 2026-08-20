@@ -182,7 +182,7 @@ service cloud.firestore {
             'updatedAt', 'updatedBy', 'lastAuditId'
           ]))
         || (action == 'hospital_activated'
-          && resource.data.status == 'pending'
+          && resource.data.status in ['pending', 'inactive']
           && resource.data.contractStatus == 'signed'
           && resource.data.contractSignedAt != null
           && request.resource.data.status == 'active'

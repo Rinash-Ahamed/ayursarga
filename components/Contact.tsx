@@ -20,6 +20,8 @@ export default function Contact({ matchProfile }: { matchProfile: MatchProfile |
   const [status, setStatus] = useState<FormStatus>("idle");
   const matchSummary = matchProfile ? formatMatchProfile(matchProfile) : "";
   const suggestedInterest = matchProfile ? INTEREST_BY_NEED[matchProfile.needs[0]] || "Not sure - help me choose" : "";
+  const [interest, setInterest] = useState(suggestedInterest);
+  const isPartnership = interest === "Ayurvedic hospital partnership";
 
   useEffect(() => {
     if (status !== "sent") return;
@@ -51,9 +53,9 @@ export default function Contact({ matchProfile }: { matchProfile: MatchProfile |
   };
 
   return <section id="contact" className="section"><div className="contact-glow" /><div className="section-inner contact-inner">
-    <RevealWords text="Contact Ayursarga" className="eyebrow" /><RevealLines as="h2" className="section-title" lines={["Talk with an", "Ayursarga guide."]} />
-    <FadeUp as="p" className="contact-sub">Tell us what you&apos;re looking for. An Ayursarga guide will help you explore suitable options before you request an appointment.</FadeUp>
-    {status === "sent" ? <FadeUp className="form-success"><span>&#10003;</span><h3>Thank you. Your journey has begun.</h3><p>Your request has been delivered to info@ayursarga.com.</p></FadeUp> : <FadeUp as="form" className="contact-form" delay={.1} onSubmit={submit}>
+    <RevealWords text="Contact Ayursarga" className="eyebrow" /><RevealLines as="h2" className="section-title" lines={isPartnership ? ["Bring your care", "to more people."] : ["Talk with an", "Ayursarga guide."]} />
+    <FadeUp as="p" className="contact-sub">{isPartnership ? "Tell us about your hospital, services, location, and the care you would like to offer. Our team will explain review, agreement, activation, and service listing." : "Tell us what you&apos;re looking for. An Ayursarga guide will help you explore suitable options before you request an appointment."}</FadeUp>
+    {status === "sent" ? <FadeUp className="form-success"><span>&#10003;</span><h3>{isPartnership ? "Your partnership enquiry is on its way." : "Thank you. Your journey has begun."}</h3><p>{isPartnership ? "Our team will review your hospital details and contact you about approval and onboarding. Appointment requests begin after activation." : "Your request has been delivered to info@ayursarga.com."}</p></FadeUp> : <FadeUp as="form" className="contact-form" delay={.1} onSubmit={submit}>
       <div className="form-row"><input name="name" aria-label="Your name" type="text" placeholder="Your name" required /><input name="phone" aria-label="Phone number" type="tel" placeholder="Phone number" required /></div>
       <input name="email" aria-label="Email address" type="email" placeholder="Email address" required />
       {matchProfile && <div className="captured-match" role="status">
@@ -62,8 +64,9 @@ export default function Contact({ matchProfile }: { matchProfile: MatchProfile |
         <p>{matchProfile.district} / {matchProfile.budget}{matchProfile.preferences.length ? ` / ${matchProfile.preferences.length} stay preferences` : ""}</p>
       </div>}
       <input type="hidden" name="matchProfile" value={matchSummary} />
-      <select key={suggestedInterest || "empty"} name="interest" aria-label="Care you are interested in" required defaultValue={suggestedInterest}>
+      <select name="interest" aria-label="Care you are interested in" required value={interest} onChange={(event) => setInterest(event.target.value)}>
         <option value="" disabled>I&apos;m interested in...</option>
+        <option>Ayurvedic hospital partnership</option>
         <optgroup label="Wellness paths">
           <option>Postnatal recovery</option>
           <option>Panchakarma</option>
@@ -78,16 +81,15 @@ export default function Contact({ matchProfile }: { matchProfile: MatchProfile |
         <optgroup label="More ways we can help">
           <option>Prenatal and maternity care</option>
           <option>Baby care and lactation support</option>
-          <option>Ayurvedic hospital partnership</option>
           <option>Not sure - help me choose</option>
         </optgroup>
       </select>
-      <textarea name="message" aria-label="How can we help" placeholder="Anything you&apos;d like us to know?" rows={3} />
+      <textarea name="message" aria-label="How can we help" placeholder={isPartnership ? "Hospital name, location, services, specialties, and how we can reach you" : "Anything you&apos;d like us to know?"} rows={3} />
       <input className="hp-field" name="website" type="text" tabIndex={-1} autoComplete="off" aria-hidden="true" />
       <label className="privacy-note"><input name="consent" type="checkbox" required /> I agree to be contacted about my request.</label>
       {status === "error" && <p className="form-error" role="alert">We couldn&apos;t send your request. Please try again or email info@ayursarga.com.</p>}
       <MagneticButton className="form-submit btn-magnetic btn-primary" type="submit" disabled={status === "sending"}>
-        <span className="submit-label">{status === "sending" ? "Sending..." : "Request personal guidance"}</span>
+        <span className="submit-label">{status === "sending" ? "Sending..." : isPartnership ? "Send partnership enquiry" : "Request personal guidance"}</span>
         <span className="submit-arrow" aria-hidden="true">&rarr;</span>
       </MagneticButton>
     </FadeUp>}

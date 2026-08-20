@@ -15,6 +15,7 @@ import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalPagination } from "@/components/portal/PortalPagination";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
+import { PortalDialog } from "@/components/portal/PortalDialog";
 
 type ServiceValues = Pick<ServiceDocument, "name" | "description" | "price" | "durationMinutes" | "durationUnit">;
 
@@ -60,6 +61,8 @@ export function ServicesManager() {
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [serviceToRemove, setServiceToRemove] = useState<DocumentRecord<ServiceDocument> | null>(null);
+  const [serviceToToggle, setServiceToToggle] = useState<DocumentRecord<ServiceDocument> | null>(null);
   const [search, setSearch] = useState("");
   const deferredSearch = useDebouncedValue(search.trim(), 300);
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) => hospitalId
@@ -109,7 +112,7 @@ export function ServicesManager() {
     }
   }
 
-  async function toggleStatus(item: DocumentRecord<ServiceDocument>) {
+  async function applyStatusChange(item: DocumentRecord<ServiceDocument>) {
     const status = item.status === "active" ? "inactive" : "active";
     beginAction(item.id);
     try {
@@ -123,14 +126,22 @@ export function ServicesManager() {
     }
   }
 
+  function toggleStatus(item: DocumentRecord<ServiceDocument>) {
+    if (item.status === "active") {
+      setServiceToToggle(item);
+      return;
+    }
+    void applyStatusChange(item);
+  }
+
   async function removeService(item: DocumentRecord<ServiceDocument>) {
-    if (!window.confirm(`Delete “${item.name}” from normal service views? Its history will remain safely archived.`)) return;
     beginAction(item.id);
     try {
       await archiveService(item.id, item);
       removeItem(item.id);
       if (editingId === item.id) setEditingId(null);
       setActionMessage("The service has been deleted from normal views and safely archived.");
+      setServiceToRemove(null);
     } catch {
       setActionError("We could not delete this service. Refresh the page and try again.");
     } finally {
@@ -161,9 +172,11 @@ export function ServicesManager() {
         </article>
         : <article className="portal-row portal-service-row" key={item.id}>
           <div><h3>{item.name}</h3><p>{formatCurrency(item.price)} · {formatServiceDuration(item.durationMinutes, item.durationUnit)}</p><p>{item.description}</p></div>
-          <div className="portal-service-controls"><span className="portal-status portal-service-status" data-status={item.status}>{formatStatus(item.status)}</span><div className="portal-actions"><button className="portal-button secondary" type="button" disabled={busyId !== null} onClick={() => { setEditingId(item.id); setActionError(null); setActionMessage(null); }}>Edit details</button><button className="portal-button secondary" type="button" disabled={busyId !== null} onClick={() => void toggleStatus(item)}>{item.status === "active" ? "Deactivate" : "Activate"}</button><button className="portal-button danger" type="button" disabled={busyId !== null} onClick={() => void removeService(item)}>Delete</button></div></div>
+          <div className="portal-service-controls"><span className="portal-status portal-service-status" data-status={item.status}>{formatStatus(item.status)}</span><div className="portal-actions"><button className="portal-button secondary" type="button" disabled={busyId !== null} onClick={() => { setEditingId(item.id); setActionError(null); setActionMessage(null); }}>Edit details</button><button className="portal-button secondary" type="button" disabled={busyId !== null} onClick={() => void toggleStatus(item)}>{item.status === "active" ? "Deactivate" : "Activate"}</button><button className="portal-button danger" type="button" disabled={busyId !== null} onClick={() => setServiceToRemove(item)}>Delete</button></div></div>
         </article>)}
     </div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
+    <PortalDialog open={Boolean(serviceToRemove)} tone="danger" title="Delete this service?" message={serviceToRemove ? `${serviceToRemove.name} will be removed from normal service views. Its history will remain safely archived.` : undefined} confirmLabel="Delete service" busy={busyId !== null} onCancel={() => setServiceToRemove(null)} onConfirm={() => { if (serviceToRemove) void removeService(serviceToRemove); }} />
+    <PortalDialog open={Boolean(serviceToToggle)} title="Deactivate this service?" message={serviceToToggle ? `${serviceToToggle.name} will be hidden from normal service views until it is activated again.` : undefined} confirmLabel="Deactivate service" busy={busyId !== null} onCancel={() => setServiceToToggle(null)} onConfirm={() => { if (serviceToToggle) { const item = serviceToToggle; setServiceToToggle(null); void applyStatusChange(item); } }} />
   </PortalShell>;
 }

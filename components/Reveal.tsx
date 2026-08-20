@@ -8,6 +8,7 @@ const motionTags = {
   div: motion.div,
   form: motion.form,
   h2: motion.h2,
+  ol: motion.ol,
   p: motion.p,
   ul: motion.ul,
 };

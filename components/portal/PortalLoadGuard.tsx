@@ -41,7 +41,11 @@ export function PortalLoadGuard({
     </div>
   </>;
 
-  if (loading && !hasData) return <div className="portal-load-overlay" role="status" aria-live="polite">
+  if (loading && !hasData) return <div className="portal-load-overlay portal-loading-screen" role="status" aria-live="polite" aria-busy="true">
+    <div className="portal-loading-brand" aria-hidden="true">
+      <span className="portal-loading-leaf" />
+      <span>Ayursarga</span>
+    </div>
     <span className="auth-loading-mark" aria-hidden="true" />
     <p>{loadingMessage}</p>
   </div>;
