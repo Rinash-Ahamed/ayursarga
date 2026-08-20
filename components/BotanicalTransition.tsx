@@ -19,6 +19,7 @@ export default function BotanicalTransition({ tone = "cream", reverse = false }:
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    if (CSS.supports("animation-timeline: view()")) return;
     if (!("IntersectionObserver" in window)) {
       container.classList.add("is-visible");
       return;
@@ -51,7 +52,12 @@ export default function BotanicalTransition({ tone = "cream", reverse = false }:
             key={leaf.x}
             className="botanical-branch"
             transform={`translate(${leaf.x} ${leaf.y}) rotate(${leaf.r}) scale(${leaf.flip} 1)`}
-            style={{ "--leaf-delay": `${300 + index * 125}ms` } as CSSProperties}
+            style={{
+              "--leaf-delay": `${300 + index * 125}ms`,
+              "--leaf-range-start": `${8 + index * 4}%`,
+              "--leaf-range-end": `${24 + index * 5}%`,
+              "--vein-range-end": `${32 + index * 5}%`,
+            } as CSSProperties}
           >
             <path className="botanical-leaf" d="M0 0 C13 -26 42 -29 61 -16 C45 4 20 10 0 0 Z" />
             <path className="botanical-vein" pathLength="1" d="M4 -1 C22 -8 39 -13 56 -16" />
