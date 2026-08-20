@@ -123,7 +123,7 @@ export function AdminAuditLogs() {
     <PortalLoadGuard loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/admin" loadingMessage="Loading recent activity…" />
     <div className="portal-audit-heading">
       <p>Showing the newest platform activity, 20 records per page.</p>
-      <button className="portal-button danger" type="button" disabled={busy || isLoading || items.length === 0} onClick={() => void clearAudits()}>
+      <button className="portal-button danger" type="button" disabled={busy || isLoading || items.length === 0} onClick={() => setClearDialogOpen(true)}>
         {busy ? "Clearing…" : "Clear all audits"}
       </button>
     </div>

@@ -184,7 +184,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     : pendingAction === "sign"
       ? { title: "Confirm signed contract?", message: "Confirm that the signed contract has been received from this hospital.", confirmLabel: "Confirm contract", tone: "default" as const }
       : pendingAction === "activate"
-        ? { title: "Activate this hospital?", message: "The hospital will become visible to consumers and receive a secure login setup email.", confirmLabel: "Activate hospital", tone: "default" as const }
+        ? { title: hospital?.status === "inactive" ? "Reactivate this hospital?" : "Activate this hospital?", message: "The hospital will become visible to consumers and receive a secure login setup email.", confirmLabel: hospital?.status === "inactive" ? "Reactivate hospital" : "Activate hospital", tone: "default" as const }
         : pendingAction === "setup"
           ? { title: "Send login setup link?", message: `A secure password setup/reset link will be sent to ${hospital?.email ?? "this hospital"}.`, confirmLabel: "Send setup link", tone: "default" as const }
           : { title: "Deactivate this hospital?", message: "The hospital will be hidden from consumers while its operational history remains stored.", confirmLabel: "Deactivate hospital", tone: "default" as const };
@@ -225,13 +225,13 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         <div className="portal-actions">
           {hospital.status === "pending" && <button className="portal-button secondary" type="button" disabled={busy} onClick={generateContract}>{contractStatus === "not_generated" ? "Generate Contract PDF" : "View / Regenerate Contract PDF"}</button>}
           {hospital.status === "pending" && contractStatus === "generated" && <button className="portal-button secondary" type="button" disabled={busy} onClick={() => setPendingAction("sign")}>Confirm signed contract</button>}
-          {hospital.status === "pending" && contractStatus === "signed" && <button className="portal-button" type="button" disabled={busy} onClick={() => {
+          {(hospital.status === "pending" || hospital.status === "inactive") && contractStatus === "signed" && <button className="portal-button" type="button" disabled={busy} onClick={() => {
             if (!contractUrl.trim()) {
               setError("Paste the signed contract URL below before activating the hospital.");
               return;
             }
             setPendingAction("activate");
-          }}>Activate hospital</button>}
+          }}>{hospital.status === "inactive" ? "Reactivate hospital" : "Activate hospital"}</button>}
           {hospital.status === "active" && <button className="portal-button" type="button" disabled={busy} onClick={() => setPendingAction("setup")}>Send login setup / reset</button>}
           {hospital.status === "active" && <button className="portal-button secondary" type="button" disabled={busy} onClick={() => setPendingAction("deactivate")}>Deactivate hospital</button>}
         </div>
