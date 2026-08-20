@@ -11,7 +11,9 @@ const reveal = {
   transition: { duration: 0.75, ease: [0.22, 1, 0.36, 1] as const },
 };
 
-export default function Footer() {
+export default function Footer({ sectionPrefix = "" }: { sectionPrefix?: string }) {
+  const sectionHref = (anchor: string) => `${sectionPrefix}${anchor}`;
+
   return <footer id="site-footer">
     <div className="footer-inner">
       <motion.section className="footer-invitation" {...reveal} aria-labelledby="footer-invitation-title">
@@ -21,14 +23,14 @@ export default function Footer() {
           <p>Discover approved Ayurvedic hospitals, understand their care, and request an appointment with confidence.</p>
         </div>
         <div className="footer-invitation-actions">
-          <a href={ROUTES.consumer.home}>Search hospitals</a>
-          <a href="#contact">Request guidance</a>
+          <a href={ROUTES.public.centers}>Search hospitals</a>
+          <a href={sectionHref("#contact")}>Request guidance</a>
         </div>
       </motion.section>
 
       <div className="footer-directory">
         <motion.div className="footer-brand-column" {...reveal}>
-          <a href="#hero" className="footer-mark" aria-label="Return to the Ayursarga home section">
+          <a href={sectionPrefix ? ROUTES.public.home : "#hero"} className="footer-mark" aria-label="Return to the Ayursarga home section">
             <span className="footer-logo-wrap">
               <Image src="/mainlogo.png" alt="" width={58} height={58} loading="eager" quality={90} sizes="58px" />
             </span>
@@ -44,15 +46,15 @@ export default function Footer() {
 
         <nav className="footer-column" aria-label="Explore Ayursarga">
           <h3>Explore</h3>
-          <a href="#how-it-works">How it works</a>
-          <a href="#wellness">Wellness paths</a>
-          <a href="#why-ayursarga">Why Ayursarga</a>
-          <a href="#contact">Personal guidance</a>
+          <a href={sectionHref("#how-it-works")}>How it works</a>
+          <a href={sectionHref("#wellness")}>Wellness paths</a>
+          <a href={sectionHref("#why-ayursarga")}>Why Ayursarga</a>
+          <a href={sectionHref("#contact")}>Personal guidance</a>
         </nav>
 
         <nav className="footer-column" aria-label="Consumer links">
           <h3>For consumers</h3>
-          <a href={ROUTES.consumer.home}>Search hospitals</a>
+          <a href={ROUTES.public.centers}>Search hospitals</a>
           <a href={ROUTES.consumer.register}>Register</a>
           <a href={ROUTES.consumer.login}>Consumer login</a>
           <a href={ROUTES.consumer.bookings}>My bookings</a>
@@ -60,16 +62,16 @@ export default function Footer() {
 
         <nav className="footer-column" aria-label="Hospital links">
           <h3>For hospitals</h3>
-          <a href="#partners">Partner with Ayursarga</a>
+          <a href={sectionHref("#partners")}>Partner with Ayursarga</a>
           <a href={ROUTES.hospital.login}>Hospital login</a>
-          <a href="#contact">Speak with our team</a>
+          <a href={sectionHref("#contact")}>Speak with our team</a>
         </nav>
       </div>
 
       <div className="footer-bottom">
         <p>© {new Date().getFullYear()} Ayursarga. All rights reserved.</p>
         <p>Treatment suitability and clinical decisions are confirmed by the chosen hospital&apos;s qualified physician.</p>
-        <a href="#hero">Back to top</a>
+        <a href={sectionPrefix ? "#search-centers" : "#hero"}>Back to top</a>
       </div>
     </div>
   </footer>;

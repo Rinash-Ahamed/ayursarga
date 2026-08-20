@@ -54,7 +54,7 @@ export default function Hero({ ready }: { ready: boolean }) {
           Discover approved Ayurvedic hospitals, compare suitable wellness services and request care with human guidance whenever you need it.
         </motion.p>
         <motion.div className="hero-ctas" initial={{ opacity: 0, y: 20 }} animate={ready ? { opacity: 1, y: 0 } : {}} transition={{ delay: 1, duration: 0.7 }}>
-          <MagneticButton href="#search-centers" className="btn-magnetic hero-search-button">
+          <MagneticButton href="/centers" className="btn-magnetic hero-search-button">
             Search for Ayurvedic Center
           </MagneticButton>
           <div className="hero-support-actions">

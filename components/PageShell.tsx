@@ -17,7 +17,6 @@ import Voices from "@/components/Voices";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
 import BotanicalTransition from "@/components/BotanicalTransition";
-import DeferredPublicHospitalSearch from "@/components/DeferredPublicHospitalSearch";
 import type { MatchProfile } from "@/lib/matchProfile";
 
 // Particle field uses browser animation APIs - load client-only, no SSR.
@@ -43,7 +42,6 @@ export default function PageShell() {
       <SmoothScroll>
         <main>
           <Hero ready={ready} />
-          <DeferredPublicHospitalSearch />
           <Philosophy />
           <BotanicalTransition tone="cream-to-forest" />
           <Journey onComplete={setMatchProfile} />

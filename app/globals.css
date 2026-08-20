@@ -257,7 +257,8 @@ em{ font-style: italic; color: var(--clay-dark); }
 /* Public hospital discovery */
 .public-center-search{ background:#fff; border-bottom:1px solid rgba(31,61,43,.12); }
 .public-center-search:focus{ outline:none; }
-.public-search-placeholder{ min-height:380px; display:flex; align-items:center; }
+.centers-directory-page{ min-height:100svh; background:#fff; }
+.centers-directory-page .public-center-search{ padding-top:clamp(150px,14vw,190px); }
 .public-search-heading{ max-width:760px; margin-bottom:34px; }
 .public-search-heading .section-title{ margin-bottom:16px; }
 .public-search-heading>p{ max-width:680px; color:var(--sage); font-size:15px; line-height:1.75; }
