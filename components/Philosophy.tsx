@@ -32,7 +32,7 @@ export default function Philosophy() {
           Find suitable Ayurvedic hospitals, understand their services and request care through one clear, manageable process.
         </FadeUp>
         <FadeUp className="maternal-editorial">
-          <Image src="/how-it-works-ayurvedic-guidance.png" alt="Ayurvedic doctor guiding a family through a care plan" width={1536} height={1024} sizes="(max-width: 900px) 100vw, 70vw" quality={86} />
+          <Image src="/how-it-works-ayurvedic-guidance.png" alt="Ayurvedic doctor guiding a family through a care plan" width={1536} height={1024} sizes="(max-width: 900px) 100vw, 70vw" quality={82} />
           <div><span>Care, considered</span><p>Understand hospital services with calm guidance before you request care.</p></div>
         </FadeUp>
         <div className="process-grid">

@@ -15,7 +15,7 @@ export default function WhatsAppBubble() {
       <strong>Chat with Ayursarga</strong>
     </span>
     <span className="whatsapp-bubble-mark" aria-hidden="true">
-      <Image className="whatsapp-bubble-image" src="/whatsapp.png" alt="" width={42} height={42} quality={100} sizes="42px" />
+      <Image className="whatsapp-bubble-image" src="/whatsapp.png" alt="" width={42} height={42} loading="eager" quality={90} sizes="42px" />
     </span>
   </a>;
 }
