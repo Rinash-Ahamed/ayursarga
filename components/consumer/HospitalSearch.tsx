@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import type { HospitalDocument } from "@/features/firestore/models";
 import type { QueryPageOptions } from "@/services/firestore/firestoreService";
-import { listPublicHospitals } from "@/services/hospitals/hospitalService";
+import { listPublicHospitals } from "@/services/hospitals/publicHospitalService";
 import { getHospitalRating, matchesRatingFilter, type RatingFilter } from "@/features/hospitals/ratings";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
