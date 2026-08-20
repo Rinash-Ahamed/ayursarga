@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import SmoothScroll from "@/components/SmoothScroll";
 import Preloader from "@/components/Preloader";
-import ProgressFlame from "@/components/ProgressFlame";
+import ScrollLogo from "@/components/ScrollLogo";
 import WhatsAppBubble from "@/components/WhatsAppBubble";
 import ScrollLife from "@/components/ScrollLife";
 import Nav from "@/components/Nav";
@@ -35,7 +35,7 @@ export default function PageShell() {
       <Preloader onDone={() => setReady(true)} />
       <div className="grain-overlay" />
       <ParticleField />
-      <ProgressFlame />
+      <ScrollLogo />
       <WhatsAppBubble />
       <ScrollLife />
       <Nav />

@@ -20,6 +20,7 @@ export default function Contact({ matchProfile }: { matchProfile: MatchProfile |
   const [status, setStatus] = useState<FormStatus>("idle");
   const matchSummary = matchProfile ? formatMatchProfile(matchProfile) : "";
   const suggestedInterest = matchProfile ? INTEREST_BY_NEED[matchProfile.needs[0]] || "Not sure - help me choose" : "";
+
   useEffect(() => {
     if (status !== "sent") return;
     const timer = window.setTimeout(() => setStatus("idle"), 6000);
@@ -33,7 +34,12 @@ export default function Contact({ matchProfile }: { matchProfile: MatchProfile |
     const timeout = window.setTimeout(() => controller.abort(), 20000);
     setStatus("sending");
     try {
-      const response = await fetch("/api/contact", { method: "POST", signal: controller.signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify(Object.fromEntries(new FormData(form).entries())) });
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        signal: controller.signal,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(Object.fromEntries(new FormData(form).entries())),
+      });
       if (!response.ok) throw new Error("Delivery failed");
       form.reset();
       setStatus("sent");
@@ -52,8 +58,8 @@ export default function Contact({ matchProfile }: { matchProfile: MatchProfile |
       <input name="email" aria-label="Email address" type="email" placeholder="Email address" required />
       {matchProfile && <div className="captured-match" role="status">
         <span>Your matching profile</span>
-        <strong>{matchProfile.needs.join(" · ")}</strong>
-        <p>{matchProfile.district} · {matchProfile.budget}{matchProfile.preferences.length ? ` · ${matchProfile.preferences.length} stay preferences` : ""}</p>
+        <strong>{matchProfile.needs.join(" / ")}</strong>
+        <p>{matchProfile.district} / {matchProfile.budget}{matchProfile.preferences.length ? ` / ${matchProfile.preferences.length} stay preferences` : ""}</p>
       </div>}
       <input type="hidden" name="matchProfile" value={matchSummary} />
       <select key={suggestedInterest || "empty"} name="interest" aria-label="Care you are interested in" required defaultValue={suggestedInterest}>
