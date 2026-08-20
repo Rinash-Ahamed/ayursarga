@@ -6,6 +6,7 @@ import type { HospitalDocument, ServiceDocument } from "@/features/firestore/mod
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import {
   listPublicHospitals,
+  listPublicHospitalsByServiceName,
   listPublicHospitalServices,
 } from "@/services/hospitals/publicHospitalService";
 import type {
@@ -23,13 +24,19 @@ type ServicePageState = {
   error: string | null;
 };
 
-export default function PublicHospitalSearch() {
+type PublicHospitalSearchProps = {
+  initialService?: string;
+};
+
+export default function PublicHospitalSearch({ initialService = "" }: PublicHospitalSearchProps) {
   const [search, setSearch] = useState("");
   const [expandedHospitalId, setExpandedHospitalId] = useState<string | null>(null);
   const [servicePages, setServicePages] = useState<Record<string, ServicePageState>>({});
   const hospitalLoader = useCallback(
-    (cursor: QueryPageOptions["cursor"]) => listPublicHospitals({ pageSize: 12, cursor }),
-    [],
+    (cursor: QueryPageOptions["cursor"]) => initialService
+      ? listPublicHospitalsByServiceName(initialService, { pageSize: 12, cursor })
+      : listPublicHospitals({ pageSize: 12, cursor }),
+    [initialService],
   );
   const { items: hospitals, error, isLoading, hasMore, loadMore } = usePaginatedList<HospitalDocument>(
     hospitalLoader,
@@ -100,9 +107,11 @@ export default function PublicHospitalSearch() {
     <section id="search-centers" className="section public-center-search" tabIndex={-1}>
       <div className="section-inner">
         <div className="public-search-heading">
-          <span className="eyebrow">Approved Ayurvedic centers</span>
-          <h2 className="section-title">Search for care that feels right.</h2>
-          <p>Explore active Ayursarga partner centers and their available treatments. Google sign-in is required only when you request an appointment.</p>
+          <span className="eyebrow">{initialService ? `Centers offering ${initialService}` : "Approved Ayurvedic centers"}</span>
+          <h2 className="section-title">{initialService ? `Find ${initialService} care.` : "Search for care that feels right."}</h2>
+          <p>{initialService
+            ? `Explore active Ayursarga partner centers that currently list ${initialService}. Google sign-in is required only when you request an appointment.`
+            : "Explore active Ayursarga partner centers and their available treatments. Google sign-in is required only when you request an appointment."}</p>
         </div>
 
         <div className="public-search-filters" role="search" aria-label="Search Ayurvedic centers">
@@ -120,7 +129,15 @@ export default function PublicHospitalSearch() {
         {isLoading && hospitals.length === 0 && <div className="public-search-status" role="status">Finding approved Ayurvedic centers...</div>}
         {error && <div className="public-search-status error" role="alert">{error}</div>}
         {!isLoading && !error && visibleHospitals.length === 0 && (
-          <div className="public-search-status">No centers match your search. Try another name, city or state.</div>
+          <div className="public-search-status">
+            {initialService && !search.trim() ? (
+              <>
+                <strong>No active center currently lists {initialService}.</strong>
+                <span>You can explore all approved centers or ask Ayursarga for personal guidance.</span>
+                <Link href="/centers">Explore all centers</Link>
+              </>
+            ) : "No centers match your search. Try another name, city or state."}
+          </div>
         )}
 
         <div className="public-center-grid">

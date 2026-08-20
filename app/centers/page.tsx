@@ -9,12 +9,19 @@ export const metadata: Metadata = {
   description: "Search approved Ayurvedic centers, compare their active treatments and request an appointment through Ayursarga.",
 };
 
-export default function CentersPage() {
+type CentersPageProps = {
+  searchParams: Promise<{ service?: string | string[] }>;
+};
+
+export default async function CentersPage({ searchParams }: CentersPageProps) {
+  const requestedService = (await searchParams).service;
+  const service = typeof requestedService === "string" ? requestedService.trim().slice(0, 100) : "";
+
   return (
     <PublicRouteEnvironment>
       <Nav sectionPrefix="/" solid />
       <main className="centers-directory-page">
-        <PublicHospitalSearch />
+        <PublicHospitalSearch initialService={service} />
       </main>
       <Footer sectionPrefix="/" />
     </PublicRouteEnvironment>

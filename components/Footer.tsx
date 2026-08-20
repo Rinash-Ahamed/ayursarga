@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { ROUTES } from "@/config/routes";
 
 const reveal = {
@@ -11,8 +11,19 @@ const reveal = {
   transition: { duration: 0.75, ease: [0.22, 1, 0.36, 1] as const },
 };
 
+const wordmarkReveal = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.09, delayChildren: 0.12 } },
+};
+
+const wordmarkLetterReveal = {
+  hidden: { opacity: 0, y: 9 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.42, ease: [0.22, 1, 0.36, 1] as const } },
+};
+
 export default function Footer({ sectionPrefix = "" }: { sectionPrefix?: string }) {
   const sectionHref = (anchor: string) => `${sectionPrefix}${anchor}`;
+  const shouldReduceMotion = useReducedMotion();
 
   return <footer id="site-footer">
     <div className="footer-inner">
@@ -32,15 +43,34 @@ export default function Footer({ sectionPrefix = "" }: { sectionPrefix?: string 
         <motion.div className="footer-brand-column" {...reveal}>
           <a href={sectionPrefix ? ROUTES.public.home : "#hero"} className="footer-mark" aria-label="Return to the Ayursarga home section">
             <span className="footer-logo-wrap">
-              <Image src="/mainlogo.png" alt="" width={58} height={58} loading="eager" quality={90} sizes="58px" />
+              <Image src="/mainlogo.png" alt="" width={58} height={58} loading="lazy" quality={90} sizes="58px" />
             </span>
-            <span>Ayursarga</span>
+            <motion.span
+              className="footer-wordmark"
+              variants={wordmarkReveal}
+              initial={shouldReduceMotion ? false : "hidden"}
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.8 }}
+              aria-hidden="true"
+            >
+              {Array.from("Ayursarga").map((letter, index) => (
+                <motion.span className="footer-wordmark-letter" variants={wordmarkLetterReveal} key={`${letter}-${index}`}>
+                  {letter}
+                </motion.span>
+              ))}
+            </motion.span>
           </a>
           <p>Helping people find suitable Ayurvedic hospital care across Kerala through clearer discovery and thoughtful guidance.</p>
           <div className="footer-contact">
             <span>Kerala, India</span>
-            <a href="tel:+918086070680">+91 8086070680</a>
-            <a href="mailto:info@ayursarga.com">info@ayursarga.com</a>
+            <a href="tel:+918086070680">
+              <svg className="footer-contact-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.2 3.5 10 8.2 7.9 10a15.5 15.5 0 0 0 6.1 6.1l1.8-2.1 4.7 2.8-.8 3.1c-.2.7-.8 1.1-1.5 1.1C10.1 20.6 3.4 13.9 3 5.8c0-.7.4-1.3 1.1-1.5l3.1-.8Z" /></svg>
+              <span>+91 8086070680</span>
+            </a>
+            <a href="mailto:info@ayursarga.com">
+              <svg className="footer-contact-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5h17v11h-17z" /><path d="m4 7 8 6 8-6" /></svg>
+              <span>info@ayursarga.com</span>
+            </a>
           </div>
         </motion.div>
 

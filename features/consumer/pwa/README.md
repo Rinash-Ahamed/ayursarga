@@ -12,3 +12,10 @@ other personal information must remain network-only and must never be placed
 in a service-worker cache.
 
 No service worker or install prompt is registered during this foundation phase.
+
+The future installed consumer experience must retain the shared performance and
+accessibility baseline: respect `prefers-reduced-motion`, trigger decorative
+motion only when it enters the viewport, animate compositor-friendly properties
+such as transform and opacity, and avoid continuous JavaScript work tied to
+scroll position. Decorative ambient effects should remain reduced on coarse
+pointer and lower-powered mobile devices.
