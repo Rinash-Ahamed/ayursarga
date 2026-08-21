@@ -14,6 +14,7 @@ const CORE_VALUES = [
 
 export default function Hero({ ready }: { ready: boolean }) {
   const heroRef = useRef<HTMLElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [activeValue, setActiveValue] = useState(0);
   const [isHeroVisible, setIsHeroVisible] = useState(true);
   const shouldReduceMotion = useReducedMotion();
@@ -37,8 +38,21 @@ export default function Hero({ ready }: { ready: boolean }) {
     return () => window.clearInterval(interval);
   }, [isHeroVisible, shouldReduceMotion]);
 
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (shouldReduceMotion || !isHeroVisible) {
+      video.pause();
+      return;
+    }
+    void video.play().catch(() => undefined);
+  }, [isHeroVisible, shouldReduceMotion]);
+
   return (
     <section id="hero" ref={heroRef}>
+      <video ref={videoRef} className="hero-background-video" autoPlay muted loop playsInline preload="metadata" aria-hidden="true" tabIndex={-1}>
+        <source src="/hero%20image%20video.mp4" type="video/mp4" media="(min-width: 901px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)" />
+      </video>
       <div className="hero-content">
         <motion.p className="eyebrow" initial={{ opacity: 0, y: 14 }} animate={ready ? { opacity: 1, y: 0 } : {}} transition={{ delay: 0.25 }}>Ayurvedic care, guided with trust</motion.p>
         <h1>

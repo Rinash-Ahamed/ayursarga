@@ -198,12 +198,16 @@ em{ font-style: italic; color: var(--clay-dark); }
 }
 #hero::before{
   content:""; position:absolute; inset:0; z-index:0;
-  background:
-    linear-gradient(90deg,rgba(18,23,20,.86) 0%,rgba(18,23,20,.66) 40%,rgba(18,23,20,.24) 70%,rgba(18,23,20,.1) 100%),
-    linear-gradient(0deg,rgba(18,23,20,.34),rgba(18,23,20,.04) 48%),
-    url("/hero-image.webp") 62% center/cover no-repeat;
+  background:url("/hero-image.webp") 62% center/cover no-repeat;
   filter:saturate(.88) contrast(1.03);
 }
+#hero::after{
+  content:""; position:absolute; inset:0; z-index:2; pointer-events:none;
+  background:
+    linear-gradient(90deg,rgba(18,23,20,.86) 0%,rgba(18,23,20,.66) 40%,rgba(18,23,20,.24) 70%,rgba(18,23,20,.1) 100%),
+    linear-gradient(0deg,rgba(18,23,20,.34),rgba(18,23,20,.04) 48%);
+}
+.hero-background-video{ position:absolute; inset:0; z-index:1; width:100%; height:100%; object-fit:cover; object-position:62% center; filter:saturate(.88) contrast(1.03); pointer-events:none; }
 .hero-content{ position:relative; z-index:3; width:min(100%,1320px); max-width:1320px; margin:0 auto; padding-left:max(40px,env(safe-area-inset-left)); padding-right:max(40px,env(safe-area-inset-right)); }
 #hero .eyebrow{ color:var(--gold); text-shadow:0 2px 18px rgba(0,0,0,.28); }
 .eyebrow{
@@ -618,11 +622,14 @@ button{ cursor:pointer; }
   .general-questions-layout{ grid-template-columns:1fr; gap:38px; }
   .general-questions-intro{ position:static; }
   #hero::before{
+    background:url("/hero-image-mobile.webp") 67% center/cover no-repeat;
+  }
+  #hero::after{
     background:
       linear-gradient(90deg,rgba(18,23,20,.9) 0%,rgba(18,23,20,.72) 52%,rgba(18,23,20,.4) 100%),
-      linear-gradient(0deg,rgba(18,23,20,.42),rgba(18,23,20,.08) 48%),
-      url("/hero-image-mobile.webp") 67% center/cover no-repeat;
+      linear-gradient(0deg,rgba(18,23,20,.42),rgba(18,23,20,.08) 48%);
   }
+  .hero-background-video{ display:none; }
   .match-layout{ grid-template-columns:1fr; gap:34px; }
   .match-copy>p{ max-width:650px; }
   .quiz-card{ min-height:0; }
