@@ -201,7 +201,7 @@ em{ font-style: italic; color: var(--clay-dark); }
   background:
     linear-gradient(90deg,rgba(18,23,20,.86) 0%,rgba(18,23,20,.66) 40%,rgba(18,23,20,.24) 70%,rgba(18,23,20,.1) 100%),
     linear-gradient(0deg,rgba(18,23,20,.34),rgba(18,23,20,.04) 48%),
-    url("/ayursarga-wellness-center-hero-clean.jpg") 62% center/cover no-repeat;
+    url("/hero-image.webp") 62% center/cover no-repeat;
   filter:saturate(.88) contrast(1.03);
 }
 .hero-content{ position:relative; z-index:3; width:min(100%,1320px); max-width:1320px; margin:0 auto; padding:0 40px; }
@@ -636,7 +636,7 @@ button{ cursor:pointer; }
     background:
       linear-gradient(90deg,rgba(18,23,20,.9) 0%,rgba(18,23,20,.72) 52%,rgba(18,23,20,.4) 100%),
       linear-gradient(0deg,rgba(18,23,20,.42),rgba(18,23,20,.08) 48%),
-      url("/ayursarga-wellness-center-hero-clean.jpg") 67% center/cover no-repeat;
+      url("/hero-image-mobile.webp") 67% center/cover no-repeat;
   }
 }
 @media(max-width:600px){
