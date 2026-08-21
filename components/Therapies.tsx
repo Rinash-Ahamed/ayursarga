@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { hasPublicHospitalForService } from "@/services/hospitals/publicHospitalService";
 import { RevealLines, RevealWords } from "./Reveal";
 import TreatmentFilm from "./TreatmentFilm";
 
@@ -41,6 +40,7 @@ export default function Therapies() {
     setBusyService(serviceName);
     setAvailabilityMessage(null);
     try {
+      const { hasPublicHospitalForService } = await import("@/services/hospitals/publicHospitalService");
       if (await hasPublicHospitalForService(serviceName)) {
         router.push(`/centers?service=${encodeURIComponent(serviceName)}`);
         return;
@@ -59,8 +59,8 @@ export default function Therapies() {
     <p className="section-intro">From maternal care to deep rejuvenation, explore programmes selected around your goals - not a generic package list.</p>
     <TreatmentFilm />
     <motion.div id="family-wellness" className="family-story" initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .35 }}>
-      <Image src="/wellness/mother-child-garden.png" alt="Mother and child exploring medicinal leaves in a Kerala retreat garden" width={1152} height={1440} sizes="(max-width: 900px) 100vw, 42vw" quality={82} />
-      <div><span className="eyebrow">Mother &amp; Child</span><h3>Wellness that holds the whole family.</h3><p>From prenatal preparation to postnatal recovery, baby care and lactation support, explore active services from Ayursarga hospital partners.</p></div>
+      <div className="family-story-media"><Image src="/wellness/mother-child-garden.png" alt="Mother and child exploring medicinal leaves in a Kerala retreat garden" width={1152} height={1440} sizes="(max-width: 900px) 100vw, 42vw" quality={82} /></div>
+      <div className="family-story-copy"><span className="eyebrow">Mother &amp; Child</span><h3>Wellness that holds the whole family.</h3><p>From prenatal preparation to postnatal recovery, baby care and lactation support, explore active services from Ayursarga hospital partners.</p></div>
     </motion.div>
     <div className="path-grid-heading"><span>Choose a wellness path</span><p>Select a path to find Ayursarga centers currently offering that care.</p></div>
     {availabilityMessage && <div className="path-availability-message" role="status">{availabilityMessage}</div>}
