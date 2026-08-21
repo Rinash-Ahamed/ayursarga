@@ -60,8 +60,8 @@ export default function Philosophy() {
           </div>
           <FadeUp className="process-principles">
             <div><strong>Explore first</strong><span>Browse centers and services before signing in.</span></div>
-            <div><strong>Request with clarity</strong><span>Your chosen center reviews every appointment request.</span></div>
-            <div><strong>Care stays clinical</strong><span>Qualified center physicians confirm treatment suitability.</span></div>
+            <div><strong>Request with clarity</strong><span>Your chosen centre will review every appointment request.</span></div>
+            <div><strong>Care stays clinical</strong><span>Qualified physicians at the centre will confirm your treatment suitability.</span></div>
           </FadeUp>
         </div>
 

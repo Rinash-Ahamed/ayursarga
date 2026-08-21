@@ -3,24 +3,12 @@
 import { FormEvent, useEffect, useState } from "react";
 import { FadeUp, RevealLines, RevealWords } from "./Reveal";
 import MagneticButton from "./MagneticButton";
-import { formatMatchProfile, type MatchProfile } from "@/lib/matchProfile";
 
 type FormStatus = "idle" | "sending" | "sent" | "error";
 
-const INTEREST_BY_NEED: Record<string, string> = {
-  "Prenatal care": "Prenatal and maternity care",
-  "Postnatal care": "Postnatal recovery",
-  "Baby care": "Baby care and lactation support",
-  "Lactation support": "Baby care and lactation support",
-  Panchakarma: "Panchakarma",
-  "Stress relief": "Stress management",
-};
-
-export default function Contact({ matchProfile }: { matchProfile: MatchProfile | null }) {
+export default function Contact() {
   const [status, setStatus] = useState<FormStatus>("idle");
-  const matchSummary = matchProfile ? formatMatchProfile(matchProfile) : "";
-  const suggestedInterest = matchProfile ? INTEREST_BY_NEED[matchProfile.needs[0]] || "Not sure - help me choose" : "";
-  const [interest, setInterest] = useState(suggestedInterest);
+  const [interest, setInterest] = useState("");
   const isPartnership = interest === "Ayurvedic hospital partnership";
 
   useEffect(() => {
@@ -58,12 +46,6 @@ export default function Contact({ matchProfile }: { matchProfile: MatchProfile |
     {status === "sent" ? <FadeUp className="form-success"><span>&#10003;</span><h3>{isPartnership ? "Your partnership enquiry is on its way." : "Thank you. Your journey has begun."}</h3><p>{isPartnership ? "Our team will review your hospital details and contact you about approval and onboarding. Appointment requests begin after activation." : "Your request has been delivered to info@ayursarga.com."}</p></FadeUp> : <FadeUp as="form" className="contact-form" delay={.1} onSubmit={submit}>
       <div className="form-row"><input name="name" aria-label="Your name" type="text" placeholder="Your name" required /><input name="phone" aria-label="Phone number" type="tel" placeholder="Phone number" required /></div>
       <input name="email" aria-label="Email address" type="email" placeholder="Email address" required />
-      {matchProfile && <div className="captured-match" role="status">
-        <span>Your matching profile</span>
-        <strong>{matchProfile.needs.join(" / ")}</strong>
-        <p>{matchProfile.district} / {matchProfile.budget}{matchProfile.preferences.length ? ` / ${matchProfile.preferences.length} stay preferences` : ""}</p>
-      </div>}
-      <input type="hidden" name="matchProfile" value={matchSummary} />
       <select name="interest" aria-label="Care you are interested in" required value={interest} onChange={(event) => setInterest(event.target.value)}>
         <option value="" disabled>I&apos;m interested in...</option>
         <option>Ayurvedic hospital partnership</option>
@@ -81,7 +63,7 @@ export default function Contact({ matchProfile }: { matchProfile: MatchProfile |
         <optgroup label="More ways we can help">
           <option>Prenatal and maternity care</option>
           <option>Baby care and lactation support</option>
-          <option>Not sure - help me choose</option>
+          <option>I need personal guidance</option>
         </optgroup>
       </select>
       <textarea name="message" aria-label="How can we help" placeholder={isPartnership ? "Hospital name, location, services, specialties, and how we can reach you" : "Anything you&apos;d like us to know?"} rows={3} />

@@ -51,15 +51,15 @@ export default function Hero({ ready }: { ready: boolean }) {
           ))}
         </h1>
         <motion.p className="hero-sub" initial={{ opacity: 0, y: 20 }} animate={ready ? { opacity: 1, y: 0 } : {}} transition={{ delay: 0.82, duration: 0.8 }}>
-          Discover approved Ayurvedic hospitals, compare suitable wellness services and request care with human guidance whenever you need it.
+          Discover trusted hospitals and wellness centres, compare your options, and connect with the care that fits your needs.
         </motion.p>
         <motion.div className="hero-ctas" initial={{ opacity: 0, y: 20 }} animate={ready ? { opacity: 1, y: 0 } : {}} transition={{ delay: 1, duration: 0.7 }}>
           <MagneticButton href="/centers" className="btn-magnetic hero-search-button">
-            Search for Ayurvedic Center
+            <svg className="hero-search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 4.2 4.2" /></svg>
+            <span>Search for Ayurvedic Center</span>
           </MagneticButton>
           <div className="hero-support-actions">
             <MagneticButton href="#contact" className="btn-magnetic btn-secondary">Talk to Ayursarga</MagneticButton>
-            <a href="#matching" className="btn-text">Help Me Choose &darr;</a>
           </div>
         </motion.div>
         <motion.div className="hero-values" initial={{ opacity: 0 }} animate={ready ? { opacity: 1 } : {}} transition={{ delay: 1.2 }}>

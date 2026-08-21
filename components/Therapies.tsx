@@ -9,15 +9,12 @@ import { RevealLines, RevealWords } from "./Reveal";
 import TreatmentFilm from "./TreatmentFilm";
 
 const PATHS = [
-  ["Postnatal recovery", "Restorative care for the mother after birth, with support options for baby and family.", "/Postnatal Recovery.jpeg"],
+  ["Prenatal care", "Comprehensive care for mother and baby throughout pregnancy, with guidance and support for a healthy journey.", "/mother-child-garden.png"],
+  ["Postnatal care", "Restorative support after childbirth, helping the mother recover while nurturing the baby and family.", "/Postnatal Recovery.jpeg"],
+  ["Lactation support", "Dedicated lactation care for mother and baby, with guidance for confident and comfortable feeding.", "/mother-child-garden.png"],
   ["Panchakarma", "Doctor-guided cleansing and renewal programmes tailored to your constitution.", "/Panchakarma.jpeg"],
+  ["Women’s wellness", "Personalised Ayurvedic care supporting women’s health, hormonal balance, and wellbeing through every life stage.", "/Womesn Wellness.jpeg"],
   ["Stress management", "Quiet stays, therapies and practices designed to settle an overextended system.", "/Stress Managemen.jpeg"],
-  ["Weight management", "Sustainable Ayurvedic programmes built around food, movement and metabolic health.", "/WT Management.jpeg"],
-  ["PCOS care", "Holistic support for hormonal balance, daily rhythm and long-term wellbeing.", "/PCOS Care.jpeg"],
-  ["Women’s wellness", "Personalised care through changing seasons of a woman’s health.", "/Womesn Wellness.jpeg"],
-  ["Corporate wellness", "Restorative programmes for teams, leaders and high-pressure work cultures.", "/Corperate Wellness.jpeg"],
-  ["Couples retreat", "Shared time to slow down, reconnect and return home with healthier rhythms.", "/Couplea Retreat.jpeg"],
-  ["Detox retreat", "A considered reset through therapeutic care, nourishing food and genuine rest.", "/Detox Retreat.jpeg"],
 ] as const;
 
 export default function Therapies() {
@@ -48,7 +45,7 @@ export default function Therapies() {
 
   useEffect(() => {
     if (prefersReducedMotion || isPaused || busyService) return;
-    const interval = window.setInterval(() => moveSlider(1), 6000);
+    const interval = window.setInterval(() => moveSlider(1), 4000);
     return () => window.clearInterval(interval);
   }, [busyService, isPaused, moveSlider, prefersReducedMotion]);
 
