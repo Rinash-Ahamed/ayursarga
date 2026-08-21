@@ -60,6 +60,7 @@ export default function Hero({ ready }: { ready: boolean }) {
           </MagneticButton>
           <div className="hero-support-actions">
             <MagneticButton href="#contact" className="btn-magnetic btn-secondary">Talk to Ayursarga</MagneticButton>
+            <a href="#matching" className="hero-guidance-link">Help me choose</a>
           </div>
         </motion.div>
         <motion.div className="hero-values" initial={{ opacity: 0 }} animate={ready ? { opacity: 1 } : {}} transition={{ delay: 1.2 }}>

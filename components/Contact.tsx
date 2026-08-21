@@ -3,13 +3,16 @@
 import { FormEvent, useEffect, useState } from "react";
 import { FadeUp, RevealLines, RevealWords } from "./Reveal";
 import MagneticButton from "./MagneticButton";
+import { formatGuidanceProfile, type GuidanceProfile } from "@/lib/guidanceProfile";
 
 type FormStatus = "idle" | "sending" | "sent" | "error";
 
-export default function Contact() {
+export default function Contact({ guidanceProfile }: { guidanceProfile: GuidanceProfile | null }) {
   const [status, setStatus] = useState<FormStatus>("idle");
   const [interest, setInterest] = useState("");
-  const isPartnership = interest === "Ayurvedic hospital partnership";
+  const guidanceSummary = guidanceProfile ? formatGuidanceProfile(guidanceProfile) : "";
+  const selectedInterest = interest || (guidanceProfile ? "I need personal guidance" : "");
+  const isPartnership = selectedInterest === "Ayurvedic hospital partnership";
 
   useEffect(() => {
     if (status !== "sent") return;
@@ -47,7 +50,13 @@ export default function Contact() {
       <div className="contact-form-heading"><h3>{isPartnership ? "Reach our partnerships team" : "Reach Ayursarga"}</h3><p>Share your details below and our team will contact you about your request.</p></div>
       <div className="form-row"><input name="name" aria-label="Your name" type="text" placeholder="Your name" required /><input name="phone" aria-label="Phone number" type="tel" placeholder="Phone number" required /></div>
       <input name="email" aria-label="Email address" type="email" placeholder="Email address" required />
-      <select name="interest" aria-label="Care you are interested in" required value={interest} onChange={(event) => setInterest(event.target.value)}>
+      {guidanceProfile && <div className="captured-match" role="status">
+        <span>Your guidance preferences</span>
+        <strong>{guidanceProfile.district} / {guidanceProfile.budget}</strong>
+        <p>{guidanceProfile.preferences.length ? guidanceProfile.preferences.join(" / ") : "No specific stay preferences selected"}</p>
+      </div>}
+      <input type="hidden" name="guidanceProfile" value={guidanceSummary} />
+      <select name="interest" aria-label="Care you are interested in" required value={selectedInterest} onChange={(event) => setInterest(event.target.value)}>
         <option value="" disabled>I&apos;m interested in...</option>
         <option>Ayurvedic hospital partnership</option>
         <optgroup label="Wellness paths">
