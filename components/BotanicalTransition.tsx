@@ -1,6 +1,10 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useLayoutEffect, useRef } from "react";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(ScrollTrigger);
 
 type Tone = "cream" | "cream-to-forest" | "forest-to-cream";
 
@@ -16,49 +20,50 @@ const LEAVES = [
 export default function BotanicalTransition({ tone = "cream", reverse = false }: { tone?: Tone; reverse?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    if (CSS.supports("animation-timeline: view()")) return;
-    if (!("IntersectionObserver" in window)) {
-      container.classList.add("is-visible");
+
+    const stem = container.querySelector<SVGPathElement>(".botanical-stem");
+    const leaves = Array.from(container.querySelectorAll<SVGPathElement>(".botanical-leaf"));
+    const veins = Array.from(container.querySelectorAll<SVGPathElement>(".botanical-vein"));
+    if (!stem) return;
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reducedMotion) {
+      gsap.set(stem, { strokeDashoffset: 0, opacity: .9 });
+      gsap.set(leaves, { opacity: 1, scale: 1 });
+      gsap.set(veins, { strokeDashoffset: 0, opacity: 1 });
       return;
     }
 
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry?.isIntersecting) return;
-      container.classList.add("is-visible");
-      observer.disconnect();
-    }, { rootMargin: "8% 0px -8%", threshold: 0.08 });
+    const context = gsap.context(() => {
+      const timeline = gsap.timeline({
+        defaults: { ease: "none" },
+        scrollTrigger: {
+          trigger: container,
+          start: "top 94%",
+          end: "bottom 48%",
+          scrub: true,
+          invalidateOnRefresh: true,
+        },
+      });
 
-    observer.observe(container);
-    return () => observer.disconnect();
+      timeline
+        .fromTo(stem, { strokeDashoffset: 1, opacity: .25 }, { strokeDashoffset: 0, opacity: .9, duration: 1 }, 0)
+        .fromTo(leaves, { opacity: 0, scale: .18 }, { opacity: 1, scale: 1, duration: .16, stagger: .12 }, .16)
+        .fromTo(veins, { strokeDashoffset: 1, opacity: 0 }, { strokeDashoffset: 0, opacity: 1, duration: .13, stagger: .12 }, .22);
+    }, container);
+
+    return () => context.revert();
   }, []);
 
   return (
-    <div
-      ref={containerRef}
-      className={`botanical-transition ${tone}${reverse ? " reverse" : ""}`}
-      aria-hidden="true"
-    >
+    <div ref={containerRef} className={`botanical-transition ${tone}${reverse ? " reverse" : ""}`} aria-hidden="true">
       <svg viewBox="0 0 1200 150" preserveAspectRatio="none" focusable="false">
-        <path
-          className="botanical-stem"
-          pathLength="1"
-          d="M-20 106 C165 104 190 62 350 75 S610 108 760 69 S1010 48 1220 74"
-        />
-        {LEAVES.map((leaf, index) => (
-          <g
-            key={leaf.x}
-            className="botanical-branch"
-            transform={`translate(${leaf.x} ${leaf.y}) rotate(${leaf.r}) scale(${leaf.flip} 1)`}
-            style={{
-              "--leaf-delay": `${300 + index * 125}ms`,
-              "--leaf-range-start": `${8 + index * 4}%`,
-              "--leaf-range-end": `${24 + index * 5}%`,
-              "--vein-range-end": `${32 + index * 5}%`,
-            } as CSSProperties}
-          >
+        <path className="botanical-stem" pathLength="1" d="M-20 106 C165 104 190 62 350 75 S610 108 760 69 S1010 48 1220 74" />
+        {LEAVES.map((leaf) => (
+          <g key={leaf.x} className="botanical-branch" transform={`translate(${leaf.x} ${leaf.y}) rotate(${leaf.r}) scale(${leaf.flip} 1)`}>
             <path className="botanical-leaf" d="M0 0 C13 -26 42 -29 61 -16 C45 4 20 10 0 0 Z" />
             <path className="botanical-vein" pathLength="1" d="M4 -1 C22 -8 39 -13 56 -16" />
           </g>
