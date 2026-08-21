@@ -440,8 +440,6 @@ em{ font-style: italic; color: var(--clay-dark); }
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce){
   *{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; }
-  .botanical-stem,.botanical-vein{ animation:none!important; stroke-dashoffset:0; opacity:1; }
-  .botanical-leaf{ animation:none!important; opacity:1; transform:scale(1); }
 }
 
 /* Focus visibility */
@@ -653,24 +651,6 @@ button{ cursor:pointer; }
   .choice-grid{ grid-template-columns:1fr; }
   .quiz-card{ padding:27px 20px; border-radius:20px; }
 }
-
-/* Original horizontal botanical separators, now scrubbed directly by scroll. */
-.botanical-transition{ position:relative; z-index:3; height:clamp(44px,4.5vw,60px); overflow:hidden; margin:0; pointer-events:none; contain:layout paint style; }
-.botanical-transition.cream{ background:var(--cream); }
-.botanical-transition.cream-to-forest{ background:linear-gradient(to bottom,var(--cream) 0 48%,var(--forest) 48% 100%); }
-.botanical-transition.forest-to-cream{ background:linear-gradient(to bottom,var(--forest) 0 48%,var(--cream) 48% 100%); }
-.botanical-transition svg{ width:100%; height:100%; display:block; overflow:visible; shape-rendering:geometricPrecision; }
-.botanical-transition.reverse svg{ transform:scaleX(-1); }
-.botanical-stem{ fill:none; stroke:var(--clay-dark); stroke-width:2.4; vector-effect:non-scaling-stroke; stroke-linecap:round; stroke-dasharray:1; stroke-dashoffset:1; opacity:.25; will-change:stroke-dashoffset,opacity; }
-.botanical-leaf{ fill:#66755a; stroke:rgba(31,61,43,.72); stroke-width:.7; transform-box:fill-box; transform-origin:0 50%; opacity:0; transform:scale(.18); will-change:transform,opacity; }
-.botanical-vein{ fill:none; stroke:#3f513f; stroke-width:1.15; vector-effect:non-scaling-stroke; stroke-linecap:round; stroke-dasharray:1; stroke-dashoffset:1; opacity:0; will-change:stroke-dashoffset,opacity; }
-.cream-to-forest .botanical-stem,.forest-to-cream .botanical-stem{ stroke:var(--gold); }
-.cream-to-forest .botanical-leaf,.forest-to-cream .botanical-leaf{ fill:#7c8967; }
-@media(max-width:600px){
-  .botanical-transition{ height:42px; }
-  .botanical-transition svg{ width:150%; margin-left:-25%; }
-}
-
 
 /* Reliable interaction layer and tactile feedback */
 .scroll-logo{ pointer-events:none; }

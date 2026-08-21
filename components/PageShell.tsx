@@ -17,7 +17,6 @@ import Voices from "@/components/Voices";
 import Contact from "@/components/Contact";
 import GeneralQuestions from "@/components/GeneralQuestions";
 import Footer from "@/components/Footer";
-import BotanicalTransition from "@/components/BotanicalTransition";
 import type { GuidanceProfile } from "@/lib/guidanceProfile";
 
 // Particle field uses browser animation APIs - load client-only, no SSR.
@@ -44,15 +43,10 @@ export default function PageShell() {
         <main>
           <Hero ready={ready} />
           <Philosophy />
-          <BotanicalTransition tone="cream-to-forest" />
           <Journey onComplete={setGuidanceProfile} />
-          <BotanicalTransition tone="forest-to-cream" reverse />
           <Therapies />
-          <BotanicalTransition tone="cream-to-forest" />
           <Sanctuary />
-          <BotanicalTransition tone="forest-to-cream" reverse />
           <Voices />
-          <BotanicalTransition tone="cream" />
           <Contact guidanceProfile={guidanceProfile} />
           <GeneralQuestions />
         </main>
