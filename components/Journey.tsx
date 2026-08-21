@@ -11,13 +11,13 @@ const STAY_OPTIONS = [
   "Therapist support",
   "Pregnancy yoga",
   "Baby care support",
-  "Lactation support",
+  "Latching difficulty",
   "Meditation & pranayama",
   "Detox programme",
   "Rejuvenation therapy",
   "Family stay",
   "Private stay",
-  "Online consultation",
+  "Others",
 ] as const;
 
 const KERALA_DISTRICTS = [
@@ -28,11 +28,13 @@ const KERALA_DISTRICTS = [
 export default function Journey({ onComplete }: { onComplete?: (profile: GuidanceProfile) => void }) {
   const [step, setStep] = useState(0);
   const [preferences, setPreferences] = useState<string[]>([]);
+  const [otherConcern, setOtherConcern] = useState("");
   const [district, setDistrict] = useState("Any district");
   const [otherDistrict, setOtherDistrict] = useState("");
   const [budget, setBudget] = useState("Flexible");
   const reduceMotion = useReducedMotion();
   const selectedDistrict = district === "Other" ? otherDistrict.trim() : district;
+  const resolvedPreferences = preferences.map((preference) => preference === "Others" ? `Other concern: ${otherConcern.trim()}` : preference);
   const transition = reduceMotion ? { duration: 0 } : { duration: 0.28, ease: [0.22, 1, 0.36, 1] as const };
 
   const togglePreference = (item: string) => {
@@ -40,13 +42,14 @@ export default function Journey({ onComplete }: { onComplete?: (profile: Guidanc
   };
 
   const complete = () => {
-    onComplete?.({ preferences, district: selectedDistrict, budget });
+    onComplete?.({ preferences: resolvedPreferences, district: selectedDistrict, budget });
     setStep(2);
   };
 
   const restart = () => {
     setStep(0);
     setPreferences([]);
+    setOtherConcern("");
     setDistrict("Any district");
     setOtherDistrict("");
     setBudget("Flexible");
@@ -66,10 +69,13 @@ export default function Journey({ onComplete }: { onComplete?: (profile: Guidanc
       <div className="quiz-card"><AnimatePresence mode="wait">
         {step === 0 && <motion.div key="preferences" initial={reduceMotion ? false : { opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: -18 }} transition={transition}>
           <span className="quiz-kicker">Step 1 of 2</span>
-          <h3>What should your stay include?</h3>
-          <p className="quiz-hint">Select any preferences that matter to you. You may also continue without choosing one.</p>
+          <h3>What are your concerns?</h3>
+          <p className="quiz-hint">Select any concerns that matter to you. You may also continue without choosing one.</p>
           <div className="choice-grid">{STAY_OPTIONS.map((item) => <button type="button" className={preferences.includes(item) ? "selected" : ""} aria-pressed={preferences.includes(item)} onClick={() => togglePreference(item)} key={item}>{item}</button>)}</div>
-          <button type="button" className="quiz-next" onClick={() => setStep(1)}>Continue <span aria-hidden="true">&rarr;</span></button>
+          {preferences.includes("Others") && <label className="quiz-label other-district-label quiz-other-concern">Tell us about your concern
+            <input type="text" value={otherConcern} onChange={(event) => setOtherConcern(event.target.value)} placeholder="Type your concern" autoFocus required />
+          </label>}
+          <button type="button" className="quiz-next" disabled={preferences.includes("Others") && !otherConcern.trim()} onClick={() => setStep(1)}>Continue <span aria-hidden="true">&rarr;</span></button>
         </motion.div>}
 
         {step === 1 && <motion.div key="location" initial={reduceMotion ? false : { opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: -18 }} transition={transition}>
@@ -98,7 +104,7 @@ export default function Journey({ onComplete }: { onComplete?: (profile: Guidanc
           <span className="result-mark" aria-hidden="true">&#10003;</span>
           <span className="quiz-kicker">Your preferences are ready</span>
           <h3>Share them with Ayursarga for personal guidance.</h3>
-          <p>{selectedDistrict} / {budget}{preferences.length ? ` / ${preferences.length} stay preferences` : ""}</p>
+          <p>{selectedDistrict} / {budget}{resolvedPreferences.length ? ` / ${resolvedPreferences.length} care preferences` : ""}</p>
           <a href="#contact" className="quiz-next">Request personal guidance <span aria-hidden="true">&rarr;</span></a>
           <button type="button" className="restart-link" onClick={restart}>Start again</button>
         </motion.div>}

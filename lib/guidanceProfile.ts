@@ -6,7 +6,7 @@ export type GuidanceProfile = {
 
 export function formatGuidanceProfile(profile: GuidanceProfile) {
   return [
-    `Stay preferences: ${profile.preferences.length ? profile.preferences.join(", ") : "No specific stay preferences selected"}`,
+    `Care concerns: ${profile.preferences.length ? profile.preferences.join(", ") : "No specific concerns selected"}`,
     `Preferred district: ${profile.district}`,
     `Budget: ${profile.budget}`,
   ].join("\n");

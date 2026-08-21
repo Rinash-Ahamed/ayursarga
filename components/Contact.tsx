@@ -53,7 +53,7 @@ export default function Contact({ guidanceProfile }: { guidanceProfile: Guidance
       {guidanceProfile && <div className="captured-match" role="status">
         <span>Your guidance preferences</span>
         <strong>{guidanceProfile.district} / {guidanceProfile.budget}</strong>
-        <p>{guidanceProfile.preferences.length ? guidanceProfile.preferences.join(" / ") : "No specific stay preferences selected"}</p>
+        <p>{guidanceProfile.preferences.length ? guidanceProfile.preferences.join(" / ") : "No specific concerns selected"}</p>
       </div>}
       <input type="hidden" name="guidanceProfile" value={guidanceSummary} />
       <select name="interest" aria-label="Care you are interested in" required value={selectedInterest} onChange={(event) => setInterest(event.target.value)}>

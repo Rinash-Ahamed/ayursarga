@@ -54,7 +54,7 @@ export default function Philosophy() {
           <div>
             <RevealWords text="How Ayursarga Works" className="eyebrow" />
             <RevealLines as="h2" className="section-title" lines={["A clear path from", "discovery to care."]} />
-            <FadeUp as="p" className="section-intro">
+            <FadeUp as="p" className="section-intro process-summary">
               Ayursarga brings center discovery, service information, appointment requests, and hospital responses into one calm and transparent journey.
             </FadeUp>
           </div>
