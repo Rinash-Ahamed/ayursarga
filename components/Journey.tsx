@@ -1,112 +1,114 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { RevealLines, RevealWords } from "./Reveal";
-import MagneticButton from "./MagneticButton";
-import type { MatchProfile } from "@/lib/matchProfile";
+import type { GuidanceProfile } from "@/lib/guidanceProfile";
 
-const NEEDS = ["Prenatal care", "Postnatal care", "Baby care", "Lactation support", "Panchakarma", "Stress relief"];
-const DETAILS: Record<string, string[]> = {
-  "Prenatal care": ["Pregnancy yoga", "Dietary advice", "Pranayama & meditation", "Obstetric consultation"],
-  "Postnatal care": ["Therapist support", "Doctor visits", "Dietary advice", "Family stay"],
-  "Baby care": ["Baby massage", "Baby bath", "Paediatric consultation"],
-  "Lactation support": ["Low milk supply", "Latching support", "Breast engorgement", "Online consultation"],
-  Panchakarma: ["Doctor consultation", "Detox programme", "Rejuvenation therapy"],
-  "Stress relief": ["Relaxation therapy", "Meditation", "Private stay", "Resort ambience"],
-};
-
-const KERALA_DISTRICTS = [
-  "Alappuzha",
-  "Ernakulam",
-  "Idukki",
-  "Kannur",
-  "Kasaragod",
-  "Kollam",
-  "Kottayam",
-  "Kozhikode",
-  "Malappuram",
-  "Palakkad",
-  "Pathanamthitta",
-  "Thiruvananthapuram",
-  "Thrissur",
-  "Wayanad",
+const STAY_OPTIONS = [
+  "Dietary guidance",
+  "Doctor consultation",
+  "Therapist support",
+  "Pregnancy yoga",
+  "Baby care support",
+  "Latching difficulty",
+  "Meditation & pranayama",
+  "Detox programme",
+  "Rejuvenation therapy",
+  "Family stay",
+  "Private stay",
+  "Others",
 ] as const;
 
-export default function Journey({ onComplete }: { onComplete?: (profile: MatchProfile) => void }) {
+const KERALA_DISTRICTS = [
+  "Alappuzha", "Ernakulam", "Idukki", "Kannur", "Kasaragod", "Kollam", "Kottayam",
+  "Kozhikode", "Malappuram", "Palakkad", "Pathanamthitta", "Thiruvananthapuram", "Thrissur", "Wayanad",
+] as const;
+
+export default function Journey({ onComplete }: { onComplete?: (profile: GuidanceProfile) => void }) {
   const [step, setStep] = useState(0);
-  const [needs, setNeeds] = useState<string[]>([]);
   const [preferences, setPreferences] = useState<string[]>([]);
+  const [otherConcern, setOtherConcern] = useState("");
   const [district, setDistrict] = useState("Any district");
   const [otherDistrict, setOtherDistrict] = useState("");
   const [budget, setBudget] = useState("Flexible");
-  const toggle = (item: string) => setPreferences((current) => current.includes(item) ? current.filter((value) => value !== item) : [...current, item]);
-  const toggleNeed = (item: string) => setNeeds((current) => current.includes(item) ? current.filter((value) => value !== item) : [...current, item]);
-  const detailOptions = Array.from(new Set(needs.flatMap((item) => DETAILS[item] || [])));
-  const continueToDetails = () => {
-    const available = new Set(detailOptions);
-    setPreferences((current) => current.filter((item) => available.has(item)));
-    setStep(1);
-  };
+  const reduceMotion = useReducedMotion();
   const selectedDistrict = district === "Other" ? otherDistrict.trim() : district;
-  const captureProfile = () => onComplete?.({
-    needs,
-    preferences,
-    district: selectedDistrict,
-    budget,
-  });
+  const resolvedPreferences = preferences.map((preference) => preference === "Others" ? `Other concern: ${otherConcern.trim()}` : preference);
+  const transition = reduceMotion ? { duration: 0 } : { duration: 0.28, ease: [0.22, 1, 0.36, 1] as const };
+
+  const togglePreference = (item: string) => {
+    setPreferences((current) => current.includes(item) ? current.filter((value) => value !== item) : [...current, item]);
+  };
+
+  const complete = () => {
+    onComplete?.({ preferences: resolvedPreferences, district: selectedDistrict, budget });
+    setStep(2);
+  };
+
   const restart = () => {
     setStep(0);
-    setNeeds([]);
     setPreferences([]);
+    setOtherConcern("");
     setDistrict("Any district");
     setOtherDistrict("");
     setBudget("Flexible");
   };
 
-  return (
-    <section id="matching" className="section dark-section match-section">
-      <div className="section-inner match-layout">
-        <div className="match-copy">
-          <RevealWords text="Help Me Choose" className="eyebrow light" />
-          <RevealLines as="h2" className="section-title light" lines={["The right care", "starts with", "the right questions."]} />
-          <p>Not sure where to begin? Share what matters and an Ayursarga guide can help you explore suitable options.</p>
-          <div className="match-progress" aria-label={`Step ${Math.min(step + 1, 3)} of 3`}>{[0, 1, 2].map((item) => <span className={step >= item ? "active" : ""} key={item} />)}</div>
+  return <section id="matching" className="section dark-section match-section">
+    <div className="section-inner match-layout">
+      <div className="match-copy">
+        <RevealWords text="Help me choose" className="eyebrow light" />
+        <RevealLines as="h2" className="section-title light" lines={["A clearer path", "to suitable care."]} />
+        <p>Tell us what would make your stay comfortable, then narrow the search by location and budget. An Ayursarga guide can help with the next step.</p>
+        <div className="match-progress" aria-label={`Step ${Math.min(step + 1, 2)} of 2`}>
+          {[0, 1].map((item) => <span className={step >= item ? "active" : ""} key={item} />)}
         </div>
-        <div className="quiz-card"><AnimatePresence mode="wait">
-          {step === 0 && <motion.div key="need" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-            <span className="quiz-kicker">Step 1 of 3</span><h3>What are you looking for?</h3><p className="quiz-hint">Choose one or more care goals.</p>
-            <div className="choice-grid">{NEEDS.map((item) => <MagneticButton type="button" className={needs.includes(item) ? "selected" : ""} onClick={() => toggleNeed(item)} key={item}>{item}</MagneticButton>)}</div>
-            <MagneticButton type="button" className="quiz-next" disabled={!needs.length} onClick={continueToDetails}>Continue <span>-&gt;</span></MagneticButton>
-          </motion.div>}
-          {step === 1 && <motion.div key="details" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-            <MagneticButton type="button" className="quiz-back" onClick={() => setStep(0)}>&lt;- Back</MagneticButton><span className="quiz-kicker">Step 2 of 3</span><h3>What should your stay include?</h3>
-            <div className="choice-grid">{detailOptions.map((item) => <MagneticButton type="button" className={preferences.includes(item) ? "selected" : ""} onClick={() => toggle(item)} key={item}>{item}</MagneticButton>)}</div>
-            <MagneticButton type="button" className="quiz-next" onClick={() => setStep(2)}>Continue <span>-&gt;</span></MagneticButton>
-          </motion.div>}
-          {step === 2 && <motion.div key="location" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-            <MagneticButton type="button" className="quiz-back" onClick={() => setStep(1)}>&lt;- Back</MagneticButton><span className="quiz-kicker">Step 3 of 3</span><h3>Help us narrow the match.</h3>
-            <label className="quiz-label">Preferred district<select value={district} onChange={(event) => setDistrict(event.target.value)}>
-              <option>Any district</option>
-              <optgroup label="Kerala">
-                {KERALA_DISTRICTS.map((name) => <option key={name}>{name}</option>)}
-              </optgroup>
-              <option>Other</option>
-            </select></label>
-            {district === "Other" && <label className="quiz-label other-district-label">Enter your preferred district
-              <input type="text" value={otherDistrict} onChange={(event) => setOtherDistrict(event.target.value)} placeholder="District name" autoFocus required />
-            </label>}
-            <label className="quiz-label">Budget preference<select value={budget} onChange={(event) => setBudget(event.target.value)}><option>Flexible</option><option>Essential comfort</option><option>Premium stay</option><option>Luxury retreat</option></select></label>
-            <MagneticButton type="button" className="quiz-next" disabled={district === "Other" && !otherDistrict.trim()} onClick={() => setStep(3)}>Prepare my request <span>-&gt;</span></MagneticButton>
-          </motion.div>}
-          {step === 3 && <motion.div className="quiz-result" key="result" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
-            <span className="result-mark">&#10003;</span><span className="quiz-kicker">Your preferences are ready</span><h3>Share them with Ayursarga for personal guidance.</h3>
-            <p className="result-needs">{needs.join(" / ")}</p>
-            <p>{selectedDistrict} / {budget}{preferences.length ? ` / ${preferences.length} care preferences` : ""}</p>
-            <MagneticButton href="#contact" className="quiz-next" onClick={captureProfile}>Request personal guidance <span>-&gt;</span></MagneticButton><MagneticButton type="button" className="restart-link" onClick={restart}>Start again</MagneticButton>
-          </motion.div>}
-        </AnimatePresence></div>
       </div>
-    </section>
-  );
+
+      <div className="quiz-card"><AnimatePresence mode="wait">
+        {step === 0 && <motion.div key="preferences" initial={reduceMotion ? false : { opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: -18 }} transition={transition}>
+          <span className="quiz-kicker">Step 1 of 2</span>
+          <h3>What are your concerns?</h3>
+          <p className="quiz-hint">Select any concerns that matter to you. You may also continue without choosing one.</p>
+          <div className="choice-grid">{STAY_OPTIONS.map((item) => <button type="button" className={preferences.includes(item) ? "selected" : ""} aria-pressed={preferences.includes(item)} onClick={() => togglePreference(item)} key={item}>{item}</button>)}</div>
+          {preferences.includes("Others") && <label className="quiz-label other-district-label quiz-other-concern">Tell us about your concern
+            <input type="text" value={otherConcern} onChange={(event) => setOtherConcern(event.target.value)} placeholder="Type your concern" autoFocus required />
+          </label>}
+          <button type="button" className="quiz-next" disabled={preferences.includes("Others") && !otherConcern.trim()} onClick={() => setStep(1)}>Continue <span aria-hidden="true">&rarr;</span></button>
+        </motion.div>}
+
+        {step === 1 && <motion.div key="location" initial={reduceMotion ? false : { opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: -18 }} transition={transition}>
+          <button type="button" className="quiz-back" onClick={() => setStep(0)}>&larr; Back</button>
+          <span className="quiz-kicker">Step 2 of 2</span>
+          <h3>Help us narrow the match.</h3>
+          <label className="quiz-label">Preferred district
+            <select value={district} onChange={(event) => setDistrict(event.target.value)}>
+              <option>Any district</option>
+              <optgroup label="Kerala">{KERALA_DISTRICTS.map((name) => <option key={name}>{name}</option>)}</optgroup>
+              <option>Other</option>
+            </select>
+          </label>
+          {district === "Other" && <label className="quiz-label other-district-label">Enter your preferred district
+            <input type="text" value={otherDistrict} onChange={(event) => setOtherDistrict(event.target.value)} placeholder="District name" autoFocus required />
+          </label>}
+          <label className="quiz-label">Budget preference
+            <select value={budget} onChange={(event) => setBudget(event.target.value)}>
+              <option>Flexible</option><option>Essential comfort</option><option>Premium stay</option><option>Luxury retreat</option>
+            </select>
+          </label>
+          <button type="button" className="quiz-next" disabled={district === "Other" && !otherDistrict.trim()} onClick={complete}>Prepare my request <span aria-hidden="true">&rarr;</span></button>
+        </motion.div>}
+
+        {step === 2 && <motion.div className="quiz-result" key="result" initial={reduceMotion ? false : { opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={transition}>
+          <span className="result-mark" aria-hidden="true">&#10003;</span>
+          <span className="quiz-kicker">Your preferences are ready</span>
+          <h3>Share them with Ayursarga for personal guidance.</h3>
+          <p>{selectedDistrict} / {budget}{resolvedPreferences.length ? ` / ${resolvedPreferences.length} care preferences` : ""}</p>
+          <a href="#contact" className="quiz-next">Request personal guidance <span aria-hidden="true">&rarr;</span></a>
+          <button type="button" className="restart-link" onClick={restart}>Start again</button>
+        </motion.div>}
+      </AnimatePresence></div>
+    </div>
+  </section>;
 }

@@ -54,14 +54,14 @@ export default function Philosophy() {
           <div>
             <RevealWords text="How Ayursarga Works" className="eyebrow" />
             <RevealLines as="h2" className="section-title" lines={["A clear path from", "discovery to care."]} />
-            <FadeUp as="p" className="section-intro">
+            <FadeUp as="p" className="section-intro process-summary">
               Ayursarga brings center discovery, service information, appointment requests, and hospital responses into one calm and transparent journey.
             </FadeUp>
           </div>
           <FadeUp className="process-principles">
             <div><strong>Explore first</strong><span>Browse centers and services before signing in.</span></div>
-            <div><strong>Request with clarity</strong><span>Your chosen center reviews every appointment request.</span></div>
-            <div><strong>Care stays clinical</strong><span>Qualified center physicians confirm treatment suitability.</span></div>
+            <div><strong>Request with clarity</strong><span>Your chosen centre will review every appointment request.</span></div>
+            <div><strong>Care stays clinical</strong><span>Qualified physicians at the centre will confirm your treatment suitability.</span></div>
           </FadeUp>
         </div>
 

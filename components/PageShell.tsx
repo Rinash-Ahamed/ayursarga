@@ -17,15 +17,14 @@ import Voices from "@/components/Voices";
 import Contact from "@/components/Contact";
 import GeneralQuestions from "@/components/GeneralQuestions";
 import Footer from "@/components/Footer";
-import BotanicalTransition from "@/components/BotanicalTransition";
-import type { MatchProfile } from "@/lib/matchProfile";
+import type { GuidanceProfile } from "@/lib/guidanceProfile";
 
 // Particle field uses browser animation APIs - load client-only, no SSR.
 const ParticleField = dynamic(() => import("@/components/ParticleField"), { ssr: false });
 
 export default function PageShell() {
   const [ready, setReady] = useState(false);
-  const [matchProfile, setMatchProfile] = useState<MatchProfile | null>(null);
+  const [guidanceProfile, setGuidanceProfile] = useState<GuidanceProfile | null>(null);
 
   useEffect(() => {
     if (ready) document.body.classList.remove("loading");
@@ -44,16 +43,11 @@ export default function PageShell() {
         <main>
           <Hero ready={ready} />
           <Philosophy />
-          <BotanicalTransition tone="cream-to-forest" />
-          <Journey onComplete={setMatchProfile} />
-          <BotanicalTransition tone="forest-to-cream" reverse />
+          <Journey onComplete={setGuidanceProfile} />
           <Therapies />
-          <BotanicalTransition tone="cream-to-forest" />
           <Sanctuary />
-          <BotanicalTransition tone="forest-to-cream" reverse />
           <Voices />
-          <BotanicalTransition tone="cream" />
-          <Contact matchProfile={matchProfile} />
+          <Contact guidanceProfile={guidanceProfile} />
           <GeneralQuestions />
         </main>
         <Footer />

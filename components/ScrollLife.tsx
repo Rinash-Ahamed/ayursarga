@@ -10,12 +10,12 @@ export default function ScrollLife() {
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const context = gsap.context(() => {
-      gsap.utils.toArray<HTMLElement>(".family-story > img").forEach((image) => {
-        gsap.fromTo(image, { scale: 1.06, yPercent: -3 }, {
-          scale: 1.06,
+      gsap.utils.toArray<HTMLElement>(".family-story-media").forEach((media) => {
+        gsap.fromTo(media, { scale: 1.035, yPercent: -2.5 }, {
+          scale: 1.035,
           yPercent: 3,
           ease: "none",
-          scrollTrigger: { trigger: image.parentElement, start: "top bottom", end: "bottom top", scrub: 0.35 },
+          scrollTrigger: { trigger: media.parentElement, start: "top bottom", end: "bottom top", scrub: 0.35 },
         });
       });
     });

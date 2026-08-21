@@ -14,6 +14,7 @@ const CORE_VALUES = [
 
 export default function Hero({ ready }: { ready: boolean }) {
   const heroRef = useRef<HTMLElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [activeValue, setActiveValue] = useState(0);
   const [isHeroVisible, setIsHeroVisible] = useState(true);
   const shouldReduceMotion = useReducedMotion();
@@ -37,8 +38,21 @@ export default function Hero({ ready }: { ready: boolean }) {
     return () => window.clearInterval(interval);
   }, [isHeroVisible, shouldReduceMotion]);
 
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (shouldReduceMotion || !isHeroVisible) {
+      video.pause();
+      return;
+    }
+    void video.play().catch(() => undefined);
+  }, [isHeroVisible, shouldReduceMotion]);
+
   return (
     <section id="hero" ref={heroRef}>
+      <video ref={videoRef} className="hero-background-video" autoPlay muted loop playsInline preload="metadata" aria-hidden="true" tabIndex={-1}>
+        <source src="/hero%20image%20video.mp4" type="video/mp4" media="(min-width: 901px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)" />
+      </video>
       <div className="hero-content">
         <motion.p className="eyebrow" initial={{ opacity: 0, y: 14 }} animate={ready ? { opacity: 1, y: 0 } : {}} transition={{ delay: 0.25 }}>Ayurvedic care, guided with trust</motion.p>
         <h1>
@@ -51,15 +65,16 @@ export default function Hero({ ready }: { ready: boolean }) {
           ))}
         </h1>
         <motion.p className="hero-sub" initial={{ opacity: 0, y: 20 }} animate={ready ? { opacity: 1, y: 0 } : {}} transition={{ delay: 0.82, duration: 0.8 }}>
-          Discover approved Ayurvedic hospitals, compare suitable wellness services and request care with human guidance whenever you need it.
+          Discover trusted hospitals and wellness centres, compare your options, and connect with the care that fits your needs.
         </motion.p>
         <motion.div className="hero-ctas" initial={{ opacity: 0, y: 20 }} animate={ready ? { opacity: 1, y: 0 } : {}} transition={{ delay: 1, duration: 0.7 }}>
           <MagneticButton href="/centers" className="btn-magnetic hero-search-button">
-            Search for Ayurvedic Center
+            <svg className="hero-search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 4.2 4.2" /></svg>
+            <span>Search for Ayurvedic Center</span>
           </MagneticButton>
           <div className="hero-support-actions">
             <MagneticButton href="#contact" className="btn-magnetic btn-secondary">Talk to Ayursarga</MagneticButton>
-            <a href="#matching" className="btn-text">Help Me Choose &darr;</a>
+            <a href="#matching" className="btn-text">Help me choose &darr;</a>
           </div>
         </motion.div>
         <motion.div className="hero-values" initial={{ opacity: 0 }} animate={ready ? { opacity: 1 } : {}} transition={{ delay: 1.2 }}>

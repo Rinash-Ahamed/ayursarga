@@ -22,7 +22,8 @@ export async function POST(request: Request) {
     const data: ContactEmailData = {
       name: toTrimmedString(body.name, 100), email: toTrimmedString(body.email, 160),
       phone: toTrimmedString(body.phone, 50), interest: toTrimmedString(body.interest, 100),
-      message: toTrimmedString(body.message, 3000), matchProfile: toTrimmedString(body.matchProfile, 2000),
+      message: toTrimmedString(body.message, 3000),
+      guidanceProfile: toTrimmedString(body.guidanceProfile, 1200),
     };
     if (!data.name || !data.phone || !data.interest || !isValidEmail(data.email)) {
       return apiJson({ error: "Please complete all required fields." }, 400);

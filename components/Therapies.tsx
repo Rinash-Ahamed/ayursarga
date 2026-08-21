@@ -1,56 +1,29 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { hasPublicHospitalForService } from "@/services/hospitals/publicHospitalService";
+import { useEffect, useRef, useState } from "react";
 import { RevealLines, RevealWords } from "./Reveal";
 import TreatmentFilm from "./TreatmentFilm";
 
 const PATHS = [
-  ["Postnatal recovery", "Restorative care for the mother after birth, with support options for baby and family.", "/Postnatal Recovery.jpeg"],
-  ["Panchakarma", "Doctor-guided cleansing and renewal programmes tailored to your constitution.", "/Panchakarma.jpeg"],
-  ["Stress management", "Quiet stays, therapies and practices designed to settle an overextended system.", "/Stress Managemen.jpeg"],
-  ["Weight management", "Sustainable Ayurvedic programmes built around food, movement and metabolic health.", "/WT Management.jpeg"],
-  ["PCOS care", "Holistic support for hormonal balance, daily rhythm and long-term wellbeing.", "/PCOS Care.jpeg"],
-  ["Women’s wellness", "Personalised care through changing seasons of a woman’s health.", "/Womesn Wellness.jpeg"],
-  ["Corporate wellness", "Restorative programmes for teams, leaders and high-pressure work cultures.", "/Corperate Wellness.jpeg"],
-  ["Couples retreat", "Shared time to slow down, reconnect and return home with healthier rhythms.", "/Couplea Retreat.jpeg"],
-  ["Detox retreat", "A considered reset through therapeutic care, nourishing food and genuine rest.", "/Detox Retreat.jpeg"],
+  ["Prenatal care", "Comprehensive care for mother and baby throughout pregnancy, with guidance and support for a healthy journey.", "/wellness/prenatal-care.jpg"],
+  ["Postnatal care", "Restorative support after childbirth, helping the mother recover while nurturing the baby and family.", "/wellness/postnatal-care.jpeg"],
+  ["Lactation support", "Dedicated lactation care for mother and baby, with guidance for confident and comfortable feeding.", "/wellness/lactation-support.jpg"],
+  ["Panchakarma", "Doctor-guided cleansing and renewal programmes tailored to your constitution.", "/wellness/panchakarma.jpeg"],
+  ["Women’s wellness", "Personalised Ayurvedic care supporting women’s health, hormonal balance, and wellbeing through every life stage.", "/wellness/womens-wellness.jpeg"],
+  ["PCOS care", "Personalised Ayurvedic support focused on menstrual health, metabolic balance, and sustainable daily wellbeing.", "/wellness/pcos-care.jpeg"],
+  ["Stress management", "Quiet stays, therapies and practices designed to settle an overextended system.", "/wellness/stress-management.jpeg"],
+  ["Detox retreat", "A restorative Ayurvedic stay combining guided therapies, mindful routines, and nourishing care.", "/wellness/detox-retreat.jpeg"],
+  ["Couples retreat", "A shared wellness experience designed for rest, renewal, and meaningful time together.", "/wellness/couples-retreat.jpeg"],
 ] as const;
 
 export default function Therapies() {
   const router = useRouter();
-  const prefersReducedMotion = useReducedMotion();
-  const sliderRef = useRef<HTMLDivElement>(null);
   const messageTimerRef = useRef<number | null>(null);
-  const [isPaused, setIsPaused] = useState(false);
   const [busyService, setBusyService] = useState<string | null>(null);
   const [availabilityMessage, setAvailabilityMessage] = useState<string | null>(null);
-
-  const moveSlider = useCallback((direction: -1 | 1) => {
-    const slider = sliderRef.current;
-    const card = slider?.querySelector<HTMLElement>(".path-card");
-    if (!slider || !card) return;
-
-    const gap = Number.parseFloat(window.getComputedStyle(slider).columnGap) || 16;
-    const step = card.offsetWidth + gap;
-    const reachedEnd = slider.scrollLeft + slider.clientWidth >= slider.scrollWidth - step / 2;
-    const reachedStart = slider.scrollLeft <= step / 2;
-    const nextLeft = direction === 1 && reachedEnd
-      ? 0
-      : direction === -1 && reachedStart
-        ? slider.scrollWidth
-        : slider.scrollLeft + direction * step;
-    slider.scrollTo({ left: nextLeft, behavior: "smooth" });
-  }, []);
-
-  useEffect(() => {
-    if (prefersReducedMotion || isPaused || busyService) return;
-    const interval = window.setInterval(() => moveSlider(1), 6000);
-    return () => window.clearInterval(interval);
-  }, [busyService, isPaused, moveSlider, prefersReducedMotion]);
 
   useEffect(() => () => {
     if (messageTimerRef.current) window.clearTimeout(messageTimerRef.current);
@@ -67,6 +40,7 @@ export default function Therapies() {
     setBusyService(serviceName);
     setAvailabilityMessage(null);
     try {
+      const { hasPublicHospitalForService } = await import("@/services/hospitals/publicHospitalService");
       if (await hasPublicHospitalForService(serviceName)) {
         router.push(`/centers?service=${encodeURIComponent(serviceName)}`);
         return;
@@ -85,27 +59,12 @@ export default function Therapies() {
     <p className="section-intro">From maternal care to deep rejuvenation, explore programmes selected around your goals - not a generic package list.</p>
     <TreatmentFilm />
     <motion.div id="family-wellness" className="family-story" initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .35 }}>
-      <Image src="/mother-child-garden.png" alt="Mother and child exploring medicinal leaves in a Kerala retreat garden" width={1152} height={1440} sizes="(max-width: 900px) 100vw, 42vw" quality={82} />
-      <div><span className="eyebrow">Mother &amp; Child</span><h3>Wellness that holds the whole family.</h3><p>From prenatal preparation to postnatal recovery, baby care and lactation support, explore active services from Ayursarga hospital partners.</p></div>
+      <div className="family-story-media"><Image src="/wellness/mother-child-garden.png" alt="Mother and child exploring medicinal leaves in a Kerala retreat garden" width={1152} height={1440} sizes="(max-width: 900px) 100vw, 42vw" quality={82} /></div>
+      <div className="family-story-copy"><span className="eyebrow">Mother &amp; Child</span><h3>Wellness that holds the whole family.</h3><p>From prenatal preparation to postnatal recovery, baby care and lactation support, explore active services from Ayursarga hospital partners.</p></div>
     </motion.div>
-    <div className="path-slider-heading">
-      <span>Choose a wellness path</span>
-      <div className="path-slider-controls" aria-label="Wellness path slider controls">
-        <button type="button" onClick={() => moveSlider(-1)} aria-label="Show previous wellness path">&#8592;</button>
-        <button type="button" onClick={() => moveSlider(1)} aria-label="Show next wellness path">&#8594;</button>
-      </div>
-    </div>
+    <div className="path-grid-heading"><span>Choose a wellness path</span><p>Select a path to find Ayursarga centers currently offering that care.</p></div>
     {availabilityMessage && <div className="path-availability-message" role="status">{availabilityMessage}</div>}
-    <div
-      className="path-grid"
-      ref={sliderRef}
-      onPointerEnter={() => setIsPaused(true)}
-      onPointerLeave={() => setIsPaused(false)}
-      onFocusCapture={() => setIsPaused(true)}
-      onBlurCapture={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) setIsPaused(false);
-      }}
-    >{PATHS.map(([name, body, image], i) => <motion.button
+    <div className="path-grid">{PATHS.map(([name, body, image], i) => <motion.button
       type="button"
       className="path-card"
       key={name}
@@ -117,10 +76,10 @@ export default function Therapies() {
       viewport={{ once: true, amount: .5 }}
       transition={{ delay: (i % 3) * .06, duration: .7 }}
     >
-      <motion.span className="path-card-media" initial={{ opacity: 0, scale: 1.06 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true, amount: .35 }} transition={{ duration: 1.1, delay: .12 + (i % 3) * .05 }}>
-        <Image src={image} alt="" fill sizes="(max-width: 600px) 88vw, (max-width: 900px) 50vw, 33vw" quality={82} />
+      <motion.span className="path-card-media" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true, amount: .25 }} transition={{ duration: .7, delay: .1 + (i % 3) * .05 }}>
+        <Image src={image} alt={`${name} Ayurvedic wellness care`} fill sizes="(max-width: 600px) calc(100vw - 44px), (max-width: 900px) 50vw, 33vw" quality={82} />
       </motion.span>
-      <span className="path-leaf">0{i + 1}</span><h3>{name}</h3><p>{body}</p>
+      <span className="path-card-copy"><h3>{name}</h3><p>{body}</p><span className="path-card-action">Explore centers <span aria-hidden="true">&#8594;</span></span></span>
     </motion.button>)}</div>
   </div></section>;
 }
