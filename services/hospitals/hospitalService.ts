@@ -13,9 +13,11 @@ import { createAuditedDocument, getArchiveMetadata, getAuditActorId, updateAudit
 
 export { listPublicHospitals } from "@/services/hospitals/publicHospitalService";
 
-type HospitalAdminUpdate = Partial<HospitalFields & Pick<HospitalDocument, "status" | "isPublic">>;
+type HospitalAdminUpdate = Partial<HospitalFields & Pick<HospitalDocument,
+  "status" | "isPublic" | "ayursargaRating" | "ayursargaReviewNote"
+>>;
 type HospitalProfileInput = Pick<HospitalDocument,
-  "name" | "description" | "email" | "phone" | "address" | "city" | "state"
+  "name" | "description" | "email" | "phone" | "address" | "city" | "state" | "imageUrls"
 >;
 
 export const getHospital = (id: string) => readDocument<HospitalDocument>(COLLECTIONS.hospitals, id);
@@ -49,6 +51,9 @@ export function createHospital(input: HospitalFields, createdBy: string) {
     contractSignedAt: null,
     contractSignedBy: null,
     contractUrl: null,
+    imageUrls: [],
+    ayursargaRating: null,
+    ayursargaReviewNote: null,
     activatedAt: null,
     activatedBy: null,
     createdBy,

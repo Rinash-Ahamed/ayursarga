@@ -13,6 +13,8 @@ import { PortalPagination } from "@/components/portal/PortalPagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 import { formatServiceDuration } from "@/utils/duration";
+import { HospitalImageGallery } from "@/components/hospital/HospitalImageGallery";
+import { getHospitalImageUrls } from "@/features/hospitals/images";
 
 export function HospitalDetails({ hospitalId }: { hospitalId: string }) {
   const [hospital, setHospital] = useState<DocumentRecord<HospitalDocument> | null>(null);
@@ -31,6 +33,7 @@ export function HospitalDetails({ hospitalId }: { hospitalId: string }) {
     <PortalLoadGuard loading={hospitalLoading || (isLoading && !hospital)} error={hospitalError} hasData={Boolean(hospital)} fallbackHref="/app" loadingMessage="Loading hospital details…" />
     <PortalFeedback error={error} empty={!error && !hospital ? "Loading hospital details…" : undefined} />
     {hospital && <><article className="portal-card">
+      <HospitalImageGallery imageUrls={getHospitalImageUrls(hospital)} hospitalName={hospital.name} />
       <p>{hospital.description}</p><div className="portal-card-meta"><span>{hospital.address}</span><span>{hospital.city}, {hospital.state}</span><span>{hospital.phone}</span></div>
     </article><h2 style={{ margin: "34px 0 18px", color: "var(--forest)", fontFamily: "var(--font-display)", fontWeight: 400 }}>Active services</h2>
     <div className="portal-grid">{services.map((service) => <article className="portal-card" key={service.id}>

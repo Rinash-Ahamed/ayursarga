@@ -34,6 +34,9 @@ export type HospitalDocument = AuditedDocument & {
   city: string;
   state: string;
   imageUrl: string | null;
+  imageUrls?: string[];
+  ayursargaRating?: number | null;
+  ayursargaReviewNote?: string | null;
   status: UserStatus;
   isPublic: boolean;
   commissionPercentage: number;

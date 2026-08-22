@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Footer from "@/components/Footer";
 import Nav from "@/components/Nav";
 import PublicHospitalSearch from "@/components/PublicHospitalSearch";
-import PublicRouteEnvironment from "@/components/PublicRouteEnvironment";
 
 export const metadata: Metadata = {
   title: "Explore Ayurvedic Centers | Ayursarga",
@@ -18,12 +17,12 @@ export default async function CentersPage({ searchParams }: CentersPageProps) {
   const service = typeof requestedService === "string" ? requestedService.trim().slice(0, 100) : "";
 
   return (
-    <PublicRouteEnvironment>
+    <>
       <Nav sectionPrefix="/" solid />
       <main className="centers-directory-page">
         <PublicHospitalSearch initialService={service} />
       </main>
       <Footer sectionPrefix="/" />
-    </PublicRouteEnvironment>
+    </>
   );
 }
