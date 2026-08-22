@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import dynamic from "next/dynamic";
 import SmoothScroll from "@/components/SmoothScroll";
-import Preloader from "@/components/Preloader";
 import ScrollLogo from "@/components/ScrollLogo";
 import WhatsAppBubble from "@/components/WhatsAppBubble";
 import ScrollLife from "@/components/ScrollLife";
@@ -23,16 +22,10 @@ import type { GuidanceProfile } from "@/lib/guidanceProfile";
 const ParticleField = dynamic(() => import("@/components/ParticleField"), { ssr: false });
 
 export default function PageShell() {
-  const [ready, setReady] = useState(false);
   const [guidanceProfile, setGuidanceProfile] = useState<GuidanceProfile | null>(null);
-
-  useEffect(() => {
-    if (ready) document.body.classList.remove("loading");
-  }, [ready]);
 
   return (
     <>
-      <Preloader onDone={() => setReady(true)} />
       <ParticleField />
       <ScrollLogo />
       <WhatsAppBubble />
@@ -41,7 +34,7 @@ export default function PageShell() {
 
       <SmoothScroll>
         <main>
-          <Hero ready={ready} />
+          <Hero />
           <Philosophy />
           <Journey onComplete={setGuidanceProfile} />
           <Therapies />

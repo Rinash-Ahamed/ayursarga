@@ -13,6 +13,7 @@ import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 type DashboardStats = {
   activeHospitals: number | null;
   pendingHospitals: number | null;
+  inactiveHospitals: number | null;
   consumers: number | null;
   monthlyBookings: number | null;
   monthlyCommission: number | null;
@@ -21,6 +22,7 @@ type DashboardStats = {
 const EMPTY_STATS: DashboardStats = {
   activeHospitals: null,
   pendingHospitals: null,
+  inactiveHospitals: null,
   consumers: null,
   monthlyBookings: null,
   monthlyCommission: null,
@@ -46,6 +48,7 @@ export function AdminDashboard() {
     void Promise.allSettled([
       countDocuments(COLLECTIONS.hospitals, [{ field: "status", operator: "==", value: "active" }]),
       countDocuments(COLLECTIONS.hospitals, [{ field: "status", operator: "==", value: "pending" }]),
+      countDocuments(COLLECTIONS.hospitals, [{ field: "status", operator: "==", value: "inactive" }]),
       countDocuments(COLLECTIONS.users, [{ field: "role", operator: "==", value: "consumer" }]),
       countDocuments(COLLECTIONS.bookings, createdThisMonth),
       sumDocuments(COLLECTIONS.bookings, "estimatedCommission", completedThisMonth),
@@ -55,9 +58,10 @@ export function AdminDashboard() {
       setStats({
         activeHospitals: resultValue(results[0]),
         pendingHospitals: resultValue(results[1]),
-        consumers: resultValue(results[2]),
-        monthlyBookings: resultValue(results[3]),
-        monthlyCommission: resultValue(results[4]),
+        inactiveHospitals: resultValue(results[2]),
+        consumers: resultValue(results[3]),
+        monthlyBookings: resultValue(results[4]),
+        monthlyCommission: resultValue(results[5]),
       });
       setError(results.some((result) => result.status === "rejected")
         ? "Some dashboard totals are temporarily unavailable. The available figures are shown below."
@@ -78,6 +82,7 @@ export function AdminDashboard() {
         <div className="portal-stat-split">
           <div><strong>{value(stats.activeHospitals)}</strong><small>Active</small></div>
           <div><strong>{value(stats.pendingHospitals)}</strong><small>Pending</small></div>
+          <div><strong>{value(stats.inactiveHospitals)}</strong><small>Inactive</small></div>
         </div>
       </article>
       <article className="portal-card portal-stat"><strong>{value(stats.consumers)}</strong><span>Registered consumers</span></article>

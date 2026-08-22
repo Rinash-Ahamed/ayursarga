@@ -9,6 +9,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { HospitalFormFields } from "@/components/forms/HospitalFormFields";
 import { PortalToast } from "@/components/portal/PortalToast";
+import { HospitalImageFields } from "@/components/forms/HospitalImageFields";
+import { HospitalImageGallery } from "@/components/hospital/HospitalImageGallery";
+import { getHospitalImageUrls, validateHospitalImageUrls } from "@/features/hospitals/images";
 
 export function HospitalProfile() {
   const { userProfile } = useAuth();
@@ -17,6 +20,7 @@ export function HospitalProfile() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<HospitalValidationErrors>({});
+  const [imageError, setImageError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -26,12 +30,15 @@ export function HospitalProfile() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!id || !hospital) return;
-    const values = hospitalFormValues(new FormData(event.currentTarget));
+    const form = new FormData(event.currentTarget);
+    const values = hospitalFormValues(form);
     const validation = validateHospitalFields({ ...values, commissionPercentage: hospital.commissionPercentage });
+    const images = validateHospitalImageUrls(form.getAll("hospitalImageUrl"));
     setFieldErrors(validation.errors);
+    setImageError(images.error);
     setMessage(null);
     setError(null);
-    if (!validation.isValid) {
+    if (!validation.isValid || images.error) {
       setError("Please check the highlighted fields, then save the profile again.");
       return;
     }
@@ -46,6 +53,7 @@ export function HospitalProfile() {
         city: validation.data.city,
         state: validation.data.state,
         description: validation.data.description,
+        imageUrls: images.imageUrls,
       };
       await updateHospitalProfile(id, profile, hospital);
       setHospital((current) => current ? { ...current, ...profile } : current);
@@ -59,7 +67,9 @@ export function HospitalProfile() {
 
   return <PortalShell role="hospital" title="Hospital Profile">{hospital && <form className="portal-card portal-form" onSubmit={submit} noValidate>
     <p className="full portal-form-note">Complete every field marked with * before saving the hospital profile.</p>
+    <HospitalImageGallery imageUrls={getHospitalImageUrls(hospital)} hospitalName={hospital.name} />
     <HospitalFormFields defaultValues={hospital} errors={fieldErrors} />
+    <HospitalImageFields defaultValues={getHospitalImageUrls(hospital)} error={imageError} />
     <PortalToast message={error} tone="error" />
     <PortalToast message={message} />
     <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save profile"}</button></div>

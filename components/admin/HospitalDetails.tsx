@@ -26,6 +26,8 @@ import { hospitalFormValues, validateHospitalFields, type HospitalValidationErro
 import { HospitalFormFields } from "@/components/forms/HospitalFormFields";
 import { sendHospitalLoginSetup } from "@/services/auth/hospitalAccountService";
 import { AdminHospitalPackages } from "@/components/admin/HospitalPackages";
+import { HospitalImageGallery } from "@/components/hospital/HospitalImageGallery";
+import { getHospitalImageUrls } from "@/features/hospitals/images";
 
 function formatDate(value: unknown) {
   const date = toDate(value);
@@ -51,6 +53,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   const [editing, setEditing] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<HospitalValidationErrors>({});
   const [pendingAction, setPendingAction] = useState<PendingHospitalAction | null>(null);
+  const [assessmentRating, setAssessmentRating] = useState<number | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -65,6 +68,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     }
     setHospital(record);
     setContractUrl(record?.contractUrl ?? "");
+    setAssessmentRating(record?.ayursargaRating ?? null);
     setLoading(false);
     if (!record) setError("We could not find this hospital. Return to the hospital list and choose another record.");
     return record;
@@ -169,6 +173,40 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     }
   }
 
+  async function savePublicAssessment(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!hospital || busy) return;
+    if (hospital.status !== "active") {
+      setError("Public assessments can be added only after the hospital is active.");
+      return;
+    }
+
+    const form = new FormData(event.currentTarget);
+    const ratingValue = String(form.get("ayursargaRating") ?? "").trim();
+    const reviewNote = String(form.get("ayursargaReviewNote") ?? "").trim().slice(0, 400);
+    const rating = ratingValue ? Number(ratingValue) : null;
+    if (rating !== null && (!Number.isFinite(rating) || rating < 1 || rating > 5)) {
+      setError("Enter an Ayursarga assessment between 1 and 5.");
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      await updateHospital(hospital.id, {
+        ayursargaRating: rating === null ? null : Math.round(rating * 10) / 10,
+        ayursargaReviewNote: reviewNote || null,
+      }, hospital);
+      await reload();
+      setMessage("The public Ayursarga assessment has been updated.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "We could not save the public assessment. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const contractStatus = hospital?.contractStatus ?? "not_generated";
   const generatedAt = hospital && contractStatus !== "not_generated" && isOnOrAfter(hospital.contractGeneratedAt, hospital.createdAt)
     ? hospital.contractGeneratedAt
@@ -200,6 +238,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
           <HospitalFormFields defaultValues={hospital} errors={fieldErrors} />
           <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save details"}</button><button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditing(false); setFieldErrors({}); setError(null); }}>Cancel</button></div>
         </form> : <>
+          <HospitalImageGallery imageUrls={getHospitalImageUrls(hospital)} hospitalName={hospital.name} />
           <p>{hospital.description || "No description provided."}</p>
           <div className="portal-card-meta">
             <span>{hospital.email}</span><span>{hospital.phone}</span><span>{hospital.city}, {hospital.state}</span><span>Commission {hospital.commissionPercentage}%</span>
@@ -237,6 +276,40 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         </div>
         <p>Start by generating the contract. After the hospital returns the signed copy, confirm it here and paste the signed contract URL. You can then activate the hospital for consumers.</p>
       </article>
+      {hospital.status === "active" && <article className="portal-card portal-assessment-card">
+        <div className="portal-row-heading"><h2>Public Ayursarga assessment</h2><span className="portal-status" data-status="active">Public</span></div>
+        <p>Use this for Ayursarga&apos;s own assessment and editorial note. It is identified publicly as Ayursarga content, not as verified patient feedback.</p>
+        <form className="portal-form portal-edit-form" onSubmit={savePublicAssessment} noValidate>
+          <fieldset className="portal-rating-field full">
+            <legend>Ayursarga rating</legend>
+            <input type="hidden" name="ayursargaRating" value={assessmentRating ?? ""} />
+            <div className="portal-star-picker" role="group" aria-label="Select Ayursarga rating out of five">
+              {Array.from({ length: 5 }, (_, index) => index + 1).map((star) => {
+                const halfValue = star === 1 ? 1 : star - 0.5;
+                const fill = assessmentRating !== null && assessmentRating >= star
+                  ? "full"
+                  : assessmentRating === halfValue && halfValue !== star ? "half" : "empty";
+                return <span className="portal-star-choice" key={star}>
+                  <span className={`portal-star-visual ${fill}`} aria-hidden="true">★</span>
+                  <button type="button" aria-label={`Select ${halfValue} out of 5`} aria-pressed={assessmentRating === halfValue} onClick={() => setAssessmentRating(halfValue)} />
+                  <button type="button" aria-label={`Select ${star} out of 5`} aria-pressed={assessmentRating === star} onClick={() => setAssessmentRating(star)} />
+                </span>;
+              })}
+              <span>{assessmentRating ? `${assessmentRating} / 5 selected` : "No rating selected"}</span>
+              {assessmentRating !== null && <button className="portal-rating-clear" type="button" onClick={() => setAssessmentRating(null)}>Clear</button>}
+            </div>
+          </fieldset>
+          <label className="full">Public Ayursarga note
+            <textarea
+              name="ayursargaReviewNote"
+              maxLength={400}
+              defaultValue={hospital.ayursargaReviewNote ?? ""}
+              placeholder="Add a concise, factual note about this center."
+            />
+          </label>
+          <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save public assessment"}</button></div>
+        </form>
+      </article>}
       <AdminHospitalPackages hospitalId={hospital.id} />
     </>}
     <PortalDialog open={Boolean(pendingAction)} title={actionDialog.title} message={actionDialog.message} tone={actionDialog.tone} confirmLabel={actionDialog.confirmLabel} busy={busy} onCancel={() => setPendingAction(null)} onConfirm={() => void confirmPendingAction()} />

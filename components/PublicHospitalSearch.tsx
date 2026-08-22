@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { HospitalDocument, ServiceDocument } from "@/features/firestore/models";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import {
@@ -15,6 +15,7 @@ import type {
 } from "@/services/firestore/firestoreService";
 import { formatCurrency } from "@/utils/currency";
 import { formatServiceDuration } from "@/utils/duration";
+import { getHospitalImageUrls } from "@/features/hospitals/images";
 
 type ServicePageState = {
   items: DocumentRecord<ServiceDocument>[];
@@ -27,6 +28,97 @@ type ServicePageState = {
 type PublicHospitalSearchProps = {
   initialService?: string;
 };
+
+function PublicHospitalImages({ hospital, priority = false }: { hospital: DocumentRecord<HospitalDocument>; priority?: boolean }) {
+  const [activeImage, setActiveImage] = useState(0);
+  const [slideDirection, setSlideDirection] = useState<"previous" | "next">("next");
+  const [failedImages, setFailedImages] = useState<string[]>([]);
+  const [loadedImageUrl, setLoadedImageUrl] = useState<string | null>(null);
+  const navigationRequest = useRef(0);
+  const images = getHospitalImageUrls(hospital).filter((url) => !failedImages.includes(url));
+  const displayedIndex = Math.min(activeImage, Math.max(images.length - 1, 0));
+  const imageUrl = images[displayedIndex];
+
+  function showImage(index: number, direction: "previous" | "next") {
+    const targetUrl = images[index];
+    if (!targetUrl || index === displayedIndex) return;
+    const requestId = ++navigationRequest.current;
+    const preload = new window.Image();
+    preload.src = targetUrl;
+
+    const reveal = () => {
+      if (requestId !== navigationRequest.current) return;
+      setSlideDirection(direction);
+      setLoadedImageUrl(null);
+      setActiveImage(index);
+    };
+    const reject = () => {
+      if (requestId !== navigationRequest.current) return;
+      setFailedImages((current) => current.includes(targetUrl) ? current : [...current, targetUrl]);
+      setActiveImage(0);
+    };
+
+    if (preload.complete) {
+      if (preload.naturalWidth > 0) reveal();
+      else reject();
+      return;
+    }
+    preload.onload = reveal;
+    preload.onerror = reject;
+  }
+
+  if (!imageUrl) return <div className="public-center-card-image placeholder" aria-hidden="true">
+    <span>Ayursarga</span>
+  </div>;
+
+  return <div className="public-center-card-image">
+    {/* Hospital images use Admin-approved external HTTPS or Google Drive sources. */}
+    {/* eslint-disable-next-line @next/next/no-img-element */}
+    <img
+      key={imageUrl}
+      className={loadedImageUrl === imageUrl ? "is-loaded" : ""}
+      src={imageUrl}
+      alt={`${hospital.name} Ayurvedic center`}
+      data-direction={slideDirection}
+      loading={priority ? "eager" : "lazy"}
+      fetchPriority={priority ? "high" : "auto"}
+      decoding="async"
+      referrerPolicy="no-referrer"
+      onLoad={() => setLoadedImageUrl(imageUrl)}
+      onError={() => {
+        setFailedImages((current) => [...current, imageUrl]);
+        setActiveImage(0);
+      }}
+    />
+    {images.length > 1 && <div className="public-center-image-arrows">
+      <button
+        type="button"
+        aria-label="Show previous hospital image"
+        onClick={() => showImage((displayedIndex - 1 + images.length) % images.length, "previous")}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7" /></svg>
+      </button>
+      <button
+        type="button"
+        aria-label="Show next hospital image"
+        onClick={() => showImage((displayedIndex + 1) % images.length, "next")}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
+      </button>
+    </div>}
+    {images.length > 1 && <div className="public-center-image-nav" aria-label={`${hospital.name} image gallery`}>
+      {images.map((url, index) => <button
+        type="button"
+        key={url}
+        className={index === displayedIndex ? "active" : ""}
+        aria-label={`Show image ${index + 1} of ${images.length}`}
+        aria-pressed={index === displayedIndex}
+        onClick={() => showImage(index, index < displayedIndex ? "previous" : "next")}
+      />)}
+      <span>{displayedIndex + 1} / {images.length}</span>
+    </div>}
+  </div>;
+}
 
 export default function PublicHospitalSearch({ initialService = "" }: PublicHospitalSearchProps) {
   const [search, setSearch] = useState("");
@@ -141,24 +233,37 @@ export default function PublicHospitalSearch({ initialService = "" }: PublicHosp
         )}
 
         <div className="public-center-grid">
-          {visibleHospitals.map((hospital) => {
+          {visibleHospitals.map((hospital, hospitalIndex) => {
             const isExpanded = expandedHospitalId === hospital.id;
             const servicePage = servicePages[hospital.id];
             return (
               <article className="public-center-card" key={hospital.id}>
-                <div className="public-center-card-topline">
-                  <span>{hospital.city}, {hospital.state}</span>
+                <PublicHospitalImages hospital={hospital} priority={hospitalIndex === 0} />
+                <div className="public-center-card-body">
+                  <div className="public-center-card-topline">
+                    <span>{hospital.city}, {hospital.state}</span>
+                  </div>
+                  <h3>{hospital.name}</h3>
+                  {hospital.ayursargaRating && <div className="public-center-assessment" aria-label={`Ayursarga assessment ${hospital.ayursargaRating} out of 5`}>
+                    <span className="public-center-stars" aria-hidden="true">
+                      <span>★★★★★</span>
+                      <span style={{ width: `${hospital.ayursargaRating / 5 * 100}%` }}>★★★★★</span>
+                    </span>
+                    <strong>{hospital.ayursargaRating.toFixed(1)}</strong>
+                  </div>}
+                  {hospital.description && <p>{hospital.description}</p>}
+                  {hospital.ayursargaReviewNote && <div className="public-center-review">
+                    <p>{hospital.ayursargaReviewNote}</p>
+                  </div>}
+                  <button
+                    type="button"
+                    className="public-center-toggle"
+                    aria-expanded={isExpanded}
+                    onClick={() => toggleServices(hospital.id)}
+                  >
+                    {isExpanded ? "Hide treatments" : "View treatments"}
+                  </button>
                 </div>
-                <h3>{hospital.name}</h3>
-                {hospital.description && <p>{hospital.description}</p>}
-                <button
-                  type="button"
-                  className="public-center-toggle"
-                  aria-expanded={isExpanded}
-                  onClick={() => toggleServices(hospital.id)}
-                >
-                  {isExpanded ? "Hide treatments" : "View treatments"}
-                </button>
 
                 {isExpanded && (
                   <div className="public-service-list">

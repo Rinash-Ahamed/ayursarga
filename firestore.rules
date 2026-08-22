@@ -60,7 +60,8 @@ service cloud.firestore {
     function hasExactHospitalFields() {
       return request.resource.data.keys().hasOnly([
         'name', 'description', 'email', 'phone', 'address', 'city', 'state',
-        'imageUrl', 'status', 'isPublic', 'commissionPercentage',
+        'imageUrl', 'imageUrls', 'ayursargaRating', 'ayursargaReviewNote',
+        'status', 'isPublic', 'commissionPercentage',
         'contractStatus', 'contractGeneratedAt', 'contractGeneratedBy',
         'contractSignedAt', 'contractSignedBy', 'contractUrl', 'activatedAt', 'activatedBy',
         'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
@@ -88,7 +89,41 @@ service cloud.firestore {
         && request.resource.data.state is string
         && request.resource.data.state.size() >= 2
         && request.resource.data.state.size() <= 80
-        && (request.resource.data.imageUrl == null || request.resource.data.imageUrl is string)
+        && (request.resource.data.get('imageUrl', null) == null
+          || request.resource.data.get('imageUrl', null) is string)
+        && (!request.resource.data.keys().hasAny(['imageUrls']) || (
+          request.resource.data.imageUrls is list
+          && request.resource.data.imageUrls.size() <= 4
+          && (request.resource.data.imageUrls.size() < 1 || (
+            request.resource.data.imageUrls[0] is string
+            && request.resource.data.imageUrls[0].size() <= 500
+            && request.resource.data.imageUrls[0].matches('https://.+')
+          ))
+          && (request.resource.data.imageUrls.size() < 2 || (
+            request.resource.data.imageUrls[1] is string
+            && request.resource.data.imageUrls[1].size() <= 500
+            && request.resource.data.imageUrls[1].matches('https://.+')
+          ))
+          && (request.resource.data.imageUrls.size() < 3 || (
+            request.resource.data.imageUrls[2] is string
+            && request.resource.data.imageUrls[2].size() <= 500
+            && request.resource.data.imageUrls[2].matches('https://.+')
+          ))
+          && (request.resource.data.imageUrls.size() < 4 || (
+            request.resource.data.imageUrls[3] is string
+            && request.resource.data.imageUrls[3].size() <= 500
+            && request.resource.data.imageUrls[3].matches('https://.+')
+          ))
+        ))
+        && (request.resource.data.get('ayursargaRating', null) == null || (
+          request.resource.data.ayursargaRating is number
+          && request.resource.data.ayursargaRating >= 1
+          && request.resource.data.ayursargaRating <= 5
+        ))
+        && (request.resource.data.get('ayursargaReviewNote', null) == null || (
+          request.resource.data.ayursargaReviewNote is string
+          && request.resource.data.ayursargaReviewNote.size() <= 400
+        ))
         && request.resource.data.commissionPercentage is number
         && request.resource.data.commissionPercentage >= 0
         && request.resource.data.commissionPercentage <= 100;
@@ -152,8 +187,13 @@ service cloud.firestore {
       return (action == 'update'
           && changed.hasOnly([
             'name', 'description', 'email', 'phone', 'address', 'city', 'state',
-            'imageUrl', 'commissionPercentage', 'updatedAt', 'updatedBy', 'lastAuditId'
-          ]))
+            'imageUrl', 'imageUrls', 'ayursargaRating', 'ayursargaReviewNote',
+            'commissionPercentage', 'updatedAt', 'updatedBy', 'lastAuditId'
+          ])
+          && (!changed.hasAny(['ayursargaRating', 'ayursargaReviewNote']) || (
+            resource.data.status == 'active'
+            && request.resource.data.status == 'active'
+          )))
         || (action == 'status_change'
           && resource.data.status == 'active'
           && request.resource.data.status == 'inactive'
@@ -321,7 +361,7 @@ service cloud.firestore {
           hasOperationalHospitalAccess(hospitalId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name', 'description', 'email', 'phone', 'address', 'city', 'state',
-            'updatedAt', 'updatedBy', 'lastAuditId'
+            'imageUrls', 'updatedAt', 'updatedBy', 'lastAuditId'
           ])
         ));
       allow delete: if false;

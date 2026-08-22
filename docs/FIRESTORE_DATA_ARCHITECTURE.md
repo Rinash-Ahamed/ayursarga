@@ -9,7 +9,15 @@ duplicating records or introducing deeply nested documents.
 - `users`: authentication profile and role. Consumer name, Google email, phone,
   and optional address live here under `role: "consumer"`; a duplicate
   `consumers` collection is intentionally not created.
-- `hospitals`: hospital profile, visibility, status, and commission settings.
+- `hospitals`: hospital profile, visibility, status, commission settings, and
+  up to four Google Drive sharing links or externally hosted HTTPS image URLs
+  normalized into `imageUrls`. Hospitals must make Drive images viewable by
+  anyone with the link. Gallery images use a consistent 4:3 presentation. The
+  legacy nullable `imageUrl` remains readable for existing records. Firebase
+  Storage and direct image uploads are intentionally not enabled in this phase.
+  Optional `ayursargaRating` and `ayursargaReviewNote` fields contain clearly
+  labelled Admin-authored editorial content for active public hospitals; they
+  are not patient-review data.
 - `hospitalCapacity`: internal treatment-room totals and current occupancy,
   readable only by Admin and the assigned Hospital.
 - `hospitalStaff`: future hospital-to-user staff assignments.

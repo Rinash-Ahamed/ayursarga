@@ -69,7 +69,11 @@ implementation work unless the project owner explicitly changes a decision.
   contract generation/signing/URLs, activation, public visibility, audit data,
   archive controls, and platform settings.
 - The Hospital Profile may edit only hospital name, official email, phone,
-  city/locality, state, complete address, and optional description.
+  city/locality, state, complete address, optional description, and up to four
+  Google Drive sharing links or externally hosted HTTPS hospital image URLs.
+  Normalize supported Drive sharing links for display and keep gallery frames
+  at a consistent 4:3 ratio. Firebase Storage and direct uploads remain disabled
+  while the project uses the Spark plan.
 - Admin alone controls hospital commission, Pending/Active state, contract
   workflow, signed-contract URL, visibility, activation, and archive/restore.
 - The Admin Users page keeps Consumer and Hospital accounts in separate
@@ -101,9 +105,11 @@ implementation work unless the project owner explicitly changes a decision.
 - Hospital room occupancy belongs in the single audited
   `hospitalCapacity/{hospitalId}` document. It is internal to Admin and the
   assigned Hospital; do not copy it into public Hospital data.
-- Hospital and booking ratings are intentionally out of scope. Do not add
-  rating fields, filters, controls, aggregates, or rating APIs unless the
-  project owner explicitly introduces a future rating phase.
+- Active hospitals may have an Admin-controlled `ayursargaRating` and
+  `ayursargaReviewNote`. Public UI must identify both as Ayursarga editorial
+  content and must never present them as verified patient feedback. Hospitals
+  and Consumers cannot edit these fields. Genuine booking-linked patient
+  ratings, rating aggregates, and rating filters remain out of scope.
 - Keep list reads bounded and cursor-paginated. Prefer Firestore count/sum
   aggregations for dashboard totals and deploy required indexes deliberately.
   Do not load complete collections or add realtime listeners without a genuine
