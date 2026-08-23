@@ -13,10 +13,7 @@ const PATHS = [
   ["Lactation support", "Dedicated lactation care for mother and baby, with guidance for confident and comfortable feeding.", "/wellness/lactation-support.jpg"],
   ["Panchakarma", "Doctor-guided cleansing and renewal programmes tailored to your constitution.", "/wellness/panchakarma.jpeg"],
   ["Women’s wellness", "Personalised Ayurvedic care supporting women’s health, hormonal balance, and wellbeing through every life stage.", "/wellness/womens-wellness.jpeg"],
-  ["PCOS care", "Personalised Ayurvedic support focused on menstrual health, metabolic balance, and sustainable daily wellbeing.", "/wellness/pcos-care.jpeg"],
   ["Stress management", "Quiet stays, therapies and practices designed to settle an overextended system.", "/wellness/stress-management.jpeg"],
-  ["Detox retreat", "A restorative Ayurvedic stay combining guided therapies, mindful routines, and nourishing care.", "/wellness/detox-retreat.jpeg"],
-  ["Couples retreat", "A shared wellness experience designed for rest, renewal, and meaningful time together.", "/wellness/couples-retreat.jpeg"],
 ] as const;
 
 export default function Therapies() {
