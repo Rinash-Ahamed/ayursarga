@@ -42,7 +42,7 @@ export function RevealLines({
             custom={i}
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, amount: 0.85 }}
+            viewport={{ once: true, amount: 0.35 }}
             variants={lineVariants}
           >
             {line}
@@ -72,7 +72,7 @@ export function RevealWords({ text, className = "" }: { text: string; className?
             custom={i}
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, amount: 0.9 }}
+            viewport={{ once: true, amount: 0.35 }}
             variants={wordVariants}
           >
             {w}
