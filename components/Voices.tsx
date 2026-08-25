@@ -37,13 +37,13 @@ export default function Voices() {
     <div className="partner-copy"><RevealWords text="For Ayurvedic Hospitals" className="eyebrow" /><RevealLines as="h2" className="section-title" lines={["Good care deserves", "to be discovered."]} /><FadeUp as="p" className="section-intro partner-intro">Partner with Ayursarga to help people discover your hospital, understand your services, and send appointment requests to your team. Clinical decisions remain with your qualified physicians.</FadeUp><FadeUp className="partner-action"><MagneticButton href="#contact" className="btn-magnetic btn-primary">Discuss partnership</MagneticButton></FadeUp><FadeUp className="partner-note">Booking requests begin after approval, activation, and service publication. Booking volume is not guaranteed.</FadeUp></div>
     <div className="partner-visual-column">
       <FadeUp className="partner-image"><Image src="/ayurvedic-hospital-partner.webp" alt="Ayurvedic hospital with a medicinal garden in Kerala" width={1536} height={1024} sizes="(max-width: 900px) 100vw, 48vw" quality={82} /></FadeUp>
-      <FadeUp as="ul" className="partner-points">{POINTS.map((point, index) => <li key={point}><motion.span
+      <ul className="partner-points">{POINTS.map((point, index) => <li key={point}><motion.span
         aria-hidden="true"
-        initial={prefersReducedMotion ? false : { opacity: 0, scale: .35, rotate: -18 }}
-        whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
-        viewport={{ once: true, amount: .8 }}
-        transition={{ duration: .42, delay: index * .07, ease: [0.22, 1, 0.36, 1] }}
-      >&#10003;</motion.span>{point}</li>)}</FadeUp>
+        initial={prefersReducedMotion ? false : { opacity: 0, scale: .2, rotate: -28 }}
+        whileInView={prefersReducedMotion ? undefined : { opacity: 1, scale: [0.2, 1.2, 1], rotate: [-28, 6, 0] }}
+        viewport={{ once: true, amount: .45 }}
+        transition={{ duration: .58, delay: .12 + index * .1, ease: [0.22, 1, 0.36, 1] }}
+      >&#10003;</motion.span>{point}</li>)}</ul>
     </div>
     <FadeUp as="ul" className="partner-steps">{PARTNER_STEPS.map(([icon, title, body]) => <li key={icon}><PartnerStepIcon name={icon} /><div><strong>{title}</strong><p>{body}</p></div></li>)}</FadeUp>
   </div></section>;
