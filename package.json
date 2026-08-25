@@ -1,6 +1,6 @@
 {
   "name": "ayursarga",
-  "version": "1.9.3",
+  "version": "1.9.6",
   "private": true,
   "scripts": {
     "dev": "next dev",
