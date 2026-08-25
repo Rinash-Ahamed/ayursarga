@@ -1,4 +1,5 @@
 export type GuidanceProfile = {
+  wellnessPath: string;
   preferences: string[];
   district: string;
   budget: string;
@@ -6,7 +7,8 @@ export type GuidanceProfile = {
 
 export function formatGuidanceProfile(profile: GuidanceProfile) {
   return [
-    `Care concerns: ${profile.preferences.length ? profile.preferences.join(", ") : "No specific concerns selected"}`,
+    `Wellness path: ${profile.wellnessPath}`,
+    `Preferences: ${profile.preferences.join(", ")}`,
     `Preferred district: ${profile.district}`,
     `Budget: ${profile.budget}`,
   ].join("\n");

@@ -74,7 +74,7 @@ export default function Hero() {
           </MagneticButton>
           <div className="hero-support-actions">
             <MagneticButton href="#contact" className="btn-magnetic btn-secondary">Talk to Ayursarga</MagneticButton>
-            <a href="#matching" className="btn-text">Help me choose &darr;</a>
+            <a href="#wellness" className="btn-text">Help me choose &darr;</a>
           </div>
         </motion.div>
         <motion.div className="hero-values" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}>

@@ -47,11 +47,6 @@ function listActiveServicesByName(serviceName: string, options: PublicPageOption
   });
 }
 
-export async function hasPublicHospitalForService(serviceName: string) {
-  const page = await listActiveServicesByName(serviceName, { pageSize: 1 });
-  return page.documents.length > 0;
-}
-
 export async function listPublicHospitalsByServiceName(
   serviceName: string,
   options: PublicPageOptions = {},

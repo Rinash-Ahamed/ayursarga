@@ -52,8 +52,8 @@ export default function Contact({ guidanceProfile }: { guidanceProfile: Guidance
       <input name="email" aria-label="Email address" type="email" placeholder="Email address" required />
       {guidanceProfile && <div className="captured-match" role="status">
         <span>Your guidance preferences</span>
-        <strong>{guidanceProfile.district} / {guidanceProfile.budget}</strong>
-        <p>{guidanceProfile.preferences.length ? guidanceProfile.preferences.join(" / ") : "No specific concerns selected"}</p>
+        <strong>{guidanceProfile.wellnessPath}</strong>
+        <p>{guidanceProfile.preferences.join(" / ")} · {guidanceProfile.district} · {guidanceProfile.budget}</p>
       </div>}
       <input type="hidden" name="guidanceProfile" value={guidanceSummary} />
       <select name="interest" aria-label="Care you are interested in" required value={selectedInterest} onChange={(event) => setInterest(event.target.value)}>
@@ -61,7 +61,7 @@ export default function Contact({ guidanceProfile }: { guidanceProfile: Guidance
         <option>Ayurvedic hospital partnership</option>
         <optgroup label="Wellness paths">
           <option>Postnatal recovery</option>
-          <option>Panchakarma</option>
+          <option>Rejuvenation</option>
           <option>Stress management</option>
           <option>Weight management</option>
           <option>PCOS care</option>

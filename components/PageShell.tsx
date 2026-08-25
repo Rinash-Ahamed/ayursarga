@@ -9,7 +9,7 @@ import ScrollLife from "@/components/ScrollLife";
 import Nav from "@/components/Nav";
 import Hero from "@/components/Hero";
 import Philosophy from "@/components/Philosophy";
-import Journey from "@/components/Journey";
+import WellnessGuide from "@/components/WellnessGuide";
 import Therapies from "@/components/Therapies";
 import Sanctuary from "@/components/Sanctuary";
 import Voices from "@/components/Voices";
@@ -36,7 +36,7 @@ export default function PageShell() {
         <main>
           <Hero />
           <Philosophy />
-          <Journey onComplete={setGuidanceProfile} />
+          <WellnessGuide onProfileChange={setGuidanceProfile} />
           <Therapies />
           <Sanctuary />
           <Voices />
