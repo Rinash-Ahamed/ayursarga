@@ -3,9 +3,8 @@
 import { COLLECTIONS } from "@/constants/firestore";
 import type { HospitalDocument, ServiceDocument } from "@/features/firestore/models";
 import {
-  readDocument,
+  readDocumentsByIds,
   runFilteredQuery,
-  type DocumentRecord,
   type QueryPage,
   type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
@@ -53,15 +52,11 @@ export async function listPublicHospitalsByServiceName(
 ): Promise<QueryPage<HospitalDocument>> {
   const servicePage = await listActiveServicesByName(serviceName, options);
   const hospitalIds = [...new Set(servicePage.documents.map((service) => service.hospitalId).filter(Boolean))];
-  const hospitals = await Promise.all(hospitalIds.map(async (hospitalId) => {
-    try {
-      return await readDocument<HospitalDocument>(COLLECTIONS.hospitals, hospitalId);
-    } catch {
-      return null;
-    }
-  }));
-  const documents = hospitals.filter((hospital): hospital is DocumentRecord<HospitalDocument> =>
-    Boolean(hospital?.isPublic && hospital.status === "active"));
+  const hospitals = await readDocumentsByIds<HospitalDocument>(COLLECTIONS.hospitals, hospitalIds, [
+    { field: "isPublic", operator: "==", value: true },
+    { field: "status", operator: "==", value: "active" },
+  ]);
+  const documents = hospitals.filter((hospital) => hospital.isPublic && hospital.status === "active");
 
   return {
     documents,

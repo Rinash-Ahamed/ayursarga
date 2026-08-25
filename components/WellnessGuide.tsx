@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
-import { RevealLines, RevealWords } from "./Reveal";
 import type { GuidanceProfile } from "@/lib/guidanceProfile";
 
 const WELLNESS_PATHS = [
@@ -158,8 +157,8 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange: (p
   return <section id="wellness" className="section dark-section match-section wellness-guide-section">
     <div className="section-inner wellness-guide-inner">
       <div className="wellness-guide-heading">
-        <RevealWords text="Wellness paths" className="eyebrow light" />
-        <RevealLines as="h2" className="section-title light" lines={["Choose a wellness path", "that feels right."]} />
+        <p className="eyebrow light">Wellness paths</p>
+        <h2 className="section-title light"><span>Choose a wellness path</span><span>that feels right.</span></h2>
         <p>Begin with the kind of support you are exploring. Your answers prepare a clear guidance request without taking you away from this page.</p>
       </div>
 

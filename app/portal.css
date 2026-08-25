@@ -29,9 +29,6 @@ body.portal-active{ cursor:auto; overflow:auto; height:auto; }
 .portal-auth-form>button:hover:not(:disabled){ background:var(--clay-dark); border-color:var(--clay-dark); }
 .portal-google-icon{ width:20px; height:20px; flex:0 0 20px; }
 .portal-auth-form>button:disabled{ opacity:.5; box-shadow:none; cursor:not-allowed; }
-.portal-form-error{ padding:13px 15px; border:1px solid rgba(139,94,60,.42); border-left:4px solid var(--rust); border-radius:10px; background:rgba(139,94,60,.11); color:var(--rust); font-size:12px; font-weight:600; line-height:1.55; }
-.portal-form-success{ margin-top:28px; padding:18px 20px; border:1px solid rgba(58,61,46,.3); border-left:4px solid var(--forest); border-radius:14px; background:rgba(201,166,107,.2); color:var(--forest); display:flex; gap:12px; align-items:flex-start; font-size:13px; font-weight:600; line-height:1.6; }
-.portal-form-success>span{ color:var(--clay-dark); }
 .portal-toast{ position:fixed; z-index:100; top:24px; right:24px; width:min(390px,calc(100vw - 40px)); padding:16px 18px; border:1px solid rgba(58,61,46,.36); border-left:4px solid var(--forest); border-radius:14px; background:var(--cream); color:var(--forest); box-shadow:0 18px 48px rgba(58,61,46,.22),0 3px 10px rgba(58,61,46,.12); display:flex; align-items:flex-start; gap:12px; animation:portal-toast-life 3s ease forwards; }
 .portal-toast[data-tone="error"]{ border-color:rgba(139,94,60,.48); border-left-color:var(--rust); color:var(--rust); }
 .portal-toast-mark{ flex:0 0 24px; width:24px; height:24px; border-radius:50%; background:var(--forest); color:var(--cream); display:grid; place-items:center; font-size:12px; font-weight:800; }

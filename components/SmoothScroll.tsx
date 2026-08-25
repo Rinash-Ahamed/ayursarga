@@ -15,7 +15,8 @@ const anchorEasing = (t: number) => t < 0.5
 export default function SmoothScroll({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const lenis = reduced ? null : new Lenis({
+    const supportsDesktopScroll = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+    const lenis = reduced || !supportsDesktopScroll ? null : new Lenis({
       duration: 0.95,
       easing: wheelEasing,
       smoothWheel: true,
@@ -68,7 +69,7 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
         const scrollTop = hash === "#hero"
           ? 0
           : Math.max(0, window.scrollY + contentRect.top + targetOffset);
-        window.scrollTo({ top: scrollTop, behavior: "auto" });
+        window.scrollTo({ top: scrollTop, behavior: reduced ? "auto" : "smooth" });
         complete();
       }
     };

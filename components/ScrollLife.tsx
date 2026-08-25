@@ -8,7 +8,7 @@ gsap.registerPlugin(ScrollTrigger);
 
 export default function ScrollLife() {
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!window.matchMedia("(min-width: 901px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)").matches) return;
     const context = gsap.context(() => {
       gsap.utils.toArray<HTMLElement>(".family-story-media").forEach((media) => {
         gsap.fromTo(media, { scale: 1.035, yPercent: -2.5 }, {

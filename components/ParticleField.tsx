@@ -13,7 +13,7 @@ export default function ParticleField() {
   const [bursts,setBursts] = useState<BurstLeaf[]>([]);
   const sequence = useRef(0);
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!window.matchMedia("(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)").matches) return;
     const onClick = (event:MouseEvent) => {
       const stamp = Date.now() + sequence.current++ * 10;
       const leaves = Array.from({length:7},(_,index) => {

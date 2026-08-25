@@ -357,7 +357,6 @@ main>.dark-section{
 .section-title span, h2 span{ display:block; overflow:hidden; }
 .section-title.light, h2.light{ color: var(--cream); }
 
-.light-body{ font-size:17px; line-height:1.85; color:rgba(249,245,234,.82); max-width:480px; margin:22px 0 30px; }
 
 /* Dark section */
 .dark-section{ background: var(--forest); color: var(--cream); overflow:hidden; }
