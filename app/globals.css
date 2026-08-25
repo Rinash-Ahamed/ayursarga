@@ -246,6 +246,13 @@ em{ font-style: italic; color: var(--clay-dark); }
    Sections - generic
    ========================================================================== */
 .section{ position:relative; padding:var(--section-pad) 0; }
+main{ background:#fff; }
+main>.dark-section{
+  width:calc(100% - clamp(16px,2vw,30px));
+  margin:clamp(6px,1vw,12px) auto;
+  border-radius:clamp(26px,3vw,42px);
+  box-shadow:0 24px 70px rgba(31,61,43,.12);
+}
 .section#how-it-works,.section#wellness{ padding-top:clamp(32px,3vw,44px); }
 .section-inner{ max-width:1320px; margin:0 auto; padding-left:max(40px,env(safe-area-inset-left)); padding-right:max(40px,env(safe-area-inset-right)); position:relative; z-index:2; }
 
@@ -419,7 +426,7 @@ em{ font-style: italic; color: var(--clay-dark); }
 /* ==========================================================================
    Footer
    ========================================================================== */
-#site-footer{ position:relative; overflow:hidden; background:var(--forest); color:rgba(249,245,234,.78); }
+#site-footer{ position:relative; overflow:hidden; margin-top:clamp(6px,1vw,12px); border-radius:clamp(26px,3vw,42px) clamp(26px,3vw,42px) 0 0; background:var(--forest); color:rgba(249,245,234,.78); box-shadow:0 -20px 60px rgba(31,61,43,.09); }
 .footer-inner{ position:relative; width:min(100%,1400px); margin:0 auto; padding-top:clamp(54px,6vw,82px); padding-right:max(40px,env(safe-area-inset-right)); padding-bottom:max(28px,env(safe-area-inset-bottom)); padding-left:max(40px,env(safe-area-inset-left)); }
 .footer-invitation{ display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:40px; padding-bottom:clamp(38px,4.5vw,58px); border-bottom:1px solid rgba(249,245,234,.2); }
 .footer-eyebrow{ display:block; margin-bottom:17px; color:var(--gold); font-size:10px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; }
@@ -551,7 +558,7 @@ button{ cursor:pointer; }
 .benefit-list p{ color:rgba(249,245,234,.76); line-height:1.65; font-size:13.5px; }
 
 .partner-section{ padding-top:clamp(32px,3.5vw,46px); }
-.partner-panel{ background:var(--cream-2); border:1px solid rgba(58,61,46,.2); border-radius:30px; padding:clamp(32px,4.5vw,56px); display:grid; grid-template-columns:1fr 1fr; gap:clamp(32px,4vw,52px); align-items:start; overflow:hidden; box-shadow:0 14px 38px rgba(58,61,46,.07); }
+.partner-panel{ background:#fff; border:0; border-radius:30px; padding:clamp(32px,4.5vw,56px); display:grid; grid-template-columns:1fr 1fr; gap:clamp(32px,4vw,52px); align-items:start; overflow:hidden; box-shadow:0 22px 64px rgba(31,61,43,.09),inset 0 0 0 1px rgba(31,61,43,.08); }
 .partner-copy{ align-self:start; text-align:center; }
 .partner-copy .section-title{ margin-bottom:12px; }
 .partner-intro{ max-width:520px; margin:0 auto 24px; text-align:center; text-wrap:balance; }
@@ -561,7 +568,7 @@ button{ cursor:pointer; }
 .partner-image img{ display:block; width:100%; height:100%; object-fit:cover; transform:translate3d(0,0,0) scale(1.002); transform-origin:center; backface-visibility:hidden; will-change:transform; transition:transform .7s var(--ease-out); }
 .partner-points{ list-style:none; display:grid; grid-template-columns:1fr 1fr; gap:14px; }
 .partner-points li{ background:#fff; border:1px solid rgba(58,61,46,.2); border-radius:14px; padding:18px; font-size:13px; color:var(--forest); }
-.partner-points span{ color:var(--clay-dark); margin-right:10px; }
+.partner-points span{ display:inline-grid; place-items:center; color:var(--clay-dark); margin-right:10px; transform-origin:center; }
 .partner-note{ max-width:520px; margin:20px auto 0; color:var(--sage); font-size:11px; line-height:1.6; }
 .partner-steps{ grid-column:1/-1; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin:4px 0 0; padding:0; list-style:none; }
 .partner-steps li{ display:grid; grid-template-columns:auto 1fr; align-items:start; gap:15px; padding:20px; border-top:1px solid rgba(58,61,46,.2); }
@@ -591,7 +598,6 @@ button{ cursor:pointer; }
 /* General questions */
 .general-questions{
   padding-top:clamp(38px,4.5vw,60px); background:#fff;
-  border-top:1px solid rgba(31,61,43,.13);
 }
 .general-questions-layout{
   display:grid; grid-template-columns:minmax(260px,.72fr) minmax(0,1.28fr);
