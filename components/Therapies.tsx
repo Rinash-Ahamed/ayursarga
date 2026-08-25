@@ -74,7 +74,14 @@ export default function Therapies() {
       transition={{ delay: (i % 3) * .06, duration: .7 }}
     >
       <motion.span className="path-card-media" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true, amount: .25 }} transition={{ duration: .7, delay: .1 + (i % 3) * .05 }}>
-        <Image src={image} alt={`${name} Ayurvedic wellness care`} fill sizes="(max-width: 600px) calc(100vw - 44px), (max-width: 900px) 50vw, 33vw" quality={82} />
+        <Image
+          src={image}
+          alt={`${name} Ayurvedic wellness care`}
+          fill
+          sizes="(max-width: 600px) calc(100vw - 44px), (max-width: 900px) 50vw, 33vw"
+          quality={82}
+          loading={name === "Prenatal care" || name === "Panchakarma" ? "eager" : "lazy"}
+        />
       </motion.span>
       <span className="path-card-copy"><h3>{name}</h3><p>{body}</p><span className="path-card-action">Explore centers <span aria-hidden="true">&#8594;</span></span></span>
     </motion.button>)}</div>
