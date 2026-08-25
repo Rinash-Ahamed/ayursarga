@@ -679,11 +679,12 @@ button{ cursor:pointer; }
   .trust-visual{ width:min(100%,720px); margin:0 auto; }
   .trust-media{ width:100%; min-height:0; aspect-ratio:1536/1419; margin:0; }
   .path-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
-  .general-questions-layout{ grid-template-columns:1fr; gap:38px; }
+  .general-questions-layout{ display:block; }
   .general-questions-intro{
     top:calc(92px + env(safe-area-inset-top)); z-index:2;
     padding:12px 0 20px; background:#fff;
   }
+  .general-questions-list{ margin-top:38px; }
   #hero::before{
     background:url("/hero-image-mobile.webp") 67% center/cover no-repeat;
   }
