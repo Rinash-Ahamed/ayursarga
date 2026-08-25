@@ -13,6 +13,8 @@ export default function ScrollLogo() {
   useEffect(() => {
     const logo = logoRef.current;
     if (!logo) return;
+    const desktop = window.matchMedia("(min-width: 901px) and (prefers-reduced-motion: no-preference)");
+    if (!desktop.matches) return;
 
     const scrollTrigger = ScrollTrigger.create({
       start: 0,

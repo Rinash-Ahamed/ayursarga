@@ -61,7 +61,7 @@ export async function readDocument<T>(collectionPath: string, id: string) {
   return snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as DocumentRecord<T>) : null;
 }
 
-export async function readDocumentsByIds<T>(collectionPath: string, ids: string[]) {
+export async function readDocumentsByIds<T>(collectionPath: string, ids: string[], filters: QueryFilter[] = []) {
   const uniqueIds = [...new Set(ids.filter(Boolean))];
   if (uniqueIds.length === 0) return [];
   const groups: string[][] = [];
@@ -69,6 +69,7 @@ export async function readDocumentsByIds<T>(collectionPath: string, ids: string[
   const snapshots = await Promise.all(groups.map((group) => getDocs(query(
     collection(getClientFirestore(), collectionPath),
     where(documentId(), "in", group),
+    ...filters.map((filter) => where(filter.field, filter.operator, filter.value)),
   ))));
   return snapshots.flatMap((snapshot) => snapshot.docs.map((item) => ({
     id: item.id,
