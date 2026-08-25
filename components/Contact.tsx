@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { FadeUp, RevealLines, RevealWords } from "./Reveal";
+import { FadeUp } from "./Reveal";
 import MagneticButton from "./MagneticButton";
 import { formatGuidanceProfile, type GuidanceProfile } from "@/lib/guidanceProfile";
 
@@ -44,10 +44,10 @@ export default function Contact({ guidanceProfile }: { guidanceProfile: Guidance
   };
 
   return <section id="contact" className="section"><div className="contact-glow" /><div className="section-inner contact-inner">
-    <RevealWords text="Personal guidance" className="eyebrow" /><RevealLines as="h2" className="section-title" lines={isPartnership ? ["Bring your care", "to more people."] : ["Talk with an", "Ayursarga guide."]} />
-    <FadeUp as="p" className="contact-sub">{isPartnership ? "Tell us about your hospital, services, location, and the care you would like to offer. Our team will explain review, agreement, activation, and service listing." : "Tell us what you're looking for. An Ayursarga guide will help you explore suitable options before you request an appointment."}</FadeUp>
-    {status === "sent" ? <FadeUp className="form-success"><span>&#10003;</span><h3>{isPartnership ? "Your partnership enquiry is on its way." : "Thank you. Your journey has begun."}</h3><p>{isPartnership ? "Our team will review your hospital details and contact you about approval and onboarding. Appointment requests begin after activation." : "Your request has been delivered to info@ayursarga.com."}</p></FadeUp> : <FadeUp as="form" className="contact-form" delay={.1} onSubmit={submit}>
-      <div className="contact-form-heading"><h3>{isPartnership ? "Reach our partnerships team" : "Reach Ayursarga"}</h3><p>Share your details below and our team will contact you about your request.</p></div>
+    <p className="eyebrow">Personal guidance</p>
+    <h2 className="section-title">{isPartnership ? <><span>Bring your care</span><span>to more people.</span></> : <><span>Talk with an</span><span>Ayursarga guide.</span></>}</h2>
+    <p className="contact-sub">{isPartnership ? "Tell us about your hospital, services, location, and the care you would like to offer. Our team will explain review, agreement, activation, and service listing." : "Tell us what you're looking for. An Ayursarga guide will help you explore suitable options before you request an appointment."}</p>
+    {status === "sent" ? <FadeUp className="form-success"><span>&#10003;</span><h3>{isPartnership ? "Your partnership enquiry is on its way." : "Thank you. Your journey has begun."}</h3><p>{isPartnership ? "Our team will review your hospital details and contact you about approval and onboarding. Appointment requests begin after activation." : "Your request has been delivered to info@ayursarga.com."}</p></FadeUp> : <form className="contact-form" onSubmit={submit}>
       <div className="form-row"><input name="name" aria-label="Your name" type="text" placeholder="Your name" required /><input name="phone" aria-label="Phone number" type="tel" placeholder="Phone number" required /></div>
       <input name="email" aria-label="Email address" type="email" placeholder="Email address" required />
       {guidanceProfile && <div className="captured-match" role="status">
@@ -83,6 +83,6 @@ export default function Contact({ guidanceProfile }: { guidanceProfile: Guidance
         <span className="submit-label">{status === "sending" ? "Sending..." : isPartnership ? "Send partnership enquiry" : "Request personal guidance"}</span>
         <span className="submit-arrow" aria-hidden="true">&rarr;</span>
       </MagneticButton>
-    </FadeUp>}
+    </form>}
   </div></section>;
 }
