@@ -45,7 +45,7 @@ export default function Contact({ guidanceProfile }: { guidanceProfile: Guidance
 
   return <section id="contact" className="section"><div className="contact-glow" /><div className="section-inner contact-inner">
     <p className="eyebrow">Personal guidance</p>
-    <h2 className="section-title">{isPartnership ? <><span>Bring your care</span><span>to more people.</span></> : <><span>Talk with an</span><span>Ayursarga guide.</span></>}</h2>
+    <h2 className="section-title static-section-title">{isPartnership ? <><span>Bring your care</span><span>to more people.</span></> : <><span>Talk with an</span><span>Ayursarga guide.</span></>}</h2>
     <p className="contact-sub">{isPartnership ? "Tell us about your hospital, services, location, and the care you would like to offer. Our team will explain review, agreement, activation, and service listing." : "Tell us what you're looking for. An Ayursarga guide will help you explore suitable options before you request an appointment."}</p>
     {status === "sent" ? <FadeUp className="form-success"><span>&#10003;</span><h3>{isPartnership ? "Your partnership enquiry is on its way." : "Thank you. Your journey has begun."}</h3><p>{isPartnership ? "Our team will review your hospital details and contact you about approval and onboarding. Appointment requests begin after activation." : "Your request has been delivered to info@ayursarga.com."}</p></FadeUp> : <form className="contact-form" onSubmit={submit}>
       <div className="form-row"><input name="name" aria-label="Your name" type="text" placeholder="Your name" required /><input name="phone" aria-label="Phone number" type="tel" placeholder="Phone number" required /></div>

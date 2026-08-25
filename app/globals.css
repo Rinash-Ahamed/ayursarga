@@ -355,6 +355,7 @@ main>.dark-section{
 @media(prefers-reduced-motion:reduce){ .public-center-card-image img,.public-center-card-image img.is-loaded{ opacity:1; animation:none; } }
 .section-title{ font-family:var(--font-display); font-weight:400; font-size:clamp(30px,4.4vw,58px); line-height:1.12; color:var(--forest); margin-bottom:20px; }
 .section-title span, h2 span{ display:block; overflow:hidden; }
+.static-section-title>span{ overflow:visible; padding:0 .04em .16em; margin:0 -.04em -.16em; }
 .section-title.light, h2.light{ color: var(--cream); }
 
 

@@ -158,7 +158,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange: (p
     <div className="section-inner wellness-guide-inner">
       <div className="wellness-guide-heading">
         <p className="eyebrow light">Wellness paths</p>
-        <h2 className="section-title light"><span>Choose a wellness path</span><span>that feels right.</span></h2>
+        <h2 className="section-title light static-section-title"><span>Choose a wellness path</span><span>that feels right.</span></h2>
         <p>Begin with the kind of support you are exploring. Your answers prepare a clear guidance request without taking you away from this page.</p>
       </div>
 
