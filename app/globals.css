@@ -558,12 +558,13 @@ button{ cursor:pointer; }
 .wellness-guide-result>strong{ display:block; margin:-8px 0 12px; color:var(--cream); font-family:var(--font-display); font-size:clamp(20px,2.4vw,27px); font-weight:550; }
 .consultation-options{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
 .consultation-options-single{ width:min(100%,330px); grid-template-columns:1fr; margin:0 auto; }
-.consultation-options>button{ min-width:0; min-height:190px; padding:24px 18px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.2); border-radius:20px; background:rgba(255,255,255,.07); color:var(--cream); font:inherit; text-align:center; transition:border-color .22s ease,background-color .22s ease,box-shadow .22s ease; }
-.consultation-options>button:hover,.consultation-options>button.selected{ border-color:var(--gold); background:rgba(184,135,47,.14); box-shadow:inset 0 0 0 1px rgba(184,135,47,.16); }
+.consultation-options>article,.consultation-options>button{ min-width:0; min-height:230px; padding:24px 18px 18px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.2); border-radius:20px; background:rgba(255,255,255,.07); color:var(--cream); font:inherit; text-align:center; transition:border-color .22s ease,background-color .22s ease,box-shadow .22s ease; }
+.consultation-options>article.selected,.consultation-options>button:hover,.consultation-options>button.selected{ border-color:var(--gold); background:rgba(184,135,47,.14); box-shadow:inset 0 0 0 1px rgba(184,135,47,.16); }
 .consultation-option-icon{ width:58px; height:58px; margin-bottom:17px; display:grid; place-items:center; border:1px solid rgba(184,135,47,.45); border-radius:50%; background:rgba(184,135,47,.1); color:var(--gold); }
 .consultation-option-icon svg{ width:30px; height:30px; }
 .consultation-options strong{ color:var(--cream); font-size:15px; font-weight:700; line-height:1.3; }
-.consultation-options>button>span:last-child{ margin-top:8px; color:rgba(255,255,255,.62); font-size:11px; line-height:1.5; }
+.consultation-options>article>span:nth-of-type(2),.consultation-options>button>span:last-child{ margin-top:8px; color:rgba(255,255,255,.62); font-size:11px; line-height:1.5; }
+.consultation-booking-button{ width:100%; min-height:40px; margin-top:18px; padding:10px 12px; border:1px solid rgba(184,135,47,.45); border-radius:100px; background:rgba(184,135,47,.14); color:rgba(255,255,255,.58); font:inherit; font-size:9px; font-weight:750; letter-spacing:.07em; text-transform:uppercase; cursor:not-allowed; }
 .consultation-provider-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
 .consultation-provider-card{ min-width:0; padding:26px 22px 22px; display:flex; flex-direction:column; align-items:center; border:1px solid rgba(255,255,255,.2); border-radius:20px; background:rgba(255,255,255,.07); text-align:center; }
 .consultation-provider-card .consultation-option-icon{ margin-bottom:16px; }
@@ -718,11 +719,12 @@ button{ cursor:pointer; }
   .wellness-guide-panel-actions{ width:100%; justify-content:space-between; }
   .quiz-location-grid{ grid-template-columns:1fr; gap:0; }
   .consultation-options{ grid-template-columns:1fr; }
-  .consultation-options>button{ min-height:0; padding:18px; display:grid; grid-template-columns:48px minmax(0,1fr); column-gap:14px; text-align:left; }
+  .consultation-options>article,.consultation-options>button{ min-height:0; padding:18px; display:grid; grid-template-columns:48px minmax(0,1fr); column-gap:14px; text-align:left; }
   .consultation-option-icon{ grid-column:1; grid-row:1/3; width:48px; height:48px; margin:0; }
   .consultation-option-icon svg{ width:25px; height:25px; }
-  .consultation-options strong,.consultation-options>button>span:last-child{ grid-column:2; }
-  .consultation-options>button>span:last-child{ margin-top:4px; }
+  .consultation-options strong,.consultation-options>article>span:nth-of-type(2),.consultation-options>button>span:last-child{ grid-column:2; }
+  .consultation-options>article>span:nth-of-type(2),.consultation-options>button>span:last-child{ margin-top:4px; }
+  .consultation-booking-button{ grid-column:1/-1; }
   .consultation-provider-grid{ grid-template-columns:1fr; }
 }
 

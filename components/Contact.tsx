@@ -53,6 +53,8 @@ export default function Contact({ guidanceProfile }: { guidanceProfile: Guidance
       {guidanceProfile && <div className="captured-match" role="status">
         <span>Your guidance preferences</span>
         <strong>{guidanceProfile.wellnessPath}</strong>
+        {guidanceProfile.expectedDeliveryDate && <p>Expected delivery date: {guidanceProfile.expectedDeliveryDate}</p>}
+        {guidanceProfile.lastMenstrualPeriod && <p>Last menstrual period: {guidanceProfile.lastMenstrualPeriod}</p>}
         <p>{guidanceProfile.preferences.join(" / ")} · {guidanceProfile.district} · {guidanceProfile.budget}</p>
       </div>}
       <input type="hidden" name="guidanceProfile" value={guidanceSummary} />
