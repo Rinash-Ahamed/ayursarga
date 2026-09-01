@@ -23,6 +23,8 @@ export function parseUserProfile(uid: string, value: unknown, fallbackEmail = ""
     role: data.role,
     status: data.status,
     hospitalId: typeof data.hospitalId === "string" ? data.hospitalId : null,
+    privacyConsentAt: toDate(data.privacyConsentAt),
+    privacyConsentVersion: typeof data.privacyConsentVersion === "string" ? data.privacyConsentVersion : null,
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
   };

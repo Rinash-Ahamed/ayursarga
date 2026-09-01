@@ -97,11 +97,15 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange: (p
   const [district, setDistrict] = useState("Any district");
   const [otherDistrict, setOtherDistrict] = useState("");
   const [budget, setBudget] = useState("Flexible");
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState("");
+  const [lastMenstrualPeriod, setLastMenstrualPeriod] = useState("");
   const reduceMotion = useReducedMotion();
   const selectedDistrict = district === "Other" ? otherDistrict.trim() : district;
   const resolvedPreferences = preferences.map((preference) => preference === "Others" ? `Other concern: ${otherConcern.trim()}` : preference);
   const transition = reduceMotion ? { duration: 0 } : { duration: .3, ease: [0.22, 1, 0.36, 1] as const };
   const hasValidPreferences = preferences.length > 0 && (!preferences.includes("Others") || Boolean(otherConcern.trim()));
+  const hasValidPostnatalDetails = selectedPath?.id !== "postnatal-care"
+    || Boolean(expectedDeliveryDate && lastMenstrualPeriod);
 
   useEffect(() => {
     if (!selectedPath) return;
@@ -125,6 +129,8 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange: (p
     setDistrict("Any district");
     setOtherDistrict("");
     setBudget("Flexible");
+    setExpectedDeliveryDate("");
+    setLastMenstrualPeriod("");
     onProfileChange(null);
   }
 
@@ -145,6 +151,8 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange: (p
       preferences: resolvedPreferences,
       district: selectedDistrict,
       budget,
+      expectedDeliveryDate: selectedPath.id === "postnatal-care" ? expectedDeliveryDate : undefined,
+      lastMenstrualPeriod: selectedPath.id === "postnatal-care" ? lastMenstrualPeriod : undefined,
     });
     setStep(2);
   }
@@ -159,7 +167,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange: (p
       <div className="wellness-guide-heading">
         <p className="eyebrow light">Wellness paths</p>
         <h2 className="section-title light static-section-title"><span>Choose a wellness path</span><span>that feels right.</span></h2>
-        <p>Begin with the kind of support you are exploring. Your answers prepare a clear guidance request without taking you away from this page.</p>
+        <p>Tell us what you&rsquo;re looking for, and we&rsquo;ll help you find the right care.</p>
       </div>
 
       <AnimatePresence initial={false}>

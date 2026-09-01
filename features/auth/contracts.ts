@@ -18,6 +18,8 @@ export type UserProfile = {
   role: PortalRole;
   status: UserStatus;
   hospitalId: string | null;
+  privacyConsentAt: Date | null;
+  privacyConsentVersion: string | null;
   createdAt: Date | null;
   updatedAt: Date | null;
 };

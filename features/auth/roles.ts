@@ -1,6 +1,7 @@
 import { ROUTES } from "@/config/routes";
 import { AuthenticationError } from "@/features/auth/errors";
 import type { PortalRole, UserProfile } from "@/features/auth/contracts";
+import { hasCurrentConsumerPrivacyConsent } from "@/features/consumers/privacyConsent";
 
 const ROLE_HOME_PATHS = {
   admin: ROUTES.admin.home,
@@ -44,7 +45,8 @@ export function getSafeRoleRedirect(requestedPath: string | null | undefined, ro
 
 export function isConsumerProfileComplete(profile: UserProfile | null | undefined) {
   return profile?.role === "consumer"
-    && Boolean(profile.phone?.trim());
+    && Boolean(profile.phone?.trim())
+    && hasCurrentConsumerPrivacyConsent(profile);
 }
 
 export function verifyProfileRole(profile: UserProfile, expectedRole: PortalRole) {

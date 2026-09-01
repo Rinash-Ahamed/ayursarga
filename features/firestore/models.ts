@@ -23,6 +23,8 @@ export type UserDocument = AuditedDocument & {
   role: PortalRole;
   status: UserStatus;
   hospitalId: string | null;
+  privacyConsentAt?: Timestamp | null;
+  privacyConsentVersion?: string | null;
 };
 
 export type HospitalDocument = AuditedDocument & {
