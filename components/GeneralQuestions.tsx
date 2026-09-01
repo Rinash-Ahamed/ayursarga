@@ -8,6 +8,14 @@ const QUESTIONS = [
     answer: "Yes. You can search centers and review their listed services without signing in. Google sign-in is required only when you request an appointment or manage your bookings.",
   },
   {
+    question: "What postnatal care services can I book through Ayursarga?",
+    answer: "You can explore and book trusted Ayurvedic postnatal care services for mothers and babies through Ayursarga.",
+  },
+  {
+    question: "How do I choose the right postnatal care centre?",
+    answer: "You can compare centres based on their location, services, facilities and packages, and choose what suits you best.",
+  },
+  {
     question: "How is an appointment confirmed?",
     answer: "Your preferred date and time are sent as a request. The selected center can confirm it, reject it, or suggest a different appointment time from its Hospital portal.",
   },
@@ -30,7 +38,6 @@ export default function GeneralQuestions() {
     <section id="general-questions" className="section general-questions">
       <div className="section-inner general-questions-layout">
         <div className="general-questions-intro">
-          <span className="eyebrow">General questions</span>
           <h2 className="section-title">A little clarity before you begin.</h2>
           <p>Simple answers about discovering centers, requesting appointments, and receiving care through Ayursarga.</p>
         </div>

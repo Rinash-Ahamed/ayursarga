@@ -52,6 +52,7 @@ service cloud.firestore {
     function hasExactUserFields() {
       return request.resource.data.keys().hasOnly([
         'uid', 'name', 'email', 'phone', 'address', 'role', 'status', 'hospitalId',
+        'privacyConsentAt', 'privacyConsentVersion',
         'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
         'archivedAt', 'archivedBy', 'lastAuditId'
       ]);
@@ -311,7 +312,8 @@ service cloud.firestore {
         && (isAdmin() || (
           isDocumentOwner(userId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'name', 'phone', 'address', 'updatedAt', 'updatedBy', 'lastAuditId'
+            'name', 'phone', 'address', 'privacyConsentAt', 'privacyConsentVersion',
+            'updatedAt', 'updatedBy', 'lastAuditId'
           ])
           && request.resource.data.name is string
           && (request.resource.data.phone == null || request.resource.data.phone is string)
@@ -324,6 +326,15 @@ service cloud.firestore {
               request.resource.data.address is string
               && request.resource.data.address.size() <= 300
             ))
+            && (
+              request.resource.data.diff(resource.data).affectedKeys().hasNone([
+                'privacyConsentAt', 'privacyConsentVersion'
+              ])
+              || (
+                request.resource.data.privacyConsentAt == request.time
+                && request.resource.data.privacyConsentVersion == '2026-09-01'
+              )
+            )
           ))
         ));
       allow delete: if false;
