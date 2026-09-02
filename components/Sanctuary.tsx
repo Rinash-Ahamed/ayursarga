@@ -64,8 +64,8 @@ export default function Sanctuary() {
         <Image
           src="/why.png"
           alt="Ayursarga connecting trusted Ayurvedic hospitals, services, appointment requests and personal guidance"
-          width={1536}
-          height={1419}
+          width={1402}
+          height={1122}
           sizes="(max-width: 600px) calc(100vw - 44px), (max-width: 900px) calc(100vw - 80px), 43vw"
           quality={82}
         />
