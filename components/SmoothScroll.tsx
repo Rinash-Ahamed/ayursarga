@@ -7,7 +7,9 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const wheelEasing = (t: number) => 1 - Math.pow(1 - t, 4);
+// Cubic easing keeps wheel input responsive while removing the sharper
+// acceleration of the previous quartic curve.
+const wheelEasing = (t: number) => 1 - Math.pow(1 - t, 3);
 const anchorEasing = (t: number) => t < 0.5
   ? 4 * t * t * t
   : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -17,7 +19,7 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const supportsDesktopScroll = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
     const lenis = reduced || !supportsDesktopScroll ? null : new Lenis({
-      duration: 0.95,
+      duration: 1.05,
       easing: wheelEasing,
       smoothWheel: true,
       syncTouch: false,
@@ -26,6 +28,13 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     });
 
     lenis?.on("scroll", ScrollTrigger.update);
+
+    const handleVisibilityChange = () => {
+      if (!lenis) return;
+      if (document.hidden) lenis.stop();
+      else lenis.start();
+    };
+    if (lenis) document.addEventListener("visibilitychange", handleVisibilityChange);
 
     const handleAnchorClick = (event: MouseEvent) => {
       const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="#"]');
@@ -76,6 +85,7 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
 
     return () => {
       if (tick) gsap.ticker.remove(tick);
+      if (lenis) document.removeEventListener("visibilitychange", handleVisibilityChange);
       document.removeEventListener("click", handleAnchorClick);
       lenis?.destroy();
     };

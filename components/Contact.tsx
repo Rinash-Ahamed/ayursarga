@@ -55,6 +55,9 @@ export default function Contact({ guidanceProfile }: { guidanceProfile: Guidance
         <strong>{guidanceProfile.wellnessPath}</strong>
         {guidanceProfile.expectedDeliveryDate && <p>Expected delivery date: {guidanceProfile.expectedDeliveryDate}</p>}
         {guidanceProfile.lastMenstrualPeriod && <p>Last menstrual period: {guidanceProfile.lastMenstrualPeriod}</p>}
+        {guidanceProfile.consultationProvider && <p>Preferred consultant: {guidanceProfile.consultationProvider}</p>}
+        {guidanceProfile.preferredAppointmentDate && <p>Preferred appointment date: {guidanceProfile.preferredAppointmentDate}</p>}
+        {guidanceProfile.preferredTimeSlot && <p>Preferred time slot: {guidanceProfile.preferredTimeSlot}</p>}
         <p>{guidanceProfile.preferences.join(" / ")} · {guidanceProfile.district} · {guidanceProfile.budget}</p>
       </div>}
       <input type="hidden" name="guidanceProfile" value={guidanceSummary} />
