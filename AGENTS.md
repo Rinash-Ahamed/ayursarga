@@ -70,7 +70,9 @@ implementation work unless the project owner explicitly changes a decision.
   archive controls, and platform settings.
 - The Hospital Profile may edit only hospital name, official email, phone,
   city/locality, state, complete address, optional description, and up to four
-  Google Drive sharing links or externally hosted HTTPS hospital image URLs.
+  Google Drive sharing links or externally hosted HTTPS hospital image URLs,
+  the default centre-guideline wording, additional centre rules, facilities,
+  and centre-specific legal/policy information.
   Normalize supported Drive sharing links for display and keep gallery frames
   at a consistent 4:3 ratio. Firebase Storage and direct uploads remain disabled
   while the project uses the Spark plan.
@@ -95,7 +97,8 @@ implementation work unless the project owner explicitly changes a decision.
   audit each transition.
 - Consumer booking creation snapshots service price and commission values for
   historical consistency. It also snapshots the Consumer's name, Google email,
-  phone, and optional address so only Admin and the assigned Hospital can use
+  phone, optional address, preferred care period, and bystander count so only
+  Admin and the assigned Hospital can use
   the available details for that booking. Do not grant Hospitals general read
   access to Consumer profiles. Booking state changes must follow the transitions in
   `firestore.rules`.
