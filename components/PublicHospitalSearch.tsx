@@ -16,6 +16,7 @@ import type {
 import { formatCurrency } from "@/utils/currency";
 import { formatServiceDuration } from "@/utils/duration";
 import { getHospitalImageUrls } from "@/features/hospitals/images";
+import { resolveCentreGuidelines } from "@/features/hospitals/guidelines";
 
 type ServicePageState = {
   items: DocumentRecord<ServiceDocument>[];
@@ -236,6 +237,8 @@ export default function PublicHospitalSearch({ initialService = "" }: PublicHosp
           {visibleHospitals.map((hospital, hospitalIndex) => {
             const isExpanded = expandedHospitalId === hospital.id;
             const servicePage = servicePages[hospital.id];
+            const guidelines = resolveCentreGuidelines(hospital);
+            const additionalRules = hospital.additionalCentreRules?.trim();
             return (
               <article className="public-center-card" key={hospital.id}>
                 <PublicHospitalImages hospital={hospital} priority={hospitalIndex === 0} />
@@ -261,7 +264,7 @@ export default function PublicHospitalSearch({ initialService = "" }: PublicHosp
                     aria-expanded={isExpanded}
                     onClick={() => toggleServices(hospital.id)}
                   >
-                    {isExpanded ? "Hide treatments" : "View treatments"}
+                    {isExpanded ? "Hide details" : "View details"}
                   </button>
                 </div>
 
@@ -299,6 +302,17 @@ export default function PublicHospitalSearch({ initialService = "" }: PublicHosp
                         {servicePage.isLoading ? "Loading..." : "Show more treatments"}
                       </button>
                     )}
+                    <details className="public-centre-guidelines">
+                      <summary>Centre guidelines</summary>
+                      <p>Please review these guidelines before visiting or staying at the centre.</p>
+                      <ol>
+                        {guidelines.map((guideline) => <li key={guideline.id}>
+                          <strong>{guideline.title}</strong>
+                          <span>{guideline.body}</span>
+                        </li>)}
+                        {additionalRules && <li><strong>Additional Centre Rules</strong><span>{additionalRules}</span></li>}
+                      </ol>
+                    </details>
                   </div>
                 )}
               </article>

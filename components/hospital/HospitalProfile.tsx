@@ -12,6 +12,8 @@ import { PortalToast } from "@/components/portal/PortalToast";
 import { HospitalImageFields } from "@/components/forms/HospitalImageFields";
 import { HospitalImageGallery } from "@/components/hospital/HospitalImageGallery";
 import { getHospitalImageUrls, validateHospitalImageUrls } from "@/features/hospitals/images";
+import { hospitalGuidelineFormValues } from "@/features/hospitals/guidelines";
+import { CentreGuidelineFields } from "@/components/forms/CentreGuidelineFields";
 
 export function HospitalProfile() {
   const { userProfile } = useAuth();
@@ -34,12 +36,13 @@ export function HospitalProfile() {
     const values = hospitalFormValues(form);
     const validation = validateHospitalFields({ ...values, commissionPercentage: hospital.commissionPercentage });
     const images = validateHospitalImageUrls(form.getAll("hospitalImageUrl"));
+    const guidelines = hospitalGuidelineFormValues(form);
     setFieldErrors(validation.errors);
     setImageError(images.error);
     setMessage(null);
     setError(null);
-    if (!validation.isValid || images.error) {
-      setError("Please check the highlighted fields, then save the profile again.");
+    if (!validation.isValid || images.error || guidelines.error) {
+      setError(guidelines.error ?? "Please check the highlighted fields, then save the profile again.");
       return;
     }
 
@@ -54,6 +57,8 @@ export function HospitalProfile() {
         state: validation.data.state,
         description: validation.data.description,
         imageUrls: images.imageUrls,
+        centreGuidelines: guidelines.centreGuidelines,
+        additionalCentreRules: guidelines.additionalCentreRules,
       };
       await updateHospitalProfile(id, profile, hospital);
       setHospital((current) => current ? { ...current, ...profile } : current);
@@ -70,6 +75,7 @@ export function HospitalProfile() {
     <HospitalImageGallery imageUrls={getHospitalImageUrls(hospital)} hospitalName={hospital.name} />
     <HospitalFormFields defaultValues={hospital} errors={fieldErrors} />
     <HospitalImageFields defaultValues={getHospitalImageUrls(hospital)} error={imageError} />
+    <CentreGuidelineFields hospital={hospital} />
     <PortalToast message={error} tone="error" />
     <PortalToast message={message} />
     <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save profile"}</button></div>

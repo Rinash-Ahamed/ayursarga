@@ -28,6 +28,7 @@ import { sendHospitalLoginSetup } from "@/services/auth/hospitalAccountService";
 import { AdminHospitalPackages } from "@/components/admin/HospitalPackages";
 import { HospitalImageGallery } from "@/components/hospital/HospitalImageGallery";
 import { getHospitalImageUrls } from "@/features/hospitals/images";
+import { CentreGuidelines } from "@/components/hospital/CentreGuidelines";
 
 function formatDate(value: unknown) {
   const date = toDate(value);
@@ -250,6 +251,8 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
           </div>}
         </>}
       </article>
+
+      <CentreGuidelines hospital={hospital} />
 
       <article className="portal-card portal-contract-card">
         <div className="portal-row-heading"><h2>Contract and approval</h2><span className="portal-status" data-status={contractStatus}>{formatStatus(contractStatus)}</span></div>

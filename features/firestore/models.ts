@@ -27,6 +27,21 @@ export type UserDocument = AuditedDocument & {
   privacyConsentVersion?: string | null;
 };
 
+export type CentreGuidelineId =
+  | "visitors"
+  | "quietEnvironment"
+  | "foodAndBeverages"
+  | "prohibitedActivities"
+  | "privacyAndPhotography"
+  | "cleanliness"
+  | "propertyDamage"
+  | "ayurvedicTherapies"
+  | "medicationsAndCharges"
+  | "reportConcerns"
+  | "emergencySituations";
+
+export type CentreGuidelineOverrides = Partial<Record<CentreGuidelineId, string>>;
+
 export type HospitalDocument = AuditedDocument & {
   name: string;
   description: string;
@@ -39,6 +54,8 @@ export type HospitalDocument = AuditedDocument & {
   imageUrls?: string[];
   ayursargaRating?: number | null;
   ayursargaReviewNote?: string | null;
+  centreGuidelines?: CentreGuidelineOverrides;
+  additionalCentreRules?: string;
   status: UserStatus;
   isPublic: boolean;
   commissionPercentage: number;
