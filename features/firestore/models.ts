@@ -58,6 +58,7 @@ export type HospitalDocument = AuditedDocument & {
   additionalCentreRules?: string;
   facilities?: string;
   legalPolicies?: string;
+  locationUrl?: string | null;
   status: UserStatus;
   isPublic: boolean;
   commissionPercentage: number;

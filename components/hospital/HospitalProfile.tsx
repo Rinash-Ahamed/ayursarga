@@ -14,6 +14,8 @@ import { HospitalImageGallery } from "@/components/hospital/HospitalImageGallery
 import { getHospitalImageUrls, validateHospitalImageUrls } from "@/features/hospitals/images";
 import { hospitalGuidelineFormValues } from "@/features/hospitals/guidelines";
 import { CentreGuidelineFields } from "@/components/forms/CentreGuidelineFields";
+import { HospitalLocationField } from "@/components/forms/HospitalLocationField";
+import { validateHospitalLocationUrl } from "@/features/hospitals/location";
 
 export function HospitalProfile() {
   const { userProfile } = useAuth();
@@ -23,6 +25,7 @@ export function HospitalProfile() {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<HospitalValidationErrors>({});
   const [imageError, setImageError] = useState<string | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -37,12 +40,15 @@ export function HospitalProfile() {
     const validation = validateHospitalFields({ ...values, commissionPercentage: hospital.commissionPercentage });
     const images = validateHospitalImageUrls(form.getAll("hospitalImageUrl"));
     const guidelines = hospitalGuidelineFormValues(form);
+    const location = validateHospitalLocationUrl(form.get("hospitalLocationUrl"));
     setFieldErrors(validation.errors);
     setImageError(images.error);
+    setLocationError(location.error);
+    const profileError = guidelines.error ?? location.error;
     setMessage(null);
     setError(null);
-    if (!validation.isValid || images.error || guidelines.error) {
-      setError(guidelines.error ?? "Please check the highlighted fields, then save the profile again.");
+    if (!validation.isValid || images.error || profileError) {
+      setError(profileError ?? "Please check the highlighted fields, then save the profile again.");
       return;
     }
 
@@ -61,6 +67,7 @@ export function HospitalProfile() {
         additionalCentreRules: guidelines.additionalCentreRules,
         facilities: guidelines.facilities,
         legalPolicies: guidelines.legalPolicies,
+        locationUrl: location.locationUrl,
       };
       await updateHospitalProfile(id, profile, hospital);
       setHospital((current) => current ? { ...current, ...profile } : current);
@@ -77,6 +84,7 @@ export function HospitalProfile() {
     <HospitalImageGallery imageUrls={getHospitalImageUrls(hospital)} hospitalName={hospital.name} />
     <HospitalFormFields defaultValues={hospital} errors={fieldErrors} />
     <HospitalImageFields defaultValues={getHospitalImageUrls(hospital)} error={imageError} />
+    <HospitalLocationField defaultValue={hospital.locationUrl} error={locationError} />
     <CentreGuidelineFields hospital={hospital} />
     <PortalToast message={error} tone="error" />
     <PortalToast message={message} />

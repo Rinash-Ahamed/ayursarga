@@ -409,6 +409,10 @@ main>.dark-section{
 .public-centre-contact-card h2{ font-size:27px; }
 .public-centre-contact-card p{ margin:12px 0 18px; color:var(--sage); font-size:11px; line-height:1.65; }
 .public-centre-contact-card a{ display:block; padding:12px 0; border-top:1px solid rgba(31,61,43,.14); color:var(--forest); font-size:11px; font-weight:700; overflow-wrap:anywhere; }
+.public-centre-location{ margin-top:14px; padding:17px; border:1px solid rgba(31,61,43,.16); border-radius:14px; background:rgba(31,61,43,.04); }
+.public-centre-location>span{ color:var(--clay-dark); font-size:9px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; }
+.public-centre-location>p{ margin:7px 0 12px; color:var(--ink); font-size:10px; line-height:1.6; }
+.public-centre-location>a{ padding:10px 0 0; display:flex; align-items:center; justify-content:space-between; color:var(--forest); }
 .public-centre-detail-status{ min-height:320px; display:grid; place-content:center; color:var(--sage); text-align:center; }
 .public-centre-detail-status strong{ color:var(--forest); font-family:var(--font-display); font-size:30px; }
 .public-centre-detail-status p{ margin-top:9px; }

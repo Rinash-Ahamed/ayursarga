@@ -155,6 +155,11 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
           <span>Centre information</span><h2>Speak with the centre</h2>
           <p>Contact the centre for practical questions. Treatment suitability is confirmed by its qualified clinical team.</p>
           <a href={`tel:${hospital.phone}`}>{hospital.phone}</a><a href={`mailto:${hospital.email}`}>{hospital.email}</a>
+          {hospital.locationUrl && <div className="public-centre-location">
+            <span>Centre location</span>
+            <p>{hospital.address}, {hospital.city}, {hospital.state}</p>
+            <a href={hospital.locationUrl} target="_blank" rel="noopener noreferrer">Open location in maps <span aria-hidden="true">↗</span></a>
+          </div>}
         </aside>
       </div>
     </div>

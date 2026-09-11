@@ -72,7 +72,8 @@ implementation work unless the project owner explicitly changes a decision.
   city/locality, state, complete address, optional description, and up to four
   Google Drive sharing links or externally hosted HTTPS hospital image URLs,
   the default centre-guideline wording, additional centre rules, facilities,
-  and centre-specific legal/policy information.
+  centre-specific legal/policy information, and a validated Google Maps or
+  OpenStreetMap location link.
   Normalize supported Drive sharing links for display and keep gallery frames
   at a consistent 4:3 ratio. Firebase Storage and direct uploads remain disabled
   while the project uses the Spark plan.

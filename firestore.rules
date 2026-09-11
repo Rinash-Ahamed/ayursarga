@@ -62,7 +62,7 @@ service cloud.firestore {
       return request.resource.data.keys().hasOnly([
         'name', 'description', 'email', 'phone', 'address', 'city', 'state',
         'imageUrl', 'imageUrls', 'ayursargaRating', 'ayursargaReviewNote',
-        'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies',
+        'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies', 'locationUrl',
         'status', 'isPublic', 'commissionPercentage',
         'contractStatus', 'contractGeneratedAt', 'contractGeneratedBy',
         'contractSignedAt', 'contractSignedBy', 'contractUrl', 'activatedAt', 'activatedBy',
@@ -156,6 +156,11 @@ service cloud.firestore {
           request.resource.data.ayursargaReviewNote is string
           && request.resource.data.ayursargaReviewNote.size() <= 400
         ))
+        && (request.resource.data.get('locationUrl', null) == null || (
+          request.resource.data.locationUrl is string
+          && request.resource.data.locationUrl.size() <= 500
+          && request.resource.data.locationUrl.matches('https://(maps\\.app\\.goo\\.gl|maps\\.google\\.com|maps\\.google\\.co\\.in|goo\\.gl|www\\.google\\.com|www\\.google\\.co\\.in|www\\.openstreetmap\\.org|openstreetmap\\.org)/.*')
+        ))
         && hasValidCentreGuidelines()
         && request.resource.data.commissionPercentage is number
         && request.resource.data.commissionPercentage >= 0
@@ -221,7 +226,7 @@ service cloud.firestore {
           && changed.hasOnly([
             'name', 'description', 'email', 'phone', 'address', 'city', 'state',
             'imageUrl', 'imageUrls', 'ayursargaRating', 'ayursargaReviewNote',
-            'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies',
+            'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies', 'locationUrl',
             'commissionPercentage', 'updatedAt', 'updatedBy', 'lastAuditId'
           ])
           && (!changed.hasAny(['ayursargaRating', 'ayursargaReviewNote']) || (
@@ -405,7 +410,7 @@ service cloud.firestore {
           hasOperationalHospitalAccess(hospitalId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name', 'description', 'email', 'phone', 'address', 'city', 'state',
-            'imageUrls', 'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies',
+            'imageUrls', 'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies', 'locationUrl',
             'updatedAt', 'updatedBy', 'lastAuditId'
           ])
         ));
