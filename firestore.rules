@@ -62,7 +62,7 @@ service cloud.firestore {
       return request.resource.data.keys().hasOnly([
         'name', 'description', 'email', 'phone', 'address', 'city', 'state',
         'imageUrl', 'imageUrls', 'ayursargaRating', 'ayursargaReviewNote',
-        'centreGuidelines', 'additionalCentreRules',
+        'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies',
         'status', 'isPublic', 'commissionPercentage',
         'contractStatus', 'contractGeneratedAt', 'contractGeneratedBy',
         'contractSignedAt', 'contractSignedBy', 'contractUrl', 'activatedAt', 'activatedBy',
@@ -74,6 +74,8 @@ service cloud.firestore {
     function hasValidCentreGuidelines() {
       let guidelines = request.resource.data.get('centreGuidelines', {});
       let additionalRules = request.resource.data.get('additionalCentreRules', '');
+      let facilities = request.resource.data.get('facilities', '');
+      let legalPolicies = request.resource.data.get('legalPolicies', '');
       return guidelines is map
         && guidelines.keys().hasOnly([
           'visitors', 'quietEnvironment', 'foodAndBeverages', 'prohibitedActivities',
@@ -92,7 +94,11 @@ service cloud.firestore {
         && guidelines.get('reportConcerns', '') is string && guidelines.get('reportConcerns', '').size() <= 1200
         && guidelines.get('emergencySituations', '') is string && guidelines.get('emergencySituations', '').size() <= 1200
         && additionalRules is string
-        && additionalRules.size() <= 4000;
+        && additionalRules.size() <= 4000
+        && facilities is string
+        && facilities.size() <= 4000
+        && legalPolicies is string
+        && legalPolicies.size() <= 4000;
     }
 
     function hasValidRequiredHospitalFields() {
@@ -215,7 +221,7 @@ service cloud.firestore {
           && changed.hasOnly([
             'name', 'description', 'email', 'phone', 'address', 'city', 'state',
             'imageUrl', 'imageUrls', 'ayursargaRating', 'ayursargaReviewNote',
-            'centreGuidelines', 'additionalCentreRules',
+            'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies',
             'commissionPercentage', 'updatedAt', 'updatedBy', 'lastAuditId'
           ])
           && (!changed.hasAny(['ayursargaRating', 'ayursargaReviewNote']) || (
@@ -399,7 +405,7 @@ service cloud.firestore {
           hasOperationalHospitalAccess(hospitalId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name', 'description', 'email', 'phone', 'address', 'city', 'state',
-            'imageUrls', 'centreGuidelines', 'additionalCentreRules',
+            'imageUrls', 'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies',
             'updatedAt', 'updatedBy', 'lastAuditId'
           ])
         ));
@@ -442,7 +448,8 @@ service cloud.firestore {
       allow create: if isConsumer()
         && request.resource.data.keys().hasOnly([
           'consumerId', 'consumerName', 'consumerEmail', 'consumerPhone',
-          'consumerAddress', 'hospitalId', 'serviceId', 'preferredDate', 'preferredTime',
+          'consumerAddress', 'hospitalId', 'serviceId', 'preferredDate', 'preferredEndDate',
+          'preferredTime', 'bystanderCount',
           'confirmedDate', 'confirmedTime', 'status', 'servicePrice',
           'commissionPercentage', 'estimatedCommission', 'consumerNotes',
           'hospitalNotes', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
@@ -461,6 +468,17 @@ service cloud.firestore {
           request.resource.data.consumerAddress is string
           && request.resource.data.consumerAddress.size() <= 300
         ))
+        && request.resource.data.preferredDate is timestamp
+        && (request.resource.data.preferredEndDate == null || (
+          request.resource.data.preferredEndDate is timestamp
+          && request.resource.data.preferredEndDate >= request.resource.data.preferredDate
+        ))
+        && request.resource.data.preferredTime is string
+        && request.resource.data.preferredTime.size() > 0
+        && request.resource.data.preferredTime.size() <= 20
+        && request.resource.data.bystanderCount is int
+        && request.resource.data.bystanderCount >= 0
+        && request.resource.data.bystanderCount <= 4
         && request.resource.data.status == 'requested'
         && request.resource.data.confirmedDate == null
         && request.resource.data.confirmedTime == null

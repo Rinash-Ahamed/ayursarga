@@ -14,11 +14,22 @@ import { getService } from "@/services/hospitals/serviceService";
 
 type BookingRequestInput = {
   consumerId: string; hospitalId: string; serviceId: string; preferredDate: Date;
-  preferredTime: string; consumerNotes?: string | null; consumerName: string;
+  preferredEndDate?: Date | null; preferredTime: string; bystanderCount: number;
+  consumerNotes?: string | null; consumerName: string;
   consumerEmail: string; consumerPhone: string; consumerAddress: string | null;
 };
 
 export async function createBookingRequest(input: BookingRequestInput) {
+  if (Number.isNaN(input.preferredDate.getTime())) throw new Error("Choose a valid preferred start date.");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (input.preferredDate < today) throw new Error("Choose a preferred start date from today onwards.");
+  if (input.preferredEndDate && (Number.isNaN(input.preferredEndDate.getTime()) || input.preferredEndDate < input.preferredDate)) {
+    throw new Error("Choose an end date on or after the preferred start date.");
+  }
+  if (!Number.isInteger(input.bystanderCount) || input.bystanderCount < 0 || input.bystanderCount > 4) {
+    throw new Error("Choose between zero and four accompanying bystanders.");
+  }
   const [hospital, service] = await Promise.all([getHospital(input.hospitalId), getService(input.serviceId)]);
   if (!hospital || hospital.status !== "active" || !hospital.isPublic) throw new Error("This hospital is not accepting appointment requests right now. Choose another hospital and try again.");
   if (!service || service.hospitalId !== hospital.id || service.status !== "active") throw new Error("This service is not accepting appointment requests right now. Return to the hospital page and choose another service.");
@@ -27,7 +38,9 @@ export async function createBookingRequest(input: BookingRequestInput) {
     consumerName: input.consumerName.trim(), consumerEmail: input.consumerEmail.trim().toLowerCase(),
     consumerPhone: input.consumerPhone.trim(), consumerAddress: input.consumerAddress?.trim() || null,
     hospitalId: hospital.id, serviceId: service.id,
-    preferredDate: Timestamp.fromDate(input.preferredDate), preferredTime: input.preferredTime,
+    preferredDate: Timestamp.fromDate(input.preferredDate),
+    preferredEndDate: input.preferredEndDate ? Timestamp.fromDate(input.preferredEndDate) : null,
+    preferredTime: input.preferredTime, bystanderCount: input.bystanderCount,
     confirmedDate: null, confirmedTime: null, status: "requested", treatmentStatus: "not_started",
     servicePrice: service.price, commissionPercentage: hospital.commissionPercentage,
     estimatedCommission: service.price * hospital.commissionPercentage / 100,

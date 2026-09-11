@@ -19,7 +19,7 @@ type HospitalAdminUpdate = Partial<HospitalFields & Pick<HospitalDocument,
 >>;
 type HospitalProfileInput = Pick<HospitalDocument,
   "name" | "description" | "email" | "phone" | "address" | "city" | "state" | "imageUrls" |
-  "centreGuidelines" | "additionalCentreRules"
+  "centreGuidelines" | "additionalCentreRules" | "facilities" | "legalPolicies"
 >;
 
 export const getHospital = (id: string) => readDocument<HospitalDocument>(COLLECTIONS.hospitals, id);
@@ -58,6 +58,8 @@ export function createHospital(input: HospitalFields, createdBy: string) {
     ayursargaReviewNote: null,
     centreGuidelines: DEFAULT_CENTRE_GUIDELINE_VALUES,
     additionalCentreRules: "",
+    facilities: "",
+    legalPolicies: "",
     activatedAt: null,
     activatedBy: null,
     createdBy,

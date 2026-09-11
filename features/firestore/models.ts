@@ -56,6 +56,8 @@ export type HospitalDocument = AuditedDocument & {
   ayursargaReviewNote?: string | null;
   centreGuidelines?: CentreGuidelineOverrides;
   additionalCentreRules?: string;
+  facilities?: string;
+  legalPolicies?: string;
   status: UserStatus;
   isPublic: boolean;
   commissionPercentage: number;
@@ -98,7 +100,9 @@ export type BookingDocument = AuditedDocument & {
   hospitalId: string;
   serviceId: string;
   preferredDate: Timestamp;
+  preferredEndDate?: Timestamp | null;
   preferredTime: string;
+  bystanderCount?: number;
   confirmedDate: Timestamp | null;
   confirmedTime: string | null;
   status: BookingStatus;

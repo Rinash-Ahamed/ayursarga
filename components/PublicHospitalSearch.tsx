@@ -1,33 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useRef, useState } from "react";
-import type { HospitalDocument, ServiceDocument } from "@/features/firestore/models";
+import { useCallback, useMemo, useRef, useState, type FormEvent } from "react";
+import type { HospitalDocument } from "@/features/firestore/models";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import {
   listPublicHospitals,
   listPublicHospitalsByServiceName,
-  listPublicHospitalServices,
 } from "@/services/hospitals/publicHospitalService";
 import type {
   DocumentRecord,
   QueryPageOptions,
 } from "@/services/firestore/firestoreService";
-import { formatCurrency } from "@/utils/currency";
-import { formatServiceDuration } from "@/utils/duration";
 import { getHospitalImageUrls } from "@/features/hospitals/images";
-import { resolveCentreGuidelines } from "@/features/hospitals/guidelines";
-
-type ServicePageState = {
-  items: DocumentRecord<ServiceDocument>[];
-  cursor: QueryPageOptions["cursor"];
-  hasMore: boolean;
-  isLoading: boolean;
-  error: string | null;
-};
+import { addCentreSearchContext, formatBystanders, type CentreSearchContext } from "@/features/hospitals/searchContext";
 
 type PublicHospitalSearchProps = {
   initialService?: string;
+  initialContext: CentreSearchContext;
+  initialSearch?: string;
 };
 
 function PublicHospitalImages({ hospital, priority = false }: { hospital: DocumentRecord<HospitalDocument>; priority?: boolean }) {
@@ -121,10 +112,14 @@ function PublicHospitalImages({ hospital, priority = false }: { hospital: Docume
   </div>;
 }
 
-export default function PublicHospitalSearch({ initialService = "" }: PublicHospitalSearchProps) {
-  const [search, setSearch] = useState("");
-  const [expandedHospitalId, setExpandedHospitalId] = useState<string | null>(null);
-  const [servicePages, setServicePages] = useState<Record<string, ServicePageState>>({});
+export default function PublicHospitalSearch({ initialService = "", initialContext, initialSearch = "" }: PublicHospitalSearchProps) {
+  const [searchDraft, setSearchDraft] = useState(initialSearch);
+  const [search, setSearch] = useState(initialSearch);
+  const [startDate, setStartDate] = useState(initialContext.startDate);
+  const [endDate, setEndDate] = useState(initialContext.endDate);
+  const [bystanders, setBystanders] = useState(initialContext.bystanders);
+  const [dateError, setDateError] = useState<string | null>(null);
+  const today = new Date().toISOString().slice(0, 10);
   const hospitalLoader = useCallback(
     (cursor: QueryPageOptions["cursor"]) => initialService
       ? listPublicHospitalsByServiceName(initialService, { pageSize: 12, cursor })
@@ -144,56 +139,22 @@ export default function PublicHospitalSearch({ initialService = "" }: PublicHosp
     });
   }, [hospitals, search]);
 
-  async function loadServices(hospitalId: string, append: boolean) {
-    const currentPage = servicePages[hospitalId];
-    if (currentPage?.isLoading) return;
-    const cursor = append ? currentPage?.cursor ?? null : null;
-
-    setServicePages((current) => ({
-      ...current,
-      [hospitalId]: {
-        items: append ? current[hospitalId]?.items ?? [] : [],
-        cursor: current[hospitalId]?.cursor ?? null,
-        hasMore: current[hospitalId]?.hasMore ?? false,
-        isLoading: true,
-        error: null,
-      },
-    }));
-
-    try {
-      const page = await listPublicHospitalServices(hospitalId, { pageSize: 8, cursor });
-      setServicePages((current) => {
-        const existing = append ? current[hospitalId]?.items ?? [] : [];
-        return {
-          ...current,
-          [hospitalId]: {
-            items: [...existing, ...page.documents.filter((service) =>
-              !existing.some((item) => item.id === service.id))],
-            cursor: page.cursor,
-            hasMore: page.hasMore,
-            isLoading: false,
-            error: null,
-          },
-        };
-      });
-    } catch {
-      setServicePages((current) => ({
-        ...current,
-        [hospitalId]: {
-          items: current[hospitalId]?.items ?? [],
-          cursor: current[hospitalId]?.cursor ?? null,
-          hasMore: current[hospitalId]?.hasMore ?? false,
-          isLoading: false,
-          error: "We could not load this center's services. Please try again.",
-        },
-      }));
+  function submitSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (Boolean(startDate) !== Boolean(endDate)) {
+      setDateError("Choose both a preferred start date and end date, or leave both flexible.");
+      return;
     }
-  }
-
-  function toggleServices(hospitalId: string) {
-    const opening = expandedHospitalId !== hospitalId;
-    setExpandedHospitalId(opening ? hospitalId : null);
-    if (opening && !servicePages[hospitalId]) void loadServices(hospitalId, false);
+    if (startDate && startDate < today) {
+      setDateError("Choose a preferred start date from today onwards.");
+      return;
+    }
+    if (startDate && endDate && endDate < startDate) {
+      setDateError("Choose an end date on or after the preferred start date.");
+      return;
+    }
+    setDateError(null);
+    setSearch(searchDraft.trim());
   }
 
   return (
@@ -207,17 +168,22 @@ export default function PublicHospitalSearch({ initialService = "" }: PublicHosp
             : "Explore active Ayursarga partner centers and their available treatments. Google sign-in is required only when you request an appointment."}</p>
         </div>
 
-        <div className="public-search-filters" role="search" aria-label="Search Ayurvedic centers">
-          <label>
-            <span>Center, city or state</span>
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search Ayurvedic centers"
-            />
+        <form className="public-search-filters" role="search" aria-label="Search Ayurvedic centers" onSubmit={submitSearch}>
+          <label className="public-search-field public-search-destination">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20v-9l8-6 8 6v9M8 20v-6h8v6M3 20h18" /></svg>
+            <span><small>Centre, city or state</small><input type="search" value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} placeholder="Where would you like care?" /></span>
           </label>
-        </div>
+          <div className="public-search-field public-search-dates">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v3m12-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z" /></svg>
+            <span><small>Preferred care dates</small><span className="public-date-inputs"><input aria-label="Preferred care start date" type="date" min={today} value={startDate} onChange={(event) => { setStartDate(event.target.value); setDateError(null); }} /><b aria-hidden="true">to</b><input aria-label="Preferred care end date" type="date" min={startDate || today} value={endDate} onChange={(event) => { setEndDate(event.target.value); setDateError(null); }} /></span></span>
+          </div>
+          <label className="public-search-field public-search-bystanders">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="3" /><path d="M5 21v-2a7 7 0 0 1 14 0v2" /></svg>
+            <span><small>Accompanying support</small><select value={bystanders} onChange={(event) => setBystanders(Number(event.target.value))}>{[0, 1, 2, 3, 4].map((count) => <option value={count} key={count}>{formatBystanders(count)}</option>)}</select></span>
+          </label>
+          <button type="submit" className="public-search-submit"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></svg><span>Search</span></button>
+        </form>
+        {dateError && <p className="public-search-date-error" role="alert">{dateError}</p>}
 
         {isLoading && hospitals.length === 0 && <div className="public-search-status" role="status">Finding approved Ayurvedic centers...</div>}
         {error && <div className="public-search-status error" role="alert">{error}</div>}
@@ -235,10 +201,10 @@ export default function PublicHospitalSearch({ initialService = "" }: PublicHosp
 
         <div className="public-center-grid">
           {visibleHospitals.map((hospital, hospitalIndex) => {
-            const isExpanded = expandedHospitalId === hospital.id;
-            const servicePage = servicePages[hospital.id];
-            const guidelines = resolveCentreGuidelines(hospital);
-            const additionalRules = hospital.additionalCentreRules?.trim();
+            const detailParams = addCentreSearchContext(new URLSearchParams(), { startDate, endDate, bystanders });
+            if (initialService) detailParams.set("service", initialService);
+            if (search) detailParams.set("q", search);
+            const detailHref = `/centers/${encodeURIComponent(hospital.id)}?${detailParams.toString()}`;
             return (
               <article className="public-center-card" key={hospital.id}>
                 <PublicHospitalImages hospital={hospital} priority={hospitalIndex === 0} />
@@ -258,63 +224,8 @@ export default function PublicHospitalSearch({ initialService = "" }: PublicHosp
                   {hospital.ayursargaReviewNote && <div className="public-center-review">
                     <p>{hospital.ayursargaReviewNote}</p>
                   </div>}
-                  <button
-                    type="button"
-                    className="public-center-toggle"
-                    aria-expanded={isExpanded}
-                    onClick={() => toggleServices(hospital.id)}
-                  >
-                    {isExpanded ? "Hide details" : "View details"}
-                  </button>
+                  <Link className="public-center-toggle" href={detailHref}>View centre details <span aria-hidden="true">→</span></Link>
                 </div>
-
-                {isExpanded && (
-                  <div className="public-service-list">
-                    {servicePage?.isLoading && servicePage.items.length === 0 && <p role="status">Loading treatments...</p>}
-                    {servicePage?.error && (
-                      <div className="public-service-error" role="alert">
-                        <span>{servicePage.error}</span>
-                        <button type="button" onClick={() => void loadServices(hospital.id, false)}>Try again</button>
-                      </div>
-                    )}
-                    {servicePage && !servicePage.isLoading && !servicePage.error && servicePage.items.length === 0 && (
-                      <p>No active treatments are listed for this center yet.</p>
-                    )}
-                    {servicePage?.items.map((service) => (
-                      <article className="public-service-row" key={service.id}>
-                        <div>
-                          <h4>{service.name}</h4>
-                          {service.description && <p>{service.description}</p>}
-                          <span>{formatCurrency(service.price)} · {formatServiceDuration(service.durationMinutes, service.durationUnit)}</span>
-                        </div>
-                        <Link href={`/app/bookings/new?hospitalId=${hospital.id}&serviceId=${service.id}`}>
-                          Request appointment
-                        </Link>
-                      </article>
-                    ))}
-                    {servicePage?.hasMore && (
-                      <button
-                        type="button"
-                        className="public-load-more"
-                        disabled={servicePage.isLoading}
-                        onClick={() => void loadServices(hospital.id, true)}
-                      >
-                        {servicePage.isLoading ? "Loading..." : "Show more treatments"}
-                      </button>
-                    )}
-                    <details className="public-centre-guidelines">
-                      <summary>Centre guidelines</summary>
-                      <p>Please review these guidelines before visiting or staying at the centre.</p>
-                      <ol>
-                        {guidelines.map((guideline) => <li key={guideline.id}>
-                          <strong>{guideline.title}</strong>
-                          <span>{guideline.body}</span>
-                        </li>)}
-                        {additionalRules && <li><strong>Additional Centre Rules</strong><span>{additionalRules}</span></li>}
-                      </ol>
-                    </details>
-                  </div>
-                )}
               </article>
             );
           })}

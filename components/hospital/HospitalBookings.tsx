@@ -2,6 +2,7 @@
 
 import { useCallback, useDeferredValue, useMemo, useState } from "react";
 import type { BookingDocument, BookingStatus, TreatmentStatus } from "@/features/firestore/models";
+import { formatBookingCarePreference } from "@/features/bookings/display";
 import { getTreatmentStatus } from "@/features/bookings/treatmentStatus";
 import { emptyQueryPage, type DocumentRecord, type QueryPageOptions } from "@/services/firestore/firestoreService";
 import { listHospitalBookings, updateHospitalBooking, updateTreatmentProgress, type HospitalBookingUpdate } from "@/services/bookings/bookingService";
@@ -160,7 +161,7 @@ export function HospitalBookings() {
         <div className="portal-row-heading"><h3>{formatCurrency(item.servicePrice)}</h3><span className="portal-status" data-status={item.status}>{formatStatus(item.status)}</span></div>
         <p><strong>{item.consumerName || "Patient"}</strong> · {item.consumerPhone || "Phone not recorded"} · {item.consumerEmail || "Email not recorded"}</p>
         <p>Address: {item.consumerAddress || "Not provided"}</p>
-        <p>Preferred: {item.preferredDate.toDate().toLocaleDateString("en-IN")} at {item.preferredTime}</p>
+        <p>Preferred: {formatBookingCarePreference(item)}</p>
         {item.consumerNotes && <p>Patient note: {item.consumerNotes}</p>}
         {item.status === "confirmed" || item.status === "completed" ? <p>Treatment: <span className="portal-status" data-status={getTreatmentStatus(item)}>{formatStatus(getTreatmentStatus(item))}</span></p> : null}
         <div className="portal-actions">

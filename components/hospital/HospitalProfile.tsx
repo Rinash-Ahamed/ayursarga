@@ -59,6 +59,8 @@ export function HospitalProfile() {
         imageUrls: images.imageUrls,
         centreGuidelines: guidelines.centreGuidelines,
         additionalCentreRules: guidelines.additionalCentreRules,
+        facilities: guidelines.facilities,
+        legalPolicies: guidelines.legalPolicies,
       };
       await updateHospitalProfile(id, profile, hospital);
       setHospital((current) => current ? { ...current, ...profile } : current);
