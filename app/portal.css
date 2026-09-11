@@ -102,6 +102,28 @@ body.portal-active{ cursor:auto; overflow:auto; height:auto; }
 .portal-form input[aria-invalid="true"],.portal-form textarea[aria-invalid="true"],.portal-form select[aria-invalid="true"]{ border-color:var(--rust); box-shadow:0 0 0 2px rgba(139,94,60,.12); }
 .portal-field-error{ color:var(--rust); font-size:10px; font-weight:700; line-height:1.45; }
 .portal-form textarea{ min-height:100px; resize:vertical; }
+.portal-guidelines-fieldset{ margin:8px 0 0; padding:24px; border:1px solid rgba(58,61,46,.28); border-radius:16px; background:rgba(58,61,46,.025); }
+.portal-guidelines-fieldset legend{ padding:0 8px; color:var(--forest); font-family:var(--font-display); font-size:24px; font-weight:550; }
+.portal-guidelines-fieldset>.portal-form-note{ margin-bottom:20px!important; font-size:11px!important; line-height:1.6!important; }
+.portal-guidelines-fields{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.portal-guidelines-fields textarea{ min-height:132px; line-height:1.55; }
+.portal-facility-groups{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.portal-facility-group{ min-width:0; margin:0; padding:16px; border:1px solid rgba(58,61,46,.22); border-radius:13px; background:#fff; }
+.portal-facility-group legend{ padding:0 6px; font-family:inherit; color:var(--forest); font-size:11px; font-weight:800; letter-spacing:.02em; }
+.portal-facility-options{ display:grid; gap:8px; }
+.portal-form .portal-facility-option{ grid-template-columns:18px minmax(0,1fr); align-items:start; gap:9px; min-height:28px; padding:5px 7px; border-radius:8px; font-size:11px; font-weight:600; line-height:1.45; cursor:pointer; transition:background-color .18s,color .18s; }
+.portal-form .portal-facility-option:hover{ background:rgba(58,61,46,.055); }
+.portal-form .portal-facility-option input{ width:17px; height:17px; margin:0; padding:0; border:0; box-shadow:none; accent-color:var(--forest); cursor:pointer; }
+.centre-guidelines{ margin-top:30px; }
+.centre-guidelines-heading>span{ color:var(--clay-dark); font-size:9px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+.centre-guidelines-heading h2{ margin-top:7px; }
+.centre-guidelines-heading>p{ margin-top:7px; }
+.centre-guidelines-list{ margin-top:22px; padding-left:30px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 38px; }
+.centre-guidelines-list li{ padding:16px 8px 16px 5px; border-top:1px solid rgba(58,61,46,.15); color:var(--clay-dark); }
+.centre-guidelines-list li::marker{ font-size:11px; font-weight:800; }
+.centre-guidelines-list strong{ display:block; color:var(--forest); font-size:13px; line-height:1.4; }
+.centre-guidelines-list p{ margin-top:6px; font-size:11px; line-height:1.65; }
+.centre-guidelines-additional{ white-space:pre-line; }
 .portal-consent{ margin:2px 0 0; padding:18px; border:1px solid rgba(58,61,46,.3); border-radius:14px; background:rgba(184,135,47,.06); }
 .portal-consent legend{ padding:0 7px; color:var(--forest); font-size:11px; font-weight:800; letter-spacing:.02em; }
 .portal-consent>p{ margin:0 0 14px; color:var(--ink); font-size:11px; line-height:1.65; }
@@ -210,13 +232,16 @@ body.portal-active{ cursor:auto; overflow:auto; height:auto; }
 .portal-image-fields legend{ padding:0 8px; color:var(--forest); font-size:13px; font-weight:800; }
 .portal-image-fields>p{ margin:0 0 16px; color:var(--sage); font-size:12px; line-height:1.6; }
 .portal-image-field-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.portal-location-field{ margin:0; padding:20px; border:1px solid rgba(58,61,46,.28); border-radius:16px; }
+.portal-location-field legend{ padding:0 8px; color:var(--forest); font-size:13px; font-weight:800; }
+.portal-location-field>p{ margin:0 0 16px; color:var(--sage); font-size:12px; line-height:1.6; }
 .portal-hospital-gallery{ grid-column:1/-1; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:20px; }
 .portal-hospital-gallery a{ min-width:0; overflow:hidden; aspect-ratio:4/3; border:1px solid rgba(58,61,46,.24); border-radius:14px; background:#fff; }
 .portal-hospital-gallery img{ width:100%; height:100%; object-fit:cover; transition:transform .35s ease; }
 @media(hover:hover) and (pointer:fine){ .portal-hospital-gallery a:hover img{ transform:scale(1.035); } }
 .portal-root :where(a,button,input,textarea,select):focus-visible{ outline:3px solid var(--clay-dark); outline-offset:3px; }
 @media(max-width:900px){ .portal-booking-filters{ grid-template-columns:1fr 1fr; } }
-@media(max-width:760px){ .portal-workspace{ grid-template-columns:1fr; } .portal-sidebar{ position:static; height:auto; padding:22px; box-shadow:0 6px 24px rgba(58,61,46,.08); } .portal-wordmark{ margin-bottom:18px; } .portal-sidebar nav{ display:flex; overflow:auto; padding-bottom:5px; } .portal-sidebar nav a{ white-space:nowrap; } .portal-account{ margin-top:18px; } .portal-content{ padding:34px 22px 60px; } .portal-page-header{ min-height:78px; padding-right:72px; } .portal-page-header::after{ width:42px; height:78px; } .portal-form{ grid-template-columns:1fr; } .portal-date-grid{ grid-template-columns:1fr 1fr; } .portal-row{ align-items:flex-start; } .portal-stat-hospitals{ grid-column:span 1; } .portal-image-field-grid{ grid-template-columns:1fr; } .portal-hospital-gallery{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:760px){ .portal-workspace{ grid-template-columns:1fr; } .portal-sidebar{ position:static; height:auto; padding:22px; box-shadow:0 6px 24px rgba(58,61,46,.08); } .portal-wordmark{ margin-bottom:18px; } .portal-sidebar nav{ display:flex; overflow:auto; padding-bottom:5px; } .portal-sidebar nav a{ white-space:nowrap; } .portal-account{ margin-top:18px; } .portal-content{ padding:34px 22px 60px; } .portal-page-header{ min-height:78px; padding-right:72px; } .portal-page-header::after{ width:42px; height:78px; } .portal-form{ grid-template-columns:1fr; } .portal-date-grid{ grid-template-columns:1fr 1fr; } .portal-row{ align-items:flex-start; } .portal-stat-hospitals{ grid-column:span 1; } .portal-image-field-grid{ grid-template-columns:1fr; } .portal-hospital-gallery{ grid-template-columns:repeat(2,minmax(0,1fr)); } .portal-guidelines-fields,.centre-guidelines-list,.portal-facility-groups{ grid-template-columns:1fr; } }
 @media(max-width:760px){ .portal-discovery-filters{ grid-template-columns:1fr; } }
 @media(max-width:520px){ .portal-service-controls{ width:100%; justify-items:start; } }
 @media(max-width:520px){ .portal-card{ padding:21px; } .portal-booking-filters{ grid-template-columns:1fr; } .portal-filter-actions .portal-button{ width:100%; } .portal-row{ padding:17px; flex-direction:column; } .portal-actions{ width:100%; } .portal-actions .portal-button{ flex:1 1 auto; } .portal-date-grid{ grid-template-columns:1fr; } .portal-stat-split{ grid-template-columns:1fr; } }

@@ -40,7 +40,7 @@ export function HospitalSearch() {
           </div>
           <h2 style={{ marginTop: 14 }}>{hospital.name}</h2>
           <p>{hospital.description}</p>
-          <div className="portal-actions"><Link className="portal-button" href={`/app/hospitals/${hospital.id}`}>View services</Link></div>
+          <div className="portal-actions"><Link className="portal-button" href={`/app/hospitals/${hospital.id}`}>View details</Link></div>
         </article>)}
     </div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />

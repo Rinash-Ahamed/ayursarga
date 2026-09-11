@@ -10,6 +10,7 @@ import {
   type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
 import { createAuditedDocument, getArchiveMetadata, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
+import { DEFAULT_CENTRE_GUIDELINE_VALUES } from "@/features/hospitals/guidelines";
 
 export { listPublicHospitals } from "@/services/hospitals/publicHospitalService";
 
@@ -17,7 +18,8 @@ type HospitalAdminUpdate = Partial<HospitalFields & Pick<HospitalDocument,
   "status" | "isPublic" | "ayursargaRating" | "ayursargaReviewNote"
 >>;
 type HospitalProfileInput = Pick<HospitalDocument,
-  "name" | "description" | "email" | "phone" | "address" | "city" | "state" | "imageUrls"
+  "name" | "description" | "email" | "phone" | "address" | "city" | "state" | "imageUrls" |
+  "centreGuidelines" | "additionalCentreRules" | "facilities" | "legalPolicies" | "locationUrl"
 >;
 
 export const getHospital = (id: string) => readDocument<HospitalDocument>(COLLECTIONS.hospitals, id);
@@ -54,6 +56,11 @@ export function createHospital(input: HospitalFields, createdBy: string) {
     imageUrls: [],
     ayursargaRating: null,
     ayursargaReviewNote: null,
+    centreGuidelines: DEFAULT_CENTRE_GUIDELINE_VALUES,
+    additionalCentreRules: "",
+    facilities: "",
+    legalPolicies: "",
+    locationUrl: null,
     activatedAt: null,
     activatedBy: null,
     createdBy,

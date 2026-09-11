@@ -15,6 +15,7 @@ import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 import { formatServiceDuration } from "@/utils/duration";
 import { HospitalImageGallery } from "@/components/hospital/HospitalImageGallery";
 import { getHospitalImageUrls } from "@/features/hospitals/images";
+import { CentreGuidelines } from "@/components/hospital/CentreGuidelines";
 
 export function HospitalDetails({ hospitalId }: { hospitalId: string }) {
   const [hospital, setHospital] = useState<DocumentRecord<HospitalDocument> | null>(null);
@@ -39,6 +40,7 @@ export function HospitalDetails({ hospitalId }: { hospitalId: string }) {
     <div className="portal-grid">{services.map((service) => <article className="portal-card" key={service.id}>
       <h3>{service.name}</h3><p>{service.description}</p><div className="portal-card-meta"><span>{formatCurrency(service.price)}</span><span>{formatServiceDuration(service.durationMinutes, service.durationUnit)}</span></div>
       <div className="portal-actions"><Link className="portal-button" href={`/app/bookings/new?hospitalId=${hospitalId}&serviceId=${service.id}`}>Request appointment</Link></div>
-    </article>)}</div><PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} /></>}
+    </article>)}</div><PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
+    <CentreGuidelines hospital={hospital} /></>}
   </PortalShell>;
 }

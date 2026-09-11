@@ -62,12 +62,43 @@ service cloud.firestore {
       return request.resource.data.keys().hasOnly([
         'name', 'description', 'email', 'phone', 'address', 'city', 'state',
         'imageUrl', 'imageUrls', 'ayursargaRating', 'ayursargaReviewNote',
+        'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies', 'locationUrl',
         'status', 'isPublic', 'commissionPercentage',
         'contractStatus', 'contractGeneratedAt', 'contractGeneratedBy',
         'contractSignedAt', 'contractSignedBy', 'contractUrl', 'activatedAt', 'activatedBy',
         'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
         'archivedAt', 'archivedBy', 'lastAuditId'
       ]);
+    }
+
+    function hasValidCentreGuidelines() {
+      let guidelines = request.resource.data.get('centreGuidelines', {});
+      let additionalRules = request.resource.data.get('additionalCentreRules', '');
+      let facilities = request.resource.data.get('facilities', '');
+      let legalPolicies = request.resource.data.get('legalPolicies', '');
+      return guidelines is map
+        && guidelines.keys().hasOnly([
+          'visitors', 'quietEnvironment', 'foodAndBeverages', 'prohibitedActivities',
+          'privacyAndPhotography', 'cleanliness', 'propertyDamage', 'ayurvedicTherapies',
+          'medicationsAndCharges', 'reportConcerns', 'emergencySituations'
+        ])
+        && guidelines.get('visitors', '') is string && guidelines.get('visitors', '').size() <= 1200
+        && guidelines.get('quietEnvironment', '') is string && guidelines.get('quietEnvironment', '').size() <= 1200
+        && guidelines.get('foodAndBeverages', '') is string && guidelines.get('foodAndBeverages', '').size() <= 1200
+        && guidelines.get('prohibitedActivities', '') is string && guidelines.get('prohibitedActivities', '').size() <= 1200
+        && guidelines.get('privacyAndPhotography', '') is string && guidelines.get('privacyAndPhotography', '').size() <= 1200
+        && guidelines.get('cleanliness', '') is string && guidelines.get('cleanliness', '').size() <= 1200
+        && guidelines.get('propertyDamage', '') is string && guidelines.get('propertyDamage', '').size() <= 1200
+        && guidelines.get('ayurvedicTherapies', '') is string && guidelines.get('ayurvedicTherapies', '').size() <= 1200
+        && guidelines.get('medicationsAndCharges', '') is string && guidelines.get('medicationsAndCharges', '').size() <= 1200
+        && guidelines.get('reportConcerns', '') is string && guidelines.get('reportConcerns', '').size() <= 1200
+        && guidelines.get('emergencySituations', '') is string && guidelines.get('emergencySituations', '').size() <= 1200
+        && additionalRules is string
+        && additionalRules.size() <= 4000
+        && facilities is string
+        && facilities.size() <= 4000
+        && legalPolicies is string
+        && legalPolicies.size() <= 4000;
     }
 
     function hasValidRequiredHospitalFields() {
@@ -125,6 +156,12 @@ service cloud.firestore {
           request.resource.data.ayursargaReviewNote is string
           && request.resource.data.ayursargaReviewNote.size() <= 400
         ))
+        && (request.resource.data.get('locationUrl', null) == null || (
+          request.resource.data.locationUrl is string
+          && request.resource.data.locationUrl.size() <= 500
+          && request.resource.data.locationUrl.matches('https://(maps\\.app\\.goo\\.gl|maps\\.google\\.com|maps\\.google\\.co\\.in|goo\\.gl|www\\.google\\.com|www\\.google\\.co\\.in|www\\.openstreetmap\\.org|openstreetmap\\.org)/.*')
+        ))
+        && hasValidCentreGuidelines()
         && request.resource.data.commissionPercentage is number
         && request.resource.data.commissionPercentage >= 0
         && request.resource.data.commissionPercentage <= 100;
@@ -189,6 +226,7 @@ service cloud.firestore {
           && changed.hasOnly([
             'name', 'description', 'email', 'phone', 'address', 'city', 'state',
             'imageUrl', 'imageUrls', 'ayursargaRating', 'ayursargaReviewNote',
+            'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies', 'locationUrl',
             'commissionPercentage', 'updatedAt', 'updatedBy', 'lastAuditId'
           ])
           && (!changed.hasAny(['ayursargaRating', 'ayursargaReviewNote']) || (
@@ -327,7 +365,7 @@ service cloud.firestore {
               && request.resource.data.address.size() <= 300
             ))
             && (
-              request.resource.data.diff(resource.data).affectedKeys().hasNone([
+              !request.resource.data.diff(resource.data).affectedKeys().hasAny([
                 'privacyConsentAt', 'privacyConsentVersion'
               ])
               || (
@@ -372,7 +410,8 @@ service cloud.firestore {
           hasOperationalHospitalAccess(hospitalId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name', 'description', 'email', 'phone', 'address', 'city', 'state',
-            'imageUrls', 'updatedAt', 'updatedBy', 'lastAuditId'
+            'imageUrls', 'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies', 'locationUrl',
+            'updatedAt', 'updatedBy', 'lastAuditId'
           ])
         ));
       allow delete: if false;
@@ -414,7 +453,8 @@ service cloud.firestore {
       allow create: if isConsumer()
         && request.resource.data.keys().hasOnly([
           'consumerId', 'consumerName', 'consumerEmail', 'consumerPhone',
-          'consumerAddress', 'hospitalId', 'serviceId', 'preferredDate', 'preferredTime',
+          'consumerAddress', 'hospitalId', 'serviceId', 'preferredDate', 'preferredEndDate',
+          'preferredTime', 'bystanderCount',
           'confirmedDate', 'confirmedTime', 'status', 'servicePrice',
           'commissionPercentage', 'estimatedCommission', 'consumerNotes',
           'hospitalNotes', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
@@ -433,6 +473,17 @@ service cloud.firestore {
           request.resource.data.consumerAddress is string
           && request.resource.data.consumerAddress.size() <= 300
         ))
+        && request.resource.data.preferredDate is timestamp
+        && (request.resource.data.preferredEndDate == null || (
+          request.resource.data.preferredEndDate is timestamp
+          && request.resource.data.preferredEndDate >= request.resource.data.preferredDate
+        ))
+        && request.resource.data.preferredTime is string
+        && request.resource.data.preferredTime.size() > 0
+        && request.resource.data.preferredTime.size() <= 20
+        && request.resource.data.bystanderCount is int
+        && request.resource.data.bystanderCount >= 0
+        && request.resource.data.bystanderCount <= 4
         && request.resource.data.status == 'requested'
         && request.resource.data.confirmedDate == null
         && request.resource.data.confirmedTime == null

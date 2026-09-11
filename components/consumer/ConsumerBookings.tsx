@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import type { BookingDocument } from "@/features/firestore/models";
+import { formatBookingCarePreference } from "@/features/bookings/display";
 import { getTreatmentStatus } from "@/features/bookings/treatmentStatus";
 import { emptyQueryPage, type DocumentRecord, type QueryPageOptions } from "@/services/firestore/firestoreService";
 import { cancelConsumerBooking, listConsumerBookings } from "@/services/bookings/bookingService";
@@ -51,7 +52,7 @@ export function ConsumerBookings() {
       {items.map((booking) => <article className="portal-row" key={booking.id}>
         <div>
           <h3>{formatCurrency(booking.servicePrice)}</h3>
-          <p>{booking.preferredDate.toDate().toLocaleDateString("en-IN")} at {booking.preferredTime}</p>
+          <p>{formatBookingCarePreference(booking)}</p>
           {booking.status === "confirmed" || booking.status === "completed"
             ? <p>Treatment: {formatStatus(getTreatmentStatus(booking))}</p>
             : null}
