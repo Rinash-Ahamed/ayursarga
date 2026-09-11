@@ -1,7 +1,10 @@
 import type { HospitalDocument } from "@/features/firestore/models";
 import { resolveCentreGuidelines } from "@/features/hospitals/guidelines";
+import { HOSPITAL_FACILITY_GROUPS, resolveHospitalFacilities } from "@/features/hospitals/facilities";
 
 export function CentreGuidelineFields({ hospital }: { hospital: HospitalDocument }) {
+  const facilities = resolveHospitalFacilities(hospital.facilities);
+
   return <><fieldset className="full portal-guidelines-fieldset">
     <legend>Centre guidelines</legend>
     <p className="portal-form-note">These guidelines appear in the centre details shown to consumers. You may adapt the wording to your centre’s policy.</p>
@@ -23,10 +26,26 @@ export function CentreGuidelineFields({ hospital }: { hospital: HospitalDocument
   </fieldset>
   <fieldset className="full portal-guidelines-fieldset">
     <legend>Facilities and policies</legend>
-    <p className="portal-form-note">Add one facility per line, then include any centre-specific legal or policy information consumers should review.</p>
+    <p className="portal-form-note">Select every facility available at your centre. These details will be visible to consumers.</p>
     <div className="portal-guidelines-fields">
-      <label>Facilities
-        <textarea name="facilities" defaultValue={hospital.facilities ?? ""} maxLength={4_000} placeholder={"Private rooms\nMother and baby care support\nAyurvedic therapy rooms"} />
+      <div className="portal-facility-groups full">
+        {HOSPITAL_FACILITY_GROUPS.map((group) => <fieldset className="portal-facility-group" key={group.title}>
+          <legend>{group.title}</legend>
+          <div className="portal-facility-options">
+            {group.options.map((option) => <label className="portal-facility-option" key={option}>
+              <input
+                type="checkbox"
+                name="facilityOption"
+                value={option}
+                defaultChecked={facilities.selected.has(option)}
+              />
+              <span>{option}</span>
+            </label>)}
+          </div>
+        </fieldset>)}
+      </div>
+      <label>Other facilities
+        <textarea name="customFacilities" defaultValue={facilities.custom} maxLength={4_000} placeholder="Add one additional facility per line." />
       </label>
       <label>Legal and policies
         <textarea name="legalPolicies" defaultValue={hospital.legalPolicies ?? ""} maxLength={4_000} placeholder="Add centre-specific legal terms, cancellation information, or policies." />

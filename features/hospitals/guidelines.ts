@@ -1,5 +1,6 @@
 import type { CentreGuidelineId, HospitalDocument } from "@/features/firestore/models";
 import { toTrimmedString } from "@/utils/text";
+import { hospitalFacilitiesFormValue } from "@/features/hospitals/facilities";
 
 export const DEFAULT_CENTRE_GUIDELINES = [
   {
@@ -75,18 +76,17 @@ export function hospitalGuidelineFormValues(form: FormData) {
     toTrimmedString(form.get(`centreGuideline_${id}`), 1_200) || body,
   ])) as Record<CentreGuidelineId, string>;
   const rawAdditionalRules = String(form.get("additionalCentreRules") ?? "").trim();
-  const rawFacilities = String(form.get("facilities") ?? "").trim();
   const rawLegalPolicies = String(form.get("legalPolicies") ?? "").trim();
   const additionalCentreRules = toTrimmedString(rawAdditionalRules, 4_000);
-  const facilities = toTrimmedString(rawFacilities, 4_000);
+  const facilityResult = hospitalFacilitiesFormValue(form);
   const legalPolicies = toTrimmedString(rawLegalPolicies, 4_000);
   const error = rawAdditionalRules.length > 4_000
     ? "Additional centre rules must be 4,000 characters or fewer."
-    : rawFacilities.length > 4_000
-      ? "Facilities must be 4,000 characters or fewer."
+    : facilityResult.error
+      ? facilityResult.error
       : rawLegalPolicies.length > 4_000
         ? "Legal and policy information must be 4,000 characters or fewer."
         : null;
 
-  return { centreGuidelines, additionalCentreRules, facilities, legalPolicies, error };
+  return { centreGuidelines, additionalCentreRules, facilities: facilityResult.facilities, legalPolicies, error };
 }
