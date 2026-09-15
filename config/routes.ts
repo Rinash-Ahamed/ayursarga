@@ -2,6 +2,7 @@ export const ROUTES = {
   public: {
     home: "/",
     centers: "/centers",
+    missionVision: "/mission-vision",
   },
   consumer: {
     home: "/app",
