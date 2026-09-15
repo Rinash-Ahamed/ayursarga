@@ -57,8 +57,8 @@ em{ font-style: italic; color: var(--clay-dark); }
 }
 #particle-canvas-wrap canvas{ transform:translateZ(0); }
 .scroll-logo{
-  position:fixed; left:24px; top:50%; transform:translateY(-50%); z-index:50;
-  width:54px; height:54px; display:grid; place-items:center; pointer-events:none;
+  position:fixed; left:24px; top:calc(50% - 27px); z-index:50;
+  width:54px; height:54px; display:grid; place-items:center; pointer-events:none; will-change:transform;
 }
 .scroll-logo-mark{ width:54px; height:54px; opacity:.48; transform:scale(.72); transform-origin:center; will-change:transform,opacity; }
 .scroll-logo-mark img{ width:54px; height:54px; object-fit:contain; }

@@ -42,7 +42,7 @@ export default function Footer({ sectionPrefix = "", backToTopHref }: { sectionP
       <div className="footer-directory">
         <motion.div className="footer-brand-column" {...reveal}>
           <a href={sectionPrefix ? ROUTES.public.home : "#hero"} className="footer-mark" aria-label="Return to the Ayursarga home section">
-            <span className="footer-logo-wrap">
+            <span className="footer-logo-wrap" data-scroll-logo-target>
               <Image src="/mainlogo.png" alt="" width={58} height={58} loading="lazy" quality={90} sizes="58px" />
             </span>
             <motion.span
