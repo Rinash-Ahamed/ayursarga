@@ -8,6 +8,7 @@ import { getHospital } from "@/services/hospitals/hospitalService";
 import { listPublicHospitalServices } from "@/services/hospitals/publicHospitalService";
 import { getHospitalImageUrls } from "@/features/hospitals/images";
 import { resolveCentreGuidelines } from "@/features/hospitals/guidelines";
+import { groupHospitalFacilities } from "@/features/hospitals/facilities";
 import { addCentreSearchContext, formatBystanders, type CentreSearchContext } from "@/features/hospitals/searchContext";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { formatCurrency } from "@/utils/currency";
@@ -83,7 +84,7 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
 
   const guidelines = resolveCentreGuidelines(hospital);
   const additionalRules = hospital.additionalCentreRules?.trim();
-  const facilities = hospital.facilities?.split(/\r?\n/).map((item) => item.trim()).filter(Boolean) ?? [];
+  const { groups: facilityGroups, custom: customFacilities, hasFacilities } = groupHospitalFacilities(hospital.facilities);
 
   return <section className="section public-centre-detail-page">
     <div className="section-inner public-centre-detail-inner">
@@ -132,7 +133,16 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
 
           <section id="facilities" className="public-centre-content-section">
             <span className="eyebrow">Facilities</span><h2>Practical comforts at the centre</h2>
-            {facilities.length > 0 ? <ul className="public-centre-facilities">{facilities.map((facility) => <li key={facility}>{facility}</li>)}</ul> : <div className="public-centre-empty-note">This centre has not added its facilities yet. Contact the centre before requesting care if you need a particular facility.</div>}
+            {hasFacilities ? <div className="public-centre-facility-groups">
+              {facilityGroups.map((group) => <section key={group.title}>
+                <h3>{group.title}</h3>
+                <ul className="public-centre-facilities">{group.options.map((facility) => <li key={facility}>{facility}</li>)}</ul>
+              </section>)}
+              {customFacilities.length > 0 && <section>
+                <h3>Other facilities</h3>
+                <ul className="public-centre-facilities">{customFacilities.map((facility, index) => <li key={`${facility}-${index}`}>{facility}</li>)}</ul>
+              </section>}
+            </div> : <div className="public-centre-empty-note">This centre has not added its facilities yet. Contact the centre before requesting care if you need a particular facility.</div>}
           </section>
 
           <section id="rules" className="public-centre-content-section public-centre-rules-section">

@@ -1,17 +1,11 @@
 import type { HospitalDocument } from "@/features/firestore/models";
 import { resolveCentreGuidelines } from "@/features/hospitals/guidelines";
-import { HOSPITAL_FACILITY_GROUPS, resolveHospitalFacilities } from "@/features/hospitals/facilities";
+import { groupHospitalFacilities } from "@/features/hospitals/facilities";
 
 export function CentreGuidelines({ hospital }: { hospital: HospitalDocument }) {
   const guidelines = resolveCentreGuidelines(hospital);
   const additionalRules = hospital.additionalCentreRules?.trim();
-  const facilities = resolveHospitalFacilities(hospital.facilities);
-  const facilityGroups = HOSPITAL_FACILITY_GROUPS.map((group) => ({
-    title: group.title,
-    options: group.options.filter((option) => facilities.selected.has(option)),
-  })).filter((group) => group.options.length > 0);
-  const customFacilities = facilities.custom.split(/\r?\n/).filter(Boolean);
-  const hasFacilities = facilityGroups.length > 0 || customFacilities.length > 0;
+  const { groups: facilityGroups, custom: customFacilities, hasFacilities } = groupHospitalFacilities(hospital.facilities);
   const legalPolicies = hospital.legalPolicies?.trim();
   const locationUrl = hospital.locationUrl?.trim();
 

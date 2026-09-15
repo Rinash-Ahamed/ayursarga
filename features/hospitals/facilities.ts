@@ -74,6 +74,17 @@ export function resolveHospitalFacilities(value: string | null | undefined) {
   return { selected, custom: custom.join("\n") };
 }
 
+export function groupHospitalFacilities(value: string | null | undefined) {
+  const facilities = resolveHospitalFacilities(value);
+  const groups = HOSPITAL_FACILITY_GROUPS.map((group) => ({
+    title: group.title,
+    options: group.options.filter((option) => facilities.selected.has(option)),
+  })).filter((group) => group.options.length > 0);
+  const custom = facilityLines(facilities.custom);
+
+  return { groups, custom, hasFacilities: groups.length > 0 || custom.length > 0 };
+}
+
 export function hospitalFacilitiesFormValue(form: FormData) {
   const selectedValues = new Set(
     form.getAll("facilityOption").map((value) => String(value).trim()).filter(Boolean),

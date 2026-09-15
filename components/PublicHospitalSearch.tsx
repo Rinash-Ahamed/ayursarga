@@ -205,6 +205,7 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
             if (initialService) detailParams.set("service", initialService);
             if (search) detailParams.set("q", search);
             const detailHref = `/centers/${encodeURIComponent(hospital.id)}?${detailParams.toString()}`;
+            const appointmentHref = `${detailHref}#packages`;
             return (
               <article className="public-center-card" key={hospital.id}>
                 <PublicHospitalImages hospital={hospital} priority={hospitalIndex === 0} />
@@ -224,7 +225,10 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
                   {hospital.ayursargaReviewNote && <div className="public-center-review">
                     <p>{hospital.ayursargaReviewNote}</p>
                   </div>}
-                  <Link className="public-center-toggle" href={detailHref}>View centre details <span aria-hidden="true">→</span></Link>
+                  <div className="public-center-actions">
+                    <Link className="public-center-toggle secondary" href={detailHref}>View centre details</Link>
+                    <Link className="public-center-toggle" href={appointmentHref}>Request appointment <span aria-hidden="true">→</span></Link>
+                  </div>
                 </div>
               </article>
             );

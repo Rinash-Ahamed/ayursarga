@@ -332,12 +332,14 @@ main>.dark-section{
 .public-center-card-body>p{ max-width:680px; margin-top:11px; color:var(--sage); font-size:13px; line-height:1.65; }
 .public-center-review{ max-width:680px; margin-top:15px; padding:12px 15px; border-left:3px solid var(--gold); border-radius:0 10px 10px 0; background:rgba(184,135,47,.08); }
 .public-center-review p{ color:var(--ink); font-size:12px; line-height:1.55; }
+.public-center-actions{ margin-top:auto; padding-top:22px; display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
 .public-center-toggle{
-  width:auto; min-height:44px; margin-top:22px; padding:11px 20px; display:inline-flex; align-items:center; gap:9px;
+  width:auto; min-height:44px; padding:11px 20px; display:inline-flex; align-items:center; justify-content:center; gap:9px;
   border:1px solid var(--forest); border-radius:100px;
   background:var(--forest); color:#fff; font:inherit; font-size:10px; font-weight:750; letter-spacing:.08em; text-transform:uppercase;
   transition:background-color .2s ease,color .2s ease,border-color .2s ease;
 }
+.public-center-toggle.secondary{ background:#fff; color:var(--forest); }
 .public-center-toggle span{ font-size:16px; line-height:1; transition:transform .2s ease; }
 .public-center-toggle:hover span{ transform:translateX(3px); }
 .public-center-toggle:hover,.public-center-toggle:focus-visible{ background:var(--gold); border-color:var(--gold); color:var(--forest); }
@@ -396,9 +398,12 @@ main>.dark-section{
 .public-centre-services a{ padding:10px 13px; border-radius:100px; background:var(--forest); color:#fff; font-size:9px; font-weight:750; letter-spacing:.05em; text-align:center; text-transform:uppercase; }
 .public-centre-services a:hover{ background:var(--gold); color:var(--forest); }
 .public-centre-inline-error{ margin-top:18px; padding:14px; border-radius:12px; background:rgba(138,75,47,.08); color:var(--rust); font-size:11px; }
-.public-centre-facilities{ margin-top:22px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:11px; list-style:none; }
-.public-centre-facilities li{ position:relative; padding:14px 15px 14px 40px; border:1px solid rgba(31,61,43,.16); border-radius:13px; background:rgba(31,61,43,.035); color:var(--forest); font-size:12px; font-weight:650; line-height:1.45; }
-.public-centre-facilities li::before{ content:"✓"; position:absolute; top:12px; left:15px; width:18px; height:18px; display:grid; place-items:center; border-radius:50%; background:var(--forest); color:#fff; font-size:10px; }
+.public-centre-facility-groups{ margin-top:22px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.public-centre-facility-groups>section{ min-width:0; padding:18px; border:1px solid rgba(31,61,43,.16); border-radius:16px; background:rgba(31,61,43,.025); }
+.public-centre-facility-groups h3{ color:var(--forest); font-size:14px; font-weight:750; line-height:1.35; }
+.public-centre-facilities{ margin-top:13px; display:grid; gap:8px; list-style:none; }
+.public-centre-facilities li{ position:relative; padding:10px 10px 10px 42px; border:1px solid rgba(31,61,43,.13); border-radius:11px; background:#fff; color:var(--forest); font-size:11px; font-weight:650; line-height:1.45; }
+.public-centre-facilities li::before{ content:"✓"; position:absolute; top:10px; left:14px; width:18px; height:18px; display:grid; place-items:center; border-radius:50%; background:var(--forest); color:#fff; font-size:10px; }
 .public-centre-empty-note{ margin-top:20px; padding:18px; border:1px solid rgba(31,61,43,.16); border-radius:14px; background:rgba(31,61,43,.035); color:var(--sage); font-size:11px; line-height:1.7; }
 .public-centre-policy-copy{ white-space:pre-line; }
 .public-centre-rules-section ol{ margin-top:22px; padding-left:31px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 30px; }
@@ -448,7 +453,7 @@ main>.dark-section{
   .public-centre-services article{ grid-template-columns:1fr; }
   .public-centre-services article>div:last-child{ justify-items:start; }
   .public-centre-rules-section ol{ grid-template-columns:1fr; }
-  .public-centre-facilities{ grid-template-columns:1fr; }
+  .public-centre-facility-groups{ grid-template-columns:1fr; }
 }
 @media(prefers-reduced-motion:reduce){ .public-center-card-image img,.public-center-card-image img.is-loaded{ opacity:1; animation:none; } }
 .section-title{ font-family:var(--font-display); font-weight:400; font-size:clamp(30px,4.4vw,58px); line-height:1.12; color:var(--forest); margin-bottom:20px; }
