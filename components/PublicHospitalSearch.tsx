@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useMemo, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import type { HospitalDocument } from "@/features/firestore/models";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import {
@@ -139,6 +139,18 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
     });
   }, [hospitals, search]);
 
+  function openDatePicker(event: MouseEvent<HTMLLabelElement>) {
+    const input = event.currentTarget.querySelector("input");
+    if (!input || event.target === input || typeof input.showPicker !== "function") return;
+    event.preventDefault();
+    input.focus();
+    try {
+      input.showPicker();
+    } catch {
+      // The focused native date input remains usable when a browser blocks showPicker.
+    }
+  }
+
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (Boolean(startDate) !== Boolean(endDate)) {
@@ -175,7 +187,10 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
           </label>
           <div className="public-search-field public-search-dates">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v3m12-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z" /></svg>
-            <span><small>Preferred care dates</small><span className="public-date-inputs"><input aria-label="Preferred care start date" type="date" min={today} value={startDate} onChange={(event) => { setStartDate(event.target.value); setDateError(null); }} /><b aria-hidden="true">to</b><input aria-label="Preferred care end date" type="date" min={startDate || today} value={endDate} onChange={(event) => { setEndDate(event.target.value); setDateError(null); }} /></span></span>
+            <span className="public-date-inputs">
+              <label className="public-date-control" onClick={openDatePicker}><span>Preferred start</span><input aria-label="Preferred care start date" type="date" min={today} value={startDate} onChange={(event) => { setStartDate(event.target.value); setDateError(null); }} /></label>
+              <label className="public-date-control" onClick={openDatePicker}><span>Preferred end</span><input aria-label="Preferred care end date" type="date" min={startDate || today} value={endDate} onChange={(event) => { setEndDate(event.target.value); setDateError(null); }} /></label>
+            </span>
           </div>
           <label className="public-search-field public-search-bystanders">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="3" /><path d="M5 21v-2a7 7 0 0 1 14 0v2" /></svg>
@@ -205,6 +220,7 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
             if (initialService) detailParams.set("service", initialService);
             if (search) detailParams.set("q", search);
             const detailHref = `/centers/${encodeURIComponent(hospital.id)}?${detailParams.toString()}`;
+            const appointmentHref = `${detailHref}#packages`;
             return (
               <article className="public-center-card" key={hospital.id}>
                 <PublicHospitalImages hospital={hospital} priority={hospitalIndex === 0} />
@@ -224,7 +240,10 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
                   {hospital.ayursargaReviewNote && <div className="public-center-review">
                     <p>{hospital.ayursargaReviewNote}</p>
                   </div>}
-                  <Link className="public-center-toggle" href={detailHref}>View centre details <span aria-hidden="true">→</span></Link>
+                  <div className="public-center-actions">
+                    <Link className="public-center-toggle secondary" href={detailHref}>View centre details</Link>
+                    <Link className="public-center-toggle" href={appointmentHref}>Request appointment <span aria-hidden="true">→</span></Link>
+                  </div>
                 </div>
               </article>
             );

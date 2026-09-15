@@ -2,10 +2,6 @@
 
 import { useEffect } from "react";
 import Lenis from "lenis";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-gsap.registerPlugin(ScrollTrigger);
 
 // Cubic easing keeps wheel input responsive while removing the sharper
 // acceleration of the previous quartic curve.
@@ -19,6 +15,7 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const supportsDesktopScroll = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
     const lenis = reduced || !supportsDesktopScroll ? null : new Lenis({
+      autoRaf: true,
       duration: 1.05,
       easing: wheelEasing,
       smoothWheel: true,
@@ -26,8 +23,6 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
       wheelMultiplier: 1,
       touchMultiplier: 1,
     });
-
-    lenis?.on("scroll", ScrollTrigger.update);
 
     const handleVisibilityChange = () => {
       if (!lenis) return;
@@ -75,16 +70,7 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
 
     document.addEventListener("click", handleAnchorClick);
 
-    // GSAP supplies seconds; Lenis expects milliseconds. Both stay synced to
-    // the display's native requestAnimationFrame cadence (60/90/120/144 Hz).
-    const tick = lenis ? (time: number) => lenis.raf(time * 1000) : null;
-    if (tick) {
-      gsap.ticker.add(tick);
-      gsap.ticker.lagSmoothing(0);
-    }
-
     return () => {
-      if (tick) gsap.ticker.remove(tick);
       if (lenis) document.removeEventListener("visibilitychange", handleVisibilityChange);
       document.removeEventListener("click", handleAnchorClick);
       lenis?.destroy();

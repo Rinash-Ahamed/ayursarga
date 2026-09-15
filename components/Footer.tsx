@@ -21,7 +21,7 @@ const wordmarkLetterReveal = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.42, ease: [0.22, 1, 0.36, 1] as const } },
 };
 
-export default function Footer({ sectionPrefix = "" }: { sectionPrefix?: string }) {
+export default function Footer({ sectionPrefix = "", backToTopHref }: { sectionPrefix?: string; backToTopHref?: string }) {
   const sectionHref = (anchor: string) => `${sectionPrefix}${anchor}`;
   const shouldReduceMotion = useReducedMotion();
 
@@ -42,7 +42,7 @@ export default function Footer({ sectionPrefix = "" }: { sectionPrefix?: string 
       <div className="footer-directory">
         <motion.div className="footer-brand-column" {...reveal}>
           <a href={sectionPrefix ? ROUTES.public.home : "#hero"} className="footer-mark" aria-label="Return to the Ayursarga home section">
-            <span className="footer-logo-wrap">
+            <span className="footer-logo-wrap" data-scroll-logo-target>
               <Image src="/mainlogo.png" alt="" width={58} height={58} loading="lazy" quality={90} sizes="58px" />
             </span>
             <motion.span
@@ -79,6 +79,7 @@ export default function Footer({ sectionPrefix = "" }: { sectionPrefix?: string 
           <a href={sectionHref("#how-it-works")}>How it works</a>
           <a href={sectionHref("#wellness")}>Wellness paths</a>
           <a href={sectionHref("#why-ayursarga")}>Why Ayursarga</a>
+          <a href={ROUTES.public.missionVision}>Mission &amp; Vision</a>
           <a href={sectionHref("#contact")}>Personal guidance</a>
         </nav>
 
@@ -101,7 +102,7 @@ export default function Footer({ sectionPrefix = "" }: { sectionPrefix?: string 
       <div className="footer-bottom">
         <p>© {new Date().getFullYear()} Ayursarga. All rights reserved.</p>
         <p>Treatment suitability and clinical decisions are confirmed by the chosen hospital&apos;s qualified physician.</p>
-        <a href={sectionPrefix ? "#search-centers" : "#hero"}>Back to top</a>
+        <a href={backToTopHref ?? (sectionPrefix ? "#search-centers" : "#hero")}>Back to top</a>
       </div>
     </div>
   </footer>;

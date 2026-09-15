@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import MagneticButton from "./MagneticButton";
+import { useBrowserIdle } from "@/hooks/useBrowserIdle";
 
 const CORE_VALUES = [
   { title: "Care", description: "Mother and baby always come first." },
@@ -17,7 +18,9 @@ export default function Hero() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [activeValue, setActiveValue] = useState(0);
   const [isHeroVisible, setIsHeroVisible] = useState(true);
+  const [videoReady, setVideoReady] = useState(false);
   const shouldReduceMotion = useReducedMotion();
+  const canLoadVideo = useBrowserIdle(350);
 
   useEffect(() => {
     const hero = heroRef.current;
@@ -40,18 +43,23 @@ export default function Hero() {
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !canLoadVideo) return;
     if (shouldReduceMotion || !isHeroVisible) {
       video.pause();
       return;
     }
     void video.play().catch(() => undefined);
-  }, [isHeroVisible, shouldReduceMotion]);
+  }, [canLoadVideo, isHeroVisible, shouldReduceMotion]);
 
   return (
     <section id="hero" ref={heroRef}>
-      <video ref={videoRef} className="hero-background-video" autoPlay muted loop playsInline preload="metadata" aria-hidden="true" tabIndex={-1}>
-        <source src="/hero%20image%20video.mp4" type="video/mp4" media="(min-width: 901px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)" />
+      <video
+        ref={videoRef}
+        className={`hero-background-video${videoReady ? " ready" : ""}`}
+        autoPlay muted loop playsInline preload="none" poster="/hero-video-poster.webp" aria-hidden="true" tabIndex={-1}
+        onCanPlay={() => setVideoReady(true)}
+      >
+        {canLoadVideo && <source src="/hero%20image%20video.mp4" type="video/mp4" media="(min-width: 901px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)" />}
       </video>
       <div className="hero-content">
         <motion.p className="eyebrow" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>Ayurvedic care, guided with trust</motion.p>
