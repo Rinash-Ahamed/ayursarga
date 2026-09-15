@@ -285,6 +285,8 @@ main>.dark-section{
 .public-search-field:focus-within{ box-shadow:inset 0 0 0 2px rgba(31,61,43,.35); }
 .public-date-inputs{ min-width:0; display:grid; grid-template-columns:minmax(125px,1fr) auto minmax(125px,1fr); align-items:center; gap:7px; }
 .public-date-inputs b{ color:var(--sage); font-size:10px; font-weight:600; }
+.public-date-control{ min-width:0; display:block; }
+.public-date-control>span{ display:none; }
 .public-search-submit{ min-width:126px; padding:0 20px; display:flex; align-items:center; justify-content:center; gap:8px; border:0; border-radius:13px; background:var(--forest); color:#fff; font:inherit; font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; transition:background-color .2s ease,color .2s ease; }
 .public-search-submit svg{ width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; }
 .public-search-submit:hover,.public-search-submit:focus-visible{ background:#294f39; color:#fff; }
@@ -436,8 +438,14 @@ main>.dark-section{
   .public-search-filters{ grid-template-columns:1fr; gap:3px; border-radius:16px; }
   .public-search-field{ min-height:66px; }
   .public-search-submit{ min-height:56px; }
-  .public-date-inputs{ grid-template-columns:1fr; gap:2px; }
+  .public-search-dates{ align-items:flex-start; padding-top:14px; padding-bottom:14px; }
+  .public-search-dates>svg{ margin-top:2px; }
+  .public-search-dates>span{ gap:8px; }
+  .public-date-inputs{ grid-template-columns:1fr; gap:8px; }
   .public-date-inputs b{ display:none; }
+  .public-date-control{ padding:8px 11px; border:1px solid rgba(31,61,43,.2); border-radius:10px; background:#fff; }
+  .public-date-control>span{ margin-bottom:3px; display:block; color:var(--sage); font-size:9px; font-weight:750; letter-spacing:.06em; line-height:1.3; text-transform:uppercase; }
+  .public-date-control input{ min-height:30px; }
   .public-center-card{ grid-template-columns:1fr; }
   .public-center-card-image{ width:calc(100% - 28px); min-height:0; aspect-ratio:16/10; margin:14px 14px 0; }
   .public-center-card-body{ padding:24px; }

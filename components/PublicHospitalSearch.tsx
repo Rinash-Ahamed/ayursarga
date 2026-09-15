@@ -175,7 +175,11 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
           </label>
           <div className="public-search-field public-search-dates">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v3m12-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z" /></svg>
-            <span><small>Preferred care dates</small><span className="public-date-inputs"><input aria-label="Preferred care start date" type="date" min={today} value={startDate} onChange={(event) => { setStartDate(event.target.value); setDateError(null); }} /><b aria-hidden="true">to</b><input aria-label="Preferred care end date" type="date" min={startDate || today} value={endDate} onChange={(event) => { setEndDate(event.target.value); setDateError(null); }} /></span></span>
+            <span><small>Preferred care dates</small><span className="public-date-inputs">
+              <label className="public-date-control"><span>Start date</span><input aria-label="Preferred care start date" type="date" min={today} value={startDate} onChange={(event) => { setStartDate(event.target.value); setDateError(null); }} /></label>
+              <b aria-hidden="true">to</b>
+              <label className="public-date-control"><span>End date</span><input aria-label="Preferred care end date" type="date" min={startDate || today} value={endDate} onChange={(event) => { setEndDate(event.target.value); setDateError(null); }} /></label>
+            </span></span>
           </div>
           <label className="public-search-field public-search-bystanders">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="3" /><path d="M5 21v-2a7 7 0 0 1 14 0v2" /></svg>
