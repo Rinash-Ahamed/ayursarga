@@ -249,3 +249,40 @@ body.portal-active{ cursor:auto; overflow:auto; height:auto; }
 @media(max-width:520px){ .portal-toast{ top:14px; right:14px; width:calc(100vw - 28px); } }
 @media(prefers-reduced-motion:reduce){ .portal-root *{ scroll-behavior:auto!important; transition-duration:.01ms!important; animation-duration:.01ms!important; animation-iteration-count:1!important; } .portal-toast{ animation:portal-toast-reduced 3s step-end forwards!important; } }
 @keyframes portal-toast-reduced{ 0%,99%{ opacity:1; visibility:visible; } 100%{ opacity:0; visibility:hidden; } }
+
+/* Shared portal clarity pass */
+.portal-auth-card{ border-color:rgba(58,61,46,.34); }
+.portal-auth-card h1{ font-weight:500; }
+.portal-auth-form label>span{ color:var(--sage); font-weight:600; }
+.portal-password-requirements{ font-weight:600; }
+.portal-auth-form input,
+.portal-form input,.portal-form textarea,.portal-form select,
+.portal-discovery-filters input,.portal-discovery-filters select,
+.portal-filter-field input,.portal-filter-field select,
+.portal-contract-url input,.portal-search input{ border-color:rgba(58,61,46,.5); }
+.portal-auth-form input::placeholder,
+.portal-form input::placeholder,.portal-form textarea::placeholder,
+.portal-discovery-filters input::placeholder,
+.portal-filter-field input::placeholder,.portal-search input::placeholder{ color:#657363; opacity:1; }
+.portal-password-toggle svg{ stroke-width:1.9; }
+.portal-sidebar{ border-right-color:rgba(58,61,46,.34); }
+.portal-sidebar nav a{ font-weight:700; }
+.portal-sidebar nav a:hover{ border-color:rgba(58,61,46,.3); }
+.portal-account{ border-top-color:rgba(58,61,46,.3); }
+.portal-account small,.portal-version{ color:var(--sage); font-weight:700; }
+.portal-page-header{ border-bottom-color:rgba(58,61,46,.28); }
+.portal-card{ border-color:rgba(58,61,46,.34); border-top-color:rgba(140,114,89,.62); box-shadow:0 8px 24px rgba(58,61,46,.095),0 1px 3px rgba(58,61,46,.1); }
+.portal-card:hover{ border-color:rgba(58,61,46,.46); }
+.portal-card p,.portal-row p,.portal-empty{ font-weight:500; }
+.portal-button{ font-weight:800; }
+.portal-button.secondary{ border-color:rgba(58,61,46,.66); }
+.portal-button:disabled{ opacity:.56; }
+.portal-guidelines-fieldset,.portal-image-fields,.portal-location-field{ border-color:rgba(58,61,46,.38); background:rgba(58,61,46,.035); }
+.portal-facility-group{ border-color:rgba(58,61,46,.32); }
+.portal-row{ border-color:rgba(58,61,46,.32); box-shadow:0 5px 16px rgba(58,61,46,.08); }
+.portal-row:hover{ border-color:rgba(58,61,46,.46); }
+.portal-empty,.portal-date-grid div,.portal-stat-split>div{ border-color:rgba(58,61,46,.3); }
+.portal-segmented,.portal-table-wrap{ border-color:rgba(58,61,46,.36); }
+.portal-audit-table th{ border-bottom-color:rgba(58,61,46,.36); background:rgba(58,61,46,.085); color:var(--forest); }
+.portal-audit-table td{ border-bottom-color:rgba(58,61,46,.22); }
+.portal-filter-results{ border-color:rgba(58,61,46,.42); }
