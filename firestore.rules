@@ -101,7 +101,7 @@ service cloud.firestore {
         && legalPolicies.size() <= 4000;
     }
 
-    function hasValidRequiredHospitalFields() {
+    function hasValidHospitalProfileFields() {
       return request.resource.data.name is string
         && request.resource.data.name.size() >= 2
         && request.resource.data.name.size() <= 120
@@ -121,8 +121,6 @@ service cloud.firestore {
         && request.resource.data.state is string
         && request.resource.data.state.size() >= 2
         && request.resource.data.state.size() <= 80
-        && (request.resource.data.get('imageUrl', null) == null
-          || request.resource.data.get('imageUrl', null) is string)
         && (!request.resource.data.keys().hasAny(['imageUrls']) || (
           request.resource.data.imageUrls is list
           && request.resource.data.imageUrls.size() <= 4
@@ -147,6 +145,18 @@ service cloud.firestore {
             && request.resource.data.imageUrls[3].matches('https://.+')
           ))
         ))
+        && (request.resource.data.get('locationUrl', null) == null || (
+          request.resource.data.locationUrl is string
+          && request.resource.data.locationUrl.size() <= 500
+          && request.resource.data.locationUrl.matches('https://(maps\\.app\\.goo\\.gl|maps\\.google\\.com|maps\\.google\\.co\\.in|goo\\.gl|www\\.google\\.com|www\\.google\\.co\\.in|www\\.openstreetmap\\.org|openstreetmap\\.org)/.*')
+        ))
+        && hasValidCentreGuidelines();
+    }
+
+    function hasValidRequiredHospitalFields() {
+      return hasValidHospitalProfileFields()
+        && (request.resource.data.get('imageUrl', null) == null
+          || request.resource.data.get('imageUrl', null) is string)
         && (request.resource.data.get('ayursargaRating', null) == null || (
           request.resource.data.ayursargaRating is number
           && request.resource.data.ayursargaRating >= 1
@@ -156,12 +166,6 @@ service cloud.firestore {
           request.resource.data.ayursargaReviewNote is string
           && request.resource.data.ayursargaReviewNote.size() <= 400
         ))
-        && (request.resource.data.get('locationUrl', null) == null || (
-          request.resource.data.locationUrl is string
-          && request.resource.data.locationUrl.size() <= 500
-          && request.resource.data.locationUrl.matches('https://(maps\\.app\\.goo\\.gl|maps\\.google\\.com|maps\\.google\\.co\\.in|goo\\.gl|www\\.google\\.com|www\\.google\\.co\\.in|www\\.openstreetmap\\.org|openstreetmap\\.org)/.*')
-        ))
-        && hasValidCentreGuidelines()
         && request.resource.data.commissionPercentage is number
         && request.resource.data.commissionPercentage >= 0
         && request.resource.data.commissionPercentage <= 100;
@@ -405,9 +409,11 @@ service cloud.firestore {
       allow update: if hasLinkedAudit('hospitals', hospitalId)
         && request.resource.data.updatedAt == request.time
         && request.resource.data.updatedBy == request.auth.uid
-        && hasValidRequiredHospitalFields()
-        && ((isAdmin() && validAdminHospitalUpdate()) || (
+        && ((isAdmin()
+          && hasValidRequiredHospitalFields()
+          && validAdminHospitalUpdate()) || (
           hasOperationalHospitalAccess(hospitalId)
+          && hasValidHospitalProfileFields()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name', 'description', 'email', 'phone', 'address', 'city', 'state',
             'imageUrls', 'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies', 'locationUrl',
