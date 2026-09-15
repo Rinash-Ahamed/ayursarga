@@ -268,12 +268,12 @@ main>.dark-section{
 .public-search-heading .section-title{ margin-bottom:16px; }
 .public-search-heading>p{ max-width:680px; margin-inline:auto; color:var(--sage); font-size:15px; line-height:1.75; }
 .public-search-filters{
-  display:grid; grid-template-columns:minmax(220px,1.15fr) minmax(330px,1.35fr) minmax(205px,.85fr) auto; gap:3px; max-width:1180px;
-  margin:0 auto 28px; padding:4px;
-  border:2px solid var(--gold); border-radius:18px;
-  background:var(--gold); box-shadow:0 14px 34px rgba(31,61,43,.12);
+  display:grid; grid-template-columns:minmax(225px,1.15fr) minmax(360px,1.45fr) minmax(190px,.82fr) 126px; gap:8px; max-width:1180px;
+  margin:0 auto 28px; padding:8px;
+  border:1px solid rgba(31,61,43,.2); border-top-color:rgba(184,135,47,.72); border-radius:20px;
+  background:#fff; box-shadow:0 14px 36px rgba(31,61,43,.1);
 }
-.public-search-field{ min-width:0; min-height:72px; padding:11px 14px; display:flex; align-items:center; gap:12px; border-radius:13px; background:#fff; color:var(--forest); }
+.public-search-field{ min-width:0; min-height:78px; padding:12px 14px; display:flex; align-items:center; gap:12px; border:1px solid rgba(31,61,43,.15); border-radius:13px; background:#fff; color:var(--forest); }
 .public-search-field>svg{ flex:0 0 25px; width:25px; height:25px; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
 .public-search-field>span{ min-width:0; width:100%; display:grid; gap:3px; }
 .public-search-field small{ color:var(--sage); font-size:9px; font-weight:750; letter-spacing:.08em; text-transform:uppercase; }
@@ -283,10 +283,10 @@ main>.dark-section{
   background:#fff; color:var(--ink); font:inherit; font-size:13px; font-weight:650; letter-spacing:0; text-transform:none;
 }
 .public-search-field:focus-within{ box-shadow:inset 0 0 0 2px rgba(31,61,43,.35); }
-.public-date-inputs{ min-width:0; display:grid; grid-template-columns:minmax(125px,1fr) auto minmax(125px,1fr); align-items:center; gap:7px; }
+.public-date-inputs{ min-width:0; display:grid; grid-template-columns:minmax(130px,1fr) auto minmax(130px,1fr); align-items:end; gap:8px; }
 .public-date-inputs b{ color:var(--sage); font-size:10px; font-weight:600; }
 .public-date-control{ min-width:0; display:block; }
-.public-date-control>span{ display:none; }
+.public-date-control>span{ margin-bottom:2px; display:block; color:var(--sage); font-size:8px; font-weight:750; letter-spacing:.06em; line-height:1.3; text-transform:uppercase; }
 .public-search-submit{ min-width:126px; padding:0 20px; display:flex; align-items:center; justify-content:center; gap:8px; border:0; border-radius:13px; background:var(--forest); color:#fff; font:inherit; font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; transition:background-color .2s ease,color .2s ease; }
 .public-search-submit svg{ width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; }
 .public-search-submit:hover,.public-search-submit:focus-visible{ background:#294f39; color:#fff; }
@@ -427,15 +427,15 @@ main>.dark-section{
 .public-centre-detail-status p{ margin-top:9px; }
 .public-centre-detail-status a{ justify-self:center; margin-top:18px; padding:11px 16px; border-radius:100px; background:var(--forest); color:#fff; font-size:10px; font-weight:750; }
 .public-centre-detail-status.error{ color:var(--rust); }
-@media(max-width:980px){
+@media(max-width:1100px){
   .public-search-filters{ grid-template-columns:1fr 1fr; }
-  .public-search-submit{ min-height:58px; }
+  .public-search-submit{ min-height:62px; }
   .public-centre-content-grid{ grid-template-columns:1fr; }
   .public-centre-contact-card{ position:static; }
 }
 @media(max-width:720px){
   .centers-directory-page .public-center-search{ padding-top:120px; }
-  .public-search-filters{ grid-template-columns:1fr; gap:3px; border-radius:16px; }
+  .public-search-filters{ grid-template-columns:1fr; gap:8px; border-radius:16px; }
   .public-search-field{ min-height:66px; }
   .public-search-submit{ min-height:56px; }
   .public-search-dates{ align-items:flex-start; padding-top:14px; padding-bottom:14px; }
@@ -444,7 +444,7 @@ main>.dark-section{
   .public-date-inputs{ grid-template-columns:1fr; gap:8px; }
   .public-date-inputs b{ display:none; }
   .public-date-control{ padding:8px 11px; border:1px solid rgba(31,61,43,.2); border-radius:10px; background:#fff; }
-  .public-date-control>span{ margin-bottom:3px; display:block; color:var(--sage); font-size:9px; font-weight:750; letter-spacing:.06em; line-height:1.3; text-transform:uppercase; }
+  .public-date-control>span{ margin-bottom:3px; font-size:9px; }
   .public-date-control input{ min-height:30px; }
   .public-center-card{ grid-template-columns:1fr; }
   .public-center-card-image{ width:calc(100% - 28px); min-height:0; aspect-ratio:16/10; margin:14px 14px 0; }
