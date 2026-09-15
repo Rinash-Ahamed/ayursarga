@@ -24,7 +24,7 @@ const ScrollLife = dynamic(() => import("@/components/ScrollLife"), { ssr: false
 
 export default function PageShell() {
   const [guidanceProfile, setGuidanceProfile] = useState<GuidanceProfile | null>(null);
-  const ambientEffectsReady = useBrowserIdle(false, 1_500);
+  const ambientEffectsReady = useBrowserIdle(1_500);
 
   return (
     <>

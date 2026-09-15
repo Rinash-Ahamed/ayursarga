@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { getImageProps } from "next/image";
 import MagneticButton from "./MagneticButton";
 import { useBrowserIdle } from "@/hooks/useBrowserIdle";
 
@@ -14,25 +13,6 @@ const CORE_VALUES = [
   { title: "Growth", description: "Growing together, creating impact." },
 ] as const;
 
-const { props: desktopHeroImage } = getImageProps({
-  src: "/hero-image.webp",
-  alt: "",
-  width: 2560,
-  height: 1707,
-  sizes: "100vw",
-  quality: 82,
-  priority: true,
-});
-const { props: mobileHeroImage } = getImageProps({
-  src: "/hero-image-mobile.webp",
-  alt: "",
-  width: 1280,
-  height: 853,
-  sizes: "100vw",
-  quality: 82,
-  priority: true,
-});
-
 export default function Hero() {
   const heroRef = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -40,7 +20,7 @@ export default function Hero() {
   const [isHeroVisible, setIsHeroVisible] = useState(true);
   const [videoReady, setVideoReady] = useState(false);
   const shouldReduceMotion = useReducedMotion();
-  const canLoadVideo = useBrowserIdle(true, 1_400);
+  const canLoadVideo = useBrowserIdle(350);
 
   useEffect(() => {
     const hero = heroRef.current;
@@ -73,14 +53,10 @@ export default function Hero() {
 
   return (
     <section id="hero" ref={heroRef}>
-      <picture className="hero-background-image">
-        <source media="(max-width: 900px)" srcSet={mobileHeroImage.srcSet} sizes={mobileHeroImage.sizes} />
-        <img {...desktopHeroImage} alt="" />
-      </picture>
       <video
         ref={videoRef}
         className={`hero-background-video${videoReady ? " ready" : ""}`}
-        autoPlay muted loop playsInline preload="none" aria-hidden="true" tabIndex={-1}
+        autoPlay muted loop playsInline preload="none" poster="/hero-video-poster.webp" aria-hidden="true" tabIndex={-1}
         onCanPlay={() => setVideoReady(true)}
       >
         {canLoadVideo && <source src="/hero%20image%20video.mp4" type="video/mp4" media="(min-width: 901px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)" />}

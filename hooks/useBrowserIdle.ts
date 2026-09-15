@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-export function useBrowserIdle(waitForWindowLoad = false, timeout = 1_200) {
+export function useBrowserIdle(timeout = 1_200) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -20,17 +20,12 @@ export function useBrowserIdle(waitForWindowLoad = false, timeout = 1_200) {
       cancelIdle = () => globalThis.clearTimeout(timeoutId);
     };
 
-    if (waitForWindowLoad && document.readyState !== "complete") {
-      window.addEventListener("load", schedule, { once: true });
-    } else {
-      schedule();
-    }
+    schedule();
 
     return () => {
-      window.removeEventListener("load", schedule);
       cancelIdle?.();
     };
-  }, [timeout, waitForWindowLoad]);
+  }, [timeout]);
 
   return ready;
 }
