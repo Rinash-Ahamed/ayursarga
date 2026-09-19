@@ -376,7 +376,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange: (p
                   src={path.image}
                   alt={`${path.name} Ayurvedic wellness care`}
                   fill
-                  sizes="(max-width: 600px) calc(100vw - 44px), (max-width: 900px) 50vw, 33vw"
+                  sizes="(max-width: 600px) calc(50vw - 28px), (max-width: 900px) 50vw, 33vw"
                   quality={82}
                   loading={path.id === "prenatal-care" || path.id === "rejuvenation" ? "eager" : "lazy"}
                 />

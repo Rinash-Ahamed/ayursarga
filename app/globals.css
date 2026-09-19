@@ -844,6 +844,13 @@ button{ cursor:pointer; }
   .hero-ctas{ gap:14px; }.hero-values{ margin-top:28px; }.hero-value-slider{ padding:15px 20px 42px; }.hero-value-dots{ top:auto; right:auto; left:20px; bottom:17px; transform:none; }
   .path-grid{ grid-template-columns:1fr; }
   .path-card-media{ aspect-ratio:16/10; }
+  .wellness-path-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+  .wellness-path-card{ border-radius:16px; }
+  .wellness-path-card .path-card-media{ aspect-ratio:4/3; }
+  .wellness-path-card .path-card-copy{ padding:14px 12px 15px; }
+  .wellness-path-card .path-card-title{ font-size:17px; line-height:1.2; }
+  .wellness-path-card .path-card-description{ margin-top:7px; font-size:11px; line-height:1.5; }
+  .wellness-path-card .path-card-action{ padding-top:13px; gap:5px; font-size:8px; letter-spacing:.05em; }
   .partner-points,.partner-steps{ grid-template-columns:1fr; }
   .partner-panel{ border-radius:20px; }
   .general-questions-list summary{ min-height:72px; padding:20px 2px; font-size:17px; }
