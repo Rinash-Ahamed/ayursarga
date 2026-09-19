@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { ROUTES } from "@/config/routes";
+import ScrollLogo from "@/components/ScrollLogo";
 
 const LINKS = [
   { href: "#discover-hospitals", label: "How It Works" },
@@ -65,6 +66,7 @@ export default function Nav({ sectionPrefix = "", solid = false }: { sectionPref
 
   return (
     <>
+      <ScrollLogo />
       <header id="site-nav" className={scrolled || solid ? "scrolled" : ""}>
         <div className="nav-inner">
           <a href={sectionPrefix ? "/" : "#hero"} className="nav-mark">

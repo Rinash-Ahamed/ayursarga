@@ -3,6 +3,7 @@ export const ROUTES = {
     home: "/",
     centers: "/centers",
     contact: "/contact",
+    postnatalCare: "/discover/postnatal-care",
     missionVision: "/mission-vision",
   },
   consumer: {

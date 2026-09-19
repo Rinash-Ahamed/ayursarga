@@ -16,7 +16,6 @@ import { useBrowserIdle } from "@/hooks/useBrowserIdle";
 
 // Nonessential ambient effects begin only after initial content has painted.
 const ParticleField = dynamic(() => import("@/components/ParticleField"), { ssr: false });
-const ScrollLogo = dynamic(() => import("@/components/ScrollLogo"), { ssr: false });
 
 export default function PageShell() {
   const ambientEffectsReady = useBrowserIdle(1_500);
@@ -24,7 +23,6 @@ export default function PageShell() {
   return (
     <>
       {ambientEffectsReady && <ParticleField />}
-      {ambientEffectsReady && <ScrollLogo />}
       <WhatsAppBubble />
       <Nav />
 
