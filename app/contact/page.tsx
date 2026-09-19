@@ -17,8 +17,15 @@ export default async function ContactPage({ searchParams }: { searchParams: Prom
     <Nav sectionPrefix="/" solid />
     <WhatsAppBubble />
     <main className="contact-page">
+      <header id="contact-page-top" className="discover-care-hero contact-page-hero">
+        <div className="discover-care-hero-inner">
+          <span className="eyebrow">Personal guidance and partnerships</span>
+          <h1>Contact Ayursarga</h1>
+          <p>Thoughtful guidance, clear next steps, and a human conversation.</p>
+        </div>
+      </header>
       <Contact initialInterest={initialInterest} />
     </main>
-    <Footer sectionPrefix="/" backToTopHref="#contact" />
+    <Footer sectionPrefix="/" backToTopHref="#contact-page-top" />
   </>;
 }

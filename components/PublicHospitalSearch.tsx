@@ -164,7 +164,7 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
       <div className="section-inner">
         <div className="public-search-heading">
           <span className="eyebrow">Approved Ayurvedic centers</span>
-          <h2 className="section-title">Search for care that feels right.</h2>
+          <h1 className="section-title">Search for care that feels right.</h1>
           <p>Explore active Ayursarga partner centers and their available treatments. Google sign-in is required only when you request an appointment.</p>
         </div>
 

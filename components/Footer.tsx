@@ -76,7 +76,7 @@ export default function Footer({ sectionPrefix = "", backToTopHref }: { sectionP
 
         <nav className="footer-column" aria-label="Hospital links">
           <h3>For hospitals</h3>
-          <a href={sectionHref("#partners")}>Partner with Ayursarga</a>
+          <a href={`${ROUTES.public.contact}?interest=partnership`}>Partner with Ayursarga</a>
           <a href={ROUTES.hospital.login}>Hospital login</a>
           <a href={`${ROUTES.public.contact}?interest=partnership`}>Speak with our team</a>
         </nav>
@@ -117,7 +117,7 @@ export default function Footer({ sectionPrefix = "", backToTopHref }: { sectionP
       <div className="footer-bottom">
         <p>© {new Date().getFullYear()} Ayursarga. All rights reserved.</p>
         <p>Treatment suitability and clinical decisions are confirmed by the chosen hospital&apos;s qualified physician.</p>
-        <a href={backToTopHref ?? (sectionPrefix ? "#search-centers" : "#hero")}>Back to top</a>
+        <a href={backToTopHref ?? (sectionPrefix ? "#site-nav" : "#hero")}>Back to top</a>
       </div>
     </div>
   </footer>;

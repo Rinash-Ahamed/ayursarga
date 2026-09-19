@@ -58,7 +58,7 @@ export default function Contact({ guidanceProfile = null, initialInterest = "" }
     <div className="contact-page-panel">
       <header className="contact-intro-panel">
         <p className="eyebrow light">{isPartnership ? "Hospital partnerships" : "Personal guidance"}</p>
-        <h1 className="section-title light static-section-title">{isPartnership ? <><span>Bring your care</span><span>to more people.</span></> : <><span>Talk with an</span><span>Ayursarga guide.</span></>}</h1>
+        <h2 className="section-title light static-section-title">{isPartnership ? <><span>Bring your care</span><span>to more people.</span></> : <><span>Talk with an</span><span>Ayursarga guide.</span></>}</h2>
         <p className="contact-sub">{isPartnership ? "Tell us about your hospital, services, location, and the care you would like to offer. Our team will explain review, agreement, activation, and service listing." : "Tell us what you're looking for. An Ayursarga guide will help you explore suitable options before you request an appointment."}</p>
 
         <div className="contact-guidance-points" aria-label="What to expect">

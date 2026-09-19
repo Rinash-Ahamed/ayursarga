@@ -29,8 +29,8 @@ export default function PageShell() {
       <SmoothScroll>
         <main>
           <Hero />
-          <WellnessGuide />
           <Philosophy />
+          <WellnessGuide />
           <Therapies />
           <Sanctuary />
           <Voices />
