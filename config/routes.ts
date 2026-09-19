@@ -2,6 +2,13 @@ export const ROUTES = {
   public: {
     home: "/",
     centers: "/centers",
+    contact: "/contact",
+    postnatalCare: "/discover/postnatal-care",
+    prenatalCare: "/discover/prenatal-care",
+    babyCare: "/discover/baby-care",
+    womensWellness: "/discover/womens-wellness",
+    ayurvedicWellness: "/discover/ayurvedic-wellness",
+    onlineConsultation: "/discover/online-consultation",
     missionVision: "/mission-vision",
   },
   consumer: {

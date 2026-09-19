@@ -41,7 +41,7 @@ export default function MissionVisionPage() {
       <header id="purpose-top" className="purpose-hero">
         <div className="purpose-hero-inner">
           <span className="eyebrow">Our purpose</span>
-          <h1>Mission &amp; Vision</h1>
+          <h1>Mission <span className="purpose-ampersand">&amp;</span> Vision</h1>
           <p>Rooted in trusted Ayurvedic care. Connected through thoughtful technology.</p>
         </div>
       </header>

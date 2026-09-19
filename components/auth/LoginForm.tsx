@@ -41,7 +41,7 @@ export function LoginForm({ role, requestedPath }: { role: Exclude<PortalRole, "
     </form>
     <div className="portal-auth-links">
       <Link href={forgotPath}>Forgot password?</Link>
-      {role === "hospital" && <Link href="/#contact">Need hospital access? Contact Ayursarga</Link>}
+      {role === "hospital" && <Link href="/contact?interest=partnership">Need hospital access? Contact Ayursarga</Link>}
     </div>
   </AuthFormShell>;
 }

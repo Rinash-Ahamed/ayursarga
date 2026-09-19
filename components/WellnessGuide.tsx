@@ -3,7 +3,8 @@
 import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
-import type { GuidanceProfile } from "@/lib/guidanceProfile";
+import { clearGuidanceProfile, saveGuidanceProfile, type GuidanceProfile } from "@/lib/guidanceProfile";
+import { KERALA_DISTRICTS } from "@/constants/keralaDistricts";
 
 const WELLNESS_PATHS = [
   {
@@ -13,16 +14,16 @@ const WELLNESS_PATHS = [
     image: "/wellness/prenatal-care.jpg",
     question: "What services are you looking for?",
     hint: "",
-    options: ["Pregnancy yoga", "Dietary advice", "Pranayama & meditation", "Doctor consultation"],
+    options: ["Pregnancy yoga", "Dietary advice", "Doctor consultation"],
   },
   {
     id: "postnatal-care",
     name: "Postnatal care",
     description: "Restorative support after childbirth, helping the mother recover while nurturing the baby and family.",
     image: "/wellness/postnatal-care.jpeg",
-    question: "What should your care experience include?",
-    hint: "Select the support and stay preferences that are important to you.",
-    options: ["Therapist support", "Doctor visits", "Dietary guidance", "Family stay"],
+    question: "Your Postnatal Care includes.",
+    hint: "",
+    options: ["Mother Care", "Baby Care"],
   },
   {
     id: "lactation-support",
@@ -40,7 +41,7 @@ const WELLNESS_PATHS = [
     image: "/wellness/panchakarma.jpeg",
     question: "What should your care experience include?",
     hint: "Select the programme or stay preferences you would like us to consider.",
-    options: ["Detox programme", "Private stay", "Panchakarma therapy"],
+    options: ["Detox programme", "Private stay", "Panchakarma therapy", "Cosmetologists"],
   },
   {
     id: "womens-wellness",
@@ -49,7 +50,7 @@ const WELLNESS_PATHS = [
     image: "/wellness/womens-wellness.jpeg",
     question: "What would you like guidance with?",
     hint: "Select any concerns you would like to discuss. Clinical suitability is confirmed by a qualified physician.",
-    options: ["Menstrual irregularities", "PCOD / PCOS", "Premenopausal concerns", "Uterine fibroids", "Infertility", "Others"],
+    options: ["Menstrual irregularities", "PCOD / PCOS", "Perimenopausal concerns", "Uterine fibroids", "Infertility", "Others"],
   },
   {
     id: "stress-management",
@@ -60,11 +61,6 @@ const WELLNESS_PATHS = [
     hint: "Choose the kinds of support you would like included in your request.",
     options: ["Yoga & relaxation therapies", "Pranayama & meditation", "Body therapies"],
   },
-] as const;
-
-const KERALA_DISTRICTS = [
-  "Alappuzha", "Ernakulam", "Idukki", "Kannur", "Kasaragod", "Kollam", "Kottayam",
-  "Kozhikode", "Malappuram", "Palakkad", "Pathanamthitta", "Thiruvananthapuram", "Thrissur", "Wayanad",
 ] as const;
 
 type WellnessPath = (typeof WELLNESS_PATHS)[number];
@@ -87,7 +83,7 @@ function ConsultationIcon({ name }: { name: ConsultationIconName }) {
   </svg>;
 }
 
-export default function WellnessGuide({ onProfileChange }: { onProfileChange: (profile: GuidanceProfile | null) => void }) {
+export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (profile: GuidanceProfile | null) => void }) {
   const guidePanelRef = useRef<HTMLDivElement>(null);
   const [selectedPath, setSelectedPath] = useState<WellnessPath | null>(null);
   const [step, setStep] = useState<GuideStep>(0);
@@ -103,9 +99,12 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange: (p
   const [preferredTimeSlot, setPreferredTimeSlot] = useState("");
   const reduceMotion = useReducedMotion();
   const selectedDistrict = district === "Other" ? otherDistrict.trim() : district;
-  const resolvedPreferences = preferences.map((preference) => preference === "Others" ? `Other concern: ${otherConcern.trim()}` : preference);
+  const resolvedPreferences = selectedPath?.id === "postnatal-care"
+    ? ["Mother Care", "Baby Care"]
+    : preferences.map((preference) => preference === "Others" ? `Other concern: ${otherConcern.trim()}` : preference);
   const transition = reduceMotion ? { duration: 0 } : { duration: .3, ease: [0.22, 1, 0.36, 1] as const };
-  const hasValidPreferences = preferences.length > 0 && (!preferences.includes("Others") || Boolean(otherConcern.trim()));
+  const hasValidPreferences = selectedPath?.id === "postnatal-care"
+    || (preferences.length > 0 && (!preferences.includes("Others") || Boolean(otherConcern.trim())));
   const hasValidPostnatalDetails = selectedPath?.id !== "postnatal-care"
     || Boolean(expectedDeliveryDate && lastMenstrualPeriod);
   const needsPreferredAppointmentDate = selectedPath?.id === "rejuvenation"
@@ -141,7 +140,8 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange: (p
     setLastMenstrualPeriod("");
     setPreferredAppointmentDate("");
     setPreferredTimeSlot("");
-    onProfileChange(null);
+    clearGuidanceProfile();
+    onProfileChange?.(null);
   }
 
   function selectPath(path: WellnessPath) {
@@ -151,6 +151,10 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange: (p
   }
 
   function togglePreference(item: string) {
+    if (selectedPath?.id === "prenatal-care") {
+      setPreferences([item]);
+      return;
+    }
     setPreferences((current) => current.includes(item) ? current.filter((value) => value !== item) : [...current, item]);
   }
 
@@ -158,7 +162,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange: (p
     if (!selectedPath) return;
     if (!hasValidPostnatalDetails || !hasValidPreferredAppointmentDate || !hasValidWomensAppointment) return;
     if (district === "Other" && !otherDistrict.trim()) return;
-    onProfileChange({
+    const profile: GuidanceProfile = {
       wellnessPath: selectedPath.name,
       preferences: resolvedPreferences,
       district: selectedDistrict,
@@ -170,7 +174,9 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange: (p
         ? preferredAppointmentDate
         : undefined,
       preferredTimeSlot: selectedPath.id === "womens-wellness" ? preferredTimeSlot : undefined,
-    });
+    };
+    saveGuidanceProfile(profile);
+    onProfileChange?.(profile);
     setStep(2);
   }
 
@@ -218,7 +224,9 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange: (p
               <span className="quiz-kicker">Step 1 of 2</span>
               <h3>{selectedPath.question}</h3>
               {selectedPath.hint && <p className="quiz-hint">{selectedPath.hint}</p>}
-              <div className="choice-grid">{selectedPath.options.map((item) => <button type="button" className={preferences.includes(item) ? "selected" : ""} aria-pressed={preferences.includes(item)} onClick={() => togglePreference(item)} key={item}>{item}</button>)}</div>
+              {selectedPath.id === "postnatal-care"
+                ? <ul className="postnatal-inclusions" aria-label="Postnatal care inclusions">{selectedPath.options.map((item) => <li key={item}>{item}</li>)}</ul>
+                : <div className="choice-grid">{selectedPath.options.map((item) => <button type="button" className={preferences.includes(item) ? "selected" : ""} aria-pressed={preferences.includes(item)} onClick={() => togglePreference(item)} key={item}>{item}</button>)}</div>}
               {preferences.includes("Others") && <label className="quiz-label other-district-label quiz-other-concern">Tell us about your concern
                 <input type="text" value={otherConcern} onChange={(event) => setOtherConcern(event.target.value)} placeholder="Type your concern" autoFocus required />
               </label>}
@@ -342,7 +350,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange: (p
               {selectedPath.id === "womens-wellness" && <p>Preferred consultant: {consultationType} &middot; {preferredAppointmentDate} &middot; {preferredTimeSlot}</p>}
               {needsPreferredAppointmentDate && <p>Preferred date: {preferredAppointmentDate}</p>}
               <p>{resolvedPreferences.join(" / ")} · {selectedDistrict} · {budget}</p>
-              <a href="#contact" className="quiz-next">Continue to contact form <span aria-hidden="true">→</span></a>
+              <a href="/contact" className="quiz-next">Continue to contact form <span aria-hidden="true">→</span></a>
             </motion.div>}
           </AnimatePresence>
         </motion.div>}
@@ -376,7 +384,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange: (p
                   src={path.image}
                   alt={`${path.name} Ayurvedic wellness care`}
                   fill
-                  sizes="(max-width: 600px) calc(100vw - 44px), (max-width: 900px) 50vw, 33vw"
+                  sizes="(max-width: 600px) calc(50vw - 28px), (max-width: 900px) 50vw, 33vw"
                   quality={82}
                   loading={path.id === "prenatal-care" || path.id === "rejuvenation" ? "eager" : "lazy"}
                 />

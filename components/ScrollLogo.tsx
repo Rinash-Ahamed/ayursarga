@@ -11,8 +11,9 @@ export default function ScrollLogo() {
     const container = containerRef.current;
     const logo = logoRef.current;
     const footerLogo = document.querySelector<HTMLElement>("[data-scroll-logo-target]");
-    if (!container || !logo || !footerLogo) return;
-    const desktop = window.matchMedia("(min-width: 901px) and (prefers-reduced-motion: no-preference)");
+    const footerIdentity = footerLogo?.closest<HTMLElement>(".footer-identity");
+    if (!container || !logo || !footerLogo || !footerIdentity) return;
+    const desktop = window.matchMedia("(min-width: 1025px) and (prefers-reduced-motion: no-preference)");
     if (!desktop.matches) return;
 
     let frame = 0;
@@ -23,9 +24,10 @@ export default function ScrollLogo() {
         const progress = Math.min(1, Math.max(0, window.scrollY / maximum));
         const target = footerLogo.getBoundingClientRect();
         const targetCenterY = target.top + target.height / 2;
-        const dockStart = window.innerHeight + 80;
-        const dockEnd = window.innerHeight * 0.68;
-        const linearDock = Math.min(1, Math.max(0, (dockStart - targetCenterY) / (dockStart - dockEnd)));
+        const identityTop = window.scrollY + footerIdentity.getBoundingClientRect().top;
+        const dockStartScroll = Math.min(maximum - 1, identityTop - window.innerHeight * 0.72);
+        const dockingDistance = Math.max(1, maximum - dockStartScroll);
+        const linearDock = Math.min(1, Math.max(0, (window.scrollY - dockStartScroll) / dockingDistance));
         const dock = linearDock * linearDock * (3 - 2 * linearDock);
         const baseCenterX = 24 + 27;
         const baseCenterY = window.innerHeight / 2;
