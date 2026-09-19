@@ -8,6 +8,7 @@ export const ROUTES = {
     babyCare: "/discover/baby-care",
     womensWellness: "/discover/womens-wellness",
     ayurvedicWellness: "/discover/ayurvedic-wellness",
+    onlineConsultation: "/discover/online-consultation",
     missionVision: "/mission-vision",
   },
   consumer: {
