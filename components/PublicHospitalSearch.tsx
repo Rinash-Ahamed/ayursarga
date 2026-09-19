@@ -14,11 +14,13 @@ import type {
 } from "@/services/firestore/firestoreService";
 import { getHospitalImageUrls } from "@/features/hospitals/images";
 import { addCentreSearchContext, formatBystanders, type CentreSearchContext } from "@/features/hospitals/searchContext";
+import { KERALA_DISTRICTS } from "@/constants/keralaDistricts";
 
 type PublicHospitalSearchProps = {
   initialService?: string;
   initialContext: CentreSearchContext;
   initialSearch?: string;
+  initialDistrict?: string;
 };
 
 function PublicHospitalImages({ hospital, priority = false }: { hospital: DocumentRecord<HospitalDocument>; priority?: boolean }) {
@@ -112,11 +114,10 @@ function PublicHospitalImages({ hospital, priority = false }: { hospital: Docume
   </div>;
 }
 
-export default function PublicHospitalSearch({ initialService = "", initialContext, initialSearch = "" }: PublicHospitalSearchProps) {
-  const [searchDraft, setSearchDraft] = useState(initialSearch);
+export default function PublicHospitalSearch({ initialService = "", initialContext, initialSearch = "", initialDistrict = "" }: PublicHospitalSearchProps) {
   const [search, setSearch] = useState(initialSearch);
+  const [district, setDistrict] = useState<string>(KERALA_DISTRICTS.some((name) => name === initialDistrict) ? initialDistrict : "");
   const [startDate, setStartDate] = useState(initialContext.startDate);
-  const [endDate, setEndDate] = useState(initialContext.endDate);
   const [bystanders, setBystanders] = useState(initialContext.bystanders);
   const [dateError, setDateError] = useState<string | null>(null);
   const today = new Date().toISOString().slice(0, 10);
@@ -133,11 +134,14 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
 
   const visibleHospitals = useMemo(() => {
     const term = search.trim().toLowerCase();
+    const districtTerm = district.toLowerCase();
     return hospitals.filter((hospital) => {
-      const searchable = `${hospital.name} ${hospital.city} ${hospital.state}`.toLowerCase();
-      return !term || searchable.includes(term);
+      const searchable = `${hospital.name} ${hospital.city} ${hospital.state} ${hospital.address}`.toLowerCase();
+      const matchesSearch = !term || searchable.includes(term);
+      const matchesDistrict = !districtTerm || `${hospital.city} ${hospital.address}`.toLowerCase().includes(districtTerm);
+      return matchesSearch && matchesDistrict;
     });
-  }, [hospitals, search]);
+  }, [district, hospitals, search]);
 
   function openDatePicker(event: MouseEvent<HTMLLabelElement>) {
     const input = event.currentTarget.querySelector("input");
@@ -153,20 +157,12 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (Boolean(startDate) !== Boolean(endDate)) {
-      setDateError("Choose both a preferred start date and end date, or leave both flexible.");
-      return;
-    }
     if (startDate && startDate < today) {
       setDateError("Choose a preferred start date from today onwards.");
       return;
     }
-    if (startDate && endDate && endDate < startDate) {
-      setDateError("Choose an end date on or after the preferred start date.");
-      return;
-    }
     setDateError(null);
-    setSearch(searchDraft.trim());
+    setSearch((current) => current.trim());
   }
 
   return (
@@ -183,13 +179,16 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
         <form className="public-search-filters" role="search" aria-label="Search Ayurvedic centers" onSubmit={submitSearch}>
           <label className="public-search-field public-search-destination">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20v-9l8-6 8 6v9M8 20v-6h8v6M3 20h18" /></svg>
-            <span><small>Centre, city or state</small><input type="search" value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} placeholder="Where would you like care?" /></span>
+            <span><small>Centre or location</small><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search as you type" /></span>
+          </label>
+          <label className="public-search-field public-search-district">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-6.2 6-12A6 6 0 1 0 6 9c0 5.8 6 12 6 12Z" /><circle cx="12" cy="9" r="2" /></svg>
+            <span><small>District</small><select value={district} onChange={(event) => setDistrict(event.target.value)}><option value="">All Kerala districts</option>{KERALA_DISTRICTS.map((name) => <option key={name}>{name}</option>)}</select></span>
           </label>
           <div className="public-search-field public-search-dates">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v3m12-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z" /></svg>
             <span className="public-date-inputs">
-              <label className="public-date-control" onClick={openDatePicker}><span>Preferred start</span><input aria-label="Preferred care start date" type="date" min={today} value={startDate} onChange={(event) => { setStartDate(event.target.value); setDateError(null); }} /></label>
-              <label className="public-date-control" onClick={openDatePicker}><span>Preferred end</span><input aria-label="Preferred care end date" type="date" min={startDate || today} value={endDate} onChange={(event) => { setEndDate(event.target.value); setDateError(null); }} /></label>
+              <label className="public-date-control" onClick={openDatePicker}><span>Start date / expected delivery date</span><input aria-label="Start date or expected delivery date" type="date" min={today} value={startDate} onChange={(event) => { setStartDate(event.target.value); setDateError(null); }} /></label>
             </span>
           </div>
           <label className="public-search-field public-search-bystanders">
@@ -210,19 +209,20 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
                 <span>You can explore all approved centers or ask Ayursarga for personal guidance.</span>
                 <Link href="/centers">Explore all centers</Link>
               </>
-            ) : "No centers match your search. Try another name, city or state."}
+            ) : "No centers match your search. Try another centre name, location, or district."}
           </div>
         )}
 
         <div className="public-center-grid">
           {visibleHospitals.map((hospital, hospitalIndex) => {
-            const detailParams = addCentreSearchContext(new URLSearchParams(), { startDate, endDate, bystanders });
+            const detailParams = addCentreSearchContext(new URLSearchParams(), { startDate, endDate: "", bystanders });
             if (initialService) detailParams.set("service", initialService);
             if (search) detailParams.set("q", search);
+            if (district) detailParams.set("district", district);
             const detailHref = `/centers/${encodeURIComponent(hospital.id)}?${detailParams.toString()}`;
-            const appointmentHref = `${detailHref}#packages`;
             return (
               <article className="public-center-card" key={hospital.id}>
+                <Link className="public-center-card-link" href={detailHref} aria-label={`View details for ${hospital.name}`} />
                 <PublicHospitalImages hospital={hospital} priority={hospitalIndex === 0} />
                 <div className="public-center-card-body">
                   <div className="public-center-card-topline">
@@ -240,10 +240,7 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
                   {hospital.ayursargaReviewNote && <div className="public-center-review">
                     <p>{hospital.ayursargaReviewNote}</p>
                   </div>}
-                  <div className="public-center-actions">
-                    <Link className="public-center-toggle secondary" href={detailHref}>View centre details</Link>
-                    <Link className="public-center-toggle" href={appointmentHref}>Request appointment <span aria-hidden="true">→</span></Link>
-                  </div>
+                  <span className="public-center-toggle" aria-hidden="true">View centre details <span>→</span></span>
                 </div>
               </article>
             );

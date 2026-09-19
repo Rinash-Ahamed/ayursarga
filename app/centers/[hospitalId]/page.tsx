@@ -14,14 +14,15 @@ export default async function PublicCentreDetailsPage({
   searchParams,
 }: {
   params: Promise<{ hospitalId: string }>;
-  searchParams: Promise<{ service?: string | string[]; q?: string | string[]; startDate?: string | string[]; endDate?: string | string[]; bystanders?: string | string[] }>;
+  searchParams: Promise<{ service?: string | string[]; q?: string | string[]; district?: string | string[]; startDate?: string | string[]; endDate?: string | string[]; bystanders?: string | string[] }>;
 }) {
   const [{ hospitalId }, query] = await Promise.all([params, searchParams]);
   const requestedService = typeof query.service === "string" ? query.service.trim().slice(0, 100) : "";
   const searchTerm = typeof query.q === "string" ? query.q.trim().slice(0, 120) : "";
+  const district = typeof query.district === "string" ? query.district.trim().slice(0, 40) : "";
   return <>
     <Nav sectionPrefix="/" solid />
-    <main className="centers-directory-page"><PublicCentreDetails hospitalId={hospitalId} searchContext={normalizeCentreSearchContext(query)} initialService={requestedService} searchTerm={searchTerm} /></main>
+    <main className="centers-directory-page"><PublicCentreDetails hospitalId={hospitalId} searchContext={normalizeCentreSearchContext(query)} initialService={requestedService} searchTerm={searchTerm} district={district} /></main>
     <Footer sectionPrefix="/" />
   </>;
 }
