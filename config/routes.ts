@@ -4,6 +4,9 @@ export const ROUTES = {
     centers: "/centers",
     contact: "/contact",
     postnatalCare: "/discover/postnatal-care",
+    prenatalCare: "/discover/prenatal-care",
+    babyCare: "/discover/baby-care",
+    womensWellness: "/discover/womens-wellness",
     missionVision: "/mission-vision",
   },
   consumer: {
