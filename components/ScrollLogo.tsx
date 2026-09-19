@@ -13,7 +13,7 @@ export default function ScrollLogo() {
     const footerLogo = document.querySelector<HTMLElement>("[data-scroll-logo-target]");
     const footerIdentity = footerLogo?.closest<HTMLElement>(".footer-identity");
     if (!container || !logo || !footerLogo || !footerIdentity) return;
-    const desktop = window.matchMedia("(min-width: 901px) and (prefers-reduced-motion: no-preference)");
+    const desktop = window.matchMedia("(min-width: 1025px) and (prefers-reduced-motion: no-preference)");
     if (!desktop.matches) return;
 
     let frame = 0;
