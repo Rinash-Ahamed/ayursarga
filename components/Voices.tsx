@@ -4,6 +4,7 @@ import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
 import { FadeUp, RevealLines, RevealWords } from "./Reveal";
 import MagneticButton from "./MagneticButton";
+import { ROUTES } from "@/config/routes";
 
 const POINTS = [
   ["reach", "Reach active consumers"],
@@ -52,7 +53,7 @@ export default function Voices() {
   const prefersReducedMotion = useReducedMotion();
 
   return <section id="partners" className="section partner-section"><div className="section-inner partner-panel">
-    <div className="partner-copy"><RevealWords text="For Ayurvedic Hospitals" className="eyebrow" /><RevealLines as="h2" className="section-title" lines={["Good care deserves", "to be discovered."]} /><FadeUp as="p" className="section-intro partner-intro">Partner with Ayursarga to help people discover your hospital, understand your services, and send appointment requests to your team. Clinical decisions remain with your qualified physicians.</FadeUp><FadeUp className="partner-action"><MagneticButton href="#contact" className="btn-magnetic btn-primary">Discuss partnership</MagneticButton></FadeUp><FadeUp className="partner-note">Booking requests begin after approval, activation, and service publication. Booking volume is not guaranteed.</FadeUp></div>
+    <div className="partner-copy"><RevealWords text="For Ayurvedic Hospitals" className="eyebrow" /><RevealLines as="h2" className="section-title" lines={["Good care deserves", "to be discovered."]} /><FadeUp as="p" className="section-intro partner-intro">Partner with Ayursarga to help people discover your hospital, understand your services, and send appointment requests to your team. Clinical decisions remain with your qualified physicians.</FadeUp><FadeUp className="partner-action"><MagneticButton href={`${ROUTES.public.contact}?interest=partnership`} className="btn-magnetic btn-primary">Discuss partnership</MagneticButton></FadeUp><FadeUp className="partner-note">Booking requests begin after approval, activation, and service publication. Booking volume is not guaranteed.</FadeUp></div>
     <div className="partner-visual-column">
       <FadeUp className="partner-image"><Image src="/ayurvedic-hospital-partner.webp" alt="Ayurvedic hospital with a medicinal garden in Kerala" width={1536} height={1024} sizes="(max-width: 900px) 100vw, 48vw" quality={82} /></FadeUp>
       <ul className="partner-points">{POINTS.map(([icon, point], index) => <li key={icon}><motion.span className="partner-point-icon"

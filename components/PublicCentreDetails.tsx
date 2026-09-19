@@ -48,7 +48,7 @@ function CentreGallery({ hospital }: { hospital: DocumentRecord<HospitalDocument
   </div>;
 }
 
-export default function PublicCentreDetails({ hospitalId, searchContext, initialService = "", searchTerm = "", district = "" }: { hospitalId: string; searchContext: CentreSearchContext; initialService?: string; searchTerm?: string; district?: string }) {
+export default function PublicCentreDetails({ hospitalId, searchContext, initialService = "", searchTerm = "" }: { hospitalId: string; searchContext: CentreSearchContext; initialService?: string; searchTerm?: string }) {
   const [hospital, setHospital] = useState<DocumentRecord<HospitalDocument> | null>(null);
   const [hospitalLoading, setHospitalLoading] = useState(true);
   const [hospitalError, setHospitalError] = useState<string | null>(null);
@@ -76,9 +76,8 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
     const params = addCentreSearchContext(new URLSearchParams(), searchContext);
     if (initialService) params.set("service", initialService);
     if (searchTerm) params.set("q", searchTerm);
-    if (district) params.set("district", district);
     return `/centers?${params.toString()}`;
-  }, [district, initialService, searchContext, searchTerm]);
+  }, [initialService, searchContext, searchTerm]);
 
   if (hospitalLoading) return <section className="section public-centre-detail-page"><div className="section-inner"><div className="public-centre-detail-status" role="status">Preparing centre details…</div></div></section>;
   if (hospitalError || !hospital) return <section className="section public-centre-detail-page"><div className="section-inner"><div className="public-centre-detail-status error" role="alert"><strong>Centre details unavailable</strong><p>{hospitalError}</p><Link href={backHref}>Return to centre search</Link></div></div></section>;

@@ -10,6 +10,45 @@ export type GuidanceProfile = {
   preferredTimeSlot?: string;
 };
 
+const GUIDANCE_PROFILE_STORAGE_KEY = "ayursarga-guidance-profile";
+
+function isGuidanceProfile(value: unknown): value is GuidanceProfile {
+  if (!value || typeof value !== "object") return false;
+  const profile = value as Partial<GuidanceProfile>;
+  return typeof profile.wellnessPath === "string"
+    && Array.isArray(profile.preferences)
+    && profile.preferences.every((item) => typeof item === "string")
+    && typeof profile.district === "string"
+    && typeof profile.budget === "string";
+}
+
+export function saveGuidanceProfile(profile: GuidanceProfile) {
+  try {
+    window.sessionStorage.setItem(GUIDANCE_PROFILE_STORAGE_KEY, JSON.stringify(profile));
+  } catch {
+    // The form remains usable when browser storage is unavailable.
+  }
+}
+
+export function loadGuidanceProfile() {
+  try {
+    const stored = window.sessionStorage.getItem(GUIDANCE_PROFILE_STORAGE_KEY);
+    if (!stored) return null;
+    const value: unknown = JSON.parse(stored);
+    return isGuidanceProfile(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearGuidanceProfile() {
+  try {
+    window.sessionStorage.removeItem(GUIDANCE_PROFILE_STORAGE_KEY);
+  } catch {
+    // Nothing needs clearing when browser storage is unavailable.
+  }
+}
+
 export function formatGuidanceProfile(profile: GuidanceProfile) {
   return [
     `Wellness path: ${profile.wellnessPath}`,

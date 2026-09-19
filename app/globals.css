@@ -65,13 +65,13 @@ em{ font-style: italic; color: var(--clay-dark); }
 @media (max-width:900px){ .scroll-logo{ display:none; } }
 
 /* Floating personal guidance */
-.whatsapp-bubble{ position:fixed; z-index:82; right:max(clamp(16px,2.6vw,38px),env(safe-area-inset-right)); bottom:max(clamp(18px,3vw,38px),env(safe-area-inset-bottom)); display:flex; align-items:center; gap:11px; color:var(--forest); filter:drop-shadow(0 14px 24px rgba(42,40,31,.2)); }
-.whatsapp-bubble-label{ min-width:154px; padding:10px 16px 10px 17px; border:1px solid rgba(58,61,46,.25); border-radius:100px; background:rgba(255,255,255,.98); box-shadow:inset 0 1px 0 rgba(255,255,255,.7); display:grid; justify-items:start; gap:2px; text-align:left; opacity:0; transform:translateX(12px); transition:opacity .22s var(--ease-out),transform .22s var(--ease-out),border-color .22s; pointer-events:none; }
+.whatsapp-bubble{ position:fixed; z-index:82; right:max(clamp(16px,2.6vw,38px),env(safe-area-inset-right)); bottom:max(clamp(18px,3vw,38px),env(safe-area-inset-bottom)); width:48px; height:48px; display:grid; place-items:center; color:var(--forest); filter:drop-shadow(0 14px 24px rgba(42,40,31,.2)); }
+.whatsapp-bubble-label{ position:absolute; top:50%; right:calc(100% + 11px); min-width:154px; padding:10px 16px 10px 17px; border:1px solid rgba(58,61,46,.25); border-radius:100px; background:rgba(255,255,255,.98); box-shadow:inset 0 1px 0 rgba(255,255,255,.7); display:grid; justify-items:start; gap:2px; text-align:left; opacity:0; transform:translate(12px,-50%); transition:opacity .22s var(--ease-out),transform .22s var(--ease-out),border-color .22s; pointer-events:none; }
 .whatsapp-bubble-label small{ color:var(--clay-dark); font-size:8px; font-weight:750; letter-spacing:.1em; text-transform:uppercase; }
 .whatsapp-bubble-label strong{ color:var(--forest); font-size:11px; font-weight:750; white-space:nowrap; }
 .whatsapp-bubble-mark{ position:relative; width:48px; height:48px; flex:0 0 48px; display:grid; place-items:center; transition:transform .22s var(--ease-out); transform-origin:center; }
 .whatsapp-bubble-image{ display:block; width:42px; height:42px; max-width:none; object-fit:cover; object-position:center; }
-.whatsapp-bubble:hover .whatsapp-bubble-label,.whatsapp-bubble:focus-visible .whatsapp-bubble-label{ opacity:1; transform:translateX(0); border-color:rgba(201,166,107,.7); }
+.whatsapp-bubble:hover .whatsapp-bubble-label,.whatsapp-bubble:focus-visible .whatsapp-bubble-label{ opacity:1; transform:translate(0,-50%); border-color:rgba(201,166,107,.7); }
 .whatsapp-bubble:hover .whatsapp-bubble-mark{ transform:scale(1.08); }
 .whatsapp-bubble:focus-visible{ outline:none; }
 .whatsapp-bubble:focus-visible .whatsapp-bubble-mark{ outline:3px solid var(--gold); outline-offset:4px; }
@@ -278,7 +278,7 @@ main>.dark-section{
 .centers-directory-page .public-search-heading .section-title{ position:relative; z-index:1; color:#fff; }
 .centers-directory-page .public-search-heading>p{ position:relative; z-index:1; color:rgba(255,255,255,.8); }
 .public-search-filters{
-  display:grid; grid-template-columns:minmax(210px,1.15fr) minmax(175px,.82fr) minmax(220px,.95fr) minmax(180px,.78fr) 118px; gap:8px; max-width:1240px;
+  display:grid; grid-template-columns:minmax(250px,1.25fr) minmax(230px,1fr) minmax(190px,.82fr) 118px; gap:8px; max-width:1080px;
   margin:0 auto 28px; padding:8px;
   border:1px solid rgba(31,61,43,.2); border-top-color:rgba(184,135,47,.72); border-radius:20px;
   background:#fff; box-shadow:0 14px 36px rgba(31,61,43,.1);
@@ -292,6 +292,16 @@ main>.dark-section{
   border:0; border-radius:0; outline:0;
   background:#fff; color:var(--ink); font:inherit; font-size:13px; font-weight:650; letter-spacing:0; text-transform:none;
 }
+.public-search-filters select{
+  padding-right:22px;
+  appearance:none;
+  background-color:transparent;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%231f3d2b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position:right 4px center;
+  background-repeat:no-repeat;
+  cursor:pointer;
+}
+.public-search-filters select option,.public-search-filters select optgroup{ background:#f4f7f4; color:var(--ink); }
 .public-search-field:focus-within{ box-shadow:inset 0 0 0 2px rgba(31,61,43,.35); }
 .public-date-inputs{ min-width:0; display:grid; grid-template-columns:minmax(0,1fr); align-items:end; gap:8px; }
 .public-date-control{ min-width:0; padding:7px 10px; display:block; border:1px solid rgba(31,61,43,.16); border-radius:10px; background:#fff; cursor:pointer; }
@@ -506,7 +516,16 @@ main>.dark-section{
 .quiz-back:hover{ color:var(--cream); }
 .quiz-label{ display:block; margin-bottom:18px; color:rgba(255,255,255,.74); font-size:12px; letter-spacing:.04em; }
 .quiz-label select,.quiz-label input{ display:block; width:100%; min-height:50px; margin-top:8px; padding:14px 16px; border:1px solid rgba(255,255,255,.24); border-radius:12px; background:rgba(255,255,255,.08); color:var(--cream); font:inherit; }
-.quiz-label select option,.quiz-label select optgroup{ color:var(--ink); }
+.quiz-label select{
+  padding-right:44px;
+  appearance:none;
+  background-color:rgba(255,255,255,.08);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%23d8b45d' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position:right 16px center;
+  background-repeat:no-repeat;
+  cursor:pointer;
+}
+.quiz-label select option,.quiz-label select optgroup{ background:#173626; color:#fff; }
 .quiz-label select:focus,.quiz-label input:focus{ border-color:var(--gold); outline:2px solid rgba(184,135,47,.42); }
 .other-district-label{ animation:district-field-in .3s var(--ease-out) both; }
 .quiz-other-concern{ margin-top:18px; }
@@ -519,6 +538,8 @@ main>.dark-section{
    Contact
    ========================================================================== */
 #contact{ text-align:center; overflow:hidden; padding-top:clamp(16px,1.6vw,22px); }
+.contact-page{ min-height:100vh; background:#fff; }
+.contact-page #contact{ min-height:calc(100vh - 88px); padding-top:clamp(138px,13vw,184px); padding-bottom:clamp(72px,8vw,110px); }
 .contact-glow{
   position:absolute; bottom:-30%; left:50%; transform:translateX(-50%); width:900px; height:900px; z-index:0;
   background: radial-gradient(circle, rgba(168,142,117,.28), transparent 65%);
@@ -616,6 +637,7 @@ main>.dark-section{
 .footer-bottom{ display:grid; grid-template-columns:auto minmax(260px,1fr) auto; align-items:start; gap:30px; padding:27px 0; color:rgba(249,245,234,.52); font-size:9.5px; line-height:1.6; }
 .footer-bottom p:nth-child(2){ max-width:620px; justify-self:center; text-align:center; }
 .footer-bottom a{ color:rgba(249,245,234,.72); font-weight:700; text-transform:uppercase; letter-spacing:.08em; }
+@media(min-width:761px){ .footer-bottom>a{ margin-right:72px; } }
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce){
@@ -764,7 +786,17 @@ button{ cursor:pointer; }
 .partner-steps p{ margin-top:8px; color:var(--sage); font-size:12px; line-height:1.6; }
 
 .contact-form select,.contact-form textarea{ width:100%; padding:16px 20px; border-radius:22px; border:1px solid rgba(58,61,46,.34); background:#fff; color:var(--ink); resize:vertical; transition:border-color .25s ease,box-shadow .25s ease,background-color .25s ease; }
-.contact-form select{ border-radius:100px; }
+.contact-form select{
+  padding-right:48px;
+  appearance:none;
+  border-radius:100px;
+  background-color:rgba(31,61,43,.045);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%231f3d2b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position:right 20px center;
+  background-repeat:no-repeat;
+  cursor:pointer;
+}
+.contact-form select option,.contact-form select optgroup{ background:#f4f7f4; color:var(--ink); }
 @media(hover:hover) and (pointer:fine){
   .contact-form input:hover,.contact-form select:hover,.contact-form textarea:hover{ border-color:rgba(31,61,43,.62); background:#fdfefd; box-shadow:0 7px 18px rgba(31,61,43,.08); }
 }

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
-import type { GuidanceProfile } from "@/lib/guidanceProfile";
+import { clearGuidanceProfile, saveGuidanceProfile, type GuidanceProfile } from "@/lib/guidanceProfile";
 import { KERALA_DISTRICTS } from "@/constants/keralaDistricts";
 
 const WELLNESS_PATHS = [
@@ -83,7 +83,7 @@ function ConsultationIcon({ name }: { name: ConsultationIconName }) {
   </svg>;
 }
 
-export default function WellnessGuide({ onProfileChange }: { onProfileChange: (profile: GuidanceProfile | null) => void }) {
+export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (profile: GuidanceProfile | null) => void }) {
   const guidePanelRef = useRef<HTMLDivElement>(null);
   const [selectedPath, setSelectedPath] = useState<WellnessPath | null>(null);
   const [step, setStep] = useState<GuideStep>(0);
@@ -140,7 +140,8 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange: (p
     setLastMenstrualPeriod("");
     setPreferredAppointmentDate("");
     setPreferredTimeSlot("");
-    onProfileChange(null);
+    clearGuidanceProfile();
+    onProfileChange?.(null);
   }
 
   function selectPath(path: WellnessPath) {
@@ -161,7 +162,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange: (p
     if (!selectedPath) return;
     if (!hasValidPostnatalDetails || !hasValidPreferredAppointmentDate || !hasValidWomensAppointment) return;
     if (district === "Other" && !otherDistrict.trim()) return;
-    onProfileChange({
+    const profile: GuidanceProfile = {
       wellnessPath: selectedPath.name,
       preferences: resolvedPreferences,
       district: selectedDistrict,
@@ -173,7 +174,9 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange: (p
         ? preferredAppointmentDate
         : undefined,
       preferredTimeSlot: selectedPath.id === "womens-wellness" ? preferredTimeSlot : undefined,
-    });
+    };
+    saveGuidanceProfile(profile);
+    onProfileChange?.(profile);
     setStep(2);
   }
 
@@ -347,7 +350,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange: (p
               {selectedPath.id === "womens-wellness" && <p>Preferred consultant: {consultationType} &middot; {preferredAppointmentDate} &middot; {preferredTimeSlot}</p>}
               {needsPreferredAppointmentDate && <p>Preferred date: {preferredAppointmentDate}</p>}
               <p>{resolvedPreferences.join(" / ")} · {selectedDistrict} · {budget}</p>
-              <a href="#contact" className="quiz-next">Continue to contact form <span aria-hidden="true">→</span></a>
+              <a href="/contact" className="quiz-next">Continue to contact form <span aria-hidden="true">→</span></a>
             </motion.div>}
           </AnimatePresence>
         </motion.div>}

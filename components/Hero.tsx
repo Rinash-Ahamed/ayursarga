@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import MagneticButton from "./MagneticButton";
 import { useBrowserIdle } from "@/hooks/useBrowserIdle";
+import { ROUTES } from "@/config/routes";
 
 const CORE_VALUES = [
   { title: "Care", description: "Mother and baby always come first." },
@@ -81,7 +82,7 @@ export default function Hero() {
             <span>Search for Ayurvedic Center</span>
           </MagneticButton>
           <div className="hero-support-actions">
-            <MagneticButton href="#contact" className="btn-magnetic btn-secondary">Talk to Ayursarga</MagneticButton>
+            <MagneticButton href={ROUTES.public.contact} className="btn-magnetic btn-secondary">Talk to Ayursarga</MagneticButton>
             <a href="#wellness" className="btn-text">Help me choose &darr;</a>
           </div>
         </motion.div>

@@ -35,7 +35,7 @@ export default function Footer({ sectionPrefix = "", backToTopHref }: { sectionP
         </div>
         <div className="footer-invitation-actions">
           <a href={ROUTES.public.centers}>Search hospitals</a>
-          <a href={sectionHref("#contact")}>Request guidance</a>
+          <a href={ROUTES.public.contact}>Contact Us</a>
         </div>
       </motion.section>
 
@@ -75,12 +75,12 @@ export default function Footer({ sectionPrefix = "", backToTopHref }: { sectionP
         </motion.div>
 
         <nav className="footer-column" aria-label="Explore Ayursarga">
-          <h3>Explore</h3>
+          <h3>About Us</h3>
           <a href={sectionHref("#how-it-works")}>How it works</a>
           <a href={sectionHref("#wellness")}>Wellness paths</a>
           <a href={sectionHref("#why-ayursarga")}>Why Ayursarga</a>
           <a href={ROUTES.public.missionVision}>Mission &amp; Vision</a>
-          <a href={sectionHref("#contact")}>Personal guidance</a>
+          <a href={ROUTES.public.contact}>Personal guidance</a>
         </nav>
 
         <nav className="footer-column" aria-label="Consumer links">
@@ -95,7 +95,7 @@ export default function Footer({ sectionPrefix = "", backToTopHref }: { sectionP
           <h3>For hospitals</h3>
           <a href={sectionHref("#partners")}>Partner with Ayursarga</a>
           <a href={ROUTES.hospital.login}>Hospital login</a>
-          <a href={sectionHref("#contact")}>Speak with our team</a>
+          <a href={`${ROUTES.public.contact}?interest=partnership`}>Speak with our team</a>
         </nav>
       </div>
 

@@ -3,16 +3,25 @@
 import { FormEvent, useEffect, useState } from "react";
 import { FadeUp } from "./Reveal";
 import MagneticButton from "./MagneticButton";
-import { formatGuidanceProfile, type GuidanceProfile } from "@/lib/guidanceProfile";
+import { clearGuidanceProfile, formatGuidanceProfile, loadGuidanceProfile, type GuidanceProfile } from "@/lib/guidanceProfile";
 
 type FormStatus = "idle" | "sending" | "sent" | "error";
 
-export default function Contact({ guidanceProfile }: { guidanceProfile: GuidanceProfile | null }) {
+export default function Contact({ guidanceProfile = null, initialInterest = "" }: { guidanceProfile?: GuidanceProfile | null; initialInterest?: string }) {
   const [status, setStatus] = useState<FormStatus>("idle");
-  const [interest, setInterest] = useState("");
-  const guidanceSummary = guidanceProfile ? formatGuidanceProfile(guidanceProfile) : "";
-  const selectedInterest = interest || (guidanceProfile ? "I need personal guidance" : "");
+  const [interest, setInterest] = useState(initialInterest);
+  const [storedGuidanceProfile, setStoredGuidanceProfile] = useState<GuidanceProfile | null>(null);
+  const activeGuidanceProfile = guidanceProfile ?? storedGuidanceProfile;
+  const selectedInterest = interest || (activeGuidanceProfile ? "I need personal guidance" : "");
   const isPartnership = selectedInterest === "Ayurvedic hospital partnership";
+  const displayedGuidanceProfile = isPartnership ? null : activeGuidanceProfile;
+  const guidanceSummary = displayedGuidanceProfile ? formatGuidanceProfile(displayedGuidanceProfile) : "";
+
+  useEffect(() => {
+    if (!guidanceProfile && initialInterest !== "Ayurvedic hospital partnership") {
+      setStoredGuidanceProfile(loadGuidanceProfile());
+    }
+  }, [guidanceProfile, initialInterest]);
 
   useEffect(() => {
     if (status !== "sent") return;
@@ -35,6 +44,8 @@ export default function Contact({ guidanceProfile }: { guidanceProfile: Guidance
       });
       if (!response.ok) throw new Error("Delivery failed");
       form.reset();
+      clearGuidanceProfile();
+      setStoredGuidanceProfile(null);
       setStatus("sent");
     } catch {
       setStatus("error");
@@ -50,15 +61,15 @@ export default function Contact({ guidanceProfile }: { guidanceProfile: Guidance
     {status === "sent" ? <FadeUp className="form-success"><span>&#10003;</span><h3>{isPartnership ? "Your partnership enquiry is on its way." : "Thank you. Your journey has begun."}</h3><p>{isPartnership ? "Our team will review your hospital details and contact you about approval and onboarding. Appointment requests begin after activation." : "Your request has been delivered to info@ayursarga.com."}</p></FadeUp> : <form className="contact-form" onSubmit={submit}>
       <div className="form-row"><input name="name" aria-label="Your name" type="text" placeholder="Your name" required /><input name="phone" aria-label="Phone number" type="tel" placeholder="Phone number" required /></div>
       <input name="email" aria-label="Email address" type="email" placeholder="Email address" required />
-      {guidanceProfile && <div className="captured-match" role="status">
+      {displayedGuidanceProfile && <div className="captured-match" role="status">
         <span>Your guidance preferences</span>
-        <strong>{guidanceProfile.wellnessPath}</strong>
-        {guidanceProfile.expectedDeliveryDate && <p>Expected delivery date: {guidanceProfile.expectedDeliveryDate}</p>}
-        {guidanceProfile.lastMenstrualPeriod && <p>Last menstrual period: {guidanceProfile.lastMenstrualPeriod}</p>}
-        {guidanceProfile.consultationProvider && <p>Preferred consultant: {guidanceProfile.consultationProvider}</p>}
-        {guidanceProfile.preferredAppointmentDate && <p>Preferred appointment date: {guidanceProfile.preferredAppointmentDate}</p>}
-        {guidanceProfile.preferredTimeSlot && <p>Preferred time slot: {guidanceProfile.preferredTimeSlot}</p>}
-        <p>{guidanceProfile.preferences.join(" / ")} · {guidanceProfile.district} · {guidanceProfile.budget}</p>
+        <strong>{displayedGuidanceProfile.wellnessPath}</strong>
+        {displayedGuidanceProfile.expectedDeliveryDate && <p>Expected delivery date: {displayedGuidanceProfile.expectedDeliveryDate}</p>}
+        {displayedGuidanceProfile.lastMenstrualPeriod && <p>Last menstrual period: {displayedGuidanceProfile.lastMenstrualPeriod}</p>}
+        {displayedGuidanceProfile.consultationProvider && <p>Preferred consultant: {displayedGuidanceProfile.consultationProvider}</p>}
+        {displayedGuidanceProfile.preferredAppointmentDate && <p>Preferred appointment date: {displayedGuidanceProfile.preferredAppointmentDate}</p>}
+        {displayedGuidanceProfile.preferredTimeSlot && <p>Preferred time slot: {displayedGuidanceProfile.preferredTimeSlot}</p>}
+        <p>{displayedGuidanceProfile.preferences.join(" / ")} &middot; {displayedGuidanceProfile.district} &middot; {displayedGuidanceProfile.budget}</p>
       </div>}
       <input type="hidden" name="guidanceProfile" value={guidanceSummary} />
       <select name="interest" aria-label="Care you are interested in" required value={selectedInterest} onChange={(event) => setInterest(event.target.value)}>

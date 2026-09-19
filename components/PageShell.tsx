@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import dynamic from "next/dynamic";
 import SmoothScroll from "@/components/SmoothScroll";
 import WhatsAppBubble from "@/components/WhatsAppBubble";
@@ -11,10 +10,8 @@ import WellnessGuide from "@/components/WellnessGuide";
 import Therapies from "@/components/Therapies";
 import Sanctuary from "@/components/Sanctuary";
 import Voices from "@/components/Voices";
-import Contact from "@/components/Contact";
 import GeneralQuestions from "@/components/GeneralQuestions";
 import Footer from "@/components/Footer";
-import type { GuidanceProfile } from "@/lib/guidanceProfile";
 import { useBrowserIdle } from "@/hooks/useBrowserIdle";
 
 // Nonessential ambient effects begin only after initial content has painted.
@@ -22,7 +19,6 @@ const ParticleField = dynamic(() => import("@/components/ParticleField"), { ssr:
 const ScrollLogo = dynamic(() => import("@/components/ScrollLogo"), { ssr: false });
 
 export default function PageShell() {
-  const [guidanceProfile, setGuidanceProfile] = useState<GuidanceProfile | null>(null);
   const ambientEffectsReady = useBrowserIdle(1_500);
 
   return (
@@ -35,12 +31,11 @@ export default function PageShell() {
       <SmoothScroll>
         <main>
           <Hero />
-          <WellnessGuide onProfileChange={setGuidanceProfile} />
+          <WellnessGuide />
           <Philosophy />
           <Therapies />
           <Sanctuary />
           <Voices />
-          <Contact guidanceProfile={guidanceProfile} />
           <GeneralQuestions />
         </main>
         <Footer />
