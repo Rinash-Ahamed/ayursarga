@@ -18,9 +18,9 @@ export default function Contact({ guidanceProfile = null, initialInterest = "" }
   const guidanceSummary = displayedGuidanceProfile ? formatGuidanceProfile(displayedGuidanceProfile) : "";
 
   useEffect(() => {
-    if (!guidanceProfile && initialInterest !== "Ayurvedic hospital partnership") {
-      setStoredGuidanceProfile(loadGuidanceProfile());
-    }
+    if (guidanceProfile || initialInterest === "Ayurvedic hospital partnership") return;
+    const frame = window.requestAnimationFrame(() => setStoredGuidanceProfile(loadGuidanceProfile()));
+    return () => window.cancelAnimationFrame(frame);
   }, [guidanceProfile, initialInterest]);
 
   useEffect(() => {
