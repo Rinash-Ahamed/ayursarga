@@ -49,7 +49,7 @@ const WELLNESS_PATHS = [
     image: "/wellness/womens-wellness.jpeg",
     question: "What would you like guidance with?",
     hint: "Select any concerns you would like to discuss. Clinical suitability is confirmed by a qualified physician.",
-    options: ["Menstrual irregularities", "PCOD / PCOS", "Premenopausal concerns", "Uterine fibroids", "Infertility", "Others"],
+    options: ["Menstrual irregularities", "PCOD / PCOS", "Perimenopausal concerns", "Uterine fibroids", "Infertility", "Others"],
   },
   {
     id: "stress-management",

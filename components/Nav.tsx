@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { ROUTES } from "@/config/routes";
 
 const LINKS = [
   { href: "#discover-hospitals", label: "How It Works" },
   { href: ROUTES.public.centers, label: "Search Hospitals" },
-  { href: "#family-wellness", label: "Wellness" },
   { href: "#why-ayursarga", label: "Why Ayursarga" },
   { href: "#partners", label: "For Hospitals" },
 ];
@@ -15,6 +14,7 @@ const LINKS = [
 export default function Nav({ sectionPrefix = "", solid = false }: { sectionPrefix?: string; solid?: boolean }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const loginRef = useRef<HTMLDetailsElement>(null);
   const linkHref = (href: string) => href.startsWith("#") ? `${sectionPrefix}${href}` : href;
 
   useEffect(() => {
@@ -40,6 +40,29 @@ export default function Nav({ sectionPrefix = "", solid = false }: { sectionPref
     return () => { document.body.style.overflow = previousOverflow; };
   }, [open]);
 
+  useEffect(() => {
+    const closeLogin = (restoreFocus = false) => {
+      const login = loginRef.current;
+      if (!login?.open) return;
+      login.open = false;
+      if (restoreFocus) login.querySelector("summary")?.focus();
+    };
+    const handleOutsidePointer = (event: PointerEvent) => {
+      const login = loginRef.current;
+      if (login?.open && event.target instanceof Node && !login.contains(event.target)) closeLogin();
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeLogin(true);
+    };
+
+    document.addEventListener("pointerdown", handleOutsidePointer);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handleOutsidePointer);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
   return (
     <>
       <header id="site-nav" className={scrolled || solid ? "scrolled" : ""}>
@@ -56,7 +79,7 @@ export default function Nav({ sectionPrefix = "", solid = false }: { sectionPref
             ))}
           </nav>
           <div className="nav-account-actions">
-            <details className="nav-login">
+            <details ref={loginRef} className="nav-login">
               <summary>Login</summary>
               <div className="nav-login-menu">
                 <a href={ROUTES.consumer.login}><span>My Ayursarga</span><small>Discover and book care</small></a>

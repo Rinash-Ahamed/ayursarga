@@ -20,7 +20,6 @@ import { useBrowserIdle } from "@/hooks/useBrowserIdle";
 // Nonessential ambient effects begin only after initial content has painted.
 const ParticleField = dynamic(() => import("@/components/ParticleField"), { ssr: false });
 const ScrollLogo = dynamic(() => import("@/components/ScrollLogo"), { ssr: false });
-const ScrollLife = dynamic(() => import("@/components/ScrollLife"), { ssr: false });
 
 export default function PageShell() {
   const [guidanceProfile, setGuidanceProfile] = useState<GuidanceProfile | null>(null);
@@ -31,7 +30,6 @@ export default function PageShell() {
       {ambientEffectsReady && <ParticleField />}
       {ambientEffectsReady && <ScrollLogo />}
       <WhatsAppBubble />
-      {ambientEffectsReady && <ScrollLife />}
       <Nav />
 
       <SmoothScroll>
