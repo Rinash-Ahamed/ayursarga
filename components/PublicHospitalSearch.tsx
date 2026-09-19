@@ -163,11 +163,9 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
     <section id="search-centers" className="section public-center-search" tabIndex={-1}>
       <div className="section-inner">
         <div className="public-search-heading">
-          <span className="eyebrow">{initialService ? `Centers offering ${initialService}` : "Approved Ayurvedic centers"}</span>
-          <h2 className="section-title">{initialService ? `Find ${initialService} care.` : "Search for care that feels right."}</h2>
-          <p>{initialService
-            ? `Explore active Ayursarga partner centers that currently list ${initialService}. Google sign-in is required only when you request an appointment.`
-            : "Explore active Ayursarga partner centers and their available treatments. Google sign-in is required only when you request an appointment."}</p>
+          <span className="eyebrow">Approved Ayurvedic centers</span>
+          <h2 className="section-title">Search for care that feels right.</h2>
+          <p>Explore active Ayursarga partner centers and their available treatments. Google sign-in is required only when you request an appointment.</p>
         </div>
 
         <form className="public-search-filters" role="search" aria-label="Search Ayurvedic centers" onSubmit={submitSearch}>

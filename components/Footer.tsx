@@ -43,11 +43,11 @@ export default function Footer({ sectionPrefix = "", backToTopHref }: { sectionP
         <nav className="footer-column" aria-label="Discover Ayurvedic care">
           <h3>Discover</h3>
           <a href={ROUTES.public.postnatalCare}>Postnatal care</a>
-          <a href={`${ROUTES.public.centers}?service=Prenatal%20care`}>Prenatal care</a>
-          <a href={`${ROUTES.public.centers}?service=Baby%20care`}>Baby care</a>
-          <a href={`${ROUTES.public.centers}?service=Women%27s%20wellness`}>Women wellness</a>
-          <a href={ROUTES.public.centers}>Ayurvedic wellness</a>
-          <a href={ROUTES.public.contact}>Online consultation</a>
+          <span className="footer-pending-link">Prenatal care</span>
+          <span className="footer-pending-link">Baby care</span>
+          <span className="footer-pending-link">Women wellness</span>
+          <span className="footer-pending-link">Ayurvedic wellness</span>
+          <span className="footer-pending-link">Online consultation</span>
         </nav>
 
         <nav className="footer-column" aria-label="Legal and policy information">

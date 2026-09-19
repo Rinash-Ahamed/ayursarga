@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Footer from "@/components/Footer";
 import Nav from "@/components/Nav";
 import WhatsAppBubble from "@/components/WhatsAppBubble";
-import { ROUTES } from "@/config/routes";
 
 export const metadata: Metadata = {
   title: "Postnatal Care | Ayursarga",
@@ -110,7 +109,6 @@ export default function PostnatalCarePage() {
             {['Explore', 'Compare', 'Choose', 'Book', 'Experience'].map((step, index) => <span key={step}>{step}{index < 4 && <b aria-hidden="true">→</b>}</span>)}
           </div>
           <p>The actual postnatal services are provided by the respective partner centre or qualified professional, according to the confirmed package and applicable terms.</p>
-          <a href={`${ROUTES.public.centers}?service=Postnatal%20care`}>Explore postnatal care centres</a>
         </section>
 
         <aside className="discover-care-disclaimer">
