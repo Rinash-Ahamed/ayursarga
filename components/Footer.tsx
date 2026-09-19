@@ -46,7 +46,7 @@ export default function Footer({ sectionPrefix = "", backToTopHref }: { sectionP
           <a href={ROUTES.public.prenatalCare}>Prenatal care</a>
           <a href={ROUTES.public.babyCare}>Baby care</a>
           <a href={ROUTES.public.womensWellness}>Women wellness</a>
-          <span className="footer-pending-link">Ayurvedic wellness</span>
+          <a href={ROUTES.public.ayurvedicWellness}>Ayurvedic wellness</a>
           <span className="footer-pending-link">Online consultation</span>
         </nav>
 
