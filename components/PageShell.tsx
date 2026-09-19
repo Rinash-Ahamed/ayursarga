@@ -35,8 +35,8 @@ export default function PageShell() {
       <SmoothScroll>
         <main>
           <Hero />
-          <Philosophy />
           <WellnessGuide onProfileChange={setGuidanceProfile} />
+          <Philosophy />
           <Therapies />
           <Sanctuary />
           <Voices />

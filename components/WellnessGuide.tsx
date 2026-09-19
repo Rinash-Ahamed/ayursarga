@@ -13,7 +13,7 @@ const WELLNESS_PATHS = [
     image: "/wellness/prenatal-care.jpg",
     question: "What services are you looking for?",
     hint: "",
-    options: ["Pregnancy yoga", "Dietary advice", "Pranayama & meditation", "Doctor consultation"],
+    options: ["Pregnancy yoga", "Dietary advice", "Doctor consultation"],
   },
   {
     id: "postnatal-care",
