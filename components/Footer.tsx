@@ -39,45 +39,49 @@ export default function Footer({ sectionPrefix = "", backToTopHref }: { sectionP
       </motion.section>
 
       <div className="footer-directory">
-        <nav className="footer-column" aria-label="Discover Ayurvedic care">
-          <h3>Discover</h3>
-          <a href={ROUTES.public.postnatalCare}>Postnatal care</a>
-          <a href={ROUTES.public.prenatalCare}>Prenatal care</a>
-          <a href={ROUTES.public.babyCare}>Baby care</a>
-          <a href={ROUTES.public.womensWellness}>Women wellness</a>
-          <a href={ROUTES.public.ayurvedicWellness}>Ayurvedic wellness</a>
-          <a href={ROUTES.public.onlineConsultation}>Online consultation</a>
-        </nav>
+        <div className="footer-directory-track">
+          <nav className="footer-column footer-column-discover" aria-label="Discover Ayurvedic care">
+            <h3>Discover</h3>
+            <a href={ROUTES.public.postnatalCare}>Postnatal care</a>
+            <a href={ROUTES.public.prenatalCare}>Prenatal care</a>
+            <a href={ROUTES.public.babyCare}>Baby care</a>
+            <a href={ROUTES.public.womensWellness}>Women wellness</a>
+            <a href={ROUTES.public.ayurvedicWellness}>Ayurvedic wellness</a>
+            <a href={ROUTES.public.onlineConsultation}>Online consultation</a>
+          </nav>
 
-        <nav className="footer-column" aria-label="Legal and policy information">
-          <h3>Legal &amp; policies</h3>
-          <span className="footer-pending-link">Privacy policy</span>
-          <span className="footer-pending-link">Terms &amp; conditions</span>
-          <span className="footer-pending-link">Cancellation &amp; refund policy</span>
-        </nav>
+          <nav className="footer-column footer-column-about" aria-label="Explore Ayursarga">
+            <h3>About Us</h3>
+            <a href={ROUTES.public.whoWeAre}>Who we are</a>
+            <a href={ROUTES.public.howAyursargaWorks}>How Ayursarga works</a>
+            <a href={ROUTES.public.whyAyursarga}>Why Ayursarga</a>
+            <a href={ROUTES.public.missionVision}>Mission &amp; Vision</a>
+          </nav>
 
-        <nav className="footer-column" aria-label="Explore Ayursarga">
-          <h3>About Us</h3>
-          <a href={ROUTES.public.whoWeAre}>Who we are</a>
-          <a href={ROUTES.public.howAyursargaWorks}>How Ayursarga works</a>
-          <a href={ROUTES.public.whyAyursarga}>Why Ayursarga</a>
-          <a href={ROUTES.public.missionVision}>Mission &amp; Vision</a>
-        </nav>
+          <nav className="footer-column footer-column-hospitals" aria-label="Hospital links">
+            <h3>For hospitals</h3>
+            <a href={ROUTES.hospital.login}>Hospital login</a>
+            <a href={`${ROUTES.public.contact}?interest=partnership`}>Partner with Ayursarga</a>
+            <a href={`${ROUTES.public.contact}?interest=partnership`}>Speak with our team</a>
+          </nav>
+        </div>
 
-        <nav className="footer-column" aria-label="Consumer links">
-          <h3>For consumers</h3>
-          <a href={ROUTES.consumer.register}>Register</a>
-          <a href={ROUTES.public.centers}>Search hospitals</a>
-          <a href={ROUTES.consumer.login}>Consumer login</a>
-          <a href={ROUTES.consumer.bookings}>My bookings</a>
-        </nav>
+        <div className="footer-directory-track">
+          <nav className="footer-column footer-column-legal" aria-label="Legal and policy information">
+            <h3>Legal &amp; policies</h3>
+            <span className="footer-pending-link">Privacy policy</span>
+            <span className="footer-pending-link">Terms &amp; conditions</span>
+            <span className="footer-pending-link">Cancellation &amp; refund policy</span>
+          </nav>
 
-        <nav className="footer-column" aria-label="Hospital links">
-          <h3>For hospitals</h3>
-          <a href={ROUTES.hospital.login}>Hospital login</a>
-          <a href={`${ROUTES.public.contact}?interest=partnership`}>Partner with Ayursarga</a>
-          <a href={`${ROUTES.public.contact}?interest=partnership`}>Speak with our team</a>
-        </nav>
+          <nav className="footer-column footer-column-consumers" aria-label="Consumer links">
+            <h3>For consumers</h3>
+            <a href={ROUTES.consumer.register}>Register</a>
+            <a href={ROUTES.public.centers}>Search hospitals</a>
+            <a href={ROUTES.consumer.login}>Consumer login</a>
+            <a href={ROUTES.consumer.bookings}>My bookings</a>
+          </nav>
+        </div>
       </div>
 
       <motion.div className="footer-identity" {...reveal}>
