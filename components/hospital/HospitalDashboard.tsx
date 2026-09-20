@@ -95,16 +95,20 @@ export function HospitalDashboard() {
         <div><span className="portal-eyebrow">Treatment occupancy</span><h2 id="room-availability-title">Room availability</h2></div>
         <span className="portal-status" data-status={available > 0 ? "active" : "pending"}>{available} available</span>
       </div>
-      <div className="portal-date-grid">
-        <div><span>Total rooms</span><strong>{total}</strong></div>
-        <div><span>Occupied</span><strong>{occupied}</strong></div>
-        <div><span>Available</span><strong>{available}</strong></div>
-        <div><span>Occupancy</span><strong>{occupancy}%</strong></div>
-      </div>
-      <form className="portal-form" onSubmit={saveCapacity} noValidate>
-        <label>Total treatment rooms<input type="number" min="0" max="10000" step="1" value={totalRooms} onChange={(event) => setTotalRooms(event.target.value)} required /></label>
-        <label>Currently occupied rooms<input type="number" min="0" max={Math.max(total, 0)} step="1" value={occupiedRooms} onChange={(event) => setOccupiedRooms(event.target.value)} required /></label>
-        <div className="portal-actions full"><button className="portal-button" disabled={saving || loading}>{saving ? "Saving..." : "Update availability"}</button></div>
+      <form className="portal-capacity-form" onSubmit={saveCapacity} noValidate>
+        <div className="portal-date-grid">
+          <label className="portal-capacity-metric">
+            <span>Total rooms</span>
+            <input aria-label="Total rooms" type="number" min="0" max="10000" step="1" value={totalRooms} onChange={(event) => setTotalRooms(event.target.value)} required />
+          </label>
+          <label className="portal-capacity-metric">
+            <span>Occupied</span>
+            <input aria-label="Occupied rooms" type="number" min="0" max={Math.max(total, 0)} step="1" value={occupiedRooms} onChange={(event) => setOccupiedRooms(event.target.value)} required />
+          </label>
+          <div><span>Available</span><strong>{available}</strong></div>
+          <div><span>Occupancy</span><strong>{occupancy}%</strong></div>
+        </div>
+        <div className="portal-actions"><button className="portal-button" disabled={saving || loading}>{saving ? "Saving..." : "Update availability"}</button></div>
       </form>
     </section>
   </PortalShell>;
