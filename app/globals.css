@@ -855,6 +855,7 @@ button{ cursor:pointer; }
 .process-stage{ margin-top:20px; color:var(--clay-dark); font-size:9px; font-weight:800; letter-spacing:.16em; text-align:center; text-transform:uppercase; }
 .process-card h3{ margin:10px 0 12px; color:var(--forest); font-family:var(--font-display); font-size:22px; font-weight:500; line-height:1.2; text-align:center; }
 .process-card>p{ color:var(--sage); font-size:12.5px; font-weight:500; line-height:1.68; text-align:center; }
+.process-swipe-hint{ display:none; }
 
 .path-grid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:clamp(18px,2.2vw,28px); margin-top:24px; }
 .path-card{ appearance:none; min-width:0; height:100%; overflow:hidden; border:0; border-radius:22px; padding:0; background:#fff; display:grid; grid-template-rows:auto 1fr; color:inherit; font:inherit; text-align:left; cursor:pointer; box-shadow:0 12px 32px rgba(31,61,43,.11); transition:box-shadow .3s ease,background-color .3s ease; }
@@ -1180,11 +1181,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   .process-journey{
     grid-template-columns:none;
     grid-auto-flow:column;
-    grid-auto-columns:calc(100% - 38px);
+    grid-auto-columns:100%;
     gap:13px;
     overflow-x:auto;
     overflow-y:hidden;
-    padding:2px 2px 16px;
+    padding:2px 12px 24px 2px;
     scroll-snap-type:x mandatory;
     scroll-padding-inline:2px;
     overscroll-behavior-inline:contain;
@@ -1192,8 +1193,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     scrollbar-width:none;
   }
   .process-journey::-webkit-scrollbar{ display:none; }
-  .process-journey>li{ scroll-snap-align:start; scroll-snap-stop:always; }
+  .process-journey>li{ isolation:isolate; scroll-snap-align:start; scroll-snap-stop:always; }
+  .process-journey>li:first-child::before{ content:""; position:absolute; z-index:1; inset:7px -6px -8px 7px; border:1px solid rgba(31,61,43,.14); border-radius:17px; background:rgba(255,255,255,.92); box-shadow:5px 6px 0 rgba(31,61,43,.055); pointer-events:none; }
   .process-journey:focus-visible{ outline:2px solid var(--gold); outline-offset:5px; border-radius:18px; }
+  .process-swipe-hint{ margin:0 2px; display:flex; align-items:center; justify-content:flex-end; gap:7px; color:var(--sage); font-size:9px; font-weight:750; letter-spacing:.08em; text-transform:uppercase; }
+  .process-swipe-hint span{ color:var(--gold); font-size:15px; line-height:1; }
   .benefit-list article{ grid-template-columns:48px 1fr; gap:14px; padding:18px 10px; }
   .benefit-icon{ width:42px; height:42px; }
   .benefit-icon svg{ width:21px; height:21px; }
