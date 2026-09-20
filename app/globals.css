@@ -1065,7 +1065,11 @@ button{ cursor:pointer; }
   .wellness-path-card .path-card-title{ font-size:17px; line-height:1.2; }
   .wellness-path-card .path-card-description{ margin-top:7px; font-size:11px; line-height:1.5; }
   .wellness-path-card .path-card-action{ padding-top:13px; gap:5px; font-size:8px; letter-spacing:.05em; }
-  .partner-points,.partner-steps{ grid-template-columns:1fr; }
+  .partner-points{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+  .partner-points li{ min-height:70px; gap:9px; padding:10px; border-radius:12px; font-size:10.5px; font-weight:650; line-height:1.35; }
+  .partner-point-icon{ width:32px; height:32px; flex-basis:32px; }
+  .partner-point-icon svg{ width:17px; height:17px; }
+  .partner-steps{ grid-template-columns:1fr; }
   .partner-panel{ border-radius:20px; }
   .general-questions-list summary{ min-height:66px; padding:17px 2px; font-size:15px; }
   .general-questions-list details>p{ padding:0 42px 24px 2px; }
