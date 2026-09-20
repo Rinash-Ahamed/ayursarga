@@ -4,5 +4,5 @@ import { ConsumerProfile } from "@/components/consumer/ConsumerProfile";
 export default async function ConsumerProfileCompletionPage({ searchParams }: { searchParams: Promise<{ next?: string | string[] }> }) {
   const next = (await searchParams).next;
   const requestedPath = typeof next === "string" ? next : undefined;
-  return <RequireRole role="consumer"><ConsumerProfile completion requestedPath={requestedPath} /></RequireRole>;
+  return <RequireRole role="consumer"><ConsumerProfile requestedPath={requestedPath} /></RequireRole>;
 }

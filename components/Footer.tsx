@@ -76,10 +76,8 @@ export default function Footer({ sectionPrefix = "", backToTopHref }: { sectionP
 
           <nav className="footer-column footer-column-consumers" aria-label="Consumer links">
             <h3>For consumers</h3>
-            <a href={ROUTES.consumer.register}>Register</a>
             <a href={ROUTES.public.centers}>Search hospitals</a>
-            <a href={ROUTES.consumer.login}>Consumer login</a>
-            <a href={ROUTES.consumer.bookings}>My bookings</a>
+            <a href={ROUTES.public.contact}>Contact Us</a>
           </nav>
         </div>
       </div>

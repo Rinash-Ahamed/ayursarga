@@ -43,6 +43,13 @@ export function getSafeRoleRedirect(requestedPath: string | null | undefined, ro
   return requestedPath;
 }
 
+export function getConsumerProfileCompletionRedirect(requestedPath?: string | null) {
+  const safeRequestedPath = getSafeRoleRedirect(requestedPath, "consumer");
+  return safeRequestedPath === ROUTES.consumer.home
+    ? ROUTES.consumer.completeProfile
+    : `${ROUTES.consumer.completeProfile}?next=${encodeURIComponent(safeRequestedPath)}`;
+}
+
 export function isConsumerProfileComplete(profile: UserProfile | null | undefined) {
   return profile?.role === "consumer"
     && Boolean(profile.phone?.trim())

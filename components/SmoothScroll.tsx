@@ -27,9 +27,20 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     const handleVisibilityChange = () => {
       if (!lenis) return;
       if (document.hidden) lenis.stop();
-      else lenis.start();
+      else if (!document.documentElement.classList.contains("nav-overlay-open")) lenis.start();
     };
     if (lenis) document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    const handleScrollLock = (event: Event) => {
+      if (!lenis) return;
+      const locked = event instanceof CustomEvent
+        ? Boolean(event.detail)
+        : document.documentElement.classList.contains("nav-overlay-open");
+      if (locked) lenis.stop();
+      else if (!document.hidden) lenis.start();
+    };
+    window.addEventListener("ayursarga:scroll-lock", handleScrollLock);
+    if (document.documentElement.classList.contains("nav-overlay-open")) lenis?.stop();
 
     const handleAnchorClick = (event: MouseEvent) => {
       const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="#"]');
@@ -72,6 +83,7 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
 
     return () => {
       if (lenis) document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("ayursarga:scroll-lock", handleScrollLock);
       document.removeEventListener("click", handleAnchorClick);
       lenis?.destroy();
     };

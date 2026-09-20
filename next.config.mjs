@@ -9,6 +9,7 @@ const nextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
     qualities: [70, 75, 82, 90],
+    remotePatterns: [{ protocol: "https", hostname: "lh3.googleusercontent.com" }],
   },
 };
 

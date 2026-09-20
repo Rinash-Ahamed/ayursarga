@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { PublicSessionTimeout } from "@/components/auth/PublicSessionTimeout";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -18,6 +17,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return <html lang="en"><head>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+    <link rel="preload" as="image" href="/hero-image-mobile.webp" media="(max-width: 900px)" fetchPriority="high" />
+    <link rel="preload" as="image" href="/hero-video-poster.webp" media="(min-width: 901px)" fetchPriority="high" />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,500&family=Manrope:wght@300..800&display=swap" rel="stylesheet" />
-  </head><body><PublicSessionTimeout />{children}</body></html>;
+  </head><body>{children}</body></html>;
 }

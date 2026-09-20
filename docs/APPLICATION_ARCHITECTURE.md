@@ -7,8 +7,8 @@ their own layouts and are compiled as separate Next.js route segments.
 
 | Area | Routes |
 | --- | --- |
-| Consumer | `/app`, `/app/hospitals/[hospitalId]`, `/app/bookings/new`, `/app/bookings`, `/app/profile`, `/app/complete-profile` |
-| Consumer auth | `/app/login` and `/app/register` use Google; the legacy forgot-password URL redirects to login |
+| Consumer | Public discovery uses `/centers`; protected workflows use `/app/bookings/new`, `/app/bookings`, and `/app/complete-profile`; `/app` redirects to `/centers` |
+| Consumer auth | `/app/login` provides Google authentication when a protected booking URL is opened directly |
 | Hospital | `/hospital`, `/hospital/profile`, `/hospital/services`, `/hospital/bookings` |
 | Hospital auth | `/hospital/login`, `/hospital/forgot-password` |
 | Admin | `/admin`, `/admin/hospitals`, `/admin/hospitals/[hospitalId]`, `/admin/users`, `/admin/bookings`, `/admin/audits` |
