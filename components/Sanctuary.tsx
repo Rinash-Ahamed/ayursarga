@@ -12,6 +12,13 @@ const BENEFITS = [
   ["access", "Role-protected access", "Consumer, hospital and admin areas are separated according to account access."],
 ] as const;
 
+const TRUST_SIGNALS = [
+  ["verified", "Verified partners"],
+  ["transparent", "Transparent services"],
+  ["human", "Human guidance"],
+  ["secure", "Secure & private"],
+] as const;
+
 type BenefitIconName = (typeof BENEFITS)[number][0];
 
 function BenefitIcon({ name }: { name: BenefitIconName }) {
@@ -25,6 +32,19 @@ function BenefitIcon({ name }: { name: BenefitIconName }) {
   } satisfies Record<BenefitIconName, ReactNode>;
 
   return <span className="benefit-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg></span>;
+}
+
+type TrustSignalName = (typeof TRUST_SIGNALS)[number][0];
+
+function TrustSignalIcon({ name }: { name: TrustSignalName }) {
+  const paths = {
+    verified: <><path d="M12 20V9" /><path d="M12 12C8 12 5 9.5 5 6c4 0 7 2.5 7 6Zm0 1c4 0 7-2.5 7-6-4 0-7 2.5-7 6Z" /><path d="M8 20h8" /></>,
+    transparent: <><path d="M12 3 5.5 5.8v5.1c0 4.2 2.7 7.9 6.5 10.1 3.8-2.2 6.5-5.9 6.5-10.1V5.8L12 3Z" /><path d="m9 12 2 2 4-5" /></>,
+    human: <><path d="M12 20s-7-4.2-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.8-7 10-7 10Z" /><path d="M3 15c2 0 3 1 4 3m14-3c-2 0-3 1-4 3" /></>,
+    secure: <><rect x="5" y="10" width="14" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3" /></>,
+  } satisfies Record<TrustSignalName, ReactNode>;
+
+  return <span className="trust-signal-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg></span>;
 }
 
 export default function Sanctuary() {
@@ -69,6 +89,9 @@ export default function Sanctuary() {
           sizes="(max-width: 600px) calc(100vw - 44px), (max-width: 900px) calc(100vw - 80px), 43vw"
           quality={82}
         />
+      </div>
+      <div className="trust-signals" aria-label="Ayursarga trust commitments">
+        {TRUST_SIGNALS.map(([icon, label]) => <div className="trust-signal" key={label}><TrustSignalIcon name={icon} /><span>{label}</span></div>)}
       </div>
     </div>
     <div className="trust-content">
