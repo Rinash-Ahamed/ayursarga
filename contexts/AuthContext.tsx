@@ -25,7 +25,7 @@ type AuthContextValue = {
   isLoading: boolean;
   error: AuthenticationError | null;
   login(credentials: LoginCredentials, expectedRole?: PortalRole, requestedPath?: string | null): Promise<UserProfile>;
-  loginConsumerWithGoogle(requestedPath?: string | null): Promise<UserProfile>;
+  loginConsumerWithGoogle(requestedPath?: string | null, stayOnPage?: boolean): Promise<UserProfile>;
   logout(): Promise<void>;
   resetPassword(email: string): Promise<void>;
   changePassword(currentPassword: string, newPassword: string): Promise<void>;
@@ -73,17 +73,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return profile;
     }), [router, run]);
 
-  const loginConsumerWithGoogle = useCallback((requestedPath?: string | null) =>
+  const loginConsumerWithGoogle = useCallback((requestedPath?: string | null, stayOnPage = false) =>
     run(async () => {
       const profile = await authService.loginConsumerWithGoogle();
       setSnapshot((current) => ({ ...current, profile }));
       setStatus("authenticated");
-      const safeRequestedPath = getSafeRoleRedirect(requestedPath, profile.role);
-      router.replace(isConsumerProfileComplete(profile)
-        ? safeRequestedPath
-        : safeRequestedPath === ROUTES.consumer.home
-          ? ROUTES.consumer.completeProfile
-          : `${ROUTES.consumer.completeProfile}?next=${encodeURIComponent(safeRequestedPath)}`);
+      if (!stayOnPage) {
+        const safeRequestedPath = getSafeRoleRedirect(requestedPath, profile.role);
+        router.replace(isConsumerProfileComplete(profile)
+          ? safeRequestedPath
+          : safeRequestedPath === ROUTES.consumer.home
+            ? ROUTES.consumer.completeProfile
+            : `${ROUTES.consumer.completeProfile}?next=${encodeURIComponent(safeRequestedPath)}`);
+      }
       return profile;
     }), [router, run]);
 

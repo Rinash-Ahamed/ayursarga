@@ -79,6 +79,18 @@ body.portal-active{ cursor:auto; overflow:auto; height:auto; }
 .portal-sidebar:is([data-role="hospital"],[data-role="admin"]) .portal-signout:disabled{ opacity:.5; cursor:not-allowed; }
 .portal-version{ margin-top:18px; color:var(--sage); font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
 .portal-content{ width:100%; max-width:1240px; padding:clamp(34px,6vw,76px); }
+.portal-consumer-focus{ min-height:100svh; background:#fff; color:var(--ink); }
+.portal-consumer-focus-header{ width:min(920px,calc(100% - 40px)); min-height:76px; margin:0 auto; padding:16px 0; display:flex; align-items:center; justify-content:space-between; gap:24px; border-bottom:1px solid rgba(58,61,46,.2); }
+.portal-consumer-focus-header .portal-wordmark{ flex:none; margin:0; font-size:21px; }
+.portal-consumer-focus-header .portal-wordmark img{ width:40px; height:40px; }
+.portal-consumer-focus-header h1{ min-width:0; color:var(--forest); font-family:var(--font-display); font-size:clamp(24px,3vw,32px); font-weight:500; line-height:1.1; text-align:right; }
+.portal-consumer-focus-content{ width:min(760px,calc(100% - 40px)); margin:0 auto; padding:clamp(24px,4vw,42px) 0 56px; }
+.consumer-booking-list{ gap:10px; }
+.consumer-booking-row{ padding:15px 17px; gap:16px; box-shadow:0 4px 14px rgba(58,61,46,.06); }
+.consumer-booking-row>div:first-child{ min-width:0; }
+.consumer-booking-row>div:last-child{ display:grid; justify-items:end; gap:8px; }
+.consumer-booking-row .portal-actions{ margin-top:0; }
+.consumer-booking-price{ display:block; margin-top:5px; color:var(--forest); font-size:12px; font-weight:750; }
 .portal-page-header{ position:relative; min-height:92px; margin-bottom:34px; padding:0 100px 20px 0; border-bottom:1px solid rgba(58,61,46,.18); }
 .portal-page-header::after{ content:""; position:absolute; right:6px; bottom:-4px; width:54px; height:100px; background:url("/neem-leaf.svg") center/contain no-repeat; opacity:.16; filter:saturate(.55); pointer-events:none; }
 .portal-page-header h1{ color:var(--forest); font-family:var(--font-display); font-size:clamp(36px,5vw,56px); font-weight:500; line-height:1.08; letter-spacing:-.015em; }
@@ -275,6 +287,7 @@ body.portal-active{ cursor:auto; overflow:auto; height:auto; }
 @media(max-width:760px){ .portal-discovery-filters{ grid-template-columns:1fr; } }
 @media(max-width:520px){ .portal-service-controls{ width:100%; justify-items:start; } }
 @media(max-width:520px){ .portal-card{ padding:21px; } .portal-booking-filters{ grid-template-columns:1fr; } .portal-filter-actions .portal-button{ width:100%; } .portal-row{ padding:17px; flex-direction:column; } .portal-actions{ width:100%; } .portal-actions .portal-button{ flex:1 1 auto; } .portal-date-grid{ grid-template-columns:1fr; } .portal-stat-split{ grid-template-columns:1fr; } }
+@media(max-width:520px){ .portal-consumer-focus-header{ width:calc(100% - 28px); min-height:68px; padding:12px 0; gap:12px; } .portal-consumer-focus-header .portal-wordmark{ gap:7px; font-size:17px; } .portal-consumer-focus-header .portal-wordmark img{ width:36px; height:36px; } .portal-consumer-focus-header h1{ font-size:22px; } .portal-consumer-focus-content{ width:calc(100% - 28px); padding:20px 0 40px; } .consumer-booking-row{ padding:15px; gap:12px; } .consumer-booking-row>div:last-child{ width:100%; grid-template-columns:auto minmax(96px,auto); align-items:center; justify-content:space-between; justify-items:start; } .consumer-booking-row .portal-actions{ width:auto; } .consumer-booking-row .portal-actions .portal-button{ min-height:36px; padding:8px 14px; } }
 @media(max-width:520px){ .portal-audit-heading{ align-items:flex-start; flex-direction:column; } .portal-audit-heading .portal-button{ width:100%; } .portal-audit-pagination{ gap:9px; } }
 @media(max-width:520px){ .portal-toast{ top:14px; right:14px; width:calc(100vw - 28px); } }
 @media(prefers-reduced-motion:reduce){ .portal-root *{ scroll-behavior:auto!important; transition-duration:.01ms!important; animation-duration:.01ms!important; animation-iteration-count:1!important; } .portal-toast{ animation:portal-toast-reduced 3s step-end forwards!important; } }

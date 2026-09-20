@@ -57,7 +57,7 @@ export default function Philosophy() {
             </li>
           ))}
         </ol>
-        <p className="process-swipe-hint">Swipe to explore all 5 steps <span aria-hidden="true">→</span></p>
+        <p className="process-swipe-hint">Swipe to explore <span aria-hidden="true">→</span></p>
       </div>
     </section>
   );

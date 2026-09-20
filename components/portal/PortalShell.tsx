@@ -25,14 +25,28 @@ const NAVIGATION = {
   ],
 } satisfies Record<PortalRole, readonly (readonly [string, string])[]>;
 
-export function PortalShell({ role, title, eyebrow, children }: {
-  role: PortalRole; title: string; eyebrow?: string; children: ReactNode;
+export function PortalShell({ role, title, eyebrow, children, focused = false }: {
+  role: PortalRole; title: string; eyebrow?: string; children: ReactNode; focused?: boolean;
 }) {
   const pathname = usePathname();
   const { userProfile, logout, isLoading } = useAuth();
   const headerEyebrow = role === "hospital" && userProfile?.name
     ? userProfile.name
     : (eyebrow ?? `${role} portal`);
+
+  if (role === "consumer" && focused) {
+    return <main className="portal-consumer-focus">
+      <header className="portal-consumer-focus-header">
+        <Link href="/" className="portal-wordmark" aria-label="Return to Ayursarga home">
+          <Image src="/mainlogo.png" alt="" width={40} height={40} loading="eager" quality={90} sizes="40px" />
+          <span>Ayursarga</span>
+        </Link>
+        <h1>{title}</h1>
+      </header>
+      <section className="portal-consumer-focus-content">{children}</section>
+    </main>;
+  }
+
   return <main className="portal-workspace">
     <aside className="portal-sidebar" data-role={role}>
       <Link href="/" className="portal-wordmark" aria-label="Return to Ayursarga home">

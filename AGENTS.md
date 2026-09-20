@@ -8,7 +8,9 @@ implementation work unless the project owner explicitly changes a decision.
 - Preserve the existing public website's pages, content, layout, palette,
   typography, animations, spacing, brand identity, and working behavior.
 - Keep `/`, `/app`, `/hospital`, and `/admin` as separate route and code
-  boundaries. Do not load portal modules into the public route unnecessarily.
+  boundaries. Consumer discovery belongs on the public routes; `/app` is reserved
+  for protected profile-completion and booking workflows. Do not load portal
+  modules into the public route unnecessarily.
 - Reuse the shared portal design system in `app/portal.css`. Maintain the
   existing cream, forest, clay, sage, rust, and Ayursarga botanical language.
 - Portal hover feedback may change color or border. Do not move, scale, or lift
@@ -37,8 +39,10 @@ implementation work unless the project owner explicitly changes a decision.
   must be redirected to their correct portal; unauthenticated users go to the
   relevant login page.
 - Retain the 15-minute inactivity sign-out for authenticated portal sessions.
-- Do not replace login navigation with a remembered user/profile button on the
-  public website.
+- Keep one public Login action. Its popup offers Consumer Google sign-in on the
+  current page and a link to Hospital Login; never expose Admin Login publicly.
+  After Consumer sign-in, replace Login with the Consumer's Google profile control
+  showing their name, email, and Logout action.
 
 ## Data preservation and audit
 

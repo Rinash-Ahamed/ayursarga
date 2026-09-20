@@ -3,13 +3,15 @@
 Ayursarga is a Next.js App Router application containing the existing public
 Ayurvedic-care website and three route-separated application areas:
 
-- `/app` — consumer hospital discovery and booking requests
+- `/` and `/centers` — public consumer discovery with inline Google sign-in
+- `/app` — protected consumer profile completion and booking workflows used only when required
 - `/hospital` — hospital profile, services, booking/treatment progress, and room occupancy management
 - `/admin` — platform hospitals, Hospital package visibility, users, bookings, and commission visibility
 
 The application uses TypeScript, React, Firebase Authentication, Cloud
-Firestore, GSAP, Lenis, and Framer Motion. The public website and portal modules
-are split by route so Firebase and portal code are not loaded by public visitors.
+Firestore, GSAP, Lenis, and Framer Motion. Public discovery and portal modules
+remain route-separated; the public navigation loads only the shared Firebase
+authentication state needed for inline Consumer Google sign-in and account display.
 
 ## Development
 
@@ -87,6 +89,11 @@ The preservation and audit design is documented in
   phone number; an address is optional. These are contact data and are not verified
   through SMS. A booking snapshots the available details for its assigned Hospital,
   while Hospitals remain unable to browse Consumer profiles directly.
+- Consumers discover centres on the public website. The public navigation has one
+  Login action offering Consumer Google sign-in or Hospital Login; Admin Login is
+  available only by direct URL. A signed-in Consumer sees their Google profile
+  control in the public navigation. `/app` remains available only for protected
+  profile-completion and booking workflows when required.
 - The confirmed scope for this phase keeps the current Firestore collection
   structure. A duplicate public/private hospital collection is not required
   while Firebase project access is limited to trusted administrators. If a

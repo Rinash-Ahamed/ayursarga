@@ -63,20 +63,18 @@ export default function Hero() {
         {canLoadVideo && <source src="/hero%20image%20video.mp4" type="video/mp4" media="(min-width: 901px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)" />}
       </video>
       <div className="hero-content">
-        <motion.p className="eyebrow" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>Ayurvedic care, guided with trust</motion.p>
+        <p className="eyebrow hero-enter-eyebrow">Ayurvedic care, guided with trust</p>
         <h1>
           {["Ayurvedic care,", "personally guided."].map((line, index) => (
-            <span key={line}><motion.span
-              initial={{ y: "115%" }}
-              animate={{ y: "0%" }}
-              transition={{ duration: 1.05, delay: 0.28 + index * 0.12, ease: [0.22, 1, 0.36, 1] }}
-            >{index === 1 ? <span className="hero-heading-emphasis">{line}</span> : line}</motion.span></span>
+            <span key={line}><span className={`hero-heading-line hero-heading-line-${index + 1}`}>
+              {index === 1 ? <span className="hero-heading-emphasis">{line}</span> : line}
+            </span></span>
           ))}
         </h1>
-        <motion.p className="hero-sub" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.82, duration: 0.8 }}>
+        <p className="hero-sub hero-enter-sub">
           Discover trusted hospitals and wellness centres, compare your options, and connect with the care that fits your needs.
-        </motion.p>
-        <motion.div className="hero-ctas" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1, duration: 0.7 }}>
+        </p>
+        <div className="hero-ctas hero-enter-actions">
           <MagneticButton href="/centers" className="btn-magnetic hero-search-button">
             <svg className="hero-search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 4.2 4.2" /></svg>
             <span>Search for Ayurvedic Center</span>
@@ -85,8 +83,8 @@ export default function Hero() {
             <MagneticButton href={ROUTES.public.contact} className="btn-magnetic btn-secondary">Talk to Ayursarga</MagneticButton>
             <a href="#wellness" className="btn-text">Help me choose &darr;</a>
           </div>
-        </motion.div>
-        <motion.div className="hero-values" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}>
+        </div>
+        <div className="hero-values hero-enter-values">
           <div className="hero-value-slider" aria-label={CORE_VALUES.map((value) => `${value.title}: ${value.description}`).join(" ")}>
             <div className="hero-value-copy" aria-live="off">
               <AnimatePresence initial={false} mode="wait">
@@ -115,7 +113,7 @@ export default function Hero() {
             </div>
           </div>
           <p className="hero-tagline">Nurturing Mothers. Preserving Tradition. Building Trust.</p>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

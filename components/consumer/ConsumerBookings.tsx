@@ -43,16 +43,17 @@ export function ConsumerBookings() {
     }
   }
 
-  return <PortalShell role="consumer" title="My bookings">
-    <PortalLoadGuard loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/app" loadingMessage="Loading your bookings…" />
-    <PortalFeedback error={items.length > 0 ? loadError : null} empty={!error && !isLoading && items.length === 0 ? "You have no bookings yet. Find a hospital to request your first appointment." : undefined} />
+  return <PortalShell role="consumer" title="My bookings" focused>
+    <PortalLoadGuard loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/" loadingMessage="Loading your bookings…" />
+    <PortalFeedback error={items.length > 0 ? loadError : null} empty={!error && !isLoading && items.length === 0 ? "You have no bookings yet." : undefined} />
     <PortalToast message={actionMessage} />
     <PortalToast message={actionError} tone="error" />
-    <div className="portal-list">
-      {items.map((booking) => <article className="portal-row" key={booking.id}>
+    <div className="portal-list consumer-booking-list">
+      {items.map((booking) => <article className="portal-row consumer-booking-row" key={booking.id}>
         <div>
-          <h3>{formatCurrency(booking.servicePrice)}</h3>
+          <h3>Appointment request</h3>
           <p>{formatBookingCarePreference(booking)}</p>
+          <strong className="consumer-booking-price">{formatCurrency(booking.servicePrice)}</strong>
           {booking.status === "confirmed" || booking.status === "completed"
             ? <p>Treatment: {formatStatus(getTreatmentStatus(booking))}</p>
             : null}
