@@ -52,8 +52,8 @@ export default function Footer({ sectionPrefix = "", backToTopHref }: { sectionP
 
         <nav className="footer-column" aria-label="Legal and policy information">
           <h3>Legal &amp; policies</h3>
-          <span className="footer-pending-link">Terms &amp; conditions</span>
           <span className="footer-pending-link">Privacy policy</span>
+          <span className="footer-pending-link">Terms &amp; conditions</span>
           <span className="footer-pending-link">Cancellation &amp; refund policy</span>
         </nav>
 
@@ -68,16 +68,16 @@ export default function Footer({ sectionPrefix = "", backToTopHref }: { sectionP
 
         <nav className="footer-column" aria-label="Consumer links">
           <h3>For consumers</h3>
-          <a href={ROUTES.public.centers}>Search hospitals</a>
           <a href={ROUTES.consumer.register}>Register</a>
+          <a href={ROUTES.public.centers}>Search hospitals</a>
           <a href={ROUTES.consumer.login}>Consumer login</a>
           <a href={ROUTES.consumer.bookings}>My bookings</a>
         </nav>
 
         <nav className="footer-column" aria-label="Hospital links">
           <h3>For hospitals</h3>
-          <a href={`${ROUTES.public.contact}?interest=partnership`}>Partner with Ayursarga</a>
           <a href={ROUTES.hospital.login}>Hospital login</a>
+          <a href={`${ROUTES.public.contact}?interest=partnership`}>Partner with Ayursarga</a>
           <a href={`${ROUTES.public.contact}?interest=partnership`}>Speak with our team</a>
         </nav>
       </div>

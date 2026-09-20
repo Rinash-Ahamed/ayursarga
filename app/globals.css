@@ -765,7 +765,7 @@ main>.dark-section{
 .footer-invitation-actions a{ display:inline-flex; min-height:48px; padding:13px 21px; align-items:center; justify-content:center; border:1px solid rgba(249,245,234,.5); border-radius:100px; color:var(--cream); font-size:10px; font-weight:750; letter-spacing:.08em; text-transform:uppercase; transition:background-color .2s,border-color .2s,color .2s; }
 .footer-invitation-actions a:first-child{ border-color:var(--cream); background:var(--cream); color:var(--forest); }
 .footer-invitation-actions a:hover{ border-color:var(--gold); background:var(--gold); color:var(--forest); }
-.footer-directory{ display:grid; grid-template-columns:repeat(5,minmax(140px,1fr)); gap:clamp(28px,3.5vw,54px); padding:clamp(38px,4.5vw,58px) 0; border-bottom:1px solid rgba(249,245,234,.2); }
+.footer-directory{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); justify-items:center; gap:clamp(24px,3vw,46px); padding:clamp(38px,4.5vw,58px) 0; border-bottom:1px solid rgba(249,245,234,.2); }
 .footer-mark{ width:max-content; display:flex; align-items:center; gap:13px; }
 .footer-mark img{ width:58px; height:58px; object-fit:cover; border-radius:50%; }
 .footer-logo-wrap{ position:relative; width:58px; height:58px; border-radius:50%; }
@@ -782,8 +782,8 @@ main>.dark-section{
 .footer-contact{ display:grid; gap:7px; margin-top:24px; color:rgba(249,245,234,.58); font-size:11px; }
 .footer-contact a{ width:max-content; display:inline-flex; align-items:center; gap:8px; color:var(--gold); font-weight:700; }
 .footer-contact-icon{ width:14px; height:14px; flex:0 0 14px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
-.footer-column{ display:flex; flex-direction:column; align-items:flex-start; gap:13px; }
-.footer-column h3{ margin-bottom:8px; color:var(--cream); font-family:var(--font-body); font-size:10px; font-weight:800; letter-spacing:.13em; text-transform:uppercase; }
+.footer-column{ width:max-content; max-width:100%; display:flex; flex-direction:column; align-items:flex-start; gap:13px; text-align:left; }
+.footer-column h3{ width:100%; margin-bottom:8px; color:var(--cream); font-family:var(--font-body); font-size:10px; font-weight:800; letter-spacing:.13em; text-align:left; text-transform:uppercase; }
 .footer-column a,.footer-pending-link{ color:rgba(249,245,234,.68); font-size:12px; line-height:1.45; transition:color .2s; }
 .footer-pending-link{ cursor:default; }
 .footer-column a:hover,.footer-bottom a:hover,.footer-contact a:hover{ color:var(--gold); }
