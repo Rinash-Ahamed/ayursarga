@@ -38,7 +38,10 @@ export function PortalShell({ role, title, eyebrow, children, focused = false }:
           <Image src="/mainlogo.png" alt="" width={40} height={40} loading="eager" quality={90} sizes="40px" />
           <span>Ayursarga</span>
         </Link>
-        <h1>{title}</h1>
+        <div className="portal-consumer-focus-title">
+          <span>My Ayursarga</span>
+          <h1>{title}</h1>
+        </div>
       </header>
       <section className="portal-consumer-focus-content">{children}</section>
     </main>;

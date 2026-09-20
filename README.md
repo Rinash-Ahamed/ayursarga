@@ -4,7 +4,7 @@ Ayursarga is a Next.js App Router application containing the existing public
 Ayurvedic-care website and three route-separated application areas:
 
 - `/` and `/centers` — public consumer discovery with inline Google sign-in
-- `/app` — protected consumer profile completion and booking workflows used only when required
+- `/app` — compatibility redirect to public centre discovery; protected Consumer routes are limited to profile completion and booking workflows
 - `/hospital` — hospital profile, services, booking/treatment progress, and room occupancy management
 - `/admin` — platform hospitals, Hospital package visibility, users, bookings, and commission visibility
 

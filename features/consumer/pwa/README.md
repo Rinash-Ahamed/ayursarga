@@ -1,9 +1,11 @@
 # Consumer PWA boundary
 
-This directory is reserved exclusively for the consumer application under
-`/app`. A later PWA phase can add its manifest, service worker registration,
-install prompt, offline page, consumer icons, update handling, notification
-adapter, and deep-link adapter here.
+This directory is reserved for the future installable Consumer experience.
+Discovery remains on the public `/centers` routes, while `/app` contains only
+the protected profile-completion and booking workflows. A later PWA phase can
+add its manifest, service worker registration, install prompt, offline page,
+consumer icons, update handling, notification adapter, and deep-link adapter
+here.
 
 Admin and hospital layouts must not import this module. Future caching should
 be limited to immutable application assets and explicitly public discovery
