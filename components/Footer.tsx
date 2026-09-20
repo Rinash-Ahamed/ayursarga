@@ -22,7 +22,6 @@ const wordmarkLetterReveal = {
 };
 
 export default function Footer({ sectionPrefix = "", backToTopHref }: { sectionPrefix?: string; backToTopHref?: string }) {
-  const sectionHref = (anchor: string) => `${sectionPrefix}${anchor}`;
   const shouldReduceMotion = useReducedMotion();
 
   return <footer id="site-footer">
@@ -59,11 +58,10 @@ export default function Footer({ sectionPrefix = "", backToTopHref }: { sectionP
 
         <nav className="footer-column" aria-label="Explore Ayursarga">
           <h3>About Us</h3>
-          <a href={sectionHref("#how-it-works")}>How it works</a>
-          <a href={sectionHref("#wellness")}>Wellness paths</a>
-          <a href={sectionHref("#why-ayursarga")}>Why Ayursarga</a>
+          <a href={ROUTES.public.whoWeAre}>Who we are</a>
+          <a href={ROUTES.public.howAyursargaWorks}>How Ayursarga works</a>
+          <a href={ROUTES.public.whyAyursarga}>Why Ayursarga</a>
           <a href={ROUTES.public.missionVision}>Mission &amp; Vision</a>
-          <a href={ROUTES.public.contact}>Personal guidance</a>
         </nav>
 
         <nav className="footer-column" aria-label="Consumer links">
