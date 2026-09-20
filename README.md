@@ -105,11 +105,12 @@ The preservation and audit design is documented in
 
 - Hospital users may edit hospital name, official email, phone, city/locality,
   state, complete address, and optional description for their assigned hospital.
-- Only Admin controls commission, approval/status, public visibility, contract
-  generation/signing details, the signed-contract URL, activation, and archive
-  actions.
-- The Hospital Profile must not expose Image URL, commission, contract, audit,
-  activation, visibility, or other Admin-management controls.
+- Only Admin controls hospital images, centre location, commission,
+  approval/status, public visibility, contract generation/signing details, the
+  signed-contract URL, activation, and archive actions.
+- The Hospital Profile must not expose hospital image, centre location,
+  commission, contract, audit, activation, visibility, or other
+  Admin-management controls.
 
 ### Hospital login lifecycle
 

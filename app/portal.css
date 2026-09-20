@@ -167,7 +167,7 @@ html.portal-menu-open,html.portal-menu-open body{ overflow:hidden; overscroll-be
 .portal-guidelines-fieldset>.portal-form-note{ margin-bottom:20px!important; font-size:11px!important; line-height:1.6!important; }
 .portal-guidelines-fields{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
 .portal-guidelines-fields textarea{ min-height:132px; line-height:1.55; }
-.portal-facility-groups{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.portal-facility-groups{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
 .portal-facility-group{ min-width:0; margin:0; padding:16px; border:1px solid rgba(58,61,46,.22); border-radius:13px; background:#fff; }
 .portal-facility-group legend{ padding:0 6px; font-family:inherit; color:var(--forest); font-size:11px; font-weight:800; letter-spacing:.02em; }
 .portal-facility-options{ display:grid; gap:8px; }
@@ -317,6 +317,7 @@ html.portal-menu-open,html.portal-menu-open body{ overflow:hidden; overscroll-be
 }
 .portal-root :where(a,button,input,textarea,select):focus-visible{ outline:3px solid var(--clay-dark); outline-offset:3px; }
 @media(max-width:900px){ .portal-booking-filters{ grid-template-columns:1fr 1fr; } }
+@media(min-width:761px) and (max-width:1100px){ .portal-facility-groups{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:760px){
   .portal-workspace{ grid-template-columns:1fr; }
   .portal-sidebar{ position:sticky; top:0; height:auto; padding:10px 18px; border-right:0; border-bottom:1px solid rgba(31,61,43,.18); background:rgba(255,255,255,.97); box-shadow:0 5px 20px rgba(31,61,43,.08); z-index:50; }

@@ -416,7 +416,7 @@ service cloud.firestore {
           && hasValidHospitalProfileFields()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name', 'description', 'email', 'phone', 'address', 'city', 'state',
-            'imageUrls', 'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies', 'locationUrl',
+            'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies',
             'updatedAt', 'updatedBy', 'lastAuditId'
           ])
         ));
