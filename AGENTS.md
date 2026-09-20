@@ -73,15 +73,15 @@ implementation work unless the project owner explicitly changes a decision.
   contract generation/signing/URLs, activation, public visibility, audit data,
   archive controls, and platform settings.
 - The Hospital Profile may edit only hospital name, official email, phone,
-  city/locality, state, complete address, optional description, and up to four
-  Google Drive sharing links or externally hosted HTTPS hospital image URLs,
-  the default centre-guideline wording, additional centre rules, facilities,
-  centre-specific legal/policy information, and a validated Google Maps or
-  OpenStreetMap location link.
+  city/locality, state, complete address, optional description, the default
+  centre-guideline wording, additional centre rules, facilities, and
+  centre-specific legal/policy information. Hospital image links and the
+  validated Google Maps or OpenStreetMap location link are Admin-managed.
   Normalize supported Drive sharing links for display and keep gallery frames
   at a consistent 4:3 ratio. Firebase Storage and direct uploads remain disabled
   while the project uses the Spark plan.
-- Admin alone controls hospital commission, Pending/Active state, contract
+- Admin alone controls hospital images, centre location, commission,
+  Pending/Active state, contract
   workflow, signed-contract URL, visibility, activation, and archive/restore.
 - The Admin Users page keeps Consumer and Hospital accounts in separate
   role-filtered views. Admin accounts are not mixed into either list.

@@ -22,7 +22,6 @@ export function ConsumerGoogleAuthForm({ requestedPath }: {
   }
 
   return <AuthFormShell
-    eyebrow="Consumer account"
     title="Continue with Google"
     description="Sign in securely to request an appointment or view your bookings."
   >

@@ -24,7 +24,7 @@ export function ForgotPasswordForm({ role }: { role: Exclude<PortalRole, "consum
     }
   };
 
-  return <AuthFormShell eyebrow="Account recovery" title="Reset your password" description="We’ll send a secure reset link to the email connected to your account.">
+  return <AuthFormShell title="Reset your password" description="We’ll send a secure reset link to the email connected to your account.">
     <PortalToast message={sent ? "If an account exists for that email, a reset link has been sent." : null} />
     {!sent && <form className="portal-auth-form" onSubmit={submit}>
       <label>Email address<input name="email" type="email" autoComplete="email" required /></label>

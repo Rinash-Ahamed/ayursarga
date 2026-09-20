@@ -43,7 +43,7 @@ export function HospitalChangePasswordForm() {
     }
   }
 
-  return <PortalShell role="hospital" title="Change Password" eyebrow="Account security">
+  return <PortalShell role="hospital" title="Change Password">
     <form className="portal-card portal-form portal-security-form" onSubmit={submit} noValidate>
       <p className="portal-form-note full">Enter your current password, then choose a new password for your Hospital portal account.</p>
       <div className="full"><PasswordField label="Current password" name="currentPassword" autoComplete="current-password" required /></div>

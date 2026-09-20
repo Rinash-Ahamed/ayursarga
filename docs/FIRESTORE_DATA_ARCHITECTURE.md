@@ -15,6 +15,8 @@ duplicating records or introducing deeply nested documents.
   anyone with the link. Gallery images use a consistent 4:3 presentation. The
   legacy nullable `imageUrl` remains readable for existing records. Firebase
   Storage and direct image uploads are intentionally not enabled in this phase.
+  Hospital images and the centre map location are maintained by Admin users;
+  Hospital accounts cannot modify those fields.
   Optional `ayursargaRating` and `ayursargaReviewNote` fields contain clearly
   labelled Admin-authored editorial content for active public hospitals; they
   are not patient-review data.

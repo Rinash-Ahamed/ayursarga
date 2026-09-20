@@ -69,7 +69,7 @@ export function AdminDashboard() {
     }).finally(() => setIsLoading(false));
   }, []);
 
-  const value = (number: number | null) => isLoading || number === null ? "—" : number.toLocaleString("en-IN");
+  const value = (number: number | null) => isLoading || number === null ? "…" : number.toLocaleString("en-IN");
 
   const hasDashboardData = Object.values(stats).some((number) => number !== null);
 
@@ -87,7 +87,7 @@ export function AdminDashboard() {
       </article>
       <article className="portal-card portal-stat"><strong>{value(stats.consumers)}</strong><span>Registered consumers</span></article>
       <article className="portal-card portal-stat"><strong>{value(stats.monthlyBookings)}</strong><span>Bookings · {monthLabel}</span></article>
-      <article className="portal-card portal-stat"><strong>{isLoading || stats.monthlyCommission === null ? "—" : formatCurrency(stats.monthlyCommission)}</strong><span>Estimated commission · {monthLabel}</span></article>
+      <article className="portal-card portal-stat"><strong>{isLoading || stats.monthlyCommission === null ? "…" : formatCurrency(stats.monthlyCommission)}</strong><span>Estimated commission · {monthLabel}</span></article>
     </div>
   </PortalShell>;
 }

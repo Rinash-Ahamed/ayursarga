@@ -10,8 +10,8 @@ import { PasswordField } from "@/components/auth/PasswordField";
 import { PortalToast } from "@/components/portal/PortalToast";
 
 const COPY = {
-  admin: { eyebrow: "Administration", title: "Admin login", description: "Secure access for authorised Ayursarga administrators." },
-  hospital: { eyebrow: "Hospital portal", title: "Hospital login", description: "Sign in with the official email connected to your activated Ayursarga hospital account." },
+  admin: { title: "Admin login", description: "Secure access for authorised Ayursarga administrators." },
+  hospital: { title: "Hospital login", description: "Sign in with the official email connected to your activated Ayursarga hospital account." },
 } as const;
 
 export function LoginForm({ role, requestedPath }: { role: Exclude<PortalRole, "consumer">; requestedPath?: string | null }) {
@@ -32,12 +32,15 @@ export function LoginForm({ role, requestedPath }: { role: Exclude<PortalRole, "
     }
   };
 
-  return <AuthFormShell eyebrow={copy.eyebrow} title={copy.title} description={copy.description}>
+  return <AuthFormShell title={copy.title} description={copy.description}>
     <form className="portal-auth-form" onSubmit={submit}>
       <label>Email address<input name="email" type="email" autoComplete="email" required /></label>
       <PasswordField label="Password" name="password" autoComplete="current-password" required />
       <PortalToast message={localError || error?.message} tone="error" />
-      <button type="submit" disabled={isLoading}>{isLoading ? "Signing in..." : "Sign in"}</button>
+      <button type="submit" className="portal-login-submit" disabled={isLoading}>
+        <span>{isLoading ? "Signing in..." : "Sign in"}</span>
+        <span aria-hidden="true">→</span>
+      </button>
     </form>
     <div className="portal-auth-links">
       <Link href={forgotPath}>Forgot password?</Link>

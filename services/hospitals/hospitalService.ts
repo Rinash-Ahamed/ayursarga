@@ -15,11 +15,11 @@ import { DEFAULT_CENTRE_GUIDELINE_VALUES } from "@/features/hospitals/guidelines
 export { listPublicHospitals } from "@/services/hospitals/publicHospitalService";
 
 type HospitalAdminUpdate = Partial<HospitalFields & Pick<HospitalDocument,
-  "status" | "isPublic" | "ayursargaRating" | "ayursargaReviewNote"
+  "status" | "isPublic" | "ayursargaRating" | "ayursargaReviewNote" | "imageUrls" | "locationUrl"
 >>;
 type HospitalProfileInput = Pick<HospitalDocument,
-  "name" | "description" | "email" | "phone" | "address" | "city" | "state" | "imageUrls" |
-  "centreGuidelines" | "additionalCentreRules" | "facilities" | "legalPolicies" | "locationUrl"
+  "name" | "description" | "email" | "phone" | "address" | "city" | "state" |
+  "centreGuidelines" | "additionalCentreRules" | "facilities" | "legalPolicies"
 >;
 
 export const getHospital = (id: string) => readDocument<HospitalDocument>(COLLECTIONS.hospitals, id);

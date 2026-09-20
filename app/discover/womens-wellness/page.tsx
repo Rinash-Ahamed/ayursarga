@@ -115,7 +115,7 @@ export default function WomensWellnessPage() {
 
       <div className="discover-care-content">
         <section className="discover-care-highlight" aria-label="Women’s wellness overview">
-          <strong>Women&apos;s wellness is about supporting physical, emotional and overall wellbeing through the different stages of life. Ayursarga connects women with suitable Ayurvedic wellness centres, qualified professionals, wellness therapies, lifestyle support and selected online consultation services—making holistic wellness more accessible and convenient.</strong>
+          <strong>Women&apos;s wellness is about supporting physical, emotional and overall wellbeing through the different stages of life. Ayursarga connects women with suitable Ayurvedic wellness centres, qualified professionals, wellness therapies, lifestyle support and selected online consultation services, making holistic wellness more accessible and convenient.</strong>
         </section>
 
         <section className="discover-care-introduction" aria-labelledby="women-through-life-title">
@@ -126,7 +126,7 @@ export default function WomensWellnessPage() {
           <div className="discover-care-copy discover-care-prenatal-copy">
             <p>Women experience physical, emotional and lifestyle changes throughout different stages of life. From adolescence and the reproductive years to pregnancy, postpartum recovery, perimenopause and beyond, each stage may bring its own wellness needs.</p>
             <p>At Ayursarga, women&apos;s wellness focuses on a holistic approach that supports healthy lifestyle habits, relaxation, nutrition, physical activity, emotional wellbeing and appropriate Ayurvedic wellness practices.</p>
-            <p>Our aim is to help women make time for their own health and wellbeing—not only when they are unwell, but as part of everyday life.</p>
+            <p>Our aim is to help women make time for their own health and wellbeing, not only when they are unwell, but as part of everyday life.</p>
           </div>
         </section>
 
