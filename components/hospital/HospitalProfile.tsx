@@ -79,7 +79,7 @@ export function HospitalProfile() {
     }
   }
 
-  return <PortalShell role="hospital" title="Hospital Profile">{hospital && <form className="portal-card portal-form" onSubmit={submit} noValidate>
+  return <PortalShell role="hospital" title="Profile">{hospital && <form className="portal-card portal-form" onSubmit={submit} noValidate>
     <p className="full portal-form-note">Complete every field marked with * before saving the hospital profile.</p>
     <HospitalImageGallery imageUrls={getHospitalImageUrls(hospital)} hospitalName={hospital.name} />
     <HospitalFormFields defaultValues={hospital} errors={fieldErrors} />

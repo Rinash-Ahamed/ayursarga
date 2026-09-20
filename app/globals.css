@@ -1146,6 +1146,23 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 }
 
 @media(max-width:600px){
+  .process-journey{
+    grid-template-columns:none;
+    grid-auto-flow:column;
+    grid-auto-columns:calc(100% - 38px);
+    gap:13px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    padding:2px 2px 16px;
+    scroll-snap-type:x mandatory;
+    scroll-padding-inline:2px;
+    overscroll-behavior-inline:contain;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+  }
+  .process-journey::-webkit-scrollbar{ display:none; }
+  .process-journey>li{ scroll-snap-align:start; scroll-snap-stop:always; }
+  .process-journey:focus-visible{ outline:2px solid var(--gold); outline-offset:5px; border-radius:18px; }
   .benefit-list article{ grid-template-columns:48px 1fr; gap:14px; padding:18px 10px; }
   .benefit-icon{ width:42px; height:42px; }
   .benefit-icon svg{ width:21px; height:21px; }
