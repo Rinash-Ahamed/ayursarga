@@ -37,7 +37,10 @@ export function LoginForm({ role, requestedPath }: { role: Exclude<PortalRole, "
       <label>Email address<input name="email" type="email" autoComplete="email" required /></label>
       <PasswordField label="Password" name="password" autoComplete="current-password" required />
       <PortalToast message={localError || error?.message} tone="error" />
-      <button type="submit" disabled={isLoading}>{isLoading ? "Signing in..." : "Sign in"}</button>
+      <button type="submit" className="portal-login-submit" disabled={isLoading}>
+        <span>{isLoading ? "Signing in..." : "Sign in"}</span>
+        <span aria-hidden="true">→</span>
+      </button>
     </form>
     <div className="portal-auth-links">
       <Link href={forgotPath}>Forgot password?</Link>
