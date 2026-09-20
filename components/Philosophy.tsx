@@ -36,7 +36,7 @@ function StepIcon({ index }: { index: number }) {
     <><path d="M4 7h7M4 12h7M4 17h7" /><path d="M15 6c3 0 5 2 5 5-3 0-5-2-5-5ZM15 18c0-3 2-5 5-5 0 3-2 5-5 5Z" /></>,
     <><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M8 3v4M16 3v4M4 10h16" /><path d="M10 15c2-2 4-2 6-1-1 2-3 3-6 1Z" /></>,
     <><path d="M4 5h16v11H9l-5 4V5Z" /><path d="M8 10h8M8 13h5" /><path d="M16 7c1-2 3-2 4-2-1 2-2 3-4 2Z" /></>,
-    <><path d="M4 19c2-7 5-11 10-14" /><path d="M8 14c-2 0-4-1-5-3 3-1 5 0 6 2M12 9c0-3 2-5 5-6 0 3-1 5-4 7" /><path d="m14 17 2 2 4-5" /></>,
+    <><rect x="5" y="4" width="14" height="17" rx="2" /><path d="M9 4V3h6v1M8 9h8M8 13h4" /><path d="m13 17 2 2 4-5" /></>,
   ];
   return <span className="process-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" strokeLinejoin="round">{paths[index]}</svg></span>;
 }

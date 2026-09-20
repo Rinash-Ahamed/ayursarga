@@ -9,6 +9,9 @@ export const ROUTES = {
     womensWellness: "/discover/womens-wellness",
     ayurvedicWellness: "/discover/ayurvedic-wellness",
     onlineConsultation: "/discover/online-consultation",
+    whoWeAre: "/about/who-we-are",
+    howAyursargaWorks: "/about/how-ayursarga-works",
+    whyAyursarga: "/about/why-ayursarga",
     missionVision: "/mission-vision",
   },
   consumer: {
