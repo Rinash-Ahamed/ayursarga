@@ -19,10 +19,7 @@ const NAVIGATION = {
     ["Services", ROUTES.hospital.services], ["Bookings", ROUTES.hospital.bookings],
     ["Change Password", ROUTES.hospital.changePassword],
   ],
-  consumer: [
-    ["Hospital Search", ROUTES.consumer.home], ["My Bookings", ROUTES.consumer.bookings],
-    ["Profile", ROUTES.consumer.profile],
-  ],
+  consumer: [],
 } satisfies Record<PortalRole, readonly (readonly [string, string])[]>;
 
 export function PortalShell({ role, title, eyebrow, children, focused = false }: {
@@ -63,7 +60,6 @@ export function PortalShell({ role, title, eyebrow, children, focused = false }:
           <button className="portal-signout" type="button" onClick={() => void logout()} disabled={isLoading}>Sign out</button>
         </div> : <div className="portal-account portal-account-links">
           <Link href={ROUTES.consumer.login}>Sign in</Link>
-          <Link href={ROUTES.consumer.register}>Register</Link>
         </div>}
         <small className="portal-version">Ayursarga v{process.env.NEXT_PUBLIC_APP_VERSION}</small>
       </div>

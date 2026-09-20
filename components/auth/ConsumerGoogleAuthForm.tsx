@@ -1,19 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { AuthFormShell } from "@/components/auth/AuthFormShell";
 import { PortalToast } from "@/components/portal/PortalToast";
-import { ROUTES } from "@/config/routes";
 import { useAuth } from "@/hooks/useAuth";
 
-export function ConsumerGoogleAuthForm({ mode, requestedPath }: {
-  mode: "login" | "register";
+export function ConsumerGoogleAuthForm({ requestedPath }: {
   requestedPath?: string | null;
 }) {
   const { loginConsumerWithGoogle, isLoading, error, clearError } = useAuth();
   const [localError, setLocalError] = useState<string | null>(null);
-  const register = mode === "register";
 
   async function continueWithGoogle() {
     clearError();
@@ -27,8 +23,8 @@ export function ConsumerGoogleAuthForm({ mode, requestedPath }: {
 
   return <AuthFormShell
     eyebrow="Consumer account"
-    title={register ? "Create your account" : "Welcome back"}
-    description="Continue securely with Google to discover hospitals, request appointments and manage your bookings."
+    title="Continue with Google"
+    description="Sign in securely to request an appointment or view your bookings."
   >
     <div className="portal-auth-form">
       <PortalToast message={localError || error?.message} tone="error" />
@@ -41,11 +37,6 @@ export function ConsumerGoogleAuthForm({ mode, requestedPath }: {
         </svg>
         {isLoading ? "Connecting..." : "Continue with Google"}
       </button>
-    </div>
-    <div className="portal-auth-links">
-      <Link href={register ? ROUTES.consumer.login : ROUTES.consumer.register}>
-        {register ? "Already registered? Sign in" : "New to Ayursarga? Create an account"}
-      </Link>
     </div>
   </AuthFormShell>;
 }

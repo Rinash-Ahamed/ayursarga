@@ -9,7 +9,7 @@ import type {
   UserProfile,
 } from "@/features/auth/contracts";
 import { AuthenticationError, toAuthenticationError } from "@/features/auth/errors";
-import { getSafeRoleRedirect, isConsumerProfileComplete } from "@/features/auth/roles";
+import { getConsumerProfileCompletionRedirect, getSafeRoleRedirect, isConsumerProfileComplete } from "@/features/auth/roles";
 import { ROUTES } from "@/config/routes";
 import { authService } from "@/services/auth/authService";
 import { useSessionIdleTimeout } from "@/hooks/useSessionIdleTimeout";
@@ -82,9 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const safeRequestedPath = getSafeRoleRedirect(requestedPath, profile.role);
         router.replace(isConsumerProfileComplete(profile)
           ? safeRequestedPath
-          : safeRequestedPath === ROUTES.consumer.home
-            ? ROUTES.consumer.completeProfile
-            : `${ROUTES.consumer.completeProfile}?next=${encodeURIComponent(safeRequestedPath)}`);
+          : getConsumerProfileCompletionRedirect(safeRequestedPath));
       }
       return profile;
     }), [router, run]);

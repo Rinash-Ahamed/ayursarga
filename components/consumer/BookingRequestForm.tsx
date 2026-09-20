@@ -34,7 +34,7 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
     } catch (caught) { setError(caught instanceof Error ? caught.message : "We could not send your appointment request. Check the details and try again."); }
     finally { setBusy(false); }
   }
-  return <PortalShell role="consumer" title="Request an appointment" eyebrow="Booking request">
+  return <PortalShell role="consumer" title="Request an appointment" eyebrow="Booking request" focused>
     <form className="portal-card portal-form" onSubmit={submit}>
       <label>Preferred start date<input name="date" type="date" min={new Date().toISOString().slice(0, 10)} value={preferredDate} onChange={(event) => setPreferredDate(event.target.value)} required /></label>
       <label>Preferred end date <small>Optional for consultation or single-day care</small><input name="endDate" type="date" min={preferredDate || new Date().toISOString().slice(0, 10)} value={preferredEndDate} onChange={(event) => setPreferredEndDate(event.target.value)} /></label>

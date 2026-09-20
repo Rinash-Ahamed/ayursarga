@@ -17,11 +17,8 @@ export const ROUTES = {
   consumer: {
     home: "/app",
     bookings: "/app/bookings",
-    profile: "/app/profile",
     completeProfile: "/app/complete-profile",
     login: "/app/login",
-    register: "/app/register",
-    forgotPassword: "/app/forgot-password",
   },
   hospital: {
     home: "/hospital",

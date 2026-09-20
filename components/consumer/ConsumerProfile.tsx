@@ -10,10 +10,9 @@ import { hasCurrentConsumerPrivacyConsent } from "@/features/consumers/privacyCo
 import { useAuth } from "@/hooks/useAuth";
 import { updateUserProfile } from "@/services/users/userService";
 
-export function ConsumerProfile({ completion = false, requestedPath }: { completion?: boolean; requestedPath?: string }) {
+export function ConsumerProfile({ requestedPath }: { requestedPath?: string }) {
   const router = useRouter();
   const { firebaseUser, userProfile, refreshUserProfile } = useAuth();
-  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<"name" | "phone" | "address" | "privacyConsent", string>>>({});
   const [busy, setBusy] = useState(false);
@@ -30,7 +29,6 @@ export function ConsumerProfile({ completion = false, requestedPath }: { complet
       privacyConsent: data.get("privacyConsent"),
     }, needsPrivacyConsent);
     setFieldErrors(validation.errors);
-    setMessage(null);
     setError(null);
     if (!validation.isValid) {
       setError("Complete the highlighted contact details before continuing.");
@@ -40,11 +38,7 @@ export function ConsumerProfile({ completion = false, requestedPath }: { complet
     try {
       await updateUserProfile(firebaseUser.uid, validation.data);
       await refreshUserProfile();
-      if (completion) {
-        router.replace(getSafeRoleRedirect(requestedPath, "consumer"));
-      } else {
-        setMessage("Your contact details have been updated.");
-      }
+      router.replace(getSafeRoleRedirect(requestedPath, "consumer"));
     } catch {
       setError("We could not update your contact details. Check the information and try again.");
     } finally {
@@ -54,11 +48,12 @@ export function ConsumerProfile({ completion = false, requestedPath }: { complet
 
   return <PortalShell
     role="consumer"
-    title={completion ? "Complete Your Profile" : "Profile"}
-    eyebrow={completion ? "One final step" : undefined}
+    title="Complete Your Profile"
+    eyebrow="One final step"
+    focused
   >
     <form className="portal-card portal-form" onSubmit={submit} noValidate>
-      {completion && <p className="portal-form-note full">Add the contact details that a Hospital may use after you request an appointment.</p>}
+      <p className="portal-form-note full">Google shares your name, email, and profile photo only. Add a phone number so your chosen centre can contact you after a request. Address is optional.</p>
       <label>Name *<input name="name" defaultValue={userProfile?.name} required minLength={2} maxLength={120} aria-invalid={Boolean(fieldErrors.name)} />{fieldErrors.name && <span className="portal-field-error">{fieldErrors.name}</span>}</label>
       <label>Phone *<input name="phone" type="tel" autoComplete="tel" defaultValue={userProfile?.phone ?? ""} required minLength={7} maxLength={25} aria-invalid={Boolean(fieldErrors.phone)} />{fieldErrors.phone && <span className="portal-field-error">{fieldErrors.phone}</span>}</label>
       <label className="full">Address<textarea name="address" autoComplete="street-address" defaultValue={userProfile?.address ?? ""} maxLength={300} aria-invalid={Boolean(fieldErrors.address)} />{fieldErrors.address && <span className="portal-field-error">{fieldErrors.address}</span>}</label>
@@ -73,8 +68,7 @@ export function ConsumerProfile({ completion = false, requestedPath }: { complet
         {fieldErrors.privacyConsent && <span className="portal-field-error">{fieldErrors.privacyConsent}</span>}
       </fieldset> : <p className="portal-consent-recorded full">Privacy consent is recorded for this Consumer profile. To withdraw it, contact <a href="mailto:info@ayursarga.com">info@ayursarga.com</a>.</p>}
       <PortalToast message={error} tone="error" />
-      <PortalToast message={message} />
-      <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : completion ? "Save and continue" : "Save profile"}</button></div>
+      <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save and continue"}</button></div>
     </form>
   </PortalShell>;
 }
