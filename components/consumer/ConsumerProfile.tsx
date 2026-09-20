@@ -49,7 +49,6 @@ export function ConsumerProfile({ requestedPath }: { requestedPath?: string }) {
   return <PortalShell
     role="consumer"
     title="Complete Your Profile"
-    eyebrow="One final step"
     focused
   >
     <form className="portal-card portal-form" onSubmit={submit} noValidate>

@@ -52,7 +52,7 @@ export default function PrenatalCarePage() {
             <h2 id="prenatal-care-title">What is prenatal care?</h2>
           </div>
           <div className="discover-care-copy discover-care-prenatal-copy">
-            <p>Prenatal care is about caring for the mother and baby throughout pregnancy—not only preparing for childbirth, but also preparing for a healthy and confident transition into motherhood.</p>
+            <p>Prenatal care is about caring for the mother and baby throughout pregnancy, not only preparing for childbirth, but also preparing for a healthy and confident transition into motherhood.</p>
             <strong className="discover-care-lead">Nurturing the mother and baby throughout pregnancy</strong>
             <p>Pregnancy brings physical, emotional and lifestyle changes. Regular prenatal care helps monitor the mother&apos;s and baby&apos;s wellbeing, identify potential concerns early and prepare the mother for childbirth and the postpartum period.</p>
           </div>

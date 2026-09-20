@@ -84,10 +84,10 @@ export function HospitalDashboard() {
     <PortalToast message={error} tone="error" />
     <PortalToast message={message} />
     <div className="portal-grid" aria-busy={loading}>
-      <article className="portal-card portal-stat"><strong>{loading ? "—" : counts.services}</strong><span>Services</span></article>
-      <article className="portal-card portal-stat"><strong>{loading ? "—" : counts.bookings}</strong><span>Total bookings</span></article>
-      <article className="portal-card portal-stat"><strong>{loading ? "—" : counts.requested}</strong><span>New requests</span></article>
-      <article className="portal-card portal-stat"><strong>{loading ? "—" : counts.treatments}</strong><span>Treatments in progress</span></article>
+      <article className="portal-card portal-stat"><strong>{loading ? "…" : counts.services}</strong><span>Services</span></article>
+      <article className="portal-card portal-stat"><strong>{loading ? "…" : counts.bookings}</strong><span>Total bookings</span></article>
+      <article className="portal-card portal-stat"><strong>{loading ? "…" : counts.requested}</strong><span>New requests</span></article>
+      <article className="portal-card portal-stat"><strong>{loading ? "…" : counts.treatments}</strong><span>Treatments in progress</span></article>
     </div>
 
     <section className="portal-card portal-capacity-card" aria-labelledby="room-availability-title">
