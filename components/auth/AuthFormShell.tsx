@@ -4,12 +4,10 @@ import type { ReactNode } from "react";
 import { ROUTES } from "@/config/routes";
 
 export function AuthFormShell({
-  eyebrow,
   title,
   description,
   children,
 }: {
-  eyebrow: string;
   title: string;
   description: string;
   children: ReactNode;
@@ -20,7 +18,6 @@ export function AuthFormShell({
       <span>Ayursarga</span>
     </Link>
     <section className="portal-auth-card" aria-labelledby="portal-auth-title">
-      <span className="portal-eyebrow">{eyebrow}</span>
       <h1 id="portal-auth-title">{title}</h1>
       <p className="portal-auth-description">{description}</p>
       {children}

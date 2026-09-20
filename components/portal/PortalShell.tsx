@@ -34,6 +34,7 @@ export function PortalShell({ role, title, children, focused = false }: {
   const pathname = usePathname();
   const { userProfile, logout, isLoading } = useAuth();
   const [accountOpen, setAccountOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!accountOpen) return;
@@ -50,6 +51,19 @@ export function PortalShell({ role, title, children, focused = false }: {
       document.removeEventListener("keydown", closeOnEscape);
     };
   }, [accountOpen]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("portal-menu-open", mobileMenuOpen);
+    if (!mobileMenuOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileMenuOpen(false);
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.documentElement.classList.remove("portal-menu-open");
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [mobileMenuOpen]);
 
   if (role === "consumer" && focused) {
     return <main className="portal-consumer-focus">
@@ -68,19 +82,36 @@ export function PortalShell({ role, title, children, focused = false }: {
   }
 
   return <main className="portal-workspace">
-    <aside className="portal-sidebar" data-role={role}>
-      <Link href="/" className="portal-wordmark" aria-label="Return to Ayursarga home">
-        <Image src="/mainlogo.png" alt="" width={44} height={44} loading="eager" quality={90} sizes="44px" />
-        <span>Ayursarga</span>
-      </Link>
-      <nav aria-label={`${role} navigation`}>
-        {NAVIGATION[role].map(([label, href]) =>
-          <Link key={href} href={href} aria-current={pathname === href ? "page" : undefined} onClick={() => setAccountOpen(false)}>{label}</Link>)}
-      </nav>
-      <div className="portal-sidebar-footer">
-        <small className="portal-version">Ayursarga v{process.env.NEXT_PUBLIC_APP_VERSION}</small>
+    <aside className="portal-sidebar" data-role={role} data-mobile-open={mobileMenuOpen || undefined}>
+      <div className="portal-sidebar-top">
+        <Link href="/" className="portal-wordmark" aria-label="Return to Ayursarga home">
+          <Image src="/mainlogo.png" alt="" width={44} height={44} loading="eager" quality={90} sizes="44px" />
+          <span>Ayursarga</span>
+        </Link>
+        <button className="portal-mobile-menu-toggle" type="button" aria-label="Open portal menu" aria-expanded={mobileMenuOpen} aria-controls="portal-mobile-drawer" onClick={() => setMobileMenuOpen(true)}>
+          <span /><span /><span />
+        </button>
+      </div>
+      <div className="portal-sidebar-drawer" id="portal-mobile-drawer">
+        <div className="portal-mobile-drawer-heading">
+          <span>Menu</span>
+          <button type="button" aria-label="Close portal menu" onClick={() => setMobileMenuOpen(false)}>×</button>
+        </div>
+        <nav aria-label={`${role} navigation`}>
+          {NAVIGATION[role].map(([label, href]) =>
+            <Link key={href} href={href} aria-current={pathname === href ? "page" : undefined} onClick={() => { setAccountOpen(false); setMobileMenuOpen(false); }}>{label}</Link>)}
+        </nav>
+        {userProfile && role !== "consumer" && <div className="portal-mobile-account">
+          <span className="portal-header-account-avatar" aria-hidden="true">{getAccountInitials(userProfile.name, userProfile.email)}</span>
+          <div><strong>{userProfile.name}</strong><small>{userProfile.email}</small></div>
+          <button className="portal-signout" type="button" onClick={() => { setMobileMenuOpen(false); void logout(); }} disabled={isLoading}>Sign out</button>
+        </div>}
+        <div className="portal-sidebar-footer">
+          <small className="portal-version">Ayursarga v{process.env.NEXT_PUBLIC_APP_VERSION}</small>
+        </div>
       </div>
     </aside>
+    {mobileMenuOpen && <button className="portal-mobile-menu-backdrop" type="button" aria-label="Close portal menu" onClick={() => setMobileMenuOpen(false)} />}
     <section className="portal-content">
       <header className="portal-page-header">
         <div className="portal-page-heading">

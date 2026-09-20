@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
-import { FadeUp, RevealLines, RevealWords } from "./Reveal";
 import MagneticButton from "./MagneticButton";
 import { ROUTES } from "@/config/routes";
 
@@ -53,9 +52,8 @@ export default function Voices() {
   const prefersReducedMotion = useReducedMotion();
 
   return <section id="partners" className="section partner-section"><div className="section-inner partner-panel">
-    <div className="partner-heading"><RevealWords text="For Ayurvedic Hospitals" className="eyebrow" /><RevealLines as="h2" className="section-title" lines={["Good care deserves", "to be discovered."]} /></div>
     <div className="partner-copy-column">
-      <div className="partner-copy"><FadeUp as="p" className="section-intro partner-intro">Partner with Ayursarga to help people discover your hospital, understand your services, and send appointment requests to your team. Clinical decisions remain with your qualified physicians.</FadeUp><FadeUp className="partner-action"><MagneticButton href={`${ROUTES.public.contact}?interest=partnership`} className="btn-magnetic btn-primary">Discuss partnership</MagneticButton></FadeUp></div>
+      <div className="partner-copy"><p className="section-intro partner-intro">Partner with Ayursarga to help people discover your hospital, understand your services, and send appointment requests to your team. Clinical decisions remain with your qualified physicians.</p><div className="partner-action"><MagneticButton href={`${ROUTES.public.contact}?interest=partnership`} className="btn-magnetic btn-primary">Discuss partnership</MagneticButton></div></div>
       <ul className="partner-points">{POINTS.map(([icon, point], index) => <li key={icon}><motion.span className="partner-point-icon"
         aria-hidden="true"
         initial={prefersReducedMotion ? false : { opacity: 0, scale: .2, rotate: -28 }}
@@ -64,7 +62,7 @@ export default function Voices() {
         transition={{ duration: .58, delay: .12 + index * .1, ease: [0.22, 1, 0.36, 1] }}
       ><PartnerPointIcon name={icon} /></motion.span><span>{point}</span></li>)}</ul>
     </div>
-    <FadeUp className="partner-image"><Image src="/ayurvedic-hospital-partner.webp" alt="Ayurvedic hospital with a medicinal garden in Kerala" width={1536} height={1024} sizes="(max-width: 900px) 100vw, 48vw" quality={82} /></FadeUp>
-    <FadeUp as="ul" className="partner-steps">{PARTNER_STEPS.map(([icon, title, body]) => <li key={icon}><PartnerStepIcon name={icon} /><div><strong>{title}</strong><p>{body}</p></div></li>)}</FadeUp>
+    <div className="partner-image"><Image src="/ayurvedic-hospital-partner.webp" alt="Ayurvedic hospital with a medicinal garden in Kerala" width={1536} height={1024} sizes="(max-width: 900px) 100vw, 48vw" quality={82} /></div>
+    <ul className="partner-steps">{PARTNER_STEPS.map(([icon, title, body]) => <li key={icon}><PartnerStepIcon name={icon} /><div><strong>{title}</strong><p>{body}</p></div></li>)}</ul>
   </div></section>;
 }
