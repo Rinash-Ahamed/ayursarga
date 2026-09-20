@@ -30,8 +30,11 @@ export function PortalShell({ role, title, eyebrow, children }: {
 }) {
   const pathname = usePathname();
   const { userProfile, logout, isLoading } = useAuth();
+  const headerEyebrow = role === "hospital" && userProfile?.name
+    ? userProfile.name
+    : (eyebrow ?? `${role} portal`);
   return <main className="portal-workspace">
-    <aside className="portal-sidebar">
+    <aside className="portal-sidebar" data-role={role}>
       <Link href="/" className="portal-wordmark" aria-label="Return to Ayursarga home">
         <Image src="/mainlogo.png" alt="" width={44} height={44} loading="eager" quality={90} sizes="44px" />
         <span>Ayursarga</span>
@@ -40,18 +43,20 @@ export function PortalShell({ role, title, eyebrow, children }: {
         {NAVIGATION[role].map(([label, href]) =>
           <Link key={href} href={href} aria-current={pathname === href ? "page" : undefined}>{label}</Link>)}
       </nav>
-      {userProfile ? <div className="portal-account">
-        <span>{userProfile.name}</span><small>{userProfile.email}</small>
-        <button type="button" onClick={() => void logout()} disabled={isLoading}>Sign out</button>
-      </div> : <div className="portal-account portal-account-links">
-        <Link href={ROUTES.consumer.login}>Sign in</Link>
-        <Link href={ROUTES.consumer.register}>Register</Link>
-      </div>}
-      <small className="portal-version">Ayursarga v{process.env.NEXT_PUBLIC_APP_VERSION}</small>
+      <div className="portal-sidebar-footer">
+        {userProfile ? <div className="portal-account">
+          <span>{userProfile.name}</span><small>{userProfile.email}</small>
+          <button className="portal-signout" type="button" onClick={() => void logout()} disabled={isLoading}>Sign out</button>
+        </div> : <div className="portal-account portal-account-links">
+          <Link href={ROUTES.consumer.login}>Sign in</Link>
+          <Link href={ROUTES.consumer.register}>Register</Link>
+        </div>}
+        <small className="portal-version">Ayursarga v{process.env.NEXT_PUBLIC_APP_VERSION}</small>
+      </div>
     </aside>
     <section className="portal-content">
       <header className="portal-page-header">
-        <span className="portal-eyebrow">{eyebrow ?? `${role} portal`}</span>
+        <span className="portal-eyebrow">{headerEyebrow}</span>
         <h1>{title}</h1>
       </header>
       {children}
