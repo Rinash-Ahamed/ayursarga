@@ -45,7 +45,7 @@ export default function Philosophy() {
   return (
     <section id="how-it-works" className="section">
       <div className="section-inner">
-        <ol className="process-journey" aria-label="The Ayursarga care journey">
+        <ol className="process-journey" aria-label="The Ayursarga care journey" tabIndex={0}>
           {STEPS.map(({ label, title, body }, index) => (
             <li id={index === 0 ? "discover-hospitals" : undefined} key={title}>
               <FadeUp as="article" className="process-card" delay={index * 0.05}>

@@ -80,7 +80,7 @@ export function HospitalDashboard() {
   const available = Math.max(0, total - occupied);
   const occupancy = total > 0 ? Math.min(100, Math.round(occupied / total * 100)) : 0;
 
-  return <PortalShell role="hospital" title="Hospital Dashboard">
+  return <PortalShell role="hospital" title="Dashboard">
     <PortalToast message={error} tone="error" />
     <PortalToast message={message} />
     <div className="portal-grid" aria-busy={loading}>
