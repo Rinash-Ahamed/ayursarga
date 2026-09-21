@@ -1,4 +1,4 @@
-export const MAX_HOSPITAL_IMAGES = 4;
+export const MAX_HOSPITAL_IMAGES = 10;
 
 type HospitalImageSource = {
   imageUrl?: string | null;

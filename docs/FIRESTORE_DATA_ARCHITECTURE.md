@@ -14,7 +14,7 @@ duplicating records or introducing deeply nested documents.
   the required `hospitalPhone1` and optional `hospitalPhone2`; `district` stores the
   selected Kerala district. Existing records remain readable until these newer
   fields are completed through the profile form. The collection also stores
-  up to four Google Drive sharing links or externally hosted HTTPS image URLs
+  up to ten Google Drive sharing links or externally hosted HTTPS image URLs
   normalized into `imageUrls`. Hospitals must make Drive images viewable by
   anyone with the link. Gallery images use a consistent 4:3 presentation. The
   legacy nullable `imageUrl` remains readable for existing records. Firebase

@@ -103,6 +103,14 @@ service cloud.firestore {
         && legalPolicies.size() <= 4000;
     }
 
+    function hasValidHospitalImageAt(images, index) {
+      return images.size() <= index || (
+        images[index] is string
+        && images[index].size() <= 500
+        && images[index].matches('https://.+')
+      );
+    }
+
     function hasValidHospitalProfileFields() {
       return request.resource.data.name is string
         && request.resource.data.name.size() >= 2
@@ -140,27 +148,17 @@ service cloud.firestore {
         && request.resource.data.state.size() <= 80
         && (!request.resource.data.keys().hasAny(['imageUrls']) || (
           request.resource.data.imageUrls is list
-          && request.resource.data.imageUrls.size() <= 4
-          && (request.resource.data.imageUrls.size() < 1 || (
-            request.resource.data.imageUrls[0] is string
-            && request.resource.data.imageUrls[0].size() <= 500
-            && request.resource.data.imageUrls[0].matches('https://.+')
-          ))
-          && (request.resource.data.imageUrls.size() < 2 || (
-            request.resource.data.imageUrls[1] is string
-            && request.resource.data.imageUrls[1].size() <= 500
-            && request.resource.data.imageUrls[1].matches('https://.+')
-          ))
-          && (request.resource.data.imageUrls.size() < 3 || (
-            request.resource.data.imageUrls[2] is string
-            && request.resource.data.imageUrls[2].size() <= 500
-            && request.resource.data.imageUrls[2].matches('https://.+')
-          ))
-          && (request.resource.data.imageUrls.size() < 4 || (
-            request.resource.data.imageUrls[3] is string
-            && request.resource.data.imageUrls[3].size() <= 500
-            && request.resource.data.imageUrls[3].matches('https://.+')
-          ))
+          && request.resource.data.imageUrls.size() <= 10
+          && hasValidHospitalImageAt(request.resource.data.imageUrls, 0)
+          && hasValidHospitalImageAt(request.resource.data.imageUrls, 1)
+          && hasValidHospitalImageAt(request.resource.data.imageUrls, 2)
+          && hasValidHospitalImageAt(request.resource.data.imageUrls, 3)
+          && hasValidHospitalImageAt(request.resource.data.imageUrls, 4)
+          && hasValidHospitalImageAt(request.resource.data.imageUrls, 5)
+          && hasValidHospitalImageAt(request.resource.data.imageUrls, 6)
+          && hasValidHospitalImageAt(request.resource.data.imageUrls, 7)
+          && hasValidHospitalImageAt(request.resource.data.imageUrls, 8)
+          && hasValidHospitalImageAt(request.resource.data.imageUrls, 9)
         ))
         && (request.resource.data.get('locationUrl', null) == null || (
           request.resource.data.locationUrl is string
