@@ -8,10 +8,18 @@ import { COLLECTIONS } from "@/constants/firestore";
 import { firestoreTimestamp, runFilteredQuery, type QueryPageOptions } from "@/services/firestore/firestoreService";
 import { createAuditedDocument, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
 
-export function listConsultants(options: Pick<QueryPageOptions, "pageSize" | "cursor"> = {}) {
+export function listConsultants(options: Pick<QueryPageOptions, "pageSize" | "cursor"> = {}, searchTerm = "") {
+  const trimmedSearch = searchTerm.trim();
+  const searchingByEmployeeId = /^as\d*/i.test(trimmedSearch);
+  const prefix = searchingByEmployeeId
+    ? trimmedSearch.toUpperCase()
+    : trimmedSearch ? `${trimmedSearch.charAt(0).toUpperCase()}${trimmedSearch.slice(1)}` : "";
+  const sortField = prefix ? (searchingByEmployeeId ? "employeeId" : "name") : "employeeSequence";
   return runFilteredQuery<ConsultantDocument>({
     collectionPath: COLLECTIONS.consultants,
-    sort: { field: "employeeSequence", direction: "desc" },
+    sort: { field: sortField, direction: prefix ? "asc" : "desc" },
+    startAtValues: prefix ? [prefix] : undefined,
+    endAtValues: prefix ? [`${prefix}\uf8ff`] : undefined,
     excludeArchived: false,
     ...options,
   });

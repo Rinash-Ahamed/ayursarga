@@ -557,8 +557,9 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time
         && request.resource.data.updatedBy == request.auth.uid
         && ((isAdmin()
-          && hasValidRequiredHospitalFields()
-          && validAdminHospitalUpdate()) || (
+          && validAdminHospitalUpdate()
+          && (!(linkedAuditAction() in ['update', 'hospital_activated'])
+            || hasValidRequiredHospitalFields())) || (
           hasOperationalHospitalAccess(hospitalId)
           && hasValidHospitalProfileFields()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([

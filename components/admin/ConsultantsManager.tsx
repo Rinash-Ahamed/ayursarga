@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, type FormEvent } from "react";
+import { useCallback, useDeferredValue, useState, type FormEvent } from "react";
 import type { ConsultantDocument } from "@/features/firestore/models";
 import type { QueryPageOptions } from "@/services/firestore/firestoreService";
 import { consultantFormValues, validateConsultantFields, type ConsultantValidationErrors } from "@/features/consultants/validation";
@@ -21,7 +21,9 @@ export function ConsultantsManager() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const loader = useCallback((cursor: QueryPageOptions["cursor"]) => listConsultants({ pageSize: 20, cursor }), []);
+  const [searchTerm, setSearchTerm] = useState("");
+  const deferredSearch = useDeferredValue(searchTerm);
+  const loader = useCallback((cursor: QueryPageOptions["cursor"]) => listConsultants({ pageSize: 20, cursor }, deferredSearch), [deferredSearch]);
   const { items, error: loadError, isLoading, hasMore, reload, loadMore } = usePaginatedList<ConsultantDocument>(loader, "We could not load the consultant list. Refresh and try again.");
 
   function resetEditor() {
@@ -110,7 +112,11 @@ export function ConsultantsManager() {
       <div className="portal-actions full"><button className="portal-button" disabled={busyId === "create"}>{busyId === "create" ? "Adding..." : "Add consultant"}</button><button className="portal-button secondary" type="button" disabled={busyId === "create"} onClick={() => { setShowCreateForm(false); setFieldErrors({}); setActionError(null); }}>Cancel</button></div>
     </form>}
 
-    <PortalFeedback error={error} empty={!error && !isLoading && items.length === 0 ? "No consultants have been added yet." : undefined} />
+    <label className="portal-search">Search consultants
+      <input type="search" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Search by name or employee ID" autoComplete="off" />
+    </label>
+
+    <PortalFeedback error={error} empty={!error && !isLoading && items.length === 0 ? (deferredSearch.trim() ? "No consultants match your search." : "No consultants have been added yet.") : undefined} />
     <PortalToast message={message} />
     <div className="portal-list consultant-list">{items.map((consultant) => <article className="portal-card" key={consultant.id}>
       <div className="portal-row-heading"><div><h3>{consultant.name}</h3><strong className="consultant-employee-id">{consultant.employeeId}</strong></div><span className="portal-status" data-status={consultant.status}>{formatStatus(consultant.status)}</span></div>
