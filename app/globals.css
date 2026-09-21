@@ -999,7 +999,7 @@ button{ cursor:pointer; }
 .benefit-list article.is-active h3{ color:#fff8e8; }
 .benefit-list p{ color:rgba(249,245,234,.76); line-height:1.65; font-size:13.5px; }
 
-.partner-section{ padding-top:0; padding-bottom:clamp(26px,3vw,38px); }
+.partner-section{ padding-top:clamp(12px,1.4vw,18px); padding-bottom:clamp(26px,3vw,38px); }
 .partner-panel{ background:#fff; border:0; border-radius:30px; padding:clamp(22px,2.4vw,30px) clamp(28px,3.4vw,44px) clamp(28px,3.4vw,44px); display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); grid-template-areas:"partner-copy partner-image" "partner-steps partner-steps"; column-gap:clamp(22px,2.4vw,32px); row-gap:0; align-items:start; overflow:hidden; box-shadow:0 22px 64px rgba(31,61,43,.09),inset 0 0 0 1px rgba(31,61,43,.08); }
 .partner-copy-column{ min-width:0; display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; align-self:start; gap:12px; }
 .partner-copy-column{ grid-area:partner-copy; }

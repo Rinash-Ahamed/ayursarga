@@ -1,6 +1,7 @@
 import type { HospitalDocument } from "@/features/firestore/models";
 import { resolveCentreGuidelines } from "@/features/hospitals/guidelines";
 import { HOSPITAL_FACILITY_GROUPS, resolveHospitalFacilities } from "@/features/hospitals/facilities";
+import { FacilityIcon } from "@/components/icons/FacilityIcon";
 
 export function CentreGuidelineFields({ hospital }: { hospital: HospitalDocument }) {
   const facilities = resolveHospitalFacilities(hospital.facilities);
@@ -39,6 +40,7 @@ export function CentreGuidelineFields({ hospital }: { hospital: HospitalDocument
                 value={option}
                 defaultChecked={facilities.selected.has(option)}
               />
+              <FacilityIcon facility={option} />
               <span>{option}</span>
             </label>)}
           </div>

@@ -171,9 +171,12 @@ html.portal-menu-open,html.portal-menu-open body{ overflow:hidden; overscroll-be
 .portal-facility-group{ min-width:0; margin:0; padding:16px; border:1px solid rgba(58,61,46,.22); border-radius:13px; background:#fff; }
 .portal-facility-group legend{ padding:0 6px; font-family:inherit; color:var(--forest); font-size:11px; font-weight:800; letter-spacing:.02em; }
 .portal-facility-options{ display:grid; gap:8px; }
-.portal-form .portal-facility-option{ grid-template-columns:18px minmax(0,1fr); align-items:start; gap:9px; min-height:28px; padding:5px 7px; border-radius:8px; font-size:11px; font-weight:600; line-height:1.45; cursor:pointer; transition:background-color .18s,color .18s; }
+.portal-form .portal-facility-option{ grid-template-columns:18px 24px minmax(0,1fr); align-items:center; gap:8px; min-height:36px; padding:5px 7px; border-radius:8px; font-size:11px; font-weight:600; line-height:1.45; cursor:pointer; transition:background-color .18s,color .18s; }
 .portal-form .portal-facility-option:hover{ background:rgba(58,61,46,.055); }
 .portal-form .portal-facility-option input{ width:17px; height:17px; margin:0; padding:0; border:0; box-shadow:none; accent-color:var(--forest); cursor:pointer; }
+.portal-facility-icon{ width:24px; height:24px; display:grid; place-items:center; border:1px solid rgba(184,135,47,.3); border-radius:7px; background:rgba(184,135,47,.07); color:var(--clay-dark); }
+.portal-facility-icon svg{ width:15px; height:15px; }
+.portal-facility-option:has(input:checked) .portal-facility-icon{ border-color:rgba(31,61,43,.42); background:rgba(31,61,43,.1); color:var(--forest); }
 .centre-guidelines{ margin-top:30px; }
 .centre-guidelines-heading>span{ color:var(--clay-dark); font-size:9px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
 .centre-guidelines-heading h2{ margin-top:7px; }
