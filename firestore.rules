@@ -60,12 +60,14 @@ service cloud.firestore {
 
     function hasExactHospitalFields() {
       return request.resource.data.keys().hasOnly([
-        'name', 'description', 'email', 'phone', 'address', 'city', 'state',
+        'name', 'description', 'email', 'phone', 'hospitalPhone1', 'hospitalPhone2',
+        'address', 'city', 'district', 'state',
         'imageUrl', 'imageUrls', 'ayursargaRating', 'ayursargaReviewNote',
         'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies', 'locationUrl',
         'status', 'isPublic', 'commissionPercentage',
         'contractStatus', 'contractGeneratedAt', 'contractGeneratedBy',
-        'contractSignedAt', 'contractSignedBy', 'contractUrl', 'activatedAt', 'activatedBy',
+        'contractSignedAt', 'contractSignedBy', 'contractUrl',
+        'contractSignedAt2', 'contractSignedBy2', 'contractUrl2', 'activatedAt', 'activatedBy',
         'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
         'archivedAt', 'archivedBy', 'lastAuditId'
       ]);
@@ -112,12 +114,27 @@ service cloud.firestore {
         && request.resource.data.phone is string
         && request.resource.data.phone.size() >= 7
         && request.resource.data.phone.size() <= 25
+        && (request.resource.data.get('hospitalPhone1', null) == null || (
+          request.resource.data.hospitalPhone1 is string
+          && request.resource.data.hospitalPhone1.size() >= 7
+          && request.resource.data.hospitalPhone1.size() <= 25
+        ))
+        && (request.resource.data.get('hospitalPhone2', null) == null || (
+          request.resource.data.hospitalPhone2 is string
+          && request.resource.data.hospitalPhone2.size() >= 7
+          && request.resource.data.hospitalPhone2.size() <= 25
+        ))
         && request.resource.data.address is string
         && request.resource.data.address.size() >= 10
         && request.resource.data.address.size() <= 300
         && request.resource.data.city is string
         && request.resource.data.city.size() >= 2
         && request.resource.data.city.size() <= 80
+        && (request.resource.data.get('district', null) == null || (
+          request.resource.data.district is string
+          && request.resource.data.district.size() >= 2
+          && request.resource.data.district.size() <= 80
+        ))
         && request.resource.data.state is string
         && request.resource.data.state.size() >= 2
         && request.resource.data.state.size() <= 80
@@ -153,6 +170,15 @@ service cloud.firestore {
         && hasValidCentreGuidelines();
     }
 
+    function hasRequiredHospitalContactFields() {
+      return request.resource.data.hospitalPhone1 is string
+        && request.resource.data.hospitalPhone1.size() >= 7
+        && request.resource.data.hospitalPhone1.size() <= 25
+        && request.resource.data.district is string
+        && request.resource.data.district.size() >= 2
+        && request.resource.data.district.size() <= 80;
+    }
+
     function hasValidRequiredHospitalFields() {
       return hasValidHospitalProfileFields()
         && (request.resource.data.get('imageUrl', null) == null
@@ -171,11 +197,55 @@ service cloud.firestore {
         && request.resource.data.commissionPercentage <= 100;
     }
 
+    function hasValidConsultantFields() {
+      return request.resource.data.keys().hasOnly([
+          'employeeId', 'employeeSequence', 'name', 'email', 'contactNo', 'whatsappNo',
+          'qualification', 'yearsExperience', 'lastWorkedCompany', 'address',
+          'emergencyContactNo', 'status', 'createdAt', 'createdBy', 'updatedAt',
+          'updatedBy', 'archivedAt', 'archivedBy', 'lastAuditId'
+        ])
+        && request.resource.data.employeeId is string
+        && request.resource.data.employeeId.matches('AS[0-9]{3,}')
+        && request.resource.data.employeeSequence is int
+        && request.resource.data.employeeSequence > 0
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.email is string
+        && request.resource.data.email.size() >= 5
+        && request.resource.data.email.size() <= 160
+        && request.resource.data.contactNo is string
+        && request.resource.data.contactNo.size() >= 7
+        && request.resource.data.contactNo.size() <= 25
+        && request.resource.data.whatsappNo is string
+        && request.resource.data.whatsappNo.size() >= 7
+        && request.resource.data.whatsappNo.size() <= 25
+        && request.resource.data.qualification is string
+        && request.resource.data.qualification.size() >= 2
+        && request.resource.data.qualification.size() <= 200
+        && request.resource.data.yearsExperience is number
+        && request.resource.data.yearsExperience >= 0
+        && request.resource.data.yearsExperience <= 80
+        && request.resource.data.yearsExperience % 0.5 == 0
+        && request.resource.data.lastWorkedCompany is string
+        && request.resource.data.lastWorkedCompany.size() <= 160
+        && request.resource.data.address is string
+        && request.resource.data.address.size() <= 400
+        && request.resource.data.emergencyContactNo is string
+        && request.resource.data.emergencyContactNo.size() <= 25
+        && request.resource.data.status in ['active', 'inactive'];
+    }
+
     function hasValidServiceFields() {
-      let durationMinutes = request.resource.data.durationMinutes;
+      let durationMinutes = request.resource.data.get('durationMinutes', null);
       let durationUnit = request.resource.data.get('durationUnit', null);
+      let packageDurationDays = request.resource.data.get('packageDurationDays', null);
+      let procedures = request.resource.data.get('procedures', {});
+      let otherProcedureName = request.resource.data.get('otherProcedureName', null);
+      let otherProcedureDays = request.resource.data.get('otherProcedureDays', null);
       return request.resource.data.keys().hasOnly([
           'hospitalId', 'name', 'description', 'price', 'durationMinutes', 'durationUnit', 'status',
+          'packageDurationDays', 'procedures', 'otherProcedureName', 'otherProcedureDays',
           'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
           'archivedAt', 'archivedBy', 'lastAuditId'
         ])
@@ -185,11 +255,62 @@ service cloud.firestore {
         && request.resource.data.name.size() <= 160
         && request.resource.data.description is string
         && request.resource.data.description.size() <= 2000
-        && request.resource.data.price is number
-        && request.resource.data.price >= 0
-        && (durationMinutes == null || (durationMinutes is int && durationMinutes > 0))
-        && (durationUnit == null || durationUnit in ['minutes', 'hours', 'days'])
-        && request.resource.data.status in ['active', 'inactive', 'archived'];
+        && request.resource.data.status in ['active', 'inactive', 'archived']
+        && ((packageDurationDays == null
+          && !request.resource.data.keys().hasAny(['procedures', 'otherProcedureName', 'otherProcedureDays'])
+          && request.resource.data.price is number
+          && request.resource.data.price >= 0
+          && ((durationMinutes == null && durationUnit == null)
+            || (durationMinutes is int
+              && durationMinutes > 0
+              && durationUnit in ['minutes', 'hours', 'days'])))
+        || (packageDurationDays in [7, 10, 14, 21, 28, 35]
+          && !request.resource.data.keys().hasAny(['price', 'durationMinutes', 'durationUnit'])
+          && procedures is map
+          && procedures.keys().hasOnly([
+            'headMassage', 'hairPack', 'faceMassage', 'facePack',
+            'fullBodyMassage', 'fullBodyPack', 'podiKizhi', 'narangaKizhi',
+            'elaKizhi', 'njavaraKizhi', 'njavaraTheppu', 'njavaraFacial',
+            'vethuKuli', 'thakraDhara', 'ksheeraDhara', 'tailaDhara',
+            'anjanam', 'dhoomapanam', 'keshaDhoopanam', 'yoniDhoopanam',
+            'abdominalBinding'
+          ])
+          && (procedures.keys().size() > 0 || otherProcedureName != null)
+          && validPackageProcedureDays(procedures, packageDurationDays, 'headMassage')
+          && validPackageProcedureDays(procedures, packageDurationDays, 'hairPack')
+          && validPackageProcedureDays(procedures, packageDurationDays, 'faceMassage')
+          && validPackageProcedureDays(procedures, packageDurationDays, 'facePack')
+          && validPackageProcedureDays(procedures, packageDurationDays, 'fullBodyMassage')
+          && validPackageProcedureDays(procedures, packageDurationDays, 'fullBodyPack')
+          && validPackageProcedureDays(procedures, packageDurationDays, 'podiKizhi')
+          && validPackageProcedureDays(procedures, packageDurationDays, 'narangaKizhi')
+          && validPackageProcedureDays(procedures, packageDurationDays, 'elaKizhi')
+          && validPackageProcedureDays(procedures, packageDurationDays, 'njavaraKizhi')
+          && validPackageProcedureDays(procedures, packageDurationDays, 'njavaraTheppu')
+          && validPackageProcedureDays(procedures, packageDurationDays, 'njavaraFacial')
+          && validPackageProcedureDays(procedures, packageDurationDays, 'vethuKuli')
+          && validPackageProcedureDays(procedures, packageDurationDays, 'thakraDhara')
+          && validPackageProcedureDays(procedures, packageDurationDays, 'ksheeraDhara')
+          && validPackageProcedureDays(procedures, packageDurationDays, 'tailaDhara')
+          && validPackageProcedureDays(procedures, packageDurationDays, 'anjanam')
+          && validPackageProcedureDays(procedures, packageDurationDays, 'dhoomapanam')
+          && validPackageProcedureDays(procedures, packageDurationDays, 'keshaDhoopanam')
+          && validPackageProcedureDays(procedures, packageDurationDays, 'yoniDhoopanam')
+          && validPackageProcedureDays(procedures, packageDurationDays, 'abdominalBinding')
+          && ((otherProcedureName == null && otherProcedureDays == null)
+            || (otherProcedureName is string
+              && otherProcedureName.size() >= 2
+              && otherProcedureName.size() <= 100
+              && otherProcedureDays is int
+              && otherProcedureDays >= 1
+              && otherProcedureDays <= packageDurationDays))));
+    }
+
+    function validPackageProcedureDays(procedures, packageDurationDays, procedureId) {
+      return !procedures.keys().hasAny([procedureId])
+        || (procedures[procedureId] is int
+          && procedures[procedureId] >= 1
+          && procedures[procedureId] <= packageDurationDays);
     }
 
     function isBootstrapAdminIdentity() {
@@ -197,7 +318,7 @@ service cloud.firestore {
     }
 
     function isAuditedModule(module) {
-      return module in ['users', 'hospitals', 'services', 'bookings', 'hospitalCapacity'];
+      return module in ['users', 'hospitals', 'consultants', 'services', 'bookings', 'hospitalCapacity'];
     }
 
     function hasLinkedAudit(module, recordId) {
@@ -228,7 +349,8 @@ service cloud.firestore {
       let action = linkedAuditAction();
       return (action == 'update'
           && changed.hasOnly([
-            'name', 'description', 'email', 'phone', 'address', 'city', 'state',
+            'name', 'description', 'email', 'phone', 'hospitalPhone1', 'hospitalPhone2',
+            'address', 'city', 'district', 'state',
             'imageUrl', 'imageUrls', 'ayursargaRating', 'ayursargaReviewNote',
             'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies', 'locationUrl',
             'commissionPercentage', 'updatedAt', 'updatedBy', 'lastAuditId'
@@ -250,35 +372,56 @@ service cloud.firestore {
           && request.resource.data.contractGeneratedBy == request.auth.uid
           && changed.hasOnly([
             'contractStatus', 'contractGeneratedAt', 'contractGeneratedBy',
-            'contractSignedAt', 'contractSignedBy', 'contractUrl', 'activatedAt', 'activatedBy',
+            'contractSignedAt', 'contractSignedBy', 'contractUrl',
+            'contractSignedAt2', 'contractSignedBy2', 'contractUrl2', 'activatedAt', 'activatedBy',
             'updatedAt', 'updatedBy', 'lastAuditId'
           ]))
         || (action == 'contract_signed'
           && resource.data.status == 'pending'
-          && resource.data.contractStatus == 'generated'
+          && resource.data.contractStatus in ['generated', 'signed']
           && request.resource.data.status == 'pending'
           && request.resource.data.contractStatus == 'signed'
-          && request.resource.data.contractSignedAt == request.time
-          && request.resource.data.contractSignedBy == request.auth.uid
+          && request.resource.data.contractSignedAt
+            == (resource.data.contractSignedAt == null ? request.time : resource.data.contractSignedAt)
+          && request.resource.data.contractSignedBy
+            == (resource.data.contractSignedBy == null ? request.auth.uid : resource.data.contractSignedBy)
+          && request.resource.data.contractUrl is string
+          && request.resource.data.contractUrl.size() > 8
+          && request.resource.data.contractUrl.size() <= 500
+          && request.resource.data.contractUrl.matches('https?://.+')
+          && request.resource.data.contractSignedAt2
+            == (resource.data.get('contractSignedAt2', null) == null ? request.time : resource.data.contractSignedAt2)
+          && request.resource.data.contractSignedBy2
+            == (resource.data.get('contractSignedBy2', null) == null ? request.auth.uid : resource.data.contractSignedBy2)
+          && request.resource.data.contractUrl2 is string
+          && request.resource.data.contractUrl2.size() > 8
+          && request.resource.data.contractUrl2.size() <= 500
+          && request.resource.data.contractUrl2.matches('https?://.+')
           && changed.hasOnly([
-            'contractStatus', 'contractSignedAt', 'contractSignedBy',
+            'contractStatus', 'contractSignedAt', 'contractSignedBy', 'contractUrl',
+            'contractSignedAt2', 'contractSignedBy2', 'contractUrl2',
             'updatedAt', 'updatedBy', 'lastAuditId'
           ]))
         || (action == 'hospital_activated'
           && resource.data.status in ['pending', 'inactive']
           && resource.data.contractStatus == 'signed'
           && resource.data.contractSignedAt != null
+          && resource.data.get('contractSignedAt2', null) != null
+          && resource.data.contractUrl is string
+          && resource.data.contractUrl.size() > 8
+          && resource.data.contractUrl.size() <= 500
+          && resource.data.contractUrl.matches('https?://.+')
+          && resource.data.contractUrl2 is string
+          && resource.data.contractUrl2.size() > 8
+          && resource.data.contractUrl2.size() <= 500
+          && resource.data.contractUrl2.matches('https?://.+')
           && request.resource.data.status == 'active'
           && request.resource.data.isPublic == true
           && request.resource.data.contractStatus == 'signed'
-          && request.resource.data.contractUrl is string
-          && request.resource.data.contractUrl.size() > 8
-          && request.resource.data.contractUrl.size() <= 500
-          && request.resource.data.contractUrl.matches('https?://.+')
           && request.resource.data.activatedAt == request.time
           && request.resource.data.activatedBy == request.auth.uid
           && changed.hasOnly([
-            'status', 'isPublic', 'contractUrl', 'activatedAt', 'activatedBy',
+            'status', 'isPublic', 'activatedAt', 'activatedBy',
             'updatedAt', 'updatedBy', 'lastAuditId'
           ]))
         || (action == 'archive'
@@ -389,6 +532,7 @@ service cloud.firestore {
       allow create: if isAdmin()
         && hasExactHospitalFields()
         && hasValidRequiredHospitalFields()
+        && hasRequiredHospitalContactFields()
         && request.resource.data.status == 'pending'
         && request.resource.data.isPublic == false
         && request.resource.data.contractStatus == 'not_generated'
@@ -397,6 +541,9 @@ service cloud.firestore {
         && request.resource.data.contractSignedAt == null
         && request.resource.data.contractSignedBy == null
         && request.resource.data.contractUrl == null
+        && request.resource.data.contractSignedAt2 == null
+        && request.resource.data.contractSignedBy2 == null
+        && request.resource.data.contractUrl2 == null
         && request.resource.data.activatedAt == null
         && request.resource.data.activatedBy == null
         && request.resource.data.createdAt == request.time
@@ -415,11 +562,48 @@ service cloud.firestore {
           hasOperationalHospitalAccess(hospitalId)
           && hasValidHospitalProfileFields()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'name', 'description', 'email', 'phone', 'address', 'city', 'state',
+            'name', 'description', 'email', 'phone', 'hospitalPhone1', 'hospitalPhone2',
+            'address', 'city', 'district', 'state',
             'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies',
             'updatedAt', 'updatedBy', 'lastAuditId'
           ])
         ));
+      allow delete: if false;
+    }
+
+    match /consultants/{consultantId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && hasValidConsultantFields()
+        && request.resource.data.employeeId == consultantId
+        && request.resource.data.status == 'active'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.archivedAt == null
+        && request.resource.data.archivedBy == null
+        && hasCreateAudit('consultants', consultantId);
+      allow update: if isAdmin()
+        && hasValidConsultantFields()
+        && hasLinkedAudit('consultants', consultantId)
+        && request.resource.data.employeeId == resource.data.employeeId
+        && request.resource.data.employeeSequence == resource.data.employeeSequence
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.archivedAt == resource.data.archivedAt
+        && request.resource.data.archivedBy == resource.data.archivedBy
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid
+        && ((linkedAuditAction() == 'update'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'name', 'email', 'contactNo', 'whatsappNo', 'qualification',
+            'yearsExperience', 'lastWorkedCompany', 'address', 'emergencyContactNo',
+            'updatedAt', 'updatedBy', 'lastAuditId'
+          ])) || (linkedAuditAction() == 'status_change'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'updatedAt', 'updatedBy', 'lastAuditId'
+          ])));
       allow delete: if false;
     }
 
@@ -429,10 +613,6 @@ service cloud.firestore {
         || (resource.data.status == 'active' && isApprovedHospital(resource.data.hospitalId));
       allow create: if (isAdmin() || hasOperationalHospitalAccess(request.resource.data.hospitalId))
         && hasValidServiceFields()
-        && ((request.resource.data.durationMinutes == null
-            && request.resource.data.get('durationUnit', null) == null)
-          || (request.resource.data.durationMinutes != null
-            && request.resource.data.get('durationUnit', null) != null))
         && request.resource.data.createdAt == request.time
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.updatedAt == request.time
@@ -505,7 +685,7 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/services/$(request.resource.data.serviceId)).data.status
           == 'active'
         && request.resource.data.servicePrice
-          == get(/databases/$(database)/documents/services/$(request.resource.data.serviceId)).data.price
+          == get(/databases/$(database)/documents/services/$(request.resource.data.serviceId)).data.get('price', 0)
         && request.resource.data.commissionPercentage
           == get(/databases/$(database)/documents/hospitals/$(request.resource.data.hospitalId)).data.commissionPercentage
         && request.resource.data.estimatedCommission
@@ -552,7 +732,7 @@ service cloud.firestore {
 
     match /hospitalCapacity/{hospitalId} {
       allow read: if isAdmin() || hasOperationalHospitalAccess(hospitalId);
-      allow create: if hasOperationalHospitalAccess(hospitalId)
+      allow create: if (isAdmin() || hasOperationalHospitalAccess(hospitalId))
         && request.resource.data.keys().hasOnly([
           'hospitalId', 'totalRooms', 'occupiedRooms', 'status',
           'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
@@ -573,7 +753,7 @@ service cloud.firestore {
         && request.resource.data.archivedAt == null
         && request.resource.data.archivedBy == null
         && hasCreateAudit('hospitalCapacity', hospitalId);
-      allow update: if hasOperationalHospitalAccess(hospitalId)
+      allow update: if (isAdmin() || hasOperationalHospitalAccess(hospitalId))
         && hasLinkedAudit('hospitalCapacity', hospitalId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'totalRooms', 'occupiedRooms', 'updatedAt', 'updatedBy', 'lastAuditId'

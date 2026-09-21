@@ -32,6 +32,7 @@ import { HospitalImageGallery } from "@/components/hospital/HospitalImageGallery
 import { getHospitalImageUrls, validateHospitalImageUrls } from "@/features/hospitals/images";
 import { validateHospitalLocationUrl } from "@/features/hospitals/location";
 import { CentreGuidelines } from "@/components/hospital/CentreGuidelines";
+import { AdminHospitalCapacity } from "@/components/admin/HospitalCapacity";
 
 function formatDate(value: unknown) {
   const date = toDate(value);
@@ -54,6 +55,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [contractUrl, setContractUrl] = useState("");
+  const [contractUrl2, setContractUrl2] = useState("");
   const [editing, setEditing] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<HospitalValidationErrors>({});
   const [imageError, setImageError] = useState<string | null>(null);
@@ -65,6 +67,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     setLoading(true);
     setHospital(null);
     setContractUrl("");
+    setContractUrl2("");
     const record = await getHospital(hospitalId);
     if (record?.status === "archived") {
       setHospital(null);
@@ -74,6 +77,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     }
     setHospital(record);
     setContractUrl(record?.contractUrl ?? "");
+    setContractUrl2(record?.contractUrl2 ?? "");
     setAssessmentRating(record?.ayursargaRating ?? null);
     setLoading(false);
     if (!record) setError("We could not find this hospital. Return to the hospital list and choose another record.");
@@ -110,9 +114,9 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   async function confirmPendingAction() {
     if (!hospital || !pendingAction) return;
     if (pendingAction === "archive") await runAction((record) => archiveHospital(record.id, record), "The hospital has been removed from the normal list. Its details and history are still safely stored.");
-    if (pendingAction === "sign") await runAction((record) => confirmHospitalContractSigning(record.id, record), "The signed contract has been confirmed. Add its URL to activate the hospital.");
+    if (pendingAction === "sign") await runAction((record) => confirmHospitalContractSigning(record.id, record, contractUrl, contractUrl2), "Both signed contracts have been confirmed. The hospital can now be activated.");
     if (pendingAction === "activate") await runAction(async (record) => {
-      await activateHospital(record.id, record, contractUrl);
+      await activateHospital(record.id, record);
       await sendHospitalLoginSetup(record.id);
     }, `The hospital is active. A secure password setup link was sent to ${hospital.email}.`);
     if (pendingAction === "setup") await runAction(async (record) => {
@@ -168,8 +172,11 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         name: validation.data.name,
         email: validation.data.email,
         phone: validation.data.phone,
+        hospitalPhone1: validation.data.hospitalPhone1,
+        hospitalPhone2: validation.data.hospitalPhone2,
         address: validation.data.address,
         city: validation.data.city,
+        district: validation.data.district,
         state: validation.data.state,
         description: validation.data.description,
         imageUrls: images.imageUrls,
@@ -229,13 +236,17 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   const signedAt = hospital && contractStatus === "signed" && isOnOrAfter(hospital.contractSignedAt, hospital.createdAt)
     ? hospital.contractSignedAt
     : null;
-  const activatedAt = hospital && hospital.status === "active" && signedAt && isOnOrAfter(hospital.activatedAt, signedAt)
+  const signedAt2 = hospital && contractStatus === "signed" && isOnOrAfter(hospital.contractSignedAt2, hospital.createdAt)
+    ? hospital.contractSignedAt2
+    : null;
+  const contractsReady = Boolean(signedAt && signedAt2 && hospital?.contractUrl && hospital?.contractUrl2);
+  const activatedAt = hospital && hospital.status === "active" && signedAt && signedAt2 && isOnOrAfter(hospital.activatedAt, signedAt2)
     ? hospital.activatedAt
     : null;
   const actionDialog = pendingAction === "archive"
     ? { title: "Remove this hospital?", message: "It will be hidden from normal application views. Its protected history will remain stored.", confirmLabel: "Remove hospital", tone: "danger" as const }
     : pendingAction === "sign"
-      ? { title: "Confirm signed contract?", message: "Confirm that the signed contract has been received from this hospital.", confirmLabel: "Confirm contract", tone: "default" as const }
+      ? { title: "Confirm both signed contracts?", message: "Confirm that both signed contract documents and their links have been received and checked.", confirmLabel: "Confirm contracts", tone: "default" as const }
       : pendingAction === "activate"
         ? { title: hospital?.status === "inactive" ? "Reactivate this hospital?" : "Activate this hospital?", message: "The hospital will become visible to consumers and receive a secure login setup email.", confirmLabel: hospital?.status === "inactive" ? "Reactivate hospital" : "Activate hospital", tone: "default" as const }
         : pendingAction === "setup"
@@ -258,7 +269,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
           <HospitalImageGallery imageUrls={getHospitalImageUrls(hospital)} hospitalName={hospital.name} />
           <p>{hospital.description || "No description provided."}</p>
           <div className="portal-card-meta">
-            <span>{hospital.email}</span><span>{hospital.phone}</span><span>{hospital.city}, {hospital.state}</span><span>Commission {hospital.commissionPercentage}%</span>
+            <span>{hospital.email}</span><span>Owner WhatsApp: {hospital.phone}</span><span>Hospital Phone 1: {hospital.hospitalPhone1 || "Not added"}</span>{hospital.hospitalPhone2 && <span>Hospital Phone 2: {hospital.hospitalPhone2}</span>}<span>{hospital.city}{hospital.district ? `, ${hospital.district}` : ""}, {hospital.state}</span><span>Commission {hospital.commissionPercentage}%</span>
           </div>
           <p>{hospital.address}</p>
           {hospital.status !== "archived" && <div className="portal-actions">
@@ -268,33 +279,43 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         </>}
       </article>
 
-      <CentreGuidelines hospital={hospital} />
-
       <article className="portal-card portal-contract-card">
         <div className="portal-row-heading"><h2>Contract and approval</h2><span className="portal-status" data-status={contractStatus}>{formatStatus(contractStatus)}</span></div>
         <div className="portal-date-grid">
           <div><span>Created date</span><strong>{formatDate(hospital.createdAt)}</strong></div>
           <div><span>Contract generated</span><strong>{formatDate(generatedAt)}</strong></div>
-          <div><span>Signed date</span><strong>{formatDate(signedAt)}</strong></div>
+          <div><span>Contract 1 signed date</span><strong>{formatDate(signedAt)}</strong></div>
+          <div><span>Contract 2 signed date</span><strong>{formatDate(signedAt2)}</strong></div>
           <div><span>Active date</span><strong>{formatDate(activatedAt)}</strong></div>
         </div>
-        {hospital.contractUrl && <p>Signed contract: <a className="portal-inline-link" href={hospital.contractUrl} target="_blank" rel="noreferrer">View contract</a></p>}
-        {hospital.status === "pending" && contractStatus === "signed" && <label className="portal-contract-url">Signed contract URL *<input type="url" value={contractUrl} onChange={(event) => setContractUrl(event.target.value)} placeholder="https://" required /></label>}
+        {hospital.contractUrl && <p>Signed contract 1: <a className="portal-inline-link" href={hospital.contractUrl} target="_blank" rel="noreferrer">View contract 1</a></p>}
+        {hospital.contractUrl2 && <p>Signed contract 2: <a className="portal-inline-link" href={hospital.contractUrl2} target="_blank" rel="noreferrer">View contract 2</a></p>}
+        {hospital.status === "pending" && contractStatus !== "not_generated" && !contractsReady && <div className="portal-form portal-edit-form">
+          <label className="portal-contract-url">Signed contract 1 URL *<input type="url" value={contractUrl} onChange={(event) => setContractUrl(event.target.value)} placeholder="https://" required /></label>
+          <label className="portal-contract-url">Signed contract 2 URL *<input type="url" value={contractUrl2} onChange={(event) => setContractUrl2(event.target.value)} placeholder="https://" required /></label>
+        </div>}
         <div className="portal-actions">
           {hospital.status === "pending" && <button className="portal-button secondary" type="button" disabled={busy} onClick={generateContract}>{contractStatus === "not_generated" ? "Generate Contract PDF" : "View / Regenerate Contract PDF"}</button>}
-          {hospital.status === "pending" && contractStatus === "generated" && <button className="portal-button secondary" type="button" disabled={busy} onClick={() => setPendingAction("sign")}>Confirm signed contract</button>}
-          {(hospital.status === "pending" || hospital.status === "inactive") && contractStatus === "signed" && <button className="portal-button" type="button" disabled={busy} onClick={() => {
-            if (!contractUrl.trim()) {
-              setError("Paste the signed contract URL below before activating the hospital.");
+          {hospital.status === "pending" && contractStatus !== "not_generated" && !contractsReady && <button className="portal-button secondary" type="button" disabled={busy} onClick={() => {
+            if (!contractUrl.trim() || !contractUrl2.trim()) {
+              setError("Add both signed contract URLs before confirming the contracts.");
               return;
             }
-            setPendingAction("activate");
-          }}>{hospital.status === "inactive" ? "Reactivate hospital" : "Activate hospital"}</button>}
+            setPendingAction("sign");
+          }}>Confirm signed contracts</button>}
+          {(hospital.status === "pending" || hospital.status === "inactive") && contractStatus === "signed" && contractsReady && <button className="portal-button" type="button" disabled={busy} onClick={() => setPendingAction("activate")}>{hospital.status === "inactive" ? "Reactivate hospital" : "Activate hospital"}</button>}
           {hospital.status === "active" && <button className="portal-button" type="button" disabled={busy} onClick={() => setPendingAction("setup")}>Send login setup / reset</button>}
           {hospital.status === "active" && <button className="portal-button secondary" type="button" disabled={busy} onClick={() => setPendingAction("deactivate")}>Deactivate hospital</button>}
         </div>
-        <p>Start by generating the contract. After the hospital returns the signed copy, confirm it here and paste the signed contract URL. You can then activate the hospital for consumers.</p>
+        <p>Generate the contract first. Add and confirm both signed contract links after the hospital returns them. Activation becomes available only after both contracts and signing dates are recorded.</p>
       </article>
+
+      <AdminHospitalPackages hospitalId={hospital.id} />
+
+      <AdminHospitalCapacity hospitalId={hospital.id} />
+
+      <CentreGuidelines hospital={hospital} />
+
       {hospital.status === "active" && <article className="portal-card portal-assessment-card">
         <div className="portal-row-heading"><h2>Public Ayursarga assessment</h2><span className="portal-status" data-status="active">Public</span></div>
         <p>Use this for Ayursarga&apos;s own assessment and editorial note. It is identified publicly as Ayursarga content, not as verified patient feedback.</p>
@@ -329,7 +350,6 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
           <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save public assessment"}</button></div>
         </form>
       </article>}
-      <AdminHospitalPackages hospitalId={hospital.id} />
     </>}
     <PortalDialog open={Boolean(pendingAction)} title={actionDialog.title} message={actionDialog.message} tone={actionDialog.tone} confirmLabel={actionDialog.confirmLabel} busy={busy} onCancel={() => setPendingAction(null)} onConfirm={() => void confirmPendingAction()} />
   </PortalShell>;

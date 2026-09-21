@@ -32,6 +32,7 @@ export const ROUTES = {
   admin: {
     home: "/admin",
     hospitals: "/admin/hospitals",
+    consultants: "/admin/consultants",
     users: "/admin/users",
     bookings: "/admin/bookings",
     audits: "/admin/audits",

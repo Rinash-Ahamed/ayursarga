@@ -465,6 +465,13 @@ main>.dark-section{
 .public-centre-services article>div:last-child>strong{ color:var(--forest); font-size:15px; }
 .public-centre-services a{ padding:10px 13px; border-radius:100px; background:var(--forest); color:#fff; font-size:9px; font-weight:750; letter-spacing:.05em; text-align:center; text-transform:uppercase; }
 .public-centre-services a:hover{ background:var(--gold); color:var(--forest); }
+.public-centre-package{ align-items:start!important; }
+.public-centre-package-copy{ min-width:0; }
+.public-package-toggle{ margin-top:13px; padding:0 0 3px; border:0; border-bottom:1px solid rgba(31,61,43,.35); background:transparent; color:var(--forest); font:inherit; font-size:10px; font-weight:750; cursor:pointer; }
+.public-package-toggle:hover,.public-package-toggle:focus-visible{ border-bottom-color:var(--gold); color:var(--clay-dark); }
+.public-package-procedures{ margin-top:14px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; list-style:none; }
+.public-package-procedures li{ padding:9px 11px; display:flex; align-items:center; justify-content:space-between; gap:12px; border:1px solid rgba(31,61,43,.14); border-radius:10px; background:rgba(31,61,43,.035); color:var(--forest); font-size:10px; line-height:1.4; }
+.public-package-procedures strong{ flex:none; color:var(--clay-dark); font-size:9px; }
 .public-centre-inline-error{ margin-top:18px; padding:14px; border-radius:12px; background:rgba(138,75,47,.08); color:var(--rust); font-size:11px; }
 .public-centre-facility-groups{ margin-top:22px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
 .public-centre-facility-groups>section{ min-width:0; padding:18px; border:1px solid rgba(31,61,43,.16); border-radius:16px; background:rgba(31,61,43,.025); }
@@ -526,6 +533,7 @@ main>.dark-section{
   .public-centre-context a{ justify-self:start; }
   .public-centre-services article{ grid-template-columns:1fr; }
   .public-centre-services article>div:last-child{ justify-items:start; }
+  .public-package-procedures{ grid-template-columns:1fr; }
   .public-centre-rules-section ol{ grid-template-columns:1fr; }
   .public-centre-facility-groups{ grid-template-columns:1fr; }
 }

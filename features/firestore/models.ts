@@ -1,6 +1,5 @@
 import type { Timestamp } from "firebase/firestore";
 import type { PortalRole, UserStatus } from "@/features/auth/contracts";
-import type { DurationUnit } from "@/utils/duration";
 
 type RecordStatus = "active" | "inactive" | "pending" | "archived";
 
@@ -47,8 +46,11 @@ export type HospitalDocument = AuditedDocument & {
   description: string;
   email: string;
   phone: string;
+  hospitalPhone1?: string;
+  hospitalPhone2?: string | null;
   address: string;
   city: string;
+  district?: string;
   state: string;
   imageUrl: string | null;
   imageUrls?: string[];
@@ -68,6 +70,9 @@ export type HospitalDocument = AuditedDocument & {
   contractSignedAt: Timestamp | null;
   contractSignedBy: string | null;
   contractUrl: string | null;
+  contractSignedAt2?: Timestamp | null;
+  contractSignedBy2?: string | null;
+  contractUrl2?: string | null;
   activatedAt: Timestamp | null;
   activatedBy: string | null;
 };
@@ -76,9 +81,13 @@ export type ServiceDocument = AuditedDocument & {
   hospitalId: string;
   name: string;
   description: string;
-  price: number;
-  durationMinutes: number | null;
-  durationUnit?: DurationUnit | null;
+  price?: number;
+  durationMinutes?: number | null;
+  durationUnit?: "minutes" | "hours" | "days" | null;
+  packageDurationDays?: number;
+  procedures?: Record<string, number>;
+  otherProcedureName?: string | null;
+  otherProcedureDays?: number | null;
   status: "active" | "inactive" | "archived";
 };
 
@@ -124,6 +133,21 @@ export type HospitalCapacityDocument = AuditedDocument & {
   totalRooms: number;
   occupiedRooms: number;
   status: "active" | "archived";
+};
+
+export type ConsultantDocument = AuditedDocument & {
+  employeeId: string;
+  employeeSequence: number;
+  name: string;
+  email: string;
+  contactNo: string;
+  whatsappNo: string;
+  qualification: string;
+  yearsExperience: number;
+  lastWorkedCompany: string;
+  address: string;
+  emergencyContactNo: string;
+  status: "active" | "inactive";
 };
 
 export type HospitalStaffDocument = AuditedDocument & {

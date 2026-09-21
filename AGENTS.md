@@ -72,8 +72,9 @@ implementation work unless the project owner explicitly changes a decision.
   Consumer or Hospital components. This includes commission management,
   contract generation/signing/URLs, activation, public visibility, audit data,
   archive controls, and platform settings.
-- The Hospital Profile may edit only hospital name, official email, phone,
-  city/locality, state, complete address, optional description, the default
+- The Hospital Profile may edit only hospital name, official email, owner
+  WhatsApp number, required primary hospital phone, optional secondary hospital
+  phone, city/locality, district, state, complete address, optional description, the default
   centre-guideline wording, additional centre rules, facilities, and
   centre-specific legal/policy information. Hospital image links and the
   validated Google Maps or OpenStreetMap location link are Admin-managed.
@@ -85,6 +86,9 @@ implementation work unless the project owner explicitly changes a decision.
   workflow, signed-contract URL, visibility, activation, and archive/restore.
 - The Admin Users page keeps Consumer and Hospital accounts in separate
   role-filtered views. Admin accounts are not mixed into either list.
+- Our Consultants is an Admin-only operational collection. Consultant records
+  do not create authentication accounts. Their IDs use the sequential `AS001`
+  format, and creates, profile edits, and Active/Inactive changes are audited.
 - The accepted current scope does not require mirrored public/private hospital
   collections because Firebase project access is controlled by trusted Admins.
   Do not introduce that migration casually. If future requirements demand
@@ -94,12 +98,13 @@ implementation work unless the project owner explicitly changes a decision.
 
 ## Hospital and booking workflow
 
-- New hospitals start `pending` and private. Description is optional; required
-  creation fields are hospital name, official email, phone, city/locality,
-  state, complete address, and commission percentage.
+- New hospitals start `pending` and private. Description and the secondary
+  hospital phone are optional; required creation fields are hospital name,
+  official email, owner WhatsApp number, primary hospital phone, city/locality,
+  district, state, complete address, and commission percentage.
 - Activation requires contract generation, signed-contract confirmation, and a
-  valid signed-contract URL. Preserve created, signed, and activated dates and
-  audit each transition.
+  valid URL and signing date for each of the two required contracts. Preserve
+  created, both signed, and activated dates and audit each transition.
 - Consumer booking creation snapshots service price and commission values for
   historical consistency. It also snapshots the Consumer's name, Google email,
   phone, optional address, preferred care period, and bystander count so only
@@ -112,7 +117,12 @@ implementation work unless the project owner explicitly changes a decision.
   direct `started` → `completed` option), and every transition is audited.
 - Hospital room occupancy belongs in the single audited
   `hospitalCapacity/{hospitalId}` document. It is internal to Admin and the
-  assigned Hospital; do not copy it into public Hospital data.
+  assigned Hospital, and either role may update its room totals from its own
+  protected interface. Do not copy it into public Hospital data.
+- Hospital services are duration-based packages using 7, 10, 14, 21, 28, or
+  35 days. Each selected procedure stores its included day count in a keyed map
+  so it cannot be duplicated within one package; the same procedure may appear
+  in multiple packages. Package deletion remains an audited archive action.
 - Active hospitals may have an Admin-controlled `ayursargaRating` and
   `ayursargaReviewNote`. Public UI must identify both as Ayursarga editorial
   content and must never present them as verified patient feedback. Hospitals

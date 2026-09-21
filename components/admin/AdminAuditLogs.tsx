@@ -28,6 +28,7 @@ function areaLabel(module: string) {
   const labels: Record<string, string> = {
     users: "Users",
     hospitals: "Hospitals",
+    consultants: "Our Consultants",
     services: "Services",
     bookings: "Bookings",
   };

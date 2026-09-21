@@ -5,6 +5,7 @@ import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import { COLLECTIONS } from "@/constants/firestore";
 import { firestoreTimestamp, readDocument } from "@/services/firestore/firestoreService";
 import { createAuditedDocument, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
+import type { PortalRole } from "@/features/auth/contracts";
 
 export type HospitalCapacityInput = {
   totalRooms: number;
@@ -30,6 +31,7 @@ export function saveHospitalCapacity(
   hospitalId: string,
   input: HospitalCapacityInput,
   previous?: DocumentRecord<HospitalCapacityDocument> | null,
+  actorRole: Extract<PortalRole, "admin" | "hospital"> = "hospital",
 ) {
   validateCapacity(input);
   const actorId = getAuditActorId();
@@ -44,11 +46,11 @@ export function saveHospitalCapacity(
       updatedBy: actorId,
       archivedAt: null,
       archivedBy: null,
-    }, { action: "create", actorRole: "hospital" }, hospitalId);
+    }, { action: "create", actorRole }, hospitalId);
   }
   return updateAuditedDocument(COLLECTIONS.hospitalCapacity, hospitalId, {
     ...input,
     updatedAt: firestoreTimestamp.server(),
     updatedBy: actorId,
-  }, { action: "update", actorRole: "hospital" }, previous);
+  }, { action: "update", actorRole }, previous);
 }
