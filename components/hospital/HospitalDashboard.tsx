@@ -62,8 +62,11 @@ export function HospitalDashboard() {
     if (!hospitalId) return;
     setSaving(true); setError(null); setMessage(null);
     try {
-      if (!totalRooms.trim() || !occupiedRooms.trim()) throw new Error("Enter both total and occupied treatment rooms.");
-      const input = { totalRooms: Number(totalRooms), occupiedRooms: Number(occupiedRooms) };
+      const normalizedTotal = totalRooms.trim() || "0";
+      const normalizedOccupied = occupiedRooms.trim() || "0";
+      setTotalRooms(normalizedTotal);
+      setOccupiedRooms(normalizedOccupied);
+      const input = { totalRooms: Number(normalizedTotal), occupiedRooms: Number(normalizedOccupied) };
       await saveHospitalCapacity(hospitalId, input, capacity);
       const saved = await getHospitalCapacity(hospitalId);
       setCapacity(saved);
@@ -92,18 +95,18 @@ export function HospitalDashboard() {
 
     <section className="portal-card portal-capacity-card" aria-labelledby="room-availability-title">
       <div className="portal-row-heading">
-        <div><span className="portal-eyebrow">Treatment occupancy</span><h2 id="room-availability-title">Room availability</h2></div>
+        <div><h2 id="room-availability-title">Room availability</h2></div>
         <span className="portal-status" data-status={available > 0 ? "active" : "pending"}>{available} available</span>
       </div>
       <form className="portal-capacity-form" onSubmit={saveCapacity} noValidate>
         <div className="portal-date-grid">
           <label className="portal-capacity-metric">
-            <span>Total rooms</span>
-            <input aria-label="Total rooms" type="number" min="0" max="10000" step="1" value={totalRooms} onChange={(event) => setTotalRooms(event.target.value)} required />
+            <span className="portal-capacity-metric-heading"><span>Total rooms</span><small>Edit</small></span>
+            <span className="portal-capacity-metric-value"><input aria-label="Total rooms" type="number" min="0" max="10000" step="1" value={totalRooms} onChange={(event) => setTotalRooms(event.target.value)} onBlur={() => setTotalRooms((value) => value.trim() || "0")} /><span>rooms</span></span>
           </label>
           <label className="portal-capacity-metric">
-            <span>Occupied</span>
-            <input aria-label="Occupied rooms" type="number" min="0" max={Math.max(total, 0)} step="1" value={occupiedRooms} onChange={(event) => setOccupiedRooms(event.target.value)} required />
+            <span className="portal-capacity-metric-heading"><span>Occupied</span><small>Edit</small></span>
+            <span className="portal-capacity-metric-value"><input aria-label="Occupied rooms" type="number" min="0" max={Math.max(total, 0)} step="1" value={occupiedRooms} onChange={(event) => setOccupiedRooms(event.target.value)} onBlur={() => setOccupiedRooms((value) => value.trim() || "0")} /><span>rooms</span></span>
           </label>
           <div><span>Available</span><strong>{available}</strong></div>
           <div><span>Occupancy</span><strong>{occupancy}%</strong></div>

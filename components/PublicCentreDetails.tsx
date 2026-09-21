@@ -9,6 +9,7 @@ import { listPublicHospitalServices } from "@/services/hospitals/publicHospitalS
 import { getHospitalImageUrls } from "@/features/hospitals/images";
 import { resolveCentreGuidelines } from "@/features/hospitals/guidelines";
 import { groupHospitalFacilities } from "@/features/hospitals/facilities";
+import { FacilityIcon } from "@/components/icons/FacilityIcon";
 import { addCentreSearchContext, formatBystanders, type CentreSearchContext } from "@/features/hospitals/searchContext";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { formatCurrency } from "@/utils/currency";
@@ -136,11 +137,11 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
             {hasFacilities ? <div className="public-centre-facility-groups">
               {facilityGroups.map((group) => <section key={group.title}>
                 <h3>{group.title}</h3>
-                <ul className="public-centre-facilities">{group.options.map((facility) => <li key={facility}>{facility}</li>)}</ul>
+                <ul className="public-centre-facilities">{group.options.map((facility) => <li key={facility}><FacilityIcon facility={facility} /><span>{facility}</span></li>)}</ul>
               </section>)}
               {customFacilities.length > 0 && <section>
                 <h3>Other facilities</h3>
-                <ul className="public-centre-facilities">{customFacilities.map((facility, index) => <li key={`${facility}-${index}`}>{facility}</li>)}</ul>
+                <ul className="public-centre-facilities">{customFacilities.map((facility, index) => <li key={`${facility}-${index}`}><FacilityIcon facility={facility} /><span>{facility}</span></li>)}</ul>
               </section>}
             </div> : <div className="public-centre-empty-note">This centre has not added its facilities yet. Contact the centre before requesting care if you need a particular facility.</div>}
           </section>
