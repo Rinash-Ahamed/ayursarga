@@ -342,6 +342,20 @@ service cloud.firestore {
       return getAfter(/databases/$(database)/documents/auditLogs/$(request.resource.data.lastAuditId)).data.action;
     }
 
+    function validAdminUserUpdate() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return linkedAuditAction() == 'archive'
+        && resource.data.role == 'consumer'
+        && resource.data.status != 'archived'
+        && request.resource.data.role == 'consumer'
+        && request.resource.data.status == 'archived'
+        && request.resource.data.archivedAt == request.time
+        && request.resource.data.archivedBy == request.auth.uid
+        && changed.hasOnly([
+          'status', 'archivedAt', 'archivedBy', 'updatedAt', 'updatedBy', 'lastAuditId'
+        ]);
+    }
+
     function validAdminHospitalUpdate() {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
       let action = linkedAuditAction();
@@ -492,7 +506,7 @@ service cloud.firestore {
       allow update: if hasLinkedAudit('users', userId)
         && request.resource.data.updatedAt == request.time
         && request.resource.data.updatedBy == request.auth.uid
-        && (isAdmin() || (
+        && ((isAdmin() && validAdminUserUpdate()) || (
           isDocumentOwner(userId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name', 'phone', 'address', 'privacyConsentAt', 'privacyConsentVersion',

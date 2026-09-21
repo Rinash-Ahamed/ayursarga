@@ -13,10 +13,12 @@ import {
   readDocument,
   readDocumentsByIds,
   runFilteredQuery,
+  type DocumentRecord,
   type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
 import {
   createAuditedDocument,
+  getArchiveMetadata,
   updateAuditedDocument,
 } from "@/services/firestore/auditService";
 
@@ -143,6 +145,19 @@ export function listUsers(role: "consumer" | "hospital", options: Pick<QueryPage
     sort: { field: "createdAt", direction: "desc" },
     ...options,
   });
+}
+
+export async function archiveConsumer(user: DocumentRecord<UserDocument>) {
+  if (user.role !== "consumer") throw new Error("Only consumer accounts can be removed from this list.");
+  if (user.status === "archived") return;
+  await updateAuditedDocument(
+    COLLECTIONS.users,
+    user.id,
+    { status: "archived", ...getArchiveMetadata() },
+    { action: "archive", actorRole: "admin" },
+    user,
+  );
+  clearUserProfileCache(user.id);
 }
 
 export async function getUserDisplayNames(uids: string[]) {

@@ -72,6 +72,9 @@ The preservation and audit design is documented in
 - Application code must never permanently delete operational Firestore data.
   Users, hospitals, services, bookings, and their history use archive/soft-delete
   metadata and remain available for audit and restoration.
+- Admin removal of a Consumer archives the Consumer profile and revokes active
+  application access while retaining the authentication identity, bookings,
+  and audit history.
 - Firestore client rules deny document deletion for active application
   collections. Audit logs are Admin-readable and cannot be changed through the
   client SDK. As an explicit platform-owner exception, an active Admin may use

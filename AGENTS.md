@@ -85,7 +85,11 @@ implementation work unless the project owner explicitly changes a decision.
   Pending/Active state, contract
   workflow, signed-contract URL, visibility, activation, and archive/restore.
 - The Admin Users page keeps Consumer and Hospital accounts in separate
-  role-filtered views. Admin accounts are not mixed into either list.
+  role-filtered views. Admin accounts are not mixed into either list. Removing
+  a Consumer from this page is an audited archive: it revokes active application
+  access and hides the profile from normal lists while preserving bookings and
+  historical records. It must never delete the Firebase Authentication account
+  or the Firestore user document.
 - Our Consultants is an Admin-only operational collection. Consultant records
   do not create authentication accounts. Their IDs use the sequential `AS001`
   format, and creates, profile edits, and Active/Inactive changes are audited.
