@@ -112,15 +112,11 @@ export function activateHospital(id: string, previous: DocumentData) {
   if (previous.contractStatus !== "signed" || !previous.contractSignedAt || !previous.contractSignedAt2 || !previous.contractUrl || !previous.contractUrl2) {
     throw new Error("Confirm both signed contracts before activating the hospital.");
   }
-  const actorId = getAuditActorId();
-  return updateAuditedDocument(COLLECTIONS.hospitals, id, {
-    status: "active",
-    isPublic: true,
-    activatedAt: firestoreTimestamp.server(),
-    activatedBy: actorId,
-    updatedAt: firestoreTimestamp.server(),
-    updatedBy: actorId,
-  }, { action: "hospital_activated", actorRole: "admin" }, previous);
+  return authorizedApiRequest<{ ok: true }>(`/api/admin/hospitals/${encodeURIComponent(id)}/activate`, {
+    method: "POST",
+    signedOutMessage: "Your Admin session has expired. Sign in again to activate the hospital.",
+    failureMessage: "We could not activate the hospital. Please try again.",
+  });
 }
 
 export function deactivateHospital(id: string, previous: DocumentData) {
