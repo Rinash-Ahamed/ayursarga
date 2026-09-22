@@ -285,8 +285,8 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
           <div><span>Contract 2 signed date</span><strong>{formatDate(signedAt2)}</strong></div>
           <div><span>Active date</span><strong>{formatDate(activatedAt)}</strong></div>
         </div>
-        {hospital.contractUrl && <p>Signed contract 1: <a className="portal-inline-link" href={hospital.contractUrl} target="_blank" rel="noreferrer">View contract 1</a></p>}
-        {hospital.contractUrl2 && <p>Signed contract 2: <a className="portal-inline-link" href={hospital.contractUrl2} target="_blank" rel="noreferrer">View contract 2</a></p>}
+        {hospital.contractUrl && <p>Signed contract 1: <a className="portal-inline-link" href={hospital.contractUrl} target="_blank" rel="noreferrer">View contract</a></p>}
+        {hospital.contractUrl2 && <p>Signed contract 2: <a className="portal-inline-link" href={hospital.contractUrl2} target="_blank" rel="noreferrer">View contract</a></p>}
         {hospital.status === "pending" && contractStatus !== "not_generated" && !contractsReady && <div className="portal-form portal-edit-form">
           <label className="portal-contract-url">Signed contract 1 URL *<input type="url" value={contractUrl} onChange={(event) => setContractUrl(event.target.value)} placeholder="https://" required /></label>
           <label className="portal-contract-url">Signed contract 2 URL *<input type="url" value={contractUrl2} onChange={(event) => setContractUrl2(event.target.value)} placeholder="https://" required /></label>
