@@ -85,8 +85,6 @@ function ConsultationIcon({ name }: { name: ConsultationIconName }) {
 
 export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (profile: GuidanceProfile | null) => void }) {
   const guidePanelRef = useRef<HTMLDivElement>(null);
-  const pathGridRef = useRef<HTMLDivElement>(null);
-  const restorePathGridPositionRef = useRef(false);
   const [selectedPath, setSelectedPath] = useState<WellnessPath | null>(null);
   const [step, setStep] = useState<GuideStep>(0);
   const [preferences, setPreferences] = useState<string[]>([]);
@@ -124,21 +122,6 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
       if (!panel) return;
       const navigationHeight = document.getElementById("site-nav")?.getBoundingClientRect().height ?? 0;
       const top = window.scrollY + panel.getBoundingClientRect().top - navigationHeight - 16;
-      window.scrollTo({ top: Math.max(0, top), behavior: reduceMotion ? "auto" : "smooth" });
-    });
-
-    return () => window.cancelAnimationFrame(frame);
-  }, [selectedPath, reduceMotion]);
-
-  useEffect(() => {
-    if (selectedPath || !restorePathGridPositionRef.current) return;
-    restorePathGridPositionRef.current = false;
-
-    const frame = window.requestAnimationFrame(() => {
-      const grid = pathGridRef.current;
-      if (!grid) return;
-      const navigationHeight = document.getElementById("site-nav")?.getBoundingClientRect().height ?? 0;
-      const top = window.scrollY + grid.getBoundingClientRect().top - navigationHeight - 16;
       window.scrollTo({ top: Math.max(0, top), behavior: reduceMotion ? "auto" : "smooth" });
     });
 
@@ -198,7 +181,6 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
   }
 
   function restart() {
-    restorePathGridPositionRef.current = true;
     setSelectedPath(null);
     resetAnswers();
   }
@@ -211,7 +193,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
         <p>Tell us what you&rsquo;re looking for, and we&rsquo;ll help you find the right care.</p>
       </div>
 
-      <AnimatePresence initial={false}>
+      <AnimatePresence initial={false} mode="popLayout">
         {selectedPath && <motion.div
           ref={guidePanelRef}
           id="wellness-guidance"
@@ -372,11 +354,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
             </motion.div>}
           </AnimatePresence>
         </motion.div>}
-      </AnimatePresence>
-
-      <AnimatePresence initial={false}>
         {(!selectedPath || step === 2) && <motion.div
-          ref={pathGridRef}
           className="path-grid wellness-path-grid"
           aria-label="Choose a wellness path"
           initial={reduceMotion ? false : { opacity: 0 }}

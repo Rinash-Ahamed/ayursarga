@@ -946,7 +946,7 @@ button{ cursor:pointer; }
 .path-card:hover .path-card-action>span{ transform:translateX(4px); }
 
 /* Combined wellness-path and personal-guidance experience */
-.wellness-guide-inner{ display:grid; }
+.wellness-guide-inner{ position:relative; display:grid; overflow-anchor:none; }
 .wellness-guide-heading{ max-width:820px; margin:0 auto; text-align:center; }
 .wellness-guide-heading .eyebrow{ margin-bottom:14px; }
 .wellness-guide-heading .section-title{ margin-bottom:7px; }
