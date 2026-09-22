@@ -94,7 +94,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     return () => window.clearTimeout(timeout);
   }, [reload]);
 
-  async function runAction(action: (record: DocumentRecord<HospitalDocument>) => Promise<void>, success: string) {
+  async function runAction(action: (record: DocumentRecord<HospitalDocument>) => Promise<unknown>, success: string) {
     if (!hospital || busy) return;
     setBusy(true);
     setError(null);
@@ -113,7 +113,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
 
   async function confirmPendingAction() {
     if (!hospital || !pendingAction) return;
-    if (pendingAction === "archive") await runAction((record) => archiveHospital(record.id, record), "The hospital has been removed from the normal list. Its details and history are still safely stored.");
+    if (pendingAction === "archive") await runAction((record) => archiveHospital(record.id), "The hospital has been removed from the normal list. Its details and history are still safely stored.");
     if (pendingAction === "sign") await runAction((record) => confirmHospitalContractSigning(record.id, record, contractUrl, contractUrl2), "Both signed contracts have been confirmed. The hospital can now be activated.");
     if (pendingAction === "activate") await runAction(async (record) => {
       await activateHospital(record.id, record);
@@ -122,14 +122,14 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     if (pendingAction === "setup") await runAction(async (record) => {
       await sendHospitalLoginSetup(record.id);
     }, `A secure password setup/reset link was sent to ${hospital.email}.`);
-    if (pendingAction === "deactivate") await runAction((record) => deactivateHospital(record.id, record), "The hospital is now inactive and hidden from consumers.");
+    if (pendingAction === "deactivate") await runAction((record) => deactivateHospital(record.id), "The hospital is now inactive and hidden from consumers.");
     setPendingAction(null);
   }
 
   function generateContract() {
     if (!hospital || busy) return;
     void runAction(async (record) => {
-      await recordHospitalContractGeneration(record.id, record);
+      await recordHospitalContractGeneration(record.id);
       const contract = buildHospitalContractPdf(record);
       const url = URL.createObjectURL(contract.blob);
       const link = document.createElement("a");
@@ -178,7 +178,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         description: validation.data.description,
         imageUrls: images.imageUrls,
         locationUrl: location.locationUrl,
-      }, hospital);
+      });
       await reload();
       setEditing(false);
       setFieldErrors({});
@@ -216,7 +216,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
       await updateHospital(hospital.id, {
         ayursargaRating: rating === null ? null : Math.round(rating * 10) / 10,
         ayursargaReviewNote: reviewNote || null,
-      }, hospital);
+      });
       await reload();
       setMessage("The public Ayursarga assessment has been updated.");
     } catch (caught) {

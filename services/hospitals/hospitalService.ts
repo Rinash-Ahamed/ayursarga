@@ -9,7 +9,7 @@ import {
   firestoreTimestamp, readDocument, runFilteredQuery,
   type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
-import { getArchiveMetadata, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
+import { getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
 import { authorizedApiRequest } from "@/services/api/client";
 
 export { listPublicHospitals } from "@/services/hospitals/publicHospitalService";
@@ -52,29 +52,21 @@ export function createHospital(input: HospitalFields) {
   });
 }
 
-export const updateHospital = (id: string, input: HospitalAdminUpdate, previousValues?: DocumentData) =>
-  updateAuditedDocument(COLLECTIONS.hospitals, id, {
-    ...input, updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
-  }, { action: input.status ? "status_change" : "update", actorRole: "admin" }, previousValues);
-
-export function recordHospitalContractGeneration(id: string, previous: DocumentData) {
-  const actorId = getAuditActorId();
-  return updateAuditedDocument(COLLECTIONS.hospitals, id, {
-    contractStatus: previous.contractStatus === "signed" ? "signed" : "generated",
-    contractGeneratedAt: firestoreTimestamp.server(),
-    contractGeneratedBy: actorId,
-    contractSignedAt: previous.contractSignedAt ?? null,
-    contractSignedBy: previous.contractSignedBy ?? null,
-    contractUrl: previous.contractUrl ?? null,
-    contractSignedAt2: previous.contractSignedAt2 ?? null,
-    contractSignedBy2: previous.contractSignedBy2 ?? null,
-    contractUrl2: previous.contractUrl2 ?? null,
-    activatedAt: previous.activatedAt ?? null,
-    activatedBy: previous.activatedBy ?? null,
-    updatedAt: firestoreTimestamp.server(),
-    updatedBy: actorId,
-  }, { action: "contract_generated", actorRole: "admin" }, previous);
+function adminHospitalAction(id: string, action: "update" | "contract_generated" | "contract_signed" | "deactivate" | "archive", data?: Record<string, unknown>) {
+  return authorizedApiRequest<{ ok: true }>(`/api/admin/hospitals/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action, data }),
+    signedOutMessage: "Your Admin session has expired. Sign in again to update the hospital.",
+    failureMessage: "We could not update the hospital. Please try again.",
+  });
 }
+
+export const updateHospital = (id: string, input: HospitalAdminUpdate) =>
+  adminHospitalAction(id, "update", input);
+
+export const recordHospitalContractGeneration = (id: string) =>
+  adminHospitalAction(id, "contract_generated");
 
 function validatedContractUrl(value: string, label: string) {
   const contractUrl = value.trim();
@@ -94,18 +86,7 @@ export function confirmHospitalContractSigning(id: string, previous: DocumentDat
   }
   const contractUrl = validatedContractUrl(contractUrlInput, "Contract 1 URL");
   const contractUrl2 = validatedContractUrl(contractUrl2Input, "Contract 2 URL");
-  const actorId = getAuditActorId();
-  return updateAuditedDocument(COLLECTIONS.hospitals, id, {
-    contractStatus: "signed",
-    contractSignedAt: previous.contractSignedAt ?? firestoreTimestamp.server(),
-    contractSignedBy: previous.contractSignedBy ?? actorId,
-    contractUrl,
-    contractSignedAt2: previous.contractSignedAt2 ?? firestoreTimestamp.server(),
-    contractSignedBy2: previous.contractSignedBy2 ?? actorId,
-    contractUrl2,
-    updatedAt: firestoreTimestamp.server(),
-    updatedBy: actorId,
-  }, { action: "contract_signed", actorRole: "admin" }, previous);
+  return adminHospitalAction(id, "contract_signed", { contractUrl, contractUrl2 });
 }
 
 export function activateHospital(id: string, previous: DocumentData) {
@@ -119,15 +100,11 @@ export function activateHospital(id: string, previous: DocumentData) {
   });
 }
 
-export function deactivateHospital(id: string, previous: DocumentData) {
-  return updateHospital(id, { status: "inactive", isPublic: false }, previous);
-}
+export const deactivateHospital = (id: string) => adminHospitalAction(id, "deactivate");
 
 export const updateHospitalProfile = (id: string, input: Partial<HospitalProfileInput>, previousValues?: DocumentData) =>
   updateAuditedDocument(COLLECTIONS.hospitals, id, {
     ...input, updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
   }, { action: "update", actorRole: "hospital" }, previousValues);
 
-export const archiveHospital = (id: string, previousValues?: DocumentData) => updateAuditedDocument(COLLECTIONS.hospitals, id, {
-  status: "archived", isPublic: false, ...getArchiveMetadata(),
-}, { action: "archive", actorRole: "admin" }, previousValues);
+export const archiveHospital = (id: string) => adminHospitalAction(id, "archive");
