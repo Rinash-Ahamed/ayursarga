@@ -162,7 +162,7 @@ service cloud.firestore {
         ))
         && (request.resource.data.get('locationUrl', null) == null || (
           request.resource.data.locationUrl is string
-          && request.resource.data.locationUrl.size() <= 500
+          && request.resource.data.locationUrl.size() <= 2000
           && request.resource.data.locationUrl.matches('https://(maps\\.app\\.goo\\.gl|maps\\.google\\.com|maps\\.google\\.co\\.in|goo\\.gl|www\\.google\\.com|www\\.google\\.co\\.in|www\\.openstreetmap\\.org|openstreetmap\\.org)/.*')
         ))
         && hasValidCentreGuidelines();

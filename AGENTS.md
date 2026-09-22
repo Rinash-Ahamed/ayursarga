@@ -78,6 +78,10 @@ implementation work unless the project owner explicitly changes a decision.
   centre-guideline wording, additional centre rules, facilities, and
   centre-specific legal/policy information. Hospital image links and the
   validated Google Maps or OpenStreetMap location link are Admin-managed.
+  Admin may paste a supported map iframe snippet, but application code must
+  extract and store only its validated HTTPS `src` URL. Public centre details
+  render that URL in a responsive map frame and retain an external maps link;
+  never store or render arbitrary iframe HTML.
   Normalize supported Drive sharing links for display and keep gallery frames
   at a consistent 4:3 ratio. Firebase Storage and direct uploads remain disabled
   while the project uses the Spark plan.
