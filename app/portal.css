@@ -120,7 +120,7 @@ html.portal-menu-open,html.portal-menu-open body{ overflow:hidden; overscroll-be
 .portal-header-account{ position:relative; z-index:2; flex:none; }
 .portal-header-account-trigger{ max-width:250px; min-height:44px; padding:5px 13px 5px 5px; display:flex; align-items:center; gap:9px; border:1px solid rgba(31,61,43,.24); border-radius:100px; background:#fff; color:var(--forest); box-shadow:0 6px 18px rgba(31,61,43,.08); font:inherit; cursor:pointer; transition:border-color .18s,background-color .18s; }
 .portal-header-account-trigger:hover,.portal-header-account-trigger:focus-visible{ border-color:var(--gold); background:rgba(184,135,47,.055); }
-.portal-header-account-avatar{ width:32px; height:32px; flex:0 0 32px; display:grid; place-items:center; border-radius:50%; background:var(--forest); color:var(--gold); font-size:9px; font-weight:850; letter-spacing:.06em; }
+.portal-header-account-avatar{ width:32px; height:32px; flex:0 0 32px; display:grid; place-items:center; border-radius:50%; background:var(--forest); color:#fff; font-size:9px; font-weight:850; letter-spacing:.06em; }
 .portal-header-account-name{ overflow:hidden; font-size:10px; font-weight:750; line-height:1.25; text-overflow:ellipsis; white-space:nowrap; }
 .portal-header-account-menu{ position:absolute; top:calc(100% + 9px); right:0; width:min(280px,calc(100vw - 32px)); padding:15px; display:grid; gap:5px; border:1px solid rgba(31,61,43,.25); border-radius:16px; background:#fff; box-shadow:0 18px 45px rgba(31,61,43,.16); }
 .portal-header-account-menu>span{ overflow:hidden; color:var(--forest); font-size:12px; font-weight:750; text-overflow:ellipsis; white-space:nowrap; }

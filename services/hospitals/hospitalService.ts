@@ -40,9 +40,14 @@ export function listAllHospitals(options: Pick<QueryPageOptions, "pageSize" | "c
   });
 }
 
-export function createHospital(input: HospitalFields, createdBy: string) {
+export function createHospital(input: HospitalFields) {
   const validation = validateHospitalFields(input);
   if (!validation.isValid) throw new Error(Object.values(validation.errors)[0] ?? "Hospital details are invalid.");
+  // Use the same live Firebase identity for the hospital metadata and its
+  // linked audit entry. A cached React auth value can briefly lag behind
+  // Firebase Auth after an account switch, which correctly causes the atomic
+  // write to be rejected by Firestore rules.
+  const actorId = getAuditActorId();
   return createAuditedDocument(COLLECTIONS.hospitals, {
     ...validation.data,
     status: "pending",
@@ -66,8 +71,8 @@ export function createHospital(input: HospitalFields, createdBy: string) {
     locationUrl: null,
     activatedAt: null,
     activatedBy: null,
-    createdBy,
-    createdAt: firestoreTimestamp.server(), updatedAt: firestoreTimestamp.server(), updatedBy: createdBy,
+    createdBy: actorId,
+    createdAt: firestoreTimestamp.server(), updatedAt: firestoreTimestamp.server(), updatedBy: actorId,
     archivedAt: null, archivedBy: null,
   }, { action: "create", actorRole: "admin" });
 }
