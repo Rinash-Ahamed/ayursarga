@@ -7,7 +7,7 @@ import type { UserDocument } from "@/features/firestore/models";
 import { isBootstrapAdminEmail } from "@/features/auth/bootstrap";
 import { AuthenticationError } from "@/features/auth/errors";
 import { parseUserProfile } from "@/features/auth/profile";
-import { CONSUMER_PRIVACY_NOTICE_VERSION } from "@/features/consumers/privacyConsent";
+import { CONSUMER_PRIVACY_NOTICE_VERSION, CUSTOMER_TERMS_VERSION } from "@/features/consumers/privacyConsent";
 import {
   firestoreTimestamp,
   readDocument,
@@ -78,6 +78,10 @@ export async function createGoogleConsumerProfile(user: User) {
     role: "consumer",
     status: "active",
     hospitalId: null,
+    privacyConsentAt: null,
+    privacyConsentVersion: null,
+    customerTermsAcceptedAt: null,
+    customerTermsVersion: null,
     createdAt: firestoreTimestamp.server(),
     createdBy: user.uid,
     updatedAt: firestoreTimestamp.server(),
@@ -96,6 +100,8 @@ export async function createGoogleConsumerProfile(user: User) {
     hospitalId: null,
     privacyConsentAt: null,
     privacyConsentVersion: null,
+    customerTermsAcceptedAt: null,
+    customerTermsVersion: null,
     createdAt: null,
     updatedAt: null,
   };
@@ -117,6 +123,8 @@ export async function updateUserProfile(
   if (changes.privacyConsentAccepted) {
     allowedChanges.privacyConsentAt = firestoreTimestamp.server();
     allowedChanges.privacyConsentVersion = CONSUMER_PRIVACY_NOTICE_VERSION;
+    allowedChanges.customerTermsAcceptedAt = firestoreTimestamp.server();
+    allowedChanges.customerTermsVersion = CUSTOMER_TERMS_VERSION;
   }
   const role = profileCache.get(uid)?.role ?? "consumer";
   await updateAuditedDocument(

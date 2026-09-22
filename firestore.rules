@@ -53,6 +53,7 @@ service cloud.firestore {
       return request.resource.data.keys().hasOnly([
         'uid', 'name', 'email', 'phone', 'address', 'role', 'status', 'hospitalId',
         'privacyConsentAt', 'privacyConsentVersion',
+        'customerTermsAcceptedAt', 'customerTermsVersion',
         'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
         'archivedAt', 'archivedBy', 'lastAuditId'
       ]);
@@ -500,7 +501,11 @@ service cloud.firestore {
         && hasCreateAudit('users', userId)
         && (
           (request.resource.data.role == 'consumer'
-            && request.auth.token.firebase.sign_in_provider == 'google.com')
+            && request.auth.token.firebase.sign_in_provider == 'google.com'
+            && request.resource.data.get('privacyConsentAt', null) == null
+            && request.resource.data.get('privacyConsentVersion', null) == null
+            && request.resource.data.get('customerTermsAcceptedAt', null) == null
+            && request.resource.data.get('customerTermsVersion', null) == null)
           || (isBootstrapAdminIdentity() && request.resource.data.role == 'admin')
         );
       allow update: if hasLinkedAudit('users', userId)
@@ -510,6 +515,7 @@ service cloud.firestore {
           isDocumentOwner(userId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name', 'phone', 'address', 'privacyConsentAt', 'privacyConsentVersion',
+            'customerTermsAcceptedAt', 'customerTermsVersion',
             'updatedAt', 'updatedBy', 'lastAuditId'
           ])
           && request.resource.data.name is string
@@ -525,11 +531,14 @@ service cloud.firestore {
             ))
             && (
               !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-                'privacyConsentAt', 'privacyConsentVersion'
+                'privacyConsentAt', 'privacyConsentVersion',
+                'customerTermsAcceptedAt', 'customerTermsVersion'
               ])
               || (
                 request.resource.data.privacyConsentAt == request.time
-                && request.resource.data.privacyConsentVersion == '2026-09-01'
+                && request.resource.data.privacyConsentVersion == '2026-09-23'
+                && request.resource.data.customerTermsAcceptedAt == request.time
+                && request.resource.data.customerTermsVersion == '2026-09-23'
               )
             )
           ))
@@ -658,7 +667,8 @@ service cloud.firestore {
           'commissionPercentage', 'estimatedCommission', 'consumerNotes',
           'hospitalNotes', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
           'archivedAt', 'archivedBy', 'lastAuditId', 'confirmedAt', 'completedAt',
-          'treatmentStatus', 'treatmentStartedAt', 'treatmentCompletedAt'
+          'treatmentStatus', 'treatmentStartedAt', 'treatmentCompletedAt',
+          'bookingTermsAcceptedAt', 'bookingTermsVersion'
         ])
         && request.resource.data.consumerId == request.auth.uid
         && request.resource.data.consumerName == getCurrentUser().name
@@ -692,6 +702,8 @@ service cloud.firestore {
         && request.resource.data.treatmentStatus == 'not_started'
         && request.resource.data.treatmentStartedAt == null
         && request.resource.data.treatmentCompletedAt == null
+        && request.resource.data.bookingTermsAcceptedAt == request.time
+        && request.resource.data.bookingTermsVersion == '2026-09-23'
         && isApprovedHospital(request.resource.data.hospitalId)
         && get(/databases/$(database)/documents/services/$(request.resource.data.serviceId)).data.hospitalId
           == request.resource.data.hospitalId
@@ -714,6 +726,10 @@ service cloud.firestore {
       allow update: if hasLinkedAudit('bookings', bookingId)
         && request.resource.data.updatedAt == request.time
         && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.get('bookingTermsAcceptedAt', null)
+          == resource.data.get('bookingTermsAcceptedAt', null)
+        && request.resource.data.get('bookingTermsVersion', null)
+          == resource.data.get('bookingTermsVersion', null)
         && (isAdmin()
         || (isConsumer()
           && resource.data.consumerId == request.auth.uid

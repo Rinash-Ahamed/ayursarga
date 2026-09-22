@@ -30,6 +30,12 @@ implementation work unless the project owner explicitly changes a decision.
   verification without a later explicit decision. Hospital and Admin accounts
   use email/password and are created only through a controlled privileged
   process.
+- Consumer profile completion requires one versioned acceptance of the
+  Ayursarga Customer Terms and Privacy Policy. Each booking request also stores
+  its own versioned acceptance timestamp for the applicable Customer Terms,
+  Cancellation and Refund Policy, and Patient/Service Disclaimer and Consent.
+  Both acceptances are mandatory and auditable; do not rely only on unchecked
+  client-side wording.
 - Hospital activation provisions or reconnects one Firebase Authentication
   account for the hospital's official email and sends a Firebase password setup
   link. Never introduce a shared default password or store passwords in

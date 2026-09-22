@@ -13,7 +13,7 @@ export function validateConsumerContact(
   const errors: Partial<Record<"name" | "phone" | "address" | "privacyConsent", string>> = {};
   if (name.length < 2) errors.name = "Enter your full name.";
   if (!PHONE_PATTERN.test(phone)) errors.phone = "Enter a valid contact number using 7 to 25 digits or common phone symbols.";
-  if (requirePrivacyConsent && !privacyConsentAccepted) errors.privacyConsent = "Please provide consent before saving your Consumer profile.";
+  if (requirePrivacyConsent && !privacyConsentAccepted) errors.privacyConsent = "Read and accept the Customer Terms & Conditions and Privacy Policy before continuing.";
   return {
     data: { name, phone, address: address || null, privacyConsentAccepted },
     errors,

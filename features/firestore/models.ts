@@ -24,6 +24,8 @@ export type UserDocument = AuditedDocument & {
   hospitalId: string | null;
   privacyConsentAt?: Timestamp | null;
   privacyConsentVersion?: string | null;
+  customerTermsAcceptedAt?: Timestamp | null;
+  customerTermsVersion?: string | null;
 };
 
 export type CentreGuidelineId =
@@ -126,6 +128,8 @@ export type BookingDocument = AuditedDocument & {
   completedAt: Timestamp | null;
   treatmentStartedAt?: Timestamp | null;
   treatmentCompletedAt?: Timestamp | null;
+  bookingTermsAcceptedAt?: Timestamp | null;
+  bookingTermsVersion?: string | null;
 };
 
 export type HospitalCapacityDocument = AuditedDocument & {
