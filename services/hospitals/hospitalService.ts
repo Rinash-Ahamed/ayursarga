@@ -62,10 +62,10 @@ function adminHospitalAction(id: string, action: "update" | "contract_generated"
   });
 }
 
-export const updateHospital = (id: string, input: HospitalAdminUpdate, _previousValues?: DocumentData) =>
+export const updateHospital = (id: string, input: HospitalAdminUpdate) =>
   adminHospitalAction(id, "update", input);
 
-export const recordHospitalContractGeneration = (id: string, _previous: DocumentData) =>
+export const recordHospitalContractGeneration = (id: string) =>
   adminHospitalAction(id, "contract_generated");
 
 function validatedContractUrl(value: string, label: string) {
@@ -100,11 +100,11 @@ export function activateHospital(id: string, previous: DocumentData) {
   });
 }
 
-export const deactivateHospital = (id: string, _previous: DocumentData) => adminHospitalAction(id, "deactivate");
+export const deactivateHospital = (id: string) => adminHospitalAction(id, "deactivate");
 
 export const updateHospitalProfile = (id: string, input: Partial<HospitalProfileInput>, previousValues?: DocumentData) =>
   updateAuditedDocument(COLLECTIONS.hospitals, id, {
     ...input, updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
   }, { action: "update", actorRole: "hospital" }, previousValues);
 
-export const archiveHospital = (id: string, _previousValues?: DocumentData) => adminHospitalAction(id, "archive");
+export const archiveHospital = (id: string) => adminHospitalAction(id, "archive");
