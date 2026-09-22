@@ -14,7 +14,7 @@ import {
   recordHospitalContractGeneration,
   updateHospital,
 } from "@/services/hospitals/hospitalService";
-import { buildHospitalContractHtml } from "@/features/hospitals/contractTemplate";
+import { buildHospitalContractPdf } from "@/features/hospitals/contractPdf";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalToast } from "@/components/portal/PortalToast";
@@ -128,21 +128,18 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
 
   function generateContract() {
     if (!hospital || busy) return;
-    const contractWindow = window.open("", "_blank");
-    if (!contractWindow) {
-      setError("Allow pop-ups for Ayursarga, then select Generate Contract PDF again.");
-      return;
-    }
-    contractWindow.opener = null;
-    contractWindow.document.write("<p style='font-family:sans-serif;padding:24px'>Preparing contract...</p>");
     void runAction(async (record) => {
       await recordHospitalContractGeneration(record.id, record);
-      if (!contractWindow.closed) {
-        contractWindow.document.open();
-        contractWindow.document.write(buildHospitalContractHtml(record));
-        contractWindow.document.close();
-      }
-    }, "The contract is ready. In the new window, select Print / Save as PDF to download it.");
+      const contract = buildHospitalContractPdf(record);
+      const url = URL.createObjectURL(contract.blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = contract.filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+    }, "The contract PDF has been downloaded.");
   }
 
   async function saveHospitalDetails(event: FormEvent<HTMLFormElement>) {
@@ -295,7 +292,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
           <label className="portal-contract-url">Signed contract 2 URL *<input type="url" value={contractUrl2} onChange={(event) => setContractUrl2(event.target.value)} placeholder="https://" required /></label>
         </div>}
         <div className="portal-actions">
-          {hospital.status === "pending" && <button className="portal-button secondary" type="button" disabled={busy} onClick={generateContract}>{contractStatus === "not_generated" ? "Generate Contract PDF" : "View / Regenerate Contract PDF"}</button>}
+          {hospital.status === "pending" && <button className="portal-button secondary" type="button" disabled={busy} onClick={generateContract}>{contractStatus === "not_generated" ? "Download Contract PDF" : "Download Contract PDF Again"}</button>}
           {hospital.status === "pending" && contractStatus !== "not_generated" && !contractsReady && <button className="portal-button secondary" type="button" disabled={busy} onClick={() => {
             if (!contractUrl.trim() || !contractUrl2.trim()) {
               setError("Add both signed contract URLs before confirming the contracts.");

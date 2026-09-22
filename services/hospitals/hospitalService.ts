@@ -90,7 +90,7 @@ function validatedContractUrl(value: string, label: string) {
 
 export function confirmHospitalContractSigning(id: string, previous: DocumentData, contractUrlInput: string, contractUrl2Input: string) {
   if (!(["generated", "signed"] as string[]).includes(previous.contractStatus)) {
-    throw new Error("Select Generate Contract PDF before confirming that the contract has been signed.");
+    throw new Error("Download the contract PDF before confirming that the contract has been signed.");
   }
   const contractUrl = validatedContractUrl(contractUrlInput, "Contract 1 URL");
   const contractUrl2 = validatedContractUrl(contractUrl2Input, "Contract 2 URL");
