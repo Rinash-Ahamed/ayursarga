@@ -132,7 +132,7 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
   const visibleHospitals = useMemo(() => {
     const term = search.trim().toLowerCase();
     return hospitals.filter((hospital) => {
-      const searchable = `${hospital.name} ${hospital.city} ${hospital.state} ${hospital.address}`.toLowerCase();
+      const searchable = `${hospital.name} ${hospital.city} ${hospital.district ?? ""} ${hospital.state} ${hospital.address}`.toLowerCase();
       return !term || searchable.includes(term);
     });
   }, [hospitals, search]);
@@ -213,7 +213,7 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
                 <PublicHospitalImages hospital={hospital} priority={hospitalIndex === 0} />
                 <div className="public-center-card-body">
                   <div className="public-center-card-topline">
-                    <span>{hospital.city}, {hospital.state}</span>
+                    <span>{hospital.city}{hospital.district ? `, ${hospital.district}` : ""}, {hospital.state}</span>
                   </div>
                   <h3>{hospital.name}</h3>
                   {hospital.ayursargaRating && <div className="public-center-assessment" aria-label={`Ayursarga assessment ${hospital.ayursargaRating} out of 5`}>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useAuth } from "@/hooks/useAuth";
 import { ROUTES } from "@/config/routes";
@@ -16,6 +17,18 @@ const LINKS = [
 
 type NavProps = { sectionPrefix?: string; solid?: boolean };
 
+type MobileNavIconName = "home" | "discover" | "search" | "contact" | "account";
+
+function MobileNavIcon({ name }: { name: MobileNavIconName }) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {name === "home" && <><path d="m3 11 9-7 9 7" /><path d="M5 10v10h14V10M9 20v-6h6v6" /></>}
+    {name === "discover" && <><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2.2 4.8-4.8 2.2 2.2-4.8 4.8-2.2Z" /></>}
+    {name === "search" && <><circle cx="10.8" cy="10.8" r="6.6" /><path d="m15.8 15.8 4.2 4.2" /></>}
+    {name === "contact" && <><path d="M7.2 3.5 10 8.2 7.9 10a15.5 15.5 0 0 0 6.1 6.1l1.8-2.1 4.7 2.8-.8 3.1c-.2.7-.8 1.1-1.5 1.1C10.1 20.6 3.4 13.9 3 5.8c0-.7.4-1.3 1.1-1.5l3.1-.8Z" /></>}
+    {name === "account" && <><circle cx="12" cy="7" r="3.2" /><path d="M5 21v-1a7 7 0 0 1 14 0v1" /></>}
+  </svg>;
+}
+
 function GoogleMark() {
   return <svg className="nav-google-icon" viewBox="0 0 24 24" aria-hidden="true">
     <path fill="#4285F4" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.4a4.6 4.6 0 0 1-2 3v2.6h3.3c1.9-1.8 2.9-4.4 2.9-7.5Z" />
@@ -26,11 +39,12 @@ function GoogleMark() {
 }
 
 function PublicNav({ sectionPrefix = "", solid = false }: NavProps) {
+  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
-  const [open, setOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
+  const mobileAccountRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const { firebaseUser, userProfile, role, isLoading, error, clearError, loginConsumerWithGoogle, logout } = useAuth();
   const consumerSignedIn = role === "consumer" && Boolean(firebaseUser && userProfile);
@@ -54,14 +68,14 @@ function PublicNav({ sectionPrefix = "", solid = false }: NavProps) {
   }, []);
 
   useEffect(() => {
-    const locked = open || loginOpen;
+    const locked = loginOpen;
     document.documentElement.classList.toggle("nav-overlay-open", locked);
     window.dispatchEvent(new CustomEvent("ayursarga:scroll-lock", { detail: locked }));
     return () => {
       document.documentElement.classList.remove("nav-overlay-open");
       window.dispatchEvent(new CustomEvent("ayursarga:scroll-lock", { detail: false }));
     };
-  }, [loginOpen, open]);
+  }, [loginOpen]);
 
   useEffect(() => {
     if (loginOpen) dialogRef.current?.querySelector<HTMLButtonElement>(".nav-auth-option")?.focus();
@@ -69,11 +83,10 @@ function PublicNav({ sectionPrefix = "", solid = false }: NavProps) {
 
   useEffect(() => {
     const handleOutsidePointer = (event: PointerEvent) => {
-      if (profileOpen && event.target instanceof Node && !accountRef.current?.contains(event.target)) setProfileOpen(false);
+      if (profileOpen && event.target instanceof Node && !accountRef.current?.contains(event.target) && !mobileAccountRef.current?.contains(event.target)) setProfileOpen(false);
     };
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      setOpen(false);
       setLoginOpen(false);
       setProfileOpen(false);
     };
@@ -102,7 +115,6 @@ function PublicNav({ sectionPrefix = "", solid = false }: NavProps) {
 
   const openLogin = () => {
     clearError();
-    setOpen(false);
     setProfileOpen(false);
     setLoginOpen(true);
   };
@@ -122,7 +134,7 @@ function PublicNav({ sectionPrefix = "", solid = false }: NavProps) {
 
         <div ref={accountRef} className={`nav-account-actions${consumerSignedIn ? " has-consumer" : ""}`}>
           {consumerSignedIn ? <div className="nav-profile">
-            <button type="button" className="nav-profile-trigger" aria-label="Open your Ayursarga account" aria-expanded={profileOpen} onClick={() => { setOpen(false); setProfileOpen((current) => !current); }}>
+            <button type="button" className="nav-profile-trigger" aria-label="Open your Ayursarga account" aria-expanded={profileOpen} onClick={() => setProfileOpen((current) => !current)}>
               <Image className="nav-profile-avatar-image" src={avatarUrl || "/mainlogo.png"} alt="" width={42} height={42} sizes="42px" unoptimized={Boolean(avatarUrl)} referrerPolicy="no-referrer" />
             </button>
             {profileOpen && <div className="nav-profile-menu">
@@ -138,18 +150,31 @@ function PublicNav({ sectionPrefix = "", solid = false }: NavProps) {
           </div> : <button type="button" className="nav-login-button" onClick={openLogin}>Login</button>}
         </div>
 
-        <button id="nav-burger" aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} aria-controls="mobile-menu" className={open ? "open" : ""} onClick={() => { setProfileOpen(false); setOpen((current) => !current); }}>
-          <span style={open ? { transform: "translateY(8px) rotate(45deg)" } : undefined} />
-          <span style={open ? { opacity: 0 } : undefined} />
-          <span style={open ? { transform: "translateY(-8px) rotate(-45deg)" } : undefined} />
-        </button>
       </div>
     </header>
 
-    <div id="mobile-menu" className={open ? "open" : ""}>
-      {LINKS.map((link) => <a key={link.href} href={linkHref(link.href)} onClick={() => setOpen(false)}>{link.label}</a>)}
-      {!consumerSignedIn && <button type="button" className="mobile-login-action" onClick={openLogin}>Login</button>}
-    </div>
+    <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
+      <a href={sectionPrefix ? ROUTES.public.home : "#hero"} aria-current={pathname === ROUTES.public.home ? "page" : undefined}><MobileNavIcon name="home" /><span>Home</span></a>
+      <a href={linkHref("#discover-hospitals")}><MobileNavIcon name="discover" /><span>Discover</span></a>
+      <a className="mobile-bottom-search" href={ROUTES.public.centers} aria-current={pathname === ROUTES.public.centers ? "page" : undefined}><span className="mobile-bottom-search-icon"><MobileNavIcon name="search" /></span><span>Search</span></a>
+      <a href={ROUTES.public.contact} aria-current={pathname === ROUTES.public.contact ? "page" : undefined}><MobileNavIcon name="contact" /><span>Contact</span></a>
+      <div ref={mobileAccountRef} className="mobile-bottom-account">
+        {consumerSignedIn ? <button type="button" aria-label="Open your Ayursarga account" aria-expanded={profileOpen} onClick={() => setProfileOpen((current) => !current)}>
+          <Image className="mobile-bottom-avatar" src={avatarUrl || "/mainlogo.png"} alt="" width={28} height={28} sizes="28px" unoptimized={Boolean(avatarUrl)} referrerPolicy="no-referrer" />
+          <span>Profile</span>
+        </button> : <button type="button" onClick={openLogin}><MobileNavIcon name="account" /><span>Login</span></button>}
+        {consumerSignedIn && profileOpen && <div className="nav-profile-menu mobile-profile-menu">
+          <div className="nav-profile-details">
+            <span className="nav-profile-name">{userProfile?.name || firebaseUser?.displayName || "Ayursarga consumer"}</span>
+            <span className="nav-profile-email">{userProfile?.email || firebaseUser?.email}</span>
+          </div>
+          <div className="nav-profile-actions">
+            <a href={ROUTES.consumer.bookings} onClick={() => setProfileOpen(false)}>My bookings</a>
+            <button type="button" onClick={() => void signOutConsumer()} disabled={isLoading}>Logout</button>
+          </div>
+        </div>}
+      </div>
+    </nav>
 
     {loginOpen && <div className="nav-auth-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setLoginOpen(false); }}>
       <div ref={dialogRef} className="nav-auth-dialog" role="dialog" aria-modal="true" aria-labelledby="nav-auth-title">
@@ -162,7 +187,7 @@ function PublicNav({ sectionPrefix = "", solid = false }: NavProps) {
             <span><strong>I&apos;m looking for care</strong><small>{isLoading ? "Connecting securely..." : "Continue with Google Sign-In"}</small></span>
           </button>
           <a className="nav-auth-option" href={ROUTES.hospital.login}>
-            <span className="nav-auth-option-icon hospital" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 21h16M6 21V5h12v16M9 9h6m-3-3v6M9 15h2m2 0h2m-4 6v-3h2v3" /></svg></span>
+            <span className="nav-auth-option-icon hospital" aria-hidden="true"><Image className="nav-hospital-partner-image" src="/hospital-partner.png" alt="" width={44} height={44} sizes="44px" /></span>
             <span><strong>I&apos;m a hospital partner</strong><small>Continue to Hospital Login</small></span>
           </a>
         </div>

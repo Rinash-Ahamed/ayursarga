@@ -1,12 +1,16 @@
 import { isValidEmail, toTrimmedString } from "@/utils/text";
 import { isIndiaStateOrUnionTerritory } from "@/constants/indiaStates";
+import { KERALA_DISTRICTS } from "@/constants/keralaDistricts";
 
 export type HospitalFields = {
   name: string;
   email: string;
   phone: string;
+  hospitalPhone1: string;
+  hospitalPhone2: string | null;
   address: string;
   city: string;
+  district: string;
   state: string;
   description: string;
   imageUrl: string | null;
@@ -33,8 +37,12 @@ export function validateHospitalFields(input: Record<string, unknown>) {
   const name = toTrimmedString(input.name, 120);
   const email = toTrimmedString(input.email, 160).toLowerCase();
   const phone = toTrimmedString(input.phone, 25);
+  const hospitalPhone1 = toTrimmedString(input.hospitalPhone1, 25);
+  const hospitalPhone2Text = toTrimmedString(input.hospitalPhone2, 25);
+  const hospitalPhone2 = hospitalPhone2Text || null;
   const address = toTrimmedString(input.address, 300);
   const city = toTrimmedString(input.city, 80);
+  const district = toTrimmedString(input.district, 80);
   const state = toTrimmedString(input.state, 80);
   const description = toTrimmedString(input.description, 2_000);
   const rawImageUrl = toTrimmedString(input.imageUrl, 500);
@@ -49,9 +57,12 @@ export function validateHospitalFields(input: Record<string, unknown>) {
 
   if (name.length < 2) errors.name = "Enter a hospital name of at least 2 characters.";
   if (!isValidEmail(email)) errors.email = "Enter a valid official email address.";
-  if (!PHONE_PATTERN.test(phone)) errors.phone = "Enter a valid phone number using 7 to 25 digits or common phone symbols.";
+  if (!PHONE_PATTERN.test(phone)) errors.phone = "Enter a valid owner WhatsApp number.";
+  if (!PHONE_PATTERN.test(hospitalPhone1)) errors.hospitalPhone1 = "Enter a valid primary hospital phone number.";
+  if (hospitalPhone2 && !PHONE_PATTERN.test(hospitalPhone2)) errors.hospitalPhone2 = "Enter a valid secondary hospital phone number.";
   if (address.length < 10) errors.address = "Enter the hospital's complete street address.";
   if (city.length < 2) errors.city = "Enter a valid city or locality.";
+  if (!KERALA_DISTRICTS.includes(district as (typeof KERALA_DISTRICTS)[number])) errors.district = "Select a valid district.";
   if (!isIndiaStateOrUnionTerritory(state)) errors.state = "Select a valid Indian state or union territory.";
   if (!Number.isFinite(commissionPercentage) || commissionPercentage < 0 || commissionPercentage > 100) {
     errors.commissionPercentage = "Commission must be between 0 and 100 percent.";
@@ -59,7 +70,7 @@ export function validateHospitalFields(input: Record<string, unknown>) {
   if (rawImageUrl && !imageUrl) errors.imageUrl = "Enter a complete image URL beginning with http:// or https://.";
 
   const data: HospitalFields = {
-    name, email, phone, address, city, state, description, imageUrl, commissionPercentage: normalizedCommission,
+    name, email, phone, hospitalPhone1, hospitalPhone2, address, city, district, state, description, imageUrl, commissionPercentage: normalizedCommission,
   };
   return { data, errors, isValid: Object.keys(errors).length === 0 };
 }
@@ -69,8 +80,11 @@ export function hospitalFormValues(form: FormData): Record<string, unknown> {
     name: form.get("name"),
     email: form.get("email"),
     phone: form.get("phone"),
+    hospitalPhone1: form.get("hospitalPhone1"),
+    hospitalPhone2: form.get("hospitalPhone2"),
     address: form.get("address"),
     city: form.get("city"),
+    district: form.get("district"),
     state: form.get("state"),
     description: form.get("description"),
     imageUrl: form.get("imageUrl"),

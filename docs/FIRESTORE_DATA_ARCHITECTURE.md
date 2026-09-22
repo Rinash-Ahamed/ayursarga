@@ -10,7 +10,11 @@ duplicating records or introducing deeply nested documents.
   and optional address live here under `role: "consumer"`; a duplicate
   `consumers` collection is intentionally not created.
 - `hospitals`: hospital profile, visibility, status, commission settings, and
-  up to four Google Drive sharing links or externally hosted HTTPS image URLs
+  owner WhatsApp contact in the legacy `phone` field. The public interface uses
+  the required `hospitalPhone1` and optional `hospitalPhone2`; `district` stores the
+  selected Kerala district. Existing records remain readable until these newer
+  fields are completed through the profile form. The collection also stores
+  up to ten Google Drive sharing links or externally hosted HTTPS image URLs
   normalized into `imageUrls`. Hospitals must make Drive images viewable by
   anyone with the link. Gallery images use a consistent 4:3 presentation. The
   legacy nullable `imageUrl` remains readable for existing records. Firebase
@@ -20,11 +24,21 @@ duplicating records or introducing deeply nested documents.
   Optional `ayursargaRating` and `ayursargaReviewNote` fields contain clearly
   labelled Admin-authored editorial content for active public hospitals; they
   are not patient-review data.
+- `consultants`: Admin-managed Ayursarga consultant directory with sequential
+  employee IDs, contact and professional details, and Active/Inactive status.
+  It is not an authentication collection and is inaccessible to Hospital,
+  Consumer, and public clients. Creates and updates are audit linked.
 - `hospitalCapacity`: internal treatment-room totals and current occupancy,
-  readable only by Admin and the assigned Hospital.
+  readable and editable only by Admin and the assigned Hospital. Both protected
+  interfaces update the same audited document.
 - `hospitalStaff`: future hospital-to-user staff assignments.
 - `doctors`: future hospital doctor profiles.
-- `services`: hospital services linked by `hospitalId`.
+- `services`: Hospital-created care packages linked by `hospitalId`. New
+  packages store `packageDurationDays`, a keyed `procedures` map containing the
+  number of included days, and optional Other-procedure details. Keyed
+  procedures prevent duplicates within one package while allowing reuse across
+  different packages. Legacy price/duration fields remain readable only until
+  an old service is converted through the audited package editor.
 - `availability`: future doctor/service availability linked by IDs.
 - `bookings`: Consumer, Hospital, and service references plus immutable price,
   commission, Consumer contact snapshots, and treatment progress. Only Admin,
@@ -65,9 +79,10 @@ previous values, changed values, server timestamp, and available device data.
 
 Hospital approval also records `contract_generated`, `contract_signed`, and
 `hospital_activated` actions. Hospital documents retain `contractStatus`,
-generation/signing actor and timestamp fields, and activation actor and
-timestamp fields. Rules require a Pending hospital and a confirmed signed
-contract before allowing the Active/Public transition.
+generation fields, two signed-contract URLs with their respective signing actor
+and timestamp fields, and activation actor and timestamp fields. Rules require
+a Pending hospital and both confirmed signed contracts before allowing the
+Active/Public transition.
 
 Audit logs are readable only by active Admins and cannot be updated or deleted
 through client rules. The platform owner has approved one narrow exception:

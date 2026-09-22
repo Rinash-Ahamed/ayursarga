@@ -112,6 +112,25 @@ export async function updateAuditedDocument(
   await batch.commit();
 }
 
+export async function replaceAuditedDocument(
+  collectionPath: string,
+  id: string,
+  replacement: DocumentData,
+  context: AuditContext,
+  previousValues: DocumentData,
+) {
+  const firestore = getClientFirestore();
+  const target = doc(firestore, collectionPath, id);
+  const previous = { ...previousValues };
+  delete previous.id;
+  const audit = doc(collection(firestore, COLLECTIONS.auditLogs));
+  const documentData = { ...replacement, lastAuditId: audit.id };
+  const batch = writeBatch(firestore);
+  batch.set(target, documentData);
+  batch.set(audit, auditEntry(collectionPath, id, context, previous, documentData));
+  await batch.commit();
+}
+
 type AuditLogScope =
   | { actorId: string; module?: never; recordId?: never }
   | { actorId?: never; module: string; recordId: string }

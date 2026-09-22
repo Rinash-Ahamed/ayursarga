@@ -7,9 +7,8 @@ import { listHospitalServices } from "@/services/hospitals/serviceService";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalPagination } from "@/components/portal/PortalPagination";
-import { formatCurrency } from "@/utils/currency";
 import { formatStatus } from "@/utils/text";
-import { formatServiceDuration } from "@/utils/duration";
+import { packageProcedureEntries, packageTitle } from "@/features/hospitals/packages";
 
 export function AdminHospitalPackages({ hospitalId }: { hospitalId: string }) {
   const loader = useCallback(
@@ -24,7 +23,6 @@ export function AdminHospitalPackages({ hospitalId }: { hospitalId: string }) {
   return <section className="portal-detail-section" aria-labelledby="hospital-packages-title">
     <div className="portal-row-heading">
       <div>
-        <span className="portal-eyebrow">Hospital catalogue</span>
         <h2 id="hospital-packages-title">Packages and services</h2>
       </div>
       {!isLoading && <span className="portal-status">{items.length}{hasMore ? "+" : ""} listed</span>}
@@ -38,12 +36,13 @@ export function AdminHospitalPackages({ hospitalId }: { hospitalId: string }) {
     <div className="portal-list">
       {items.map((service) => <article className="portal-row" key={service.id}>
         <div>
-          <h3>{service.name}</h3>
+          <h3>{packageTitle(service)}</h3>
           <p>{service.description || "No description provided."}</p>
           <div className="portal-card-meta">
-            <span>{formatCurrency(service.price)}</span>
-            <span>{formatServiceDuration(service.durationMinutes, service.durationUnit)}</span>
+            <span>{service.packageDurationDays ? `${service.packageDurationDays} days` : "Legacy service"}</span>
+            <span>{packageProcedureEntries(service).length} procedures</span>
           </div>
+          {packageProcedureEntries(service).length > 0 && <ul className="portal-package-summary">{packageProcedureEntries(service).map((procedure) => <li key={procedure.id}>{procedure.label} <span>{procedure.days} days</span></li>)}</ul>}
         </div>
         <span className="portal-status" data-status={service.status}>{formatStatus(service.status)}</span>
       </article>)}

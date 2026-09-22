@@ -158,7 +158,7 @@ export function HospitalBookings() {
     <PortalToast message={actionError} tone="error" />
     <div className="portal-list">
       {visible.map((item) => <article className="portal-card" key={item.id}>
-        <div className="portal-row-heading"><h3>{formatCurrency(item.servicePrice)}</h3><span className="portal-status" data-status={item.status}>{formatStatus(item.status)}</span></div>
+        <div className="portal-row-heading"><h3>{item.servicePrice > 0 ? formatCurrency(item.servicePrice) : "Package request"}</h3><span className="portal-status" data-status={item.status}>{formatStatus(item.status)}</span></div>
         <p><strong>{item.consumerName || "Patient"}</strong> · {item.consumerPhone || "Phone not recorded"} · {item.consumerEmail || "Email not recorded"}</p>
         <p>Address: {item.consumerAddress || "Not provided"}</p>
         <p>Preferred: {formatBookingCarePreference(item)}</p>

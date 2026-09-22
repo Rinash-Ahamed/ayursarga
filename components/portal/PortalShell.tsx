@@ -8,9 +8,12 @@ import type { PortalRole } from "@/features/auth/contracts";
 import { ROUTES } from "@/config/routes";
 import { useAuth } from "@/hooks/useAuth";
 
-const NAVIGATION = {
+type NavigationItem = readonly [label: string, href: string, nested?: boolean];
+
+const NAVIGATION: Record<PortalRole, readonly NavigationItem[]> = {
   admin: [
     ["Dashboard", ROUTES.admin.home], ["Hospitals", ROUTES.admin.hospitals],
+    ["Our Consultants", ROUTES.admin.consultants, true],
     ["Users", ROUTES.admin.users], ["Bookings", ROUTES.admin.bookings],
     ["Audit Logs", ROUTES.admin.audits],
   ],
@@ -20,7 +23,7 @@ const NAVIGATION = {
     ["Change Password", ROUTES.hospital.changePassword],
   ],
   consumer: [],
-} satisfies Record<PortalRole, readonly (readonly [string, string])[]>;
+};
 
 function getAccountInitials(name: string, email: string) {
   const words = name.trim().split(/\s+/).filter(Boolean);
@@ -98,8 +101,8 @@ export function PortalShell({ role, title, children, focused = false }: {
           <button type="button" aria-label="Close portal menu" onClick={() => setMobileMenuOpen(false)}>×</button>
         </div>
         <nav aria-label={`${role} navigation`}>
-          {NAVIGATION[role].map(([label, href]) =>
-            <Link key={href} href={href} aria-current={pathname === href ? "page" : undefined} onClick={() => { setAccountOpen(false); setMobileMenuOpen(false); }}>{label}</Link>)}
+          {NAVIGATION[role].map(([label, href, nested]) =>
+            <Link className={nested ? "portal-nav-subitem" : undefined} key={href} href={href} aria-current={pathname === href ? "page" : undefined} onClick={() => { setAccountOpen(false); setMobileMenuOpen(false); }}>{label}</Link>)}
         </nav>
         {userProfile && role !== "consumer" && <div className="portal-mobile-account">
           <span className="portal-header-account-avatar" aria-hidden="true">{getAccountInitials(userProfile.name, userProfile.email)}</span>

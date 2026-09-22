@@ -43,13 +43,21 @@ for the existing public contact form.
 - `firestore.rules` and `firestore.indexes.json` define data isolation and queries.
 - `scripts/` contains controlled privileged-user provisioning.
 
-Hospital packages reuse the existing `services` collection. Internal room
+Admin manages platform consultants at `/admin/consultants`. Consultant records
+use sequential display IDs (`AS001`, `AS002`, and so on), remain separate from
+Firebase Authentication users, and support audited profile edits and
+Active/Inactive status changes.
+
+Hospital packages reuse the existing `services` collection. Each package uses
+one of the supported 7, 10, 14, 21, 28, or 35-day durations and stores a
+duplicate-free map of selected procedures to their included day counts.
+Procedures may be reused across different packages. Internal room
 occupancy uses one audited `hospitalCapacity/{hospitalId}` record and is not
-exposed through the public Hospital document. Bookings keep appointment status
+exposed through the public Hospital document. Admin can view and update this
+same capacity record from Hospital Details, while the assigned Hospital manages
+it from its dashboard. Bookings keep appointment status
 separate from `treatmentStatus` (`not_started`, `started`, `ongoing`, or
 `completed`).
-Service durations accept minutes, hours, or days while retaining a normalized
-`durationMinutes` value for reliable querying and a preferred display unit.
 
 See [Firebase setup](docs/FIREBASE.md) and
 [application architecture](docs/APPLICATION_ARCHITECTURE.md) for configuration,
@@ -64,6 +72,9 @@ The preservation and audit design is documented in
 - Application code must never permanently delete operational Firestore data.
   Users, hospitals, services, bookings, and their history use archive/soft-delete
   metadata and remain available for audit and restoration.
+- Admin removal of a Consumer archives the Consumer profile and revokes active
+  application access while retaining the authentication identity, bookings,
+  and audit history.
 - Firestore client rules deny document deletion for active application
   collections. Audit logs are Admin-readable and cannot be changed through the
   client SDK. As an explicit platform-owner exception, an active Admin may use
@@ -103,11 +114,13 @@ The preservation and audit design is documented in
 
 ### Hospital field ownership
 
-- Hospital users may edit hospital name, official email, phone, city/locality,
-  state, complete address, and optional description for their assigned hospital.
+- Hospital users may edit hospital name, official email, owner WhatsApp number,
+  required primary hospital phone, optional secondary hospital phone,
+  city/locality, Kerala district, state, complete address, and optional
+  description for their assigned hospital.
 - Only Admin controls hospital images, centre location, commission,
   approval/status, public visibility, contract generation/signing details, the
-  signed-contract URL, activation, and archive actions.
+  two signed-contract URLs, activation, and archive actions.
 - The Hospital Profile must not expose hospital image, centre location,
   commission, contract, audit, activation, visibility, or other
   Admin-management controls.

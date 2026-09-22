@@ -35,7 +35,8 @@ export function buildHospitalContractHtml(hospital: DocumentRecord<HospitalDocum
 <header><div><div class="brand">Ayursarga</div><h1>Hospital Partnership Contract</h1></div><div class="meta">Reference: ${escapeHtml(reference)}<br>Generated: ${escapeHtml(generatedDate)}</div></header>
 <section><h2>Hospital details</h2><div class="details">
   <div><span>Hospital</span><strong>${escapeHtml(hospital.name)}</strong></div><div><span>Official email</span><strong>${escapeHtml(hospital.email)}</strong></div>
-  <div><span>Phone</span><strong>${escapeHtml(hospital.phone)}</strong></div><div><span>Location</span><strong>${escapeHtml(`${hospital.city}, ${hospital.state}`)}</strong></div>
+  <div><span>Owner WhatsApp</span><strong>${escapeHtml(hospital.phone)}</strong></div><div><span>Hospital phone 1</span><strong>${escapeHtml(hospital.hospitalPhone1 || "Not provided")}</strong></div>
+  ${hospital.hospitalPhone2 ? `<div><span>Hospital phone 2</span><strong>${escapeHtml(hospital.hospitalPhone2)}</strong></div>` : ""}<div><span>Location</span><strong>${escapeHtml([hospital.city, hospital.district, hospital.state].filter(Boolean).join(", "))}</strong></div>
   <div style="grid-column:1/-1"><span>Registered address</span><strong>${escapeHtml(hospital.address)}</strong></div>
   <div><span>Agreed commission</span><strong>${escapeHtml(commission)}%</strong></div><div><span>Current status</span><strong>${escapeHtml(hospital.status)}</strong></div>
 </div></section>

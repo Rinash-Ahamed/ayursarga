@@ -1,6 +1,7 @@
 import type { HospitalDocument } from "@/features/firestore/models";
 import { resolveCentreGuidelines } from "@/features/hospitals/guidelines";
 import { groupHospitalFacilities } from "@/features/hospitals/facilities";
+import { FacilityIcon } from "@/components/icons/FacilityIcon";
 
 export function CentreGuidelines({ hospital }: { hospital: HospitalDocument }) {
   const guidelines = resolveCentreGuidelines(hospital);
@@ -32,11 +33,11 @@ export function CentreGuidelines({ hospital }: { hospital: HospitalDocument }) {
         {hasFacilities ? <div className="centre-facility-summary">
           {facilityGroups.map((group) => <div key={group.title}>
             <strong>{group.title}</strong>
-            <ul>{group.options.map((option) => <li key={option}>{option}</li>)}</ul>
+            <ul>{group.options.map((option) => <li key={option}><FacilityIcon facility={option} /><span>{option}</span></li>)}</ul>
           </div>)}
           {customFacilities.length > 0 && <div>
             <strong>Other facilities</strong>
-            <ul>{customFacilities.map((facility, index) => <li key={`${facility}-${index}`}>{facility}</li>)}</ul>
+            <ul>{customFacilities.map((facility, index) => <li key={`${facility}-${index}`}><FacilityIcon facility={facility} /><span>{facility}</span></li>)}</ul>
           </div>}
         </div> : <p className="centre-profile-empty">No facilities have been submitted.</p>}
       </section>

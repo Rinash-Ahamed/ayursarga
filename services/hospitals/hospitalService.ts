@@ -18,7 +18,7 @@ type HospitalAdminUpdate = Partial<HospitalFields & Pick<HospitalDocument,
   "status" | "isPublic" | "ayursargaRating" | "ayursargaReviewNote" | "imageUrls" | "locationUrl"
 >>;
 type HospitalProfileInput = Pick<HospitalDocument,
-  "name" | "description" | "email" | "phone" | "address" | "city" | "state" |
+  "name" | "description" | "email" | "phone" | "hospitalPhone1" | "hospitalPhone2" | "address" | "city" | "district" | "state" |
   "centreGuidelines" | "additionalCentreRules" | "facilities" | "legalPolicies"
 >;
 
@@ -53,6 +53,9 @@ export function createHospital(input: HospitalFields, createdBy: string) {
     contractSignedAt: null,
     contractSignedBy: null,
     contractUrl: null,
+    contractSignedAt2: null,
+    contractSignedBy2: null,
+    contractUrl2: null,
     imageUrls: [],
     ayursargaRating: null,
     ayursargaReviewNote: null,
@@ -83,6 +86,9 @@ export function recordHospitalContractGeneration(id: string, previous: DocumentD
     contractSignedAt: previous.contractSignedAt ?? null,
     contractSignedBy: previous.contractSignedBy ?? null,
     contractUrl: previous.contractUrl ?? null,
+    contractSignedAt2: previous.contractSignedAt2 ?? null,
+    contractSignedBy2: previous.contractSignedBy2 ?? null,
+    contractUrl2: previous.contractUrl2 ?? null,
     activatedAt: previous.activatedAt ?? null,
     activatedBy: previous.activatedBy ?? null,
     updatedAt: firestoreTimestamp.server(),
@@ -90,37 +96,46 @@ export function recordHospitalContractGeneration(id: string, previous: DocumentD
   }, { action: "contract_generated", actorRole: "admin" }, previous);
 }
 
-export function confirmHospitalContractSigning(id: string, previous: DocumentData) {
-  if (previous.contractStatus !== "generated") {
+function validatedContractUrl(value: string, label: string) {
+  const contractUrl = value.trim();
+  if (contractUrl.length > 500) throw new Error(`${label} must be 500 characters or fewer.`);
+  try {
+    const parsed = new URL(contractUrl);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error();
+  } catch {
+    throw new Error(`Enter a valid ${label.toLowerCase()} beginning with http:// or https://.`);
+  }
+  return contractUrl;
+}
+
+export function confirmHospitalContractSigning(id: string, previous: DocumentData, contractUrlInput: string, contractUrl2Input: string) {
+  if (!(["generated", "signed"] as string[]).includes(previous.contractStatus)) {
     throw new Error("Select Generate Contract PDF before confirming that the contract has been signed.");
   }
+  const contractUrl = validatedContractUrl(contractUrlInput, "Contract 1 URL");
+  const contractUrl2 = validatedContractUrl(contractUrl2Input, "Contract 2 URL");
   const actorId = getAuditActorId();
   return updateAuditedDocument(COLLECTIONS.hospitals, id, {
     contractStatus: "signed",
-    contractSignedAt: firestoreTimestamp.server(),
-    contractSignedBy: actorId,
+    contractSignedAt: previous.contractSignedAt ?? firestoreTimestamp.server(),
+    contractSignedBy: previous.contractSignedBy ?? actorId,
+    contractUrl,
+    contractSignedAt2: previous.contractSignedAt2 ?? firestoreTimestamp.server(),
+    contractSignedBy2: previous.contractSignedBy2 ?? actorId,
+    contractUrl2,
     updatedAt: firestoreTimestamp.server(),
     updatedBy: actorId,
   }, { action: "contract_signed", actorRole: "admin" }, previous);
 }
 
-export function activateHospital(id: string, previous: DocumentData, contractUrlInput: string) {
-  if (previous.contractStatus !== "signed" || !previous.contractSignedAt) {
-    throw new Error("Confirm that the hospital has signed the contract before activating it.");
-  }
-  const contractUrl = contractUrlInput.trim();
-  if (contractUrl.length > 500) throw new Error("The signed contract URL must be 500 characters or fewer.");
-  try {
-    const parsed = new URL(contractUrl);
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error();
-  } catch {
-    throw new Error("Enter a valid signed contract URL beginning with http:// or https://.");
+export function activateHospital(id: string, previous: DocumentData) {
+  if (previous.contractStatus !== "signed" || !previous.contractSignedAt || !previous.contractSignedAt2 || !previous.contractUrl || !previous.contractUrl2) {
+    throw new Error("Confirm both signed contracts before activating the hospital.");
   }
   const actorId = getAuditActorId();
   return updateAuditedDocument(COLLECTIONS.hospitals, id, {
     status: "active",
     isPublic: true,
-    contractUrl,
     activatedAt: firestoreTimestamp.server(),
     activatedBy: actorId,
     updatedAt: firestoreTimestamp.server(),

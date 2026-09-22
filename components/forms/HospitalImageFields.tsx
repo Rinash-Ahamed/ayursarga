@@ -4,7 +4,7 @@ export function HospitalImageFields({ defaultValues = [], error }: { defaultValu
   return <fieldset className="portal-image-fields full">
     <legend>Hospital images</legend>
     <p>
-      Add up to four images. Upload each image to Google Drive, set its General access to
+      Add up to {MAX_HOSPITAL_IMAGES} images. Upload each image to Google Drive, set its General access to
       <strong> Anyone with the link</strong> as a Viewer, then paste the sharing link below.
       Images are displayed in a consistent 4:3 frame, so landscape photos work best.
     </p>

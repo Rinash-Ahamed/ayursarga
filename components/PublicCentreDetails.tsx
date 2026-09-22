@@ -9,10 +9,10 @@ import { listPublicHospitalServices } from "@/services/hospitals/publicHospitalS
 import { getHospitalImageUrls } from "@/features/hospitals/images";
 import { resolveCentreGuidelines } from "@/features/hospitals/guidelines";
 import { groupHospitalFacilities } from "@/features/hospitals/facilities";
+import { packageProcedureEntries, packageTitle } from "@/features/hospitals/packages";
+import { FacilityIcon } from "@/components/icons/FacilityIcon";
 import { addCentreSearchContext, formatBystanders, type CentreSearchContext } from "@/features/hospitals/searchContext";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
-import { formatCurrency } from "@/utils/currency";
-import { formatServiceDuration } from "@/utils/duration";
 
 function formatCareDates(context: CentreSearchContext) {
   if (!context.startDate && !context.endDate) return "Dates are flexible";
@@ -52,8 +52,9 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
   const [hospital, setHospital] = useState<DocumentRecord<HospitalDocument> | null>(null);
   const [hospitalLoading, setHospitalLoading] = useState(true);
   const [hospitalError, setHospitalError] = useState<string | null>(null);
+  const [expandedPackages, setExpandedPackages] = useState<Set<string>>(() => new Set());
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) => listPublicHospitalServices(hospitalId, { pageSize: 12, cursor }), [hospitalId]);
-  const { items: services, error: serviceError, isLoading: servicesLoading, hasMore, loadMore } = usePaginatedList<ServiceDocument>(loader, "We could not load this centre’s treatments. Please try again.");
+  const { items: services, error: serviceError, isLoading: servicesLoading, hasMore, loadMore } = usePaginatedList<ServiceDocument>(loader, "We could not load this centre's packages. Please try again.");
 
   useEffect(() => {
     let active = true;
@@ -85,22 +86,24 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
   const guidelines = resolveCentreGuidelines(hospital);
   const additionalRules = hospital.additionalCentreRules?.trim();
   const { groups: facilityGroups, custom: customFacilities, hasFacilities } = groupHospitalFacilities(hospital.facilities);
+  const primaryHospitalPhone = hospital.hospitalPhone1?.trim() || hospital.phone;
+  const secondaryHospitalPhone = hospital.hospitalPhone2?.trim();
 
   return <section className="section public-centre-detail-page">
     <div className="section-inner public-centre-detail-inner">
       <Link href={backHref} className="public-centre-back">← Back to centre search</Link>
       <nav className="public-centre-detail-nav" aria-label="Centre details sections">
-        <a href="#overview">Overview</a><a href="#packages">Package and Price Details</a><a href="#facilities">Facilities</a><a href="#rules">Centre Rules</a><a href="#legal">Legal and Policies</a><a href="#reviews">Guest Reviews</a>
+        <a href="#overview">Overview</a><a href="#packages">Services</a><a href="#facilities">Facilities</a><a href="#rules">Centre Rules</a><a href="#legal">Legal and Policies</a><a href="#reviews">Guest Reviews</a>
       </nav>
 
       <header className="public-centre-detail-header">
         <div>
           <span className="eyebrow">Ayursarga partner centre</span>
           <h1>{hospital.name}</h1>
-          <p className="public-centre-address"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-6.2 6-12A6 6 0 1 0 6 9c0 5.8 6 12 6 12Z" /><circle cx="12" cy="9" r="2" /></svg>{hospital.address}, {hospital.city}, {hospital.state}</p>
+          <p className="public-centre-address"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-6.2 6-12A6 6 0 1 0 6 9c0 5.8 6 12 6 12Z" /><circle cx="12" cy="9" r="2" /></svg>{hospital.address}, {hospital.city}{hospital.district ? `, ${hospital.district}` : ""}, {hospital.state}</p>
           {hospital.ayursargaRating && <div className="public-center-assessment" aria-label={`Ayursarga assessment ${hospital.ayursargaRating} out of 5`}><span className="public-center-stars" aria-hidden="true"><span>★★★★★</span><span style={{ width: `${hospital.ayursargaRating / 5 * 100}%` }}>★★★★★</span></span><strong>{hospital.ayursargaRating.toFixed(1)}</strong></div>}
         </div>
-        <a className="public-centre-primary-action" href="#packages">Choose a treatment</a>
+        <a className="public-centre-primary-action" href="#packages">Choose a package</a>
       </header>
 
       <CentreGallery hospital={hospital} />
@@ -120,15 +123,31 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
           </section>
 
           <section id="packages" className="public-centre-content-section">
-            <span className="eyebrow">Package and price details</span><h2>Choose the care you would like to discuss</h2>
+            <span className="eyebrow">Available packages</span><h2>Choose the care you would like to discuss</h2>
             {serviceError && <div className="public-centre-inline-error" role="alert">{serviceError}</div>}
-            {servicesLoading && services.length === 0 && <p role="status">Loading available treatments…</p>}
-            {!servicesLoading && !serviceError && services.length === 0 && <p>No active treatments are listed for this centre yet.</p>}
+            {servicesLoading && services.length === 0 && <p role="status">Loading available packages...</p>}
+            {!servicesLoading && !serviceError && services.length === 0 && <p>No active packages are listed for this centre yet.</p>}
             <div className="public-centre-services">{services.map((service) => {
               const bookingParams = addCentreSearchContext(new URLSearchParams({ hospitalId: hospital.id, serviceId: service.id }), searchContext);
-              return <article key={service.id}><div><h3>{service.name}</h3><p>{service.description}</p><span>{formatServiceDuration(service.durationMinutes, service.durationUnit)}</span></div><div><strong>{formatCurrency(service.price)}</strong><Link href={`/app/bookings/new?${bookingParams.toString()}`}>Request appointment</Link></div></article>;
+              const procedures = packageProcedureEntries(service);
+              const expanded = expandedPackages.has(service.id);
+              return <article className="public-centre-package" key={service.id}>
+                <div className="public-centre-package-copy">
+                  <h3>{packageTitle(service)}</h3>
+                  <p>{service.description || `${procedures.length} procedures included in this package.`}</p>
+                  {service.packageDurationDays && <span>{service.packageDurationDays} days</span>}
+                  {procedures.length > 0 && <button className="public-package-toggle" type="button" aria-expanded={expanded} onClick={() => setExpandedPackages((current) => {
+                    const next = new Set(current);
+                    if (next.has(service.id)) next.delete(service.id);
+                    else next.add(service.id);
+                    return next;
+                  })}>{expanded ? "View less" : "View more"}</button>}
+                  {expanded && <ul className="public-package-procedures">{procedures.map((procedure) => <li key={procedure.id}><span>{procedure.label}</span><strong>{procedure.days} {procedure.days === 1 ? "day" : "days"}</strong></li>)}</ul>}
+                </div>
+                <div><Link href={`/app/bookings/new?${bookingParams.toString()}`}>Request appointment</Link></div>
+              </article>;
             })}</div>
-            {hasMore && <button className="public-load-more" type="button" disabled={servicesLoading} onClick={() => void loadMore()}>{servicesLoading ? "Loading…" : "Show more treatments"}</button>}
+            {hasMore && <button className="public-load-more" type="button" disabled={servicesLoading} onClick={() => void loadMore()}>{servicesLoading ? "Loading..." : "Show more packages"}</button>}
           </section>
 
           <section id="facilities" className="public-centre-content-section">
@@ -136,11 +155,11 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
             {hasFacilities ? <div className="public-centre-facility-groups">
               {facilityGroups.map((group) => <section key={group.title}>
                 <h3>{group.title}</h3>
-                <ul className="public-centre-facilities">{group.options.map((facility) => <li key={facility}>{facility}</li>)}</ul>
+                <ul className="public-centre-facilities">{group.options.map((facility) => <li key={facility}><FacilityIcon facility={facility} /><span>{facility}</span></li>)}</ul>
               </section>)}
               {customFacilities.length > 0 && <section>
                 <h3>Other facilities</h3>
-                <ul className="public-centre-facilities">{customFacilities.map((facility, index) => <li key={`${facility}-${index}`}>{facility}</li>)}</ul>
+                <ul className="public-centre-facilities">{customFacilities.map((facility, index) => <li key={`${facility}-${index}`}><FacilityIcon facility={facility} /><span>{facility}</span></li>)}</ul>
               </section>}
             </div> : <div className="public-centre-empty-note">This centre has not added its facilities yet. Contact the centre before requesting care if you need a particular facility.</div>}
           </section>
@@ -164,10 +183,12 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
         <aside className="public-centre-contact-card">
           <span>Centre information</span><h2>Speak with the centre</h2>
           <p>Contact the centre for practical questions. Treatment suitability is confirmed by its qualified clinical team.</p>
-          <a href={`tel:${hospital.phone}`}>{hospital.phone}</a><a href={`mailto:${hospital.email}`}>{hospital.email}</a>
+          <a href={`tel:${primaryHospitalPhone}`}>{primaryHospitalPhone}</a>
+          {secondaryHospitalPhone && <a href={`tel:${secondaryHospitalPhone}`}>{secondaryHospitalPhone}</a>}
+          <a href={`mailto:${hospital.email}`}>{hospital.email}</a>
           {hospital.locationUrl && <div className="public-centre-location">
             <span>Centre location</span>
-            <p>{hospital.address}, {hospital.city}, {hospital.state}</p>
+            <p>{hospital.address}, {hospital.city}{hospital.district ? `, ${hospital.district}` : ""}, {hospital.state}</p>
             <a href={hospital.locationUrl} target="_blank" rel="noopener noreferrer">Open location in maps <span aria-hidden="true">↗</span></a>
           </div>}
         </aside>

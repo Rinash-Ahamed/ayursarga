@@ -72,7 +72,7 @@ export function ConsumerBookings() {
         </div>
         <div className="consumer-booking-meta">
           <span className="portal-status" data-status={booking.status}>{formatStatus(booking.status)}</span>
-          <strong className="consumer-booking-price">{formatCurrency(booking.servicePrice)}</strong>
+          {booking.servicePrice > 0 && <strong className="consumer-booking-price">{formatCurrency(booking.servicePrice)}</strong>}
           {["requested", "confirmed", "reschedule_requested"].includes(booking.status) && getTreatmentStatus(booking) === "not_started" && <div className="portal-actions">
             <button className="portal-button secondary" disabled={busy === booking.id} onClick={() => void cancel(booking)}>Cancel</button>
           </div>}

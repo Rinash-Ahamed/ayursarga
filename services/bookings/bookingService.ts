@@ -33,6 +33,7 @@ export async function createBookingRequest(input: BookingRequestInput) {
   const [hospital, service] = await Promise.all([getHospital(input.hospitalId), getService(input.serviceId)]);
   if (!hospital || hospital.status !== "active" || !hospital.isPublic) throw new Error("This hospital is not accepting appointment requests right now. Choose another hospital and try again.");
   if (!service || service.hospitalId !== hospital.id || service.status !== "active") throw new Error("This service is not accepting appointment requests right now. Return to the hospital page and choose another service.");
+  const servicePrice = service.price ?? 0;
   return createAuditedDocument(COLLECTIONS.bookings, {
     consumerId: input.consumerId,
     consumerName: input.consumerName.trim(), consumerEmail: input.consumerEmail.trim().toLowerCase(),
@@ -42,8 +43,8 @@ export async function createBookingRequest(input: BookingRequestInput) {
     preferredEndDate: input.preferredEndDate ? Timestamp.fromDate(input.preferredEndDate) : null,
     preferredTime: input.preferredTime, bystanderCount: input.bystanderCount,
     confirmedDate: null, confirmedTime: null, status: "requested", treatmentStatus: "not_started",
-    servicePrice: service.price, commissionPercentage: hospital.commissionPercentage,
-    estimatedCommission: service.price * hospital.commissionPercentage / 100,
+    servicePrice, commissionPercentage: hospital.commissionPercentage,
+    estimatedCommission: servicePrice * hospital.commissionPercentage / 100,
     consumerNotes: input.consumerNotes?.trim() || null, hospitalNotes: null,
     createdAt: firestoreTimestamp.server(), createdBy: input.consumerId,
     updatedAt: firestoreTimestamp.server(), updatedBy: input.consumerId,
