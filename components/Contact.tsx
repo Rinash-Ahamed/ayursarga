@@ -98,12 +98,7 @@ export default function Contact({ guidanceProfile = null, initialInterest = "" }
               <option>Postnatal recovery</option>
               <option>Rejuvenation</option>
               <option>Stress management</option>
-              <option>Weight management</option>
-              <option>PCOS care</option>
               <option>Women&apos;s wellness</option>
-              <option>Corporate wellness</option>
-              <option>Couples retreat</option>
-              <option>Detox retreat</option>
             </optgroup>
             <optgroup label="More ways we can help">
               <option>Prenatal and maternity care</option>
