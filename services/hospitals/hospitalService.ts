@@ -9,8 +9,8 @@ import {
   firestoreTimestamp, readDocument, runFilteredQuery,
   type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
-import { createAuditedDocument, getArchiveMetadata, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
-import { DEFAULT_CENTRE_GUIDELINE_VALUES } from "@/features/hospitals/guidelines";
+import { getArchiveMetadata, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
+import { authorizedApiRequest } from "@/services/api/client";
 
 export { listPublicHospitals } from "@/services/hospitals/publicHospitalService";
 
@@ -43,38 +43,13 @@ export function listAllHospitals(options: Pick<QueryPageOptions, "pageSize" | "c
 export function createHospital(input: HospitalFields) {
   const validation = validateHospitalFields(input);
   if (!validation.isValid) throw new Error(Object.values(validation.errors)[0] ?? "Hospital details are invalid.");
-  // Use the same live Firebase identity for the hospital metadata and its
-  // linked audit entry. A cached React auth value can briefly lag behind
-  // Firebase Auth after an account switch, which correctly causes the atomic
-  // write to be rejected by Firestore rules.
-  const actorId = getAuditActorId();
-  return createAuditedDocument(COLLECTIONS.hospitals, {
-    ...validation.data,
-    status: "pending",
-    isPublic: false,
-    contractStatus: "not_generated",
-    contractGeneratedAt: null,
-    contractGeneratedBy: null,
-    contractSignedAt: null,
-    contractSignedBy: null,
-    contractUrl: null,
-    contractSignedAt2: null,
-    contractSignedBy2: null,
-    contractUrl2: null,
-    imageUrls: [],
-    ayursargaRating: null,
-    ayursargaReviewNote: null,
-    centreGuidelines: DEFAULT_CENTRE_GUIDELINE_VALUES,
-    additionalCentreRules: "",
-    facilities: "",
-    legalPolicies: "",
-    locationUrl: null,
-    activatedAt: null,
-    activatedBy: null,
-    createdBy: actorId,
-    createdAt: firestoreTimestamp.server(), updatedAt: firestoreTimestamp.server(), updatedBy: actorId,
-    archivedAt: null, archivedBy: null,
-  }, { action: "create", actorRole: "admin" });
+  return authorizedApiRequest<{ ok: true; hospitalId: string }>("/api/admin/hospitals", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(validation.data),
+    signedOutMessage: "Your Admin session has expired. Sign in again to create a hospital.",
+    failureMessage: "We could not create the hospital. Please try again.",
+  });
 }
 
 export const updateHospital = (id: string, input: HospitalAdminUpdate, previousValues?: DocumentData) =>
