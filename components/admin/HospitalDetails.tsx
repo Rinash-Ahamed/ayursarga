@@ -57,6 +57,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   const [contractUrl, setContractUrl] = useState("");
   const [contractUrl2, setContractUrl2] = useState("");
   const [editing, setEditing] = useState(false);
+  const [editingMedia, setEditingMedia] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<HospitalValidationErrors>({});
   const [imageError, setImageError] = useState<string | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -151,15 +152,11 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
       imageUrl: hospital.imageUrl,
       commissionPercentage: hospital.commissionPercentage,
     });
-    const images = validateHospitalImageUrls(form.getAll("hospitalImageUrl"));
-    const location = validateHospitalLocationUrl(form.get("hospitalLocationUrl"));
     setFieldErrors(validation.errors);
-    setImageError(images.error);
-    setLocationError(location.error);
     setError(null);
     setMessage(null);
-    if (!validation.isValid || images.error || location.error) {
-      setError(images.error ?? location.error ?? "Please check the highlighted fields, then save the details again.");
+    if (!validation.isValid) {
+      setError("Please check the highlighted fields, then save the details again.");
       return;
     }
 
@@ -176,17 +173,43 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         district: validation.data.district,
         state: validation.data.state,
         description: validation.data.description,
-        imageUrls: images.imageUrls,
-        locationUrl: location.locationUrl,
       });
       await reload();
       setEditing(false);
       setFieldErrors({});
-      setImageError(null);
-      setLocationError(null);
       setMessage("The hospital details have been updated.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "We could not save the hospital details. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveHospitalMedia(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!hospital || busy) return;
+    const form = new FormData(event.currentTarget);
+    const images = validateHospitalImageUrls(form.getAll("hospitalImageUrl"));
+    const location = validateHospitalLocationUrl(form.get("hospitalLocationUrl"));
+    setImageError(images.error);
+    setLocationError(location.error);
+    setError(null);
+    setMessage(null);
+    if (images.error || location.error) {
+      setError(images.error ?? location.error ?? "Check the hospital images and map details, then try again.");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      await updateHospital(hospital.id, { imageUrls: images.imageUrls, locationUrl: location.locationUrl });
+      await reload();
+      setEditingMedia(false);
+      setImageError(null);
+      setLocationError(null);
+      setMessage("The hospital images and map have been updated.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "We could not save the hospital images and map. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -259,11 +282,8 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         <div className="portal-row-heading"><h2>{hospital.name}</h2><span className="portal-status" data-status={hospital.status}>{formatStatus(hospital.status)}</span></div>
         {editing ? <form className="portal-form portal-edit-form" onSubmit={saveHospitalDetails} noValidate>
           <HospitalFormFields defaultValues={hospital} errors={fieldErrors} />
-          <HospitalImageFields defaultValues={getHospitalImageUrls(hospital)} error={imageError} />
-          <HospitalLocationField defaultValue={hospital.locationUrl} error={locationError} />
-          <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save details"}</button><button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditing(false); setFieldErrors({}); setImageError(null); setLocationError(null); setError(null); }}>Cancel</button></div>
+          <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save details"}</button><button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditing(false); setFieldErrors({}); setError(null); }}>Cancel</button></div>
         </form> : <>
-          <HospitalImageGallery imageUrls={getHospitalImageUrls(hospital)} hospitalName={hospital.name} />
           <p>{hospital.description || "No description provided."}</p>
           <div className="portal-card-meta">
             <span>{hospital.email}</span><span>Owner WhatsApp: {hospital.phone}</span><span>Hospital Phone 1: {hospital.hospitalPhone1 || "Not added"}</span>{hospital.hospitalPhone2 && <span>Hospital Phone 2: {hospital.hospitalPhone2}</span>}<span>{hospital.city}{hospital.district ? `, ${hospital.district}` : ""}, {hospital.state}</span><span>Commission {hospital.commissionPercentage}%</span>
@@ -273,6 +293,20 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
             <button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditing(true); setError(null); setMessage(null); }}>Edit hospital</button>
             <button className="portal-button danger" type="button" disabled={busy} onClick={() => setPendingAction("archive")}>Delete hospital</button>
           </div>}
+        </>}
+      </article>
+
+      <article className="portal-card portal-hospital-media-card">
+        <div className="portal-row-heading"><h2>Hospital images and map</h2><span className="portal-status" data-status={hospital.locationUrl || getHospitalImageUrls(hospital).length ? "active" : "pending"}>{hospital.locationUrl || getHospitalImageUrls(hospital).length ? "Added" : "Not added"}</span></div>
+        {editingMedia ? <form className="portal-form portal-edit-form" onSubmit={saveHospitalMedia} noValidate>
+          <HospitalImageFields defaultValues={getHospitalImageUrls(hospital)} error={imageError} />
+          <HospitalLocationField defaultValue={hospital.locationUrl} error={locationError} />
+          <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save images and map"}</button><button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditingMedia(false); setImageError(null); setLocationError(null); setError(null); }}>Cancel</button></div>
+        </form> : <>
+          <HospitalImageGallery imageUrls={getHospitalImageUrls(hospital)} hospitalName={hospital.name} />
+          <div className="portal-card-meta"><span>{getHospitalImageUrls(hospital).length} of 10 images added</span><span>{hospital.locationUrl ? "Map location added" : "Map location not added"}</span></div>
+          {hospital.locationUrl && <p><a className="portal-inline-link" href={hospital.locationUrl} target="_blank" rel="noreferrer">View centre map</a></p>}
+          {hospital.status !== "archived" && <div className="portal-actions"><button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditingMedia(true); setError(null); setMessage(null); }}>Manage images and map</button></div>}
         </>}
       </article>
 

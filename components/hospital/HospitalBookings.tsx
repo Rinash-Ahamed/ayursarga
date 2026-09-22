@@ -79,7 +79,7 @@ export function HospitalBookings() {
       item,
       nextStatus,
       date: item.preferredDate.toDate().toISOString().slice(0, 10),
-      time: item.preferredTime,
+      time: /^\d{2}:\d{2}$/.test(item.preferredTime) ? item.preferredTime : "",
       notes: item.hospitalNotes ?? "",
     });
   }

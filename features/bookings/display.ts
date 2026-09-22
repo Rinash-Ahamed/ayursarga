@@ -8,5 +8,6 @@ export function formatBookingCarePreference(booking: BookingCarePreference) {
   const endDate = booking.preferredEndDate?.toDate().toLocaleDateString("en-IN");
   const period = endDate && endDate !== startDate ? `${startDate} to ${endDate}` : startDate;
   const bystanders = formatBystanders(booking.bystanderCount ?? 1);
-  return `${period} at ${booking.preferredTime} · ${bystanders}`;
+  const time = booking.preferredTime && booking.preferredTime !== "Flexible" ? ` at ${booking.preferredTime}` : "";
+  return `${period}${time} · ${bystanders}`;
 }

@@ -33,7 +33,7 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
         hospitalId, serviceId,
         preferredDate: new Date(`${preferredDate}T00:00:00`),
         preferredEndDate: preferredEndDate ? new Date(`${preferredEndDate}T00:00:00`) : null,
-        preferredTime: String(data.get("time")), bystanderCount: Number(data.get("bystanders")),
+        preferredTime: "Flexible", bystanderCount: Number(data.get("bystanders")),
         consumerNotes: String(data.get("notes") || ""), bookingTermsAccepted });
       router.replace("/app/bookings");
     } catch (caught) { setError(caught instanceof Error ? caught.message : "We could not send your appointment request. Check the details and try again."); }
@@ -43,7 +43,6 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
     <form className="portal-card portal-form" onSubmit={submit}>
       <label>Preferred start date<input name="date" type="date" min={new Date().toISOString().slice(0, 10)} value={preferredDate} onChange={(event) => setPreferredDate(event.target.value)} required /></label>
       <label>Preferred end date <small>Optional for consultation or single-day care</small><input name="endDate" type="date" min={preferredDate || new Date().toISOString().slice(0, 10)} value={preferredEndDate} onChange={(event) => setPreferredEndDate(event.target.value)} /></label>
-      <label>Preferred time<input name="time" type="time" required /></label>
       <label>Accompanying bystanders<select name="bystanders" defaultValue={searchContext.bystanders}>{[0, 1, 2, 3, 4].map((count) => <option value={count} key={count}>{formatBystanders(count)}</option>)}</select></label>
       <label className="full">Notes (optional)<textarea name="notes" maxLength={500} /></label>
       <fieldset className="portal-consent portal-booking-consent full">
