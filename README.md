@@ -75,6 +75,9 @@ The preservation and audit design is documented in
 - Admin removal of a Consumer archives the Consumer profile and revokes active
   application access while retaining the authentication identity, bookings,
   and audit history.
+- Consumer profile completion records versioned Customer Terms and Privacy
+  Policy acceptance. Every booking separately records the applicable booking
+  terms and policy acceptance version and timestamp.
 - Firestore client rules deny document deletion for active application
   collections. Audit logs are Admin-readable and cannot be changed through the
   client SDK. As an explicit platform-owner exception, an active Admin may use

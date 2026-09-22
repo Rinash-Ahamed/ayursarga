@@ -58,14 +58,14 @@ export function ConsumerProfile({ requestedPath }: { requestedPath?: string }) {
       <label className="full">Address<textarea name="address" autoComplete="street-address" defaultValue={userProfile?.address ?? ""} maxLength={300} aria-invalid={Boolean(fieldErrors.address)} />{fieldErrors.address && <span className="portal-field-error">{fieldErrors.address}</span>}</label>
       <label className="full">Google account email<input value={userProfile?.email ?? ""} disabled /></label>
       {needsPrivacyConsent ? <fieldset className="portal-consent full">
-        <legend>Privacy consent *</legend>
+        <legend>Customer agreement and privacy consent *</legend>
         <p>Ayursarga will process your name, Google email, phone number, optional address, wellness preferences, and booking information to provide your account, personal guidance, center discovery, and appointment-request services. Your contact and booking details are shared only with the center you choose when you request an appointment. You may withdraw consent by contacting <a href="mailto:info@ayursarga.com">info@ayursarga.com</a>.</p>
         <label className="portal-consent-choice">
           <input name="privacyConsent" type="checkbox" required aria-invalid={Boolean(fieldErrors.privacyConsent)} />
-          <span>I have read this notice and consent to the processing of my personal data for these purposes.</span>
+          <span>I have read and agree to the Ayursarga Customer Terms &amp; Conditions and Privacy Policy.</span>
         </label>
         {fieldErrors.privacyConsent && <span className="portal-field-error">{fieldErrors.privacyConsent}</span>}
-      </fieldset> : <p className="portal-consent-recorded full">Privacy consent is recorded for this Consumer profile. To withdraw it, contact <a href="mailto:info@ayursarga.com">info@ayursarga.com</a>.</p>}
+      </fieldset> : <p className="portal-consent-recorded full">Customer agreement and privacy consent are recorded for this Consumer profile. To withdraw consent, contact <a href="mailto:info@ayursarga.com">info@ayursarga.com</a>.</p>}
       <PortalToast message={error} tone="error" />
       <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save and continue"}</button></div>
     </form>

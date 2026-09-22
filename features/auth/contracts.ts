@@ -21,6 +21,8 @@ export type UserProfile = {
   hospitalId: string | null;
   privacyConsentAt: Date | null;
   privacyConsentVersion: string | null;
+  customerTermsAcceptedAt: Date | null;
+  customerTermsVersion: string | null;
   createdAt: Date | null;
   updatedAt: Date | null;
 };

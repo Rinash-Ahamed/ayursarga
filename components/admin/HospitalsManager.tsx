@@ -6,7 +6,6 @@ import type { HospitalDocument } from "@/features/firestore/models";
 import type { QueryPageOptions } from "@/services/firestore/firestoreService";
 import { createHospital, listAllHospitals } from "@/services/hospitals/hospitalService";
 import { hospitalFormValues, validateHospitalFields, type HospitalValidationErrors } from "@/features/hospitals/validation";
-import { useAuth } from "@/hooks/useAuth";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalPagination } from "@/components/portal/PortalPagination";
@@ -17,7 +16,6 @@ import { PortalToast } from "@/components/portal/PortalToast";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 
 export function HospitalsManager() {
-  const { firebaseUser } = useAuth();
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<HospitalValidationErrors>({});
@@ -31,7 +29,6 @@ export function HospitalsManager() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!firebaseUser) return;
     const form = event.currentTarget;
     const validation = validateHospitalFields(hospitalFormValues(new FormData(form)));
     setFieldErrors(validation.errors);
@@ -44,7 +41,7 @@ export function HospitalsManager() {
 
     setBusy(true);
     try {
-      await createHospital(validation.data, firebaseUser.uid);
+      await createHospital(validation.data);
       form.reset();
       setFieldErrors({});
       await reload();

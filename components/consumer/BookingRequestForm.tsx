@@ -13,10 +13,15 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
   const router = useRouter();
   const [preferredDate, setPreferredDate] = useState(searchContext.startDate);
   const [preferredEndDate, setPreferredEndDate] = useState(searchContext.endDate);
+  const [bookingTermsAccepted, setBookingTermsAccepted] = useState(false);
   const [busy, setBusy] = useState(false); const [error, setError] = useState<string | null>(null);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (!firebaseUser || !userProfile?.phone) return;
     const data = new FormData(event.currentTarget);
+    if (!bookingTermsAccepted) {
+      setError("Read and accept the applicable terms and policies before sending your request.");
+      return;
+    }
     if (preferredEndDate && preferredEndDate < preferredDate) {
       setError("Choose an end date on or after the preferred start date.");
       return;
@@ -29,7 +34,7 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
         preferredDate: new Date(`${preferredDate}T00:00:00`),
         preferredEndDate: preferredEndDate ? new Date(`${preferredEndDate}T00:00:00`) : null,
         preferredTime: String(data.get("time")), bystanderCount: Number(data.get("bystanders")),
-        consumerNotes: String(data.get("notes") || "") });
+        consumerNotes: String(data.get("notes") || ""), bookingTermsAccepted });
       router.replace("/app/bookings");
     } catch (caught) { setError(caught instanceof Error ? caught.message : "We could not send your appointment request. Check the details and try again."); }
     finally { setBusy(false); }
@@ -41,6 +46,14 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
       <label>Preferred time<input name="time" type="time" required /></label>
       <label>Accompanying bystanders<select name="bystanders" defaultValue={searchContext.bystanders}>{[0, 1, 2, 3, 4].map((count) => <option value={count} key={count}>{formatBystanders(count)}</option>)}</select></label>
       <label className="full">Notes (optional)<textarea name="notes" maxLength={500} /></label>
+      <fieldset className="portal-consent portal-booking-consent full">
+        <legend>Booking confirmation *</legend>
+        <p>By proceeding, you acknowledge the applicable Customer Terms &amp; Conditions, Cancellation &amp; Refund Policy and Patient/Service Disclaimer &amp; Consent.</p>
+        <label className="portal-consent-choice">
+          <input name="bookingTerms" type="checkbox" required checked={bookingTermsAccepted} onChange={(event) => setBookingTermsAccepted(event.target.checked)} />
+          <span>I have read and agree to the applicable terms and policies.</span>
+        </label>
+      </fieldset>
       <PortalToast message={error} tone="error" />
       <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Sending…" : "Send request"}</button></div>
     </form>

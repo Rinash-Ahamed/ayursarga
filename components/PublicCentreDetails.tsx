@@ -10,6 +10,7 @@ import { getHospitalImageUrls } from "@/features/hospitals/images";
 import { resolveCentreGuidelines } from "@/features/hospitals/guidelines";
 import { groupHospitalFacilities } from "@/features/hospitals/facilities";
 import { packageProcedureEntries, packageTitle } from "@/features/hospitals/packages";
+import { getHospitalMapEmbedUrl } from "@/features/hospitals/location";
 import { FacilityIcon } from "@/components/icons/FacilityIcon";
 import { addCentreSearchContext, formatBystanders, type CentreSearchContext } from "@/features/hospitals/searchContext";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
@@ -88,6 +89,8 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
   const { groups: facilityGroups, custom: customFacilities, hasFacilities } = groupHospitalFacilities(hospital.facilities);
   const primaryHospitalPhone = hospital.hospitalPhone1?.trim() || hospital.phone;
   const secondaryHospitalPhone = hospital.hospitalPhone2?.trim();
+  const centreAddress = `${hospital.address}, ${hospital.city}${hospital.district ? `, ${hospital.district}` : ""}, ${hospital.state}`;
+  const mapEmbedUrl = hospital.locationUrl ? getHospitalMapEmbedUrl(hospital.locationUrl, centreAddress) : null;
 
   return <section className="section public-centre-detail-page">
     <div className="section-inner public-centre-detail-inner">
@@ -188,7 +191,10 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
           <a href={`mailto:${hospital.email}`}>{hospital.email}</a>
           {hospital.locationUrl && <div className="public-centre-location">
             <span>Centre location</span>
-            <p>{hospital.address}, {hospital.city}{hospital.district ? `, ${hospital.district}` : ""}, {hospital.state}</p>
+            <p>{centreAddress}</p>
+            {mapEmbedUrl && <div className="public-centre-map-frame">
+              <iframe src={mapEmbedUrl} title={`${hospital.name} location map`} loading="lazy" referrerPolicy="no-referrer-when-downgrade" allowFullScreen />
+            </div>}
             <a href={hospital.locationUrl} target="_blank" rel="noopener noreferrer">Open location in maps <span aria-hidden="true">↗</span></a>
           </div>}
         </aside>

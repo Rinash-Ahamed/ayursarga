@@ -193,16 +193,16 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
         <p>Tell us what you&rsquo;re looking for, and we&rsquo;ll help you find the right care.</p>
       </div>
 
-      <AnimatePresence initial={false}>
+      <AnimatePresence initial={false} mode="popLayout">
         {selectedPath && <motion.div
           ref={guidePanelRef}
           id="wellness-guidance"
           className="quiz-card wellness-guide-panel"
           role="region"
           aria-label={`${selectedPath.name} guidance questions`}
-          initial={reduceMotion ? false : { opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
+          initial={reduceMotion ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
           transition={transition}
           key="wellness-guide-panel"
         >
@@ -228,7 +228,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
                 ? <ul className="postnatal-inclusions" aria-label="Postnatal care inclusions">{selectedPath.options.map((item) => <li key={item}>{item}</li>)}</ul>
                 : <div className="choice-grid">{selectedPath.options.map((item) => <button type="button" className={preferences.includes(item) ? "selected" : ""} aria-pressed={preferences.includes(item)} onClick={() => togglePreference(item)} key={item}>{item}</button>)}</div>}
               {preferences.includes("Others") && <label className="quiz-label other-district-label quiz-other-concern">Tell us about your concern
-                <input type="text" value={otherConcern} onChange={(event) => setOtherConcern(event.target.value)} placeholder="Type your concern" autoFocus required />
+                <input type="text" value={otherConcern} onChange={(event) => setOtherConcern(event.target.value)} placeholder="Type your concern" required />
               </label>}
               <button type="button" className="quiz-next" disabled={!hasValidPreferences} onClick={() => setStep(1)}>Continue <span aria-hidden="true">→</span></button>
             </motion.div>}
@@ -336,7 +336,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
                 </label>
               </div>
               {district === "Other" && <label className="quiz-label other-district-label">Enter your preferred district
-                <input type="text" value={otherDistrict} onChange={(event) => setOtherDistrict(event.target.value)} placeholder="District name" autoFocus required />
+                <input type="text" value={otherDistrict} onChange={(event) => setOtherDistrict(event.target.value)} placeholder="District name" required />
               </label>}
               <button type="button" className="quiz-next" disabled={!hasValidPostnatalDetails || !hasValidPreferredAppointmentDate || (district === "Other" && !otherDistrict.trim())} onClick={complete}>Prepare my request <span aria-hidden="true">→</span></button>
             </motion.div>}
@@ -354,9 +354,6 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
             </motion.div>}
           </AnimatePresence>
         </motion.div>}
-      </AnimatePresence>
-
-      <AnimatePresence initial={false}>
         {(!selectedPath || step === 2) && <motion.div
           className="path-grid wellness-path-grid"
           aria-label="Choose a wellness path"

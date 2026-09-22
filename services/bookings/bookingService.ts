@@ -3,6 +3,7 @@
 import { Timestamp, type DocumentData } from "firebase/firestore";
 import type { BookingDocument, BookingStatus, TreatmentStatus } from "@/features/firestore/models";
 import { getTreatmentStatus } from "@/features/bookings/treatmentStatus";
+import { BOOKING_TERMS_VERSION } from "@/features/consumers/privacyConsent";
 import { COLLECTIONS } from "@/constants/firestore";
 import {
   firestoreTimestamp, runFilteredQuery,
@@ -17,9 +18,11 @@ type BookingRequestInput = {
   preferredEndDate?: Date | null; preferredTime: string; bystanderCount: number;
   consumerNotes?: string | null; consumerName: string;
   consumerEmail: string; consumerPhone: string; consumerAddress: string | null;
+  bookingTermsAccepted: boolean;
 };
 
 export async function createBookingRequest(input: BookingRequestInput) {
+  if (!input.bookingTermsAccepted) throw new Error("Read and accept the applicable terms and policies before sending your request.");
   if (Number.isNaN(input.preferredDate.getTime())) throw new Error("Choose a valid preferred start date.");
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -50,6 +53,7 @@ export async function createBookingRequest(input: BookingRequestInput) {
     updatedAt: firestoreTimestamp.server(), updatedBy: input.consumerId,
     archivedAt: null, archivedBy: null,
     confirmedAt: null, completedAt: null, treatmentStartedAt: null, treatmentCompletedAt: null,
+    bookingTermsAcceptedAt: firestoreTimestamp.server(), bookingTermsVersion: BOOKING_TERMS_VERSION,
   }, { action: "create", actorRole: "consumer" });
 }
 

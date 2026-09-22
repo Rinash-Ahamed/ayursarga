@@ -30,6 +30,12 @@ implementation work unless the project owner explicitly changes a decision.
   verification without a later explicit decision. Hospital and Admin accounts
   use email/password and are created only through a controlled privileged
   process.
+- Consumer profile completion requires one versioned acceptance of the
+  Ayursarga Customer Terms and Privacy Policy. Each booking request also stores
+  its own versioned acceptance timestamp for the applicable Customer Terms,
+  Cancellation and Refund Policy, and Patient/Service Disclaimer and Consent.
+  Both acceptances are mandatory and auditable; do not rely only on unchecked
+  client-side wording.
 - Hospital activation provisions or reconnects one Firebase Authentication
   account for the hospital's official email and sends a Firebase password setup
   link. Never introduce a shared default password or store passwords in
@@ -78,6 +84,10 @@ implementation work unless the project owner explicitly changes a decision.
   centre-guideline wording, additional centre rules, facilities, and
   centre-specific legal/policy information. Hospital image links and the
   validated Google Maps or OpenStreetMap location link are Admin-managed.
+  Admin may paste a supported map iframe snippet, but application code must
+  extract and store only its validated HTTPS `src` URL. Public centre details
+  render that URL in a responsive map frame and retain an external maps link;
+  never store or render arbitrary iframe HTML.
   Normalize supported Drive sharing links for display and keep gallery frames
   at a consistent 4:3 ratio. Firebase Storage and direct uploads remain disabled
   while the project uses the Spark plan.

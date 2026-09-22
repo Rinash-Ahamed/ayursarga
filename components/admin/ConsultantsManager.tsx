@@ -124,10 +124,16 @@ export function ConsultantsManager() {
         <ConsultantFormFields key={consultant.id} defaultValues={consultant} errors={fieldErrors} />
         <div className="portal-actions full"><button className="portal-button" disabled={busyId === consultant.id}>{busyId === consultant.id ? "Saving..." : "Save changes"}</button><button className="portal-button secondary" type="button" disabled={busyId === consultant.id} onClick={resetEditor}>Cancel</button></div>
       </form> : <>
-        <div className="portal-card-meta"><span>{consultant.email}</span><span>{consultant.contactNo}</span><span>WhatsApp: {consultant.whatsappNo}</span><span>{consultant.qualification}</span><span>{consultant.yearsExperience} years experience</span></div>
-        {consultant.lastWorkedCompany && <p>Last worked at {consultant.lastWorkedCompany}</p>}
-        {consultant.address && <p>{consultant.address}</p>}
-        {consultant.emergencyContactNo && <p>Emergency contact: {consultant.emergencyContactNo}</p>}
+        <dl className="consultant-details">
+          <div><dt>Email</dt><dd>{consultant.email}</dd></div>
+          <div><dt>Contact number</dt><dd>{consultant.contactNo}</dd></div>
+          <div><dt>WhatsApp number</dt><dd>{consultant.whatsappNo}</dd></div>
+          <div><dt>Qualification</dt><dd>{consultant.qualification}</dd></div>
+          <div><dt>Experience</dt><dd>{consultant.yearsExperience} years</dd></div>
+          {consultant.lastWorkedCompany && <div><dt>Last worked at</dt><dd>{consultant.lastWorkedCompany}</dd></div>}
+          {consultant.address && <div className="consultant-detail-wide"><dt>Address</dt><dd>{consultant.address}</dd></div>}
+          {consultant.emergencyContactNo && <div><dt>Emergency contact</dt><dd>{consultant.emergencyContactNo}</dd></div>}
+        </dl>
         <div className="portal-actions"><button className="portal-button secondary" type="button" disabled={Boolean(busyId)} onClick={() => { setEditingId(consultant.id); setShowCreateForm(false); setFieldErrors({}); setActionError(null); setMessage(null); }}>Edit</button><button className="portal-button secondary" type="button" disabled={Boolean(busyId)} onClick={() => void toggleStatus(consultant)}>{consultant.status === "active" ? "Make inactive" : "Make active"}</button></div>
       </>}
     </article>)}</div>
