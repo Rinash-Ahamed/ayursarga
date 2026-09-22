@@ -53,7 +53,9 @@ export const PACKAGE_PROCEDURE_GROUPS = [
 export type PackageProcedureId = (typeof PACKAGE_PROCEDURE_GROUPS)[number]["options"][number][0];
 export type PackageProcedures = Partial<Record<PackageProcedureId, number>>;
 
-export const PACKAGE_PROCEDURES = PACKAGE_PROCEDURE_GROUPS.flatMap((group) => group.options) as readonly (readonly [PackageProcedureId, string])[];
+export const PACKAGE_PROCEDURES = PACKAGE_PROCEDURE_GROUPS.flatMap<readonly [PackageProcedureId, string]>(
+  (group) => group.options as readonly (readonly [PackageProcedureId, string])[],
+);
 export const PACKAGE_PROCEDURE_LABELS = new Map<string, string>(PACKAGE_PROCEDURES.map(([id, label]) => [id, label] as const));
 
 export type PackageLike = {

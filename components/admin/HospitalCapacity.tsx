@@ -17,7 +17,6 @@ export function AdminHospitalCapacity({ hospitalId }: { hospitalId: string }) {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
     void getHospitalCapacity(hospitalId).then((record) => {
       if (!active) return;
       setCapacity(record);
