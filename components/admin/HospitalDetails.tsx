@@ -19,6 +19,7 @@ import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
+import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import { PortalDialog } from "@/components/portal/PortalDialog";
 import { formatStatus } from "@/utils/text";
 import { toDate } from "@/utils/date";
@@ -52,8 +53,8 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   const [hospital, setHospital] = useState<DocumentRecord<HospitalDocument> | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useRepeatableMessage();
+  const [message, setMessage] = useRepeatableMessage();
   const [contractUrl, setContractUrl] = useState("");
   const [contractUrl2, setContractUrl2] = useState("");
   const [editing, setEditing] = useState(false);
@@ -83,7 +84,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     setLoading(false);
     if (!record) setError("We could not find this hospital. Return to the hospital list and choose another record.");
     return record;
-  }, [hospitalId, router]);
+  }, [hospitalId, router, setError]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -93,7 +94,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
       });
     }, 0);
     return () => window.clearTimeout(timeout);
-  }, [reload]);
+  }, [reload, setError]);
 
   async function runAction(action: (record: DocumentRecord<HospitalDocument>) => Promise<unknown>, success: string) {
     if (!hospital || busy) return;

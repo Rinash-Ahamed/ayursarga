@@ -7,12 +7,13 @@ import type { DocumentRecord, QueryPageOptions } from "@/services/firestore/fire
 import { listAllHospitals } from "@/services/hospitals/hospitalService";
 import { createAdminAvailabilityBlock, listAdminAvailabilityRequests, reviewAvailabilityRequest } from "@/services/hospitals/availabilityService";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { useCursorPagination } from "@/hooks/useCursorPagination";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalPagination } from "@/components/portal/PortalPagination";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { formatStatus } from "@/utils/text";
+import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 
 export function AdminAvailability() {
   const [hospitalSearch, setHospitalSearch] = useState("");
@@ -20,12 +21,15 @@ export function AdminAvailability() {
   const [hospitalResults, setHospitalResults] = useState<DocumentRecord<HospitalDocument>[]>([]);
   const [selectedHospital, setSelectedHospital] = useState<DocumentRecord<HospitalDocument> | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [message, setMessage] = useRepeatableMessage();
+  const [actionError, setActionError] = useRepeatableMessage();
   const today = new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
-    if (!deferredSearch) return;
+    if (!deferredSearch) {
+      setHospitalResults([]);
+      return;
+    }
     let active = true;
     void listAllHospitals({ pageSize: 8 }, deferredSearch).then((page) => {
       if (active) setHospitalResults(page.documents.filter((hospital) => hospital.status !== "archived"));
@@ -34,7 +38,7 @@ export function AdminAvailability() {
   }, [deferredSearch]);
 
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) => listAdminAvailabilityRequests({ pageSize: 20, cursor }), []);
-  const { items, error: loadError, isLoading, hasMore, reload, loadMore } = usePaginatedList<AvailabilityDocument>(
+  const { items, error: loadError, isLoading, hasMore, page, canGoBack, reload, reset, nextPage, previousPage } = useCursorPagination<AvailabilityDocument>(
     loader,
     "We could not load availability requests. Refresh and try again.",
   );
@@ -57,7 +61,7 @@ export function AdminAvailability() {
       });
       form.reset();
       setSelectedHospital(null); setHospitalSearch(""); setHospitalResults([]);
-      await reload();
+      reset();
       setMessage("The hospital's availability has been blocked for the selected dates.");
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : "We could not block these dates. Try again.");
@@ -93,18 +97,24 @@ export function AdminAvailability() {
     </form>
     <PortalToast message={message} />
     <PortalToast message={actionError} tone="error" />
-    <PortalFeedback error={items.length > 0 ? loadError : null} empty={!loadError && !isLoading && items.length === 0 ? "No availability requests or blocks yet." : undefined} />
-    <div className="portal-list">
+    <PortalFeedback error={loadError} empty={!loadError && !isLoading && items.length === 0 ? "No availability requests or blocks yet." : undefined} />
+    <div className="portal-list portal-availability-list">
       {items.map((item) => <article className="portal-card portal-availability-record" key={item.id}>
-        <div className="portal-row-heading"><div><h3>{item.hospitalName}</h3><p>{formatAvailabilityRange(item.startDate, item.endDate)}</p></div><span className="portal-status" data-status={item.status}>{formatStatus(item.status)}</span></div>
-        <p>{item.reason}</p>
-        <small>{item.source === "admin_call" ? "Recorded from a call by Admin" : "Requested through the hospital portal"}</small>
-        <div className="portal-actions">
-          {item.status === "pending" && <><button className="portal-button" type="button" disabled={busy !== null} onClick={() => void act(item, "approve")}>Approve and block</button><button className="portal-button secondary" type="button" disabled={busy !== null} onClick={() => void act(item, "reject")}>Reject</button></>}
-          {item.status === "blocked" && <button className="portal-button secondary" type="button" disabled={busy !== null} onClick={() => void act(item, "cancel")}>Remove block</button>}
+        <div className="portal-availability-record-content">
+          <h3>{item.hospitalName}</h3>
+          <p className="portal-availability-dates">{formatAvailabilityRange(item.startDate, item.endDate)}</p>
+          <p className="portal-availability-reason">{item.reason}</p>
+          <small>{item.source === "admin_call" ? "Recorded from a call by Admin" : "Requested through the hospital portal"}</small>
+        </div>
+        <div className="portal-availability-record-side">
+          <span className="portal-status" data-status={item.status}>{formatStatus(item.status)}</span>
+          <div className="portal-actions">
+            {item.status === "pending" && <><button className="portal-button" type="button" disabled={busy !== null || isLoading} onClick={() => void act(item, "approve")}>Approve and block</button><button className="portal-button secondary" type="button" disabled={busy !== null || isLoading} onClick={() => void act(item, "reject")}>Reject</button></>}
+            {item.status === "blocked" && <button className="portal-button secondary" type="button" disabled={busy !== null || isLoading} onClick={() => void act(item, "cancel")}>Remove block</button>}
+          </div>
         </div>
       </article>)}
     </div>
-    <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
+    <PortalPagination hasMore={hasMore} isLoading={isLoading} page={page} canGoBack={canGoBack} onPrevious={previousPage} onLoadMore={nextPage} />
   </PortalShell>;
 }

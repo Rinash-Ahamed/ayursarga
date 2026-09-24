@@ -13,19 +13,20 @@ import { hospitalGuidelineFormValues } from "@/features/hospitals/guidelines";
 import { CentreGuidelineFields } from "@/components/forms/CentreGuidelineFields";
 import { BystanderPolicyFields } from "@/components/forms/BystanderPolicyFields";
 import { hospitalBystanderFormValues } from "@/features/hospitals/bystanders";
+import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 
 export function HospitalProfile() {
   const { userProfile } = useAuth();
   const id = userProfile?.hospitalId;
   const [hospital, setHospital] = useState<DocumentRecord<HospitalDocument> | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useRepeatableMessage();
+  const [error, setError] = useRepeatableMessage();
   const [fieldErrors, setFieldErrors] = useState<HospitalValidationErrors>({});
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (id) void getHospital(id).then(setHospital).catch(() => setError("We could not load the hospital profile. Refresh the page and try again."));
-  }, [id]);
+  }, [id, setError]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

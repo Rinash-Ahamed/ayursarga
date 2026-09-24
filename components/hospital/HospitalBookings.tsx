@@ -17,6 +17,7 @@ import { PortalPagination } from "@/components/portal/PortalPagination";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 import { PortalDialog } from "@/components/portal/PortalDialog";
+import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 
 const BOOKING_STATUSES: readonly BookingStatus[] = [
   "requested", "confirmed", "reschedule_requested", "completed", "cancelled", "rejected",
@@ -38,9 +39,9 @@ type PendingTreatmentAction = {
 export function HospitalBookings() {
   const { userProfile } = useAuth();
   const hospitalId = userProfile?.hospitalId;
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionError, setActionError] = useRepeatableMessage();
   const [busy, setBusy] = useState<string | null>(null);
-  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useRepeatableMessage();
   const [pendingBookingAction, setPendingBookingAction] = useState<PendingBookingAction | null>(null);
   const [pendingTreatmentAction, setPendingTreatmentAction] = useState<PendingTreatmentAction | null>(null);
   const [search, setSearch] = useState("");

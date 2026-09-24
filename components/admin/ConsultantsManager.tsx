@@ -8,6 +8,7 @@ import { createConsultant, listConsultants, setConsultantStatus, updateConsultan
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalToast } from "@/components/portal/PortalToast";
+import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import { PortalPagination } from "@/components/portal/PortalPagination";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 import { ConsultantFormFields } from "@/components/forms/ConsultantFormFields";
@@ -19,8 +20,8 @@ export function ConsultantsManager() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<ConsultantValidationErrors>({});
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [actionError, setActionError] = useRepeatableMessage();
+  const [message, setMessage] = useRepeatableMessage();
   const [searchTerm, setSearchTerm] = useState("");
   const deferredSearch = useDeferredValue(searchTerm);
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) => listConsultants({ pageSize: 20, cursor }, deferredSearch), [deferredSearch]);

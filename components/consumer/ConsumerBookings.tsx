@@ -17,12 +17,13 @@ import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalPagination } from "@/components/portal/PortalPagination";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
+import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 
 export function ConsumerBookings() {
   const { firebaseUser } = useAuth();
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionError, setActionError] = useRepeatableMessage();
   const [busy, setBusy] = useState<string | null>(null);
-  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useRepeatableMessage();
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) => firebaseUser
     ? listConsumerBookings(firebaseUser.uid, { pageSize: 20, cursor })
     : Promise.resolve(emptyQueryPage<BookingDocument>()), [firebaseUser]);

@@ -7,20 +7,21 @@ import { emptyQueryPage, type DocumentRecord, type QueryPageOptions } from "@/se
 import { getHospital } from "@/services/hospitals/hospitalService";
 import { listHospitalAvailabilityRequests, requestAvailabilityBlock } from "@/services/hospitals/availabilityService";
 import { useAuth } from "@/hooks/useAuth";
-import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { useCursorPagination } from "@/hooks/useCursorPagination";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalPagination } from "@/components/portal/PortalPagination";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { formatStatus } from "@/utils/text";
+import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 
 export function HospitalAvailability() {
   const { userProfile } = useAuth();
   const hospitalId = userProfile?.hospitalId;
   const [hospital, setHospital] = useState<DocumentRecord<HospitalDocument> | null>(null);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [message, setMessage] = useRepeatableMessage();
+  const [actionError, setActionError] = useRepeatableMessage();
   const today = new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
@@ -30,12 +31,12 @@ export function HospitalAvailability() {
       if (active) setActionError("We could not load the hospital details. Refresh and try again.");
     });
     return () => { active = false; };
-  }, [hospitalId]);
+  }, [hospitalId, setActionError]);
 
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) => hospitalId
     ? listHospitalAvailabilityRequests(hospitalId, { pageSize: 20, cursor })
     : Promise.resolve(emptyQueryPage<AvailabilityDocument>()), [hospitalId]);
-  const { items, error: loadError, isLoading, hasMore, reload, loadMore } = usePaginatedList<AvailabilityDocument>(
+  const { items, error: loadError, isLoading, hasMore, page, canGoBack, reset, nextPage, previousPage } = useCursorPagination<AvailabilityDocument>(
     loader,
     "We could not load availability requests. Refresh and try again.",
   );
@@ -55,7 +56,7 @@ export function HospitalAvailability() {
         reason: String(data.get("reason") ?? ""),
       });
       form.reset();
-      await reload();
+      reset();
       setMessage("The availability block request has been sent to Admin for approval.");
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : "We could not send the request. Try again.");
@@ -74,13 +75,17 @@ export function HospitalAvailability() {
     </form>
     <PortalToast message={message} />
     <PortalToast message={actionError} tone="error" />
-    <PortalFeedback error={items.length > 0 ? loadError : null} empty={!loadError && !isLoading && items.length === 0 ? "No availability requests yet." : undefined} />
-    <div className="portal-list">
-      {items.map((item) => <article className="portal-row" key={item.id}>
-        <div><h3>{formatAvailabilityRange(item.startDate, item.endDate)}</h3><p>{item.reason}</p><small>{item.source === "admin_call" ? "Recorded by Admin" : "Requested through hospital portal"}</small></div>
-        <span className="portal-status" data-status={item.status}>{formatStatus(item.status)}</span>
+    <PortalFeedback error={loadError} empty={!loadError && !isLoading && items.length === 0 ? "No availability requests yet." : undefined} />
+    <div className="portal-list portal-availability-list">
+      {items.map((item) => <article className="portal-card portal-availability-record" key={item.id}>
+        <div className="portal-availability-record-content">
+          <h3>{formatAvailabilityRange(item.startDate, item.endDate)}</h3>
+          <p className="portal-availability-reason">{item.reason}</p>
+          <small>{item.source === "admin_call" ? "Recorded by Admin" : "Requested through hospital portal"}</small>
+        </div>
+        <div className="portal-availability-record-side"><span className="portal-status" data-status={item.status}>{formatStatus(item.status)}</span></div>
       </article>)}
     </div>
-    <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
+    <PortalPagination hasMore={hasMore} isLoading={isLoading} page={page} canGoBack={canGoBack} onPrevious={previousPage} onLoadMore={nextPage} />
   </PortalShell>;
 }

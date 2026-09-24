@@ -12,6 +12,7 @@ import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import { getHospital } from "@/services/hospitals/hospitalService";
 import { INCLUDED_BYSTANDERS, resolveHospitalBystanderPolicy } from "@/features/hospitals/bystanders";
 import { formatCurrency } from "@/utils/currency";
+import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 
 export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { hospitalId: string; serviceId: string; searchContext: CentreSearchContext }) {
   const { firebaseUser, userProfile } = useAuth();
@@ -22,7 +23,7 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
   const [hospital, setHospital] = useState<DocumentRecord<HospitalDocument> | null>(null);
   const [hospitalLoading, setHospitalLoading] = useState(true);
   const [bystanderCount, setBystanderCount] = useState(INCLUDED_BYSTANDERS);
-  const [busy, setBusy] = useState(false); const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false); const [error, setError] = useRepeatableMessage();
 
   useEffect(() => {
     let active = true;
@@ -34,7 +35,7 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
       if (active) setHospitalLoading(false);
     });
     return () => { active = false; };
-  }, [hospitalId]);
+  }, [hospitalId, setError]);
 
   const bystanderPolicy = resolveHospitalBystanderPolicy(hospital ?? {});
   const maximumBystanders = INCLUDED_BYSTANDERS + bystanderPolicy.maxAdditionalBystanders;

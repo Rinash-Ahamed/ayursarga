@@ -14,10 +14,11 @@ import { formatStatus } from "@/utils/text";
 import { HospitalFormFields } from "@/components/forms/HospitalFormFields";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
+import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 
 export function HospitalsManager() {
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [actionError, setActionError] = useRepeatableMessage();
+  const [actionMessage, setActionMessage] = useRepeatableMessage();
   const [fieldErrors, setFieldErrors] = useState<HospitalValidationErrors>({});
   const [busy, setBusy] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);

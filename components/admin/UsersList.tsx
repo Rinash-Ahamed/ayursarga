@@ -9,6 +9,7 @@ import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalPagination } from "@/components/portal/PortalPagination";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 import { PortalDialog } from "@/components/portal/PortalDialog";
+import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 
@@ -18,8 +19,8 @@ export function UsersList() {
   const [group, setGroup] = useState<UserGroup>("consumer");
   const [consumerToRemove, setConsumerToRemove] = useState<DocumentRecord<UserDocument> | null>(null);
   const [busy, setBusy] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [actionError, setActionError] = useRepeatableMessage();
+  const [message, setMessage] = useRepeatableMessage();
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) =>
     listUsers(group, { pageSize: 20, cursor }), [group]);
   const { items, error, isLoading, hasMore, loadMore, removeItem } = usePaginatedList<UserDocument>(

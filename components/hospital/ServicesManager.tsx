@@ -15,6 +15,7 @@ import { formatStatus } from "@/utils/text";
 import { useAuth } from "@/hooks/useAuth";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalPagination } from "@/components/portal/PortalPagination";
@@ -125,8 +126,8 @@ function usedProcedures(items: DocumentRecord<ServiceDocument>[], excludingId?: 
 export function ServicesManager() {
   const { userProfile } = useAuth();
   const hospitalId = userProfile?.hospitalId;
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [actionError, setActionError] = useRepeatableMessage();
+  const [actionMessage, setActionMessage] = useRepeatableMessage();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [serviceToRemove, setServiceToRemove] = useState<DocumentRecord<ServiceDocument> | null>(null);
