@@ -63,6 +63,9 @@ export type HospitalDocument = AuditedDocument & {
   facilities?: string;
   legalPolicies?: string;
   locationUrl?: string | null;
+  additionalBystandersAllowed?: boolean;
+  maxAdditionalBystanders?: number;
+  additionalBystanderCharge?: number;
   status: UserStatus;
   isPublic: boolean;
   commissionPercentage: number;
@@ -88,6 +91,7 @@ export type ServiceDocument = AuditedDocument & {
   durationUnit?: "minutes" | "hours" | "days" | null;
   packageDurationDays?: number;
   procedures?: Record<string, number>;
+  otherProcedures?: Array<{ name: string; days: number }>;
   otherProcedureName?: string | null;
   otherProcedureDays?: number | null;
   status: "active" | "inactive" | "archived";
@@ -115,6 +119,8 @@ export type BookingDocument = AuditedDocument & {
   preferredEndDate?: Timestamp | null;
   preferredTime: string;
   bystanderCount?: number;
+  additionalBystanderCharge?: number;
+  additionalBystanderTotal?: number;
   confirmedDate: Timestamp | null;
   confirmedTime: string | null;
   status: BookingStatus;

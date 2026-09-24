@@ -12,7 +12,7 @@ import { groupHospitalFacilities } from "@/features/hospitals/facilities";
 import { packageProcedureEntries, packageTitle } from "@/features/hospitals/packages";
 import { getHospitalMapEmbedUrl } from "@/features/hospitals/location";
 import { FacilityIcon } from "@/components/icons/FacilityIcon";
-import { addCentreSearchContext, formatBystanders, type CentreSearchContext } from "@/features/hospitals/searchContext";
+import { addCentreSearchContext, type CentreSearchContext } from "@/features/hospitals/searchContext";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 
 function formatCareDates(context: CentreSearchContext) {
@@ -113,7 +113,6 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
 
       <div className="public-centre-context" aria-label="Selected care preferences">
         <div><span>Preferred care dates</span><strong>{formatCareDates(searchContext)}</strong></div>
-        <div><span>Accompanying support</span><strong>{formatBystanders(searchContext.bystanders)}</strong></div>
         <Link href={backHref}>Change search</Link>
       </div>
 

@@ -19,7 +19,8 @@ type HospitalAdminUpdate = Partial<HospitalFields & Pick<HospitalDocument,
 >>;
 type HospitalProfileInput = Pick<HospitalDocument,
   "name" | "description" | "email" | "phone" | "hospitalPhone1" | "hospitalPhone2" | "address" | "city" | "district" | "state" |
-  "centreGuidelines" | "additionalCentreRules" | "facilities" | "legalPolicies"
+  "centreGuidelines" | "additionalCentreRules" | "facilities" | "legalPolicies" |
+  "additionalBystandersAllowed" | "maxAdditionalBystanders" | "additionalBystanderCharge"
 >;
 
 export const getHospital = (id: string) => readDocument<HospitalDocument>(COLLECTIONS.hospitals, id);

@@ -65,6 +65,7 @@ service cloud.firestore {
         'address', 'city', 'district', 'state',
         'imageUrl', 'imageUrls', 'ayursargaRating', 'ayursargaReviewNote',
         'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies', 'locationUrl',
+        'additionalBystandersAllowed', 'maxAdditionalBystanders', 'additionalBystanderCharge',
         'status', 'isPublic', 'commissionPercentage',
         'contractStatus', 'contractGeneratedAt', 'contractGeneratedBy',
         'contractSignedAt', 'contractSignedBy', 'contractUrl',
@@ -147,6 +148,20 @@ service cloud.firestore {
         && request.resource.data.state is string
         && request.resource.data.state.size() >= 2
         && request.resource.data.state.size() <= 80
+        && request.resource.data.get('additionalBystandersAllowed', false) is bool
+        && request.resource.data.get('maxAdditionalBystanders', 0) is int
+        && request.resource.data.get('maxAdditionalBystanders', 0) >= 0
+        && request.resource.data.get('maxAdditionalBystanders', 0) <= 3
+        && request.resource.data.get('additionalBystanderCharge', 0) is number
+        && request.resource.data.get('additionalBystanderCharge', 0) >= 0
+        && request.resource.data.get('additionalBystanderCharge', 0) <= 1000000
+        && ((request.resource.data.get('additionalBystandersAllowed', false) == false
+          && request.resource.data.get('maxAdditionalBystanders', 0) == 0
+          && request.resource.data.get('additionalBystanderCharge', 0) == 0) || (
+          request.resource.data.get('additionalBystandersAllowed', false) == true
+          && request.resource.data.get('maxAdditionalBystanders', 0) >= 1
+          && request.resource.data.get('additionalBystanderCharge', 0) > 0
+        ))
         && (!request.resource.data.keys().hasAny(['imageUrls']) || (
           request.resource.data.imageUrls is list
           && request.resource.data.imageUrls.size() <= 10
@@ -240,11 +255,12 @@ service cloud.firestore {
       let durationUnit = request.resource.data.get('durationUnit', null);
       let packageDurationDays = request.resource.data.get('packageDurationDays', null);
       let procedures = request.resource.data.get('procedures', {});
+      let otherProcedures = request.resource.data.get('otherProcedures', []);
       let otherProcedureName = request.resource.data.get('otherProcedureName', null);
       let otherProcedureDays = request.resource.data.get('otherProcedureDays', null);
       return request.resource.data.keys().hasOnly([
           'hospitalId', 'name', 'description', 'price', 'durationMinutes', 'durationUnit', 'status',
-          'packageDurationDays', 'procedures', 'otherProcedureName', 'otherProcedureDays',
+          'packageDurationDays', 'procedures', 'otherProcedures', 'otherProcedureName', 'otherProcedureDays',
           'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
           'archivedAt', 'archivedBy', 'lastAuditId'
         ])
@@ -256,7 +272,7 @@ service cloud.firestore {
         && request.resource.data.description.size() <= 2000
         && request.resource.data.status in ['active', 'inactive', 'archived']
         && ((packageDurationDays == null
-          && !request.resource.data.keys().hasAny(['procedures', 'otherProcedureName', 'otherProcedureDays'])
+          && !request.resource.data.keys().hasAny(['procedures', 'otherProcedures', 'otherProcedureName', 'otherProcedureDays'])
           && request.resource.data.price is number
           && request.resource.data.price >= 0
           && ((durationMinutes == null && durationUnit == null)
@@ -274,7 +290,7 @@ service cloud.firestore {
             'anjanam', 'dhoomapanam', 'keshaDhoopanam', 'yoniDhoopanam',
             'abdominalBinding'
           ])
-          && (procedures.keys().size() > 0 || otherProcedureName != null)
+          && (procedures.keys().size() > 0 || otherProcedures.size() > 0 || otherProcedureName != null)
           && validPackageProcedureDays(procedures, packageDurationDays, 'headMassage')
           && validPackageProcedureDays(procedures, packageDurationDays, 'hairPack')
           && validPackageProcedureDays(procedures, packageDurationDays, 'faceMassage')
@@ -296,6 +312,13 @@ service cloud.firestore {
           && validPackageProcedureDays(procedures, packageDurationDays, 'keshaDhoopanam')
           && validPackageProcedureDays(procedures, packageDurationDays, 'yoniDhoopanam')
           && validPackageProcedureDays(procedures, packageDurationDays, 'abdominalBinding')
+          && otherProcedures is list
+          && otherProcedures.size() <= 5
+          && validOtherProcedure(otherProcedures, packageDurationDays, 0)
+          && validOtherProcedure(otherProcedures, packageDurationDays, 1)
+          && validOtherProcedure(otherProcedures, packageDurationDays, 2)
+          && validOtherProcedure(otherProcedures, packageDurationDays, 3)
+          && validOtherProcedure(otherProcedures, packageDurationDays, 4)
           && ((otherProcedureName == null && otherProcedureDays == null)
             || (otherProcedureName is string
               && otherProcedureName.size() >= 2
@@ -310,6 +333,19 @@ service cloud.firestore {
         || (procedures[procedureId] is int
           && procedures[procedureId] >= 1
           && procedures[procedureId] <= packageDurationDays);
+    }
+
+    function validOtherProcedure(otherProcedures, packageDurationDays, index) {
+      return otherProcedures.size() <= index || (
+        otherProcedures[index] is map
+        && otherProcedures[index].keys().hasOnly(['name', 'days'])
+        && otherProcedures[index].name is string
+        && otherProcedures[index].name.size() >= 2
+        && otherProcedures[index].name.size() <= 100
+        && otherProcedures[index].days is int
+        && otherProcedures[index].days >= 1
+        && otherProcedures[index].days <= packageDurationDays
+      );
     }
 
     function isBootstrapAdminIdentity() {
@@ -366,6 +402,7 @@ service cloud.firestore {
             'address', 'city', 'district', 'state',
             'imageUrl', 'imageUrls', 'ayursargaRating', 'ayursargaReviewNote',
             'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies', 'locationUrl',
+            'additionalBystandersAllowed', 'maxAdditionalBystanders', 'additionalBystanderCharge',
             'commissionPercentage', 'updatedAt', 'updatedBy', 'lastAuditId'
           ])
           && (!changed.hasAny(['ayursargaRating', 'ayursargaReviewNote']) || (
@@ -587,6 +624,7 @@ service cloud.firestore {
             'name', 'description', 'email', 'phone', 'hospitalPhone1', 'hospitalPhone2',
             'address', 'city', 'district', 'state',
             'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies',
+            'additionalBystandersAllowed', 'maxAdditionalBystanders', 'additionalBystanderCharge',
             'updatedAt', 'updatedBy', 'lastAuditId'
           ])
         ));
@@ -662,7 +700,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly([
           'consumerId', 'consumerName', 'consumerEmail', 'consumerPhone',
           'consumerAddress', 'hospitalId', 'serviceId', 'preferredDate', 'preferredEndDate',
-          'preferredTime', 'bystanderCount',
+          'preferredTime', 'bystanderCount', 'additionalBystanderCharge', 'additionalBystanderTotal',
           'confirmedDate', 'confirmedTime', 'status', 'servicePrice',
           'commissionPercentage', 'estimatedCommission', 'consumerNotes',
           'hospitalNotes', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
@@ -691,8 +729,17 @@ service cloud.firestore {
         && request.resource.data.preferredTime.size() > 0
         && request.resource.data.preferredTime.size() <= 20
         && request.resource.data.bystanderCount is int
-        && request.resource.data.bystanderCount >= 0
+        && request.resource.data.bystanderCount >= 1
         && request.resource.data.bystanderCount <= 4
+        && request.resource.data.bystanderCount <= 1 + get(/databases/$(database)/documents/hospitals/$(request.resource.data.hospitalId)).data.get('maxAdditionalBystanders', 0)
+        && (request.resource.data.bystanderCount == 1
+          || get(/databases/$(database)/documents/hospitals/$(request.resource.data.hospitalId)).data.get('additionalBystandersAllowed', false) == true)
+        && request.resource.data.additionalBystanderCharge is number
+        && request.resource.data.additionalBystanderCharge
+          == get(/databases/$(database)/documents/hospitals/$(request.resource.data.hospitalId)).data.get('additionalBystanderCharge', 0)
+        && request.resource.data.additionalBystanderTotal is number
+        && request.resource.data.additionalBystanderTotal
+          == (request.resource.data.bystanderCount - 1) * request.resource.data.additionalBystanderCharge
         && request.resource.data.status == 'requested'
         && request.resource.data.confirmedDate == null
         && request.resource.data.confirmedTime == null

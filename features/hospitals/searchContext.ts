@@ -26,7 +26,6 @@ export function normalizeCentreSearchContext(input: {
 export function addCentreSearchContext(params: URLSearchParams, context: CentreSearchContext) {
   if (context.startDate) params.set("startDate", context.startDate);
   if (context.endDate) params.set("endDate", context.endDate);
-  params.set("bystanders", String(context.bystanders));
   return params;
 }
 

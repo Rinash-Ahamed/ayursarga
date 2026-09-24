@@ -14,7 +14,7 @@ export default async function PublicCentreDetailsPage({
   searchParams,
 }: {
   params: Promise<{ hospitalId: string }>;
-  searchParams: Promise<{ service?: string | string[]; q?: string | string[]; startDate?: string | string[]; endDate?: string | string[]; bystanders?: string | string[] }>;
+  searchParams: Promise<{ service?: string | string[]; q?: string | string[]; startDate?: string | string[]; endDate?: string | string[] }>;
 }) {
   const [{ hospitalId }, query] = await Promise.all([params, searchParams]);
   const requestedService = typeof query.service === "string" ? query.service.trim().slice(0, 100) : "";
