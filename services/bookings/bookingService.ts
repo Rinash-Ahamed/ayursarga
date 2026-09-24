@@ -13,6 +13,7 @@ import { createAuditedDocument, getAuditActorId, updateAuditedDocument } from "@
 import { getHospital } from "@/services/hospitals/hospitalService";
 import { getService } from "@/services/hospitals/serviceService";
 import { INCLUDED_BYSTANDERS, resolveHospitalBystanderPolicy } from "@/features/hospitals/bystanders";
+import { isHospitalUnavailable } from "@/features/hospitals/availability";
 
 type BookingRequestInput = {
   consumerId: string; hospitalId: string; serviceId: string; preferredDate: Date;
@@ -34,6 +35,9 @@ export async function createBookingRequest(input: BookingRequestInput) {
   const [hospital, service] = await Promise.all([getHospital(input.hospitalId), getService(input.serviceId)]);
   if (!hospital || hospital.status !== "active" || !hospital.isPublic) throw new Error("This hospital is not accepting appointment requests right now. Choose another hospital and try again.");
   if (!service || service.hospitalId !== hospital.id || service.status !== "active") throw new Error("This service is not accepting appointment requests right now. Return to the hospital page and choose another service.");
+  if (isHospitalUnavailable(hospital, input.preferredDate, input.preferredEndDate)) {
+    throw new Error("This hospital is unavailable for the selected dates. Choose another date and try again.");
+  }
   const bystanderPolicy = resolveHospitalBystanderPolicy(hospital);
   const maximumBystanders = INCLUDED_BYSTANDERS + bystanderPolicy.maxAdditionalBystanders;
   if (!Number.isInteger(input.bystanderCount) || input.bystanderCount < INCLUDED_BYSTANDERS || input.bystanderCount > maximumBystanders) {

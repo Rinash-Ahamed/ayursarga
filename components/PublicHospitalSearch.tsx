@@ -14,6 +14,7 @@ import type {
 } from "@/services/firestore/firestoreService";
 import { getHospitalImageUrls } from "@/features/hospitals/images";
 import { addCentreSearchContext, type CentreSearchContext } from "@/features/hospitals/searchContext";
+import { isHospitalUnavailable } from "@/features/hospitals/availability";
 
 type PublicHospitalSearchProps = {
   initialService?: string;
@@ -132,9 +133,11 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
     const term = search.trim().toLowerCase();
     return hospitals.filter((hospital) => {
       const searchable = `${hospital.name} ${hospital.city} ${hospital.district ?? ""} ${hospital.state} ${hospital.address}`.toLowerCase();
-      return !term || searchable.includes(term);
+      const matchesSearch = !term || searchable.includes(term);
+      const availableForDates = !startDate || !isHospitalUnavailable(hospital, startDate);
+      return matchesSearch && availableForDates;
     });
-  }, [hospitals, search]);
+  }, [hospitals, search, startDate]);
 
   function openDatePicker(event: MouseEvent<HTMLLabelElement>) {
     const input = event.currentTarget.querySelector("input");

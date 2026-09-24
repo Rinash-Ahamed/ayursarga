@@ -458,6 +458,7 @@ main>.dark-section{
 .public-centre-content-section blockquote{ margin-top:20px; padding:16px 19px; border-left:3px solid var(--gold); border-radius:0 12px 12px 0; background:rgba(184,135,47,.08); color:var(--ink); font-size:12px; line-height:1.7; }
 .public-centre-services{ margin-top:22px; display:grid; gap:12px; }
 .public-centre-services article{ padding:19px; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:22px; border:1px solid rgba(31,61,43,.17); border-radius:16px; background:#fff; box-shadow:0 6px 18px rgba(31,61,43,.045); }
+.public-package-unavailable{ display:inline-block; max-width:160px; color:#8b3b2f; font-size:10px; font-weight:800; line-height:1.4; text-align:right; }
 .public-centre-services h3{ color:var(--forest); font-size:16px; line-height:1.35; }
 .public-centre-services p{ margin-top:6px; color:var(--sage); font-size:11px; line-height:1.6; }
 .public-centre-services div>span{ display:block; margin-top:8px; color:var(--clay-dark); font-size:10px; font-weight:700; }

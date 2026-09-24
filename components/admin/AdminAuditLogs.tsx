@@ -29,6 +29,7 @@ function areaLabel(module: string) {
     users: "Users",
     hospitals: "Hospitals",
     consultants: "Our Consultants",
+    availability: "Availability",
     services: "Services",
     bookings: "Bookings",
   };

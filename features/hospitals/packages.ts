@@ -128,6 +128,13 @@ export function readPackageForm(form: HTMLFormElement) {
     otherProcedures.push({ name, days });
   }
   if (Object.keys(procedures).length === 0 && otherProcedures.length === 0) throw new Error("Select or add at least one procedure for this package.");
+  const assignedProcedureDays = [
+    ...Object.values(procedures),
+    ...otherProcedures.map((procedure) => procedure.days),
+  ].reduce((total, days) => total + (days ?? 0), 0);
+  if (assignedProcedureDays > packageDurationDays) {
+    throw new Error(`The procedures total ${assignedProcedureDays} days. A ${packageDurationDays}-day package cannot exceed ${packageDurationDays} assigned procedure days.`);
+  }
 
   return {
     name: `${packageDurationDays}-day package`,

@@ -152,6 +152,15 @@ html.portal-menu-open,html.portal-menu-open body{ overflow:hidden; overscroll-be
 .portal-booking-extra-charge{ padding:13px 15px; display:flex; align-items:center; justify-content:space-between; gap:16px; border:1px solid rgba(184,135,47,.35); border-radius:12px; background:rgba(184,135,47,.07); color:var(--forest); }
 .portal-booking-extra-charge span{ font-size:11px; font-weight:700; }
 .portal-booking-extra-charge strong{ font-size:17px; }
+.portal-section-heading h2{ margin-bottom:6px; color:var(--forest); font-family:var(--font-display); font-size:28px; font-weight:550; }
+.portal-section-heading p{ max-width:760px; color:var(--sage); font-size:12px; line-height:1.65; }
+.portal-availability-hospital-search{ position:relative; z-index:4; }
+.portal-search-results{ position:absolute; top:100%; left:0; right:0; z-index:10; max-height:260px; overflow:auto; border:1px solid rgba(31,61,43,.2); border-radius:0 0 12px 12px; background:#fff; box-shadow:0 16px 35px rgba(31,61,43,.14); }
+.portal-search-results button{ width:100%; padding:11px 13px; display:grid; gap:3px; border:0; border-bottom:1px solid rgba(31,61,43,.1); background:#fff; color:var(--forest); font:inherit; text-align:left; cursor:pointer; }
+.portal-search-results button:hover,.portal-search-results button:focus-visible{ background:rgba(31,61,43,.055); }
+.portal-search-results small{ color:var(--sage); font-size:9px; }
+.portal-availability-record>p{ margin-top:10px; }
+.portal-availability-record>small{ display:block; margin-top:6px; color:var(--sage); }
 .portal-form .full{ grid-column:1/-1; }
 .portal-form label{ display:grid; gap:8px; color:var(--forest); font-size:11px; font-weight:700; letter-spacing:.02em; }
 .portal-form-field{ display:grid; gap:8px; }
@@ -249,7 +258,7 @@ html.portal-menu-open,html.portal-menu-open body{ overflow:hidden; overscroll-be
 .portal-user-actions{ display:flex; align-items:center; justify-content:flex-end; gap:10px; flex-wrap:wrap; }
 .portal-empty{ padding:15px 17px; border:1px solid rgba(58,61,46,.2); border-radius:12px; background:#fff; }
 .portal-status{ display:inline-block; padding:6px 10px; border:1px solid rgba(58,61,46,.26); border-radius:100px; background:rgba(201,166,107,.26); color:var(--forest); font-size:9px; font-weight:800; letter-spacing:.07em; line-height:1.2; text-transform:uppercase; }
-.portal-status[data-status="active"],.portal-status[data-status="confirmed"],.portal-status[data-status="completed"],.portal-status[data-status="signed"]{ border-color:rgba(58,61,46,.48); background:rgba(58,61,46,.14); color:var(--forest); }
+.portal-status[data-status="active"],.portal-status[data-status="blocked"],.portal-status[data-status="confirmed"],.portal-status[data-status="completed"],.portal-status[data-status="signed"]{ border-color:rgba(58,61,46,.48); background:rgba(58,61,46,.14); color:var(--forest); }
 .portal-status[data-status="started"],.portal-status[data-status="ongoing"]{ border-color:rgba(58,61,46,.48); background:rgba(201,166,107,.34); color:var(--forest); }
 .portal-status[data-status="pending"],.portal-status[data-status="requested"],.portal-status[data-status="generated"],.portal-status[data-status="reschedule_requested"]{ border-color:rgba(140,114,89,.48); background:rgba(201,166,107,.3); color:var(--forest); }
 .portal-status[data-status="inactive"],.portal-status[data-status="archived"],.portal-status[data-status="cancelled"],.portal-status[data-status="rejected"]{ border-color:rgba(139,94,60,.45); background:rgba(139,94,60,.12); color:var(--rust); }

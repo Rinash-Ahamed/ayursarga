@@ -66,6 +66,11 @@ export type HospitalDocument = AuditedDocument & {
   additionalBystandersAllowed?: boolean;
   maxAdditionalBystanders?: number;
   additionalBystanderCharge?: number;
+  blockedDateRanges?: Array<{
+    availabilityId: string;
+    startDate: Timestamp;
+    endDate: Timestamp;
+  }>;
   status: UserStatus;
   isPublic: boolean;
   commissionPercentage: number;
@@ -177,11 +182,14 @@ export type DoctorDocument = AuditedDocument & {
 
 export type AvailabilityDocument = AuditedDocument & {
   hospitalId: string;
-  doctorId: string | null;
-  serviceId: string | null;
-  startsAt: Timestamp;
-  endsAt: Timestamp;
-  status: RecordStatus;
+  hospitalName: string;
+  startDate: Timestamp;
+  endDate: Timestamp;
+  reason: string;
+  source: "hospital_portal" | "admin_call";
+  status: "pending" | "blocked" | "rejected" | "cancelled";
+  reviewedAt: Timestamp | null;
+  reviewedBy: string | null;
 };
 
 export type PaymentDocument = AuditedDocument & {
