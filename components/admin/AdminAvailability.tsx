@@ -26,10 +26,7 @@ export function AdminAvailability() {
   const today = new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
-    if (!deferredSearch) {
-      setHospitalResults([]);
-      return;
-    }
+    if (!deferredSearch) return;
     let active = true;
     void listAllHospitals({ pageSize: 8 }, deferredSearch).then((page) => {
       if (active) setHospitalResults(page.documents.filter((hospital) => hospital.status !== "archived"));
@@ -87,7 +84,7 @@ export function AdminAvailability() {
     <form className="portal-card portal-form" onSubmit={createBlock}>
       <div className="full portal-section-heading"><h2>Block hospital dates</h2><p>Use this when a hospital requests an availability block by phone. Portal requests can be approved below.</p></div>
       <label className="full portal-availability-hospital-search">Hospital *
-        <input type="search" value={hospitalSearch} onChange={(event) => { setHospitalSearch(event.target.value); setSelectedHospital(null); }} placeholder="Search hospital name" autoComplete="off" />
+        <input type="search" value={hospitalSearch} onChange={(event) => { setHospitalSearch(event.target.value); setSelectedHospital(null); setHospitalResults([]); }} placeholder="Search hospital name" autoComplete="off" />
         {hospitalResults.length > 0 && !selectedHospital && <span className="portal-search-results">{hospitalResults.map((hospital) => <button type="button" key={hospital.id} onClick={() => { setSelectedHospital(hospital); setHospitalSearch(hospital.name); setHospitalResults([]); }}><strong>{hospital.name}</strong><small>{hospital.city}, {hospital.state}</small></button>)}</span>}
       </label>
       <label>Start date *<input name="startDate" type="date" min={today} required /></label>
