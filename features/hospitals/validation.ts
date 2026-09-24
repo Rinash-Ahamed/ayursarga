@@ -1,6 +1,6 @@
 import { isValidEmail, toTrimmedString } from "@/utils/text";
 import { isIndiaStateOrUnionTerritory } from "@/constants/indiaStates";
-import { KERALA_DISTRICTS } from "@/constants/keralaDistricts";
+import { isDistrictInIndiaState } from "@/constants/indiaDistricts";
 
 export type HospitalFields = {
   name: string;
@@ -62,8 +62,8 @@ export function validateHospitalFields(input: Record<string, unknown>) {
   if (hospitalPhone2 && !PHONE_PATTERN.test(hospitalPhone2)) errors.hospitalPhone2 = "Enter a valid secondary hospital phone number.";
   if (address.length < 10) errors.address = "Enter the hospital's complete street address.";
   if (city.length < 2) errors.city = "Enter a valid city or locality.";
-  if (!KERALA_DISTRICTS.includes(district as (typeof KERALA_DISTRICTS)[number])) errors.district = "Select a valid district.";
   if (!isIndiaStateOrUnionTerritory(state)) errors.state = "Select a valid Indian state or union territory.";
+  if (!isDistrictInIndiaState(state, district)) errors.district = state ? "Select a district belonging to the selected state." : "Select a state first.";
   if (!Number.isFinite(commissionPercentage) || commissionPercentage < 0 || commissionPercentage > 100) {
     errors.commissionPercentage = "Commission must be between 0 and 100 percent.";
   }
