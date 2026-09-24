@@ -15,11 +15,13 @@ const NAVIGATION: Record<PortalRole, readonly NavigationItem[]> = {
     ["Dashboard", ROUTES.admin.home], ["Hospitals", ROUTES.admin.hospitals],
     ["Our Consultants", ROUTES.admin.consultants, true],
     ["Users", ROUTES.admin.users], ["Bookings", ROUTES.admin.bookings],
+    ["Availability", ROUTES.admin.availability],
     ["Audit Logs", ROUTES.admin.audits],
   ],
   hospital: [
     ["Dashboard", ROUTES.hospital.home], ["Hospital Profile", ROUTES.hospital.profile],
     ["Services", ROUTES.hospital.services], ["Bookings", ROUTES.hospital.bookings],
+    ["Availability", ROUTES.hospital.availability],
     ["Change Password", ROUTES.hospital.changePassword],
   ],
   consumer: [],

@@ -73,7 +73,7 @@ export function AdminDashboard() {
 
   const hasDashboardData = Object.values(stats).some((number) => number !== null);
 
-  return <PortalShell role="admin" title="Admin Dashboard">
+  return <PortalShell role="admin" title="Dashboard">
     <PortalLoadGuard loading={isLoading} error={error} hasData={hasDashboardData} fallbackHref="/" loadingMessage="Loading dashboard totals…" />
     {error && <div className="portal-dashboard-feedback"><PortalFeedback error={error} /></div>}
     <div className="portal-grid">

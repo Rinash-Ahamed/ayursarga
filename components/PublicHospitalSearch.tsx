@@ -13,7 +13,8 @@ import type {
   QueryPageOptions,
 } from "@/services/firestore/firestoreService";
 import { getHospitalImageUrls } from "@/features/hospitals/images";
-import { addCentreSearchContext, formatBystanders, type CentreSearchContext } from "@/features/hospitals/searchContext";
+import { addCentreSearchContext, type CentreSearchContext } from "@/features/hospitals/searchContext";
+import { isHospitalUnavailable } from "@/features/hospitals/availability";
 
 type PublicHospitalSearchProps = {
   initialService?: string;
@@ -115,7 +116,6 @@ function PublicHospitalImages({ hospital, priority = false }: { hospital: Docume
 export default function PublicHospitalSearch({ initialService = "", initialContext, initialSearch = "" }: PublicHospitalSearchProps) {
   const [search, setSearch] = useState(initialSearch);
   const [startDate, setStartDate] = useState(initialContext.startDate);
-  const [bystanders, setBystanders] = useState(initialContext.bystanders);
   const [dateError, setDateError] = useState<string | null>(null);
   const today = new Date().toISOString().slice(0, 10);
   const hospitalLoader = useCallback(
@@ -133,9 +133,11 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
     const term = search.trim().toLowerCase();
     return hospitals.filter((hospital) => {
       const searchable = `${hospital.name} ${hospital.city} ${hospital.district ?? ""} ${hospital.state} ${hospital.address}`.toLowerCase();
-      return !term || searchable.includes(term);
+      const matchesSearch = !term || searchable.includes(term);
+      const availableForDates = !startDate || !isHospitalUnavailable(hospital, startDate);
+      return matchesSearch && availableForDates;
     });
-  }, [hospitals, search]);
+  }, [hospitals, search, startDate]);
 
   function openDatePicker(event: MouseEvent<HTMLLabelElement>) {
     const input = event.currentTarget.querySelector("input");
@@ -179,10 +181,6 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
               <label className="public-date-control" onClick={openDatePicker}><span>Start date / expected delivery date</span><input aria-label="Start date or expected delivery date" type="date" min={today} value={startDate} onChange={(event) => { setStartDate(event.target.value); setDateError(null); }} /></label>
             </span>
           </div>
-          <label className="public-search-field public-search-bystanders">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="3" /><path d="M5 21v-2a7 7 0 0 1 14 0v2" /></svg>
-            <span><small>Accompanying support</small><select value={bystanders} onChange={(event) => setBystanders(Number(event.target.value))}>{[0, 1, 2, 3, 4].map((count) => <option value={count} key={count}>{formatBystanders(count)}</option>)}</select></span>
-          </label>
           <button type="submit" className="public-search-submit"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></svg><span>Search</span></button>
         </form>
         {dateError && <p className="public-search-date-error" role="alert">{dateError}</p>}
@@ -203,7 +201,7 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
 
         <div className="public-center-grid">
           {visibleHospitals.map((hospital, hospitalIndex) => {
-            const detailParams = addCentreSearchContext(new URLSearchParams(), { startDate, endDate: "", bystanders });
+            const detailParams = addCentreSearchContext(new URLSearchParams(), { ...initialContext, startDate, endDate: "" });
             if (initialService) detailParams.set("service", initialService);
             if (search) detailParams.set("q", search);
             const detailHref = `/centers/${encodeURIComponent(hospital.id)}?${detailParams.toString()}`;

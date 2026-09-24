@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalToast } from "@/components/portal/PortalToast";
+import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import { getSafeRoleRedirect } from "@/features/auth/roles";
 import { validateConsumerContact } from "@/features/consumers/profileValidation";
 import { hasCurrentConsumerPrivacyConsent } from "@/features/consumers/privacyConsent";
@@ -13,7 +14,7 @@ import { updateUserProfile } from "@/services/users/userService";
 export function ConsumerProfile({ requestedPath }: { requestedPath?: string }) {
   const router = useRouter();
   const { firebaseUser, userProfile, refreshUserProfile } = useAuth();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useRepeatableMessage();
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<"name" | "phone" | "address" | "privacyConsent", string>>>({});
   const [busy, setBusy] = useState(false);
   const needsPrivacyConsent = !hasCurrentConsumerPrivacyConsent(userProfile);

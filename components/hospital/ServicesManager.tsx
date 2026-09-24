@@ -15,6 +15,7 @@ import { formatStatus } from "@/utils/text";
 import { useAuth } from "@/hooks/useAuth";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalPagination } from "@/components/portal/PortalPagination";
@@ -26,9 +27,16 @@ type UsedProcedureMap = Map<string, string[]>;
 
 function PackageFields({ service, usedIn }: { service?: DocumentRecord<ServiceDocument>; usedIn: UsedProcedureMap }) {
   const initialSelected = Object.keys(service?.procedures ?? {});
-  if (service?.otherProcedureName) initialSelected.push("other");
   const [selected, setSelected] = useState(() => new Set(initialSelected));
   const [duration, setDuration] = useState<number>(service?.packageDurationDays ?? PACKAGE_DURATIONS[0]);
+  const [customProcedures, setCustomProcedures] = useState(() => {
+    const saved = service?.otherProcedures?.length
+      ? service.otherProcedures
+      : service?.otherProcedureName && service.otherProcedureDays
+        ? [{ name: service.otherProcedureName, days: service.otherProcedureDays }]
+        : [{ name: "", days: 0 }];
+    return saved.map((procedure, index) => ({ ...procedure, id: index }));
+  });
 
   function toggle(id: string, checked: boolean) {
     setSelected((current) => {
@@ -37,6 +45,22 @@ function PackageFields({ service, usedIn }: { service?: DocumentRecord<ServiceDo
       else next.delete(id);
       return next;
     });
+  }
+
+  function updateCustomProcedure(id: number, changes: Partial<{ name: string; days: number }>) {
+    setCustomProcedures((current) => current.map((procedure) => procedure.id === id ? { ...procedure, ...changes } : procedure));
+  }
+
+  function addCustomProcedure() {
+    setCustomProcedures((current) => current.length >= 5
+      ? current
+      : [...current, { id: Math.max(-1, ...current.map((procedure) => procedure.id)) + 1, name: "", days: 0 }]);
+  }
+
+  function removeCustomProcedure(id: number) {
+    setCustomProcedures((current) => current.length === 1
+      ? [{ id: current[0].id, name: "", days: 0 }]
+      : current.filter((procedure) => procedure.id !== id));
   }
 
   return <>
@@ -66,17 +90,17 @@ function PackageFields({ service, usedIn }: { service?: DocumentRecord<ServiceDo
           </div>
         </section>)}
         <section>
-          <h3>Other procedure</h3>
-          <label className="portal-package-procedure portal-package-procedure-other" data-selected={selected.has("other") || undefined}>
-            <span className="portal-package-procedure-choice">
-              <input type="checkbox" name="procedure_other" checked={selected.has("other")} onChange={(event) => toggle("other", event.target.checked)} />
-              <span><strong>Others</strong><small>Add a centre-specific procedure</small></span>
-            </span>
-            <span className="portal-package-other-fields">
-              <input name="otherProcedureName" maxLength={100} defaultValue={service?.otherProcedureName ?? ""} disabled={!selected.has("other")} required={selected.has("other")} placeholder="Procedure name" />
-              <span className="portal-package-days"><input type="number" name="otherProcedureDays" min="1" max={duration} step="1" defaultValue={service?.otherProcedureDays ?? ""} disabled={!selected.has("other")} required={selected.has("other")} aria-label="Number of days for the other procedure" /><small>days</small></span>
-            </span>
-          </label>
+          <div className="portal-package-custom-heading">
+            <div><h3>Other procedures</h3><p>Add up to five centre-specific procedures.</p></div>
+            <button className="portal-button secondary" type="button" disabled={customProcedures.length >= 5} onClick={addCustomProcedure}>Add another</button>
+          </div>
+          <div className="portal-package-custom-list">
+            {customProcedures.map((procedure, index) => <div className="portal-package-custom-row" key={procedure.id}>
+              <input name={`otherProcedureName_${index}`} maxLength={100} value={procedure.name} onChange={(event) => updateCustomProcedure(procedure.id, { name: event.target.value })} placeholder="Procedure name" aria-label={`Custom procedure ${index + 1} name`} />
+              <span className="portal-package-days"><input type="number" name={`otherProcedureDays_${index}`} min="1" max={duration} step="1" value={procedure.days || ""} onChange={(event) => updateCustomProcedure(procedure.id, { days: Number(event.target.value) })} aria-label={`Number of days for custom procedure ${index + 1}`} /><small>days</small></span>
+              <button className="portal-custom-remove" type="button" onClick={() => removeCustomProcedure(procedure.id)} aria-label={`Remove custom procedure ${index + 1}`}>Remove</button>
+            </div>)}
+          </div>
         </section>
       </div>
     </fieldset>
@@ -89,7 +113,7 @@ function usedProcedures(items: DocumentRecord<ServiceDocument>[], excludingId?: 
   for (const item of items) {
     if (item.id === excludingId || item.status === "archived") continue;
     for (const procedure of packageProcedureEntries(item)) {
-      if (procedure.id === "other") continue;
+      if (procedure.id.startsWith("other")) continue;
       const packages = map.get(procedure.id) ?? [];
       const title = packageTitle(item);
       if (!packages.includes(title)) packages.push(title);
@@ -102,8 +126,8 @@ function usedProcedures(items: DocumentRecord<ServiceDocument>[], excludingId?: 
 export function ServicesManager() {
   const { userProfile } = useAuth();
   const hospitalId = userProfile?.hospitalId;
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [actionError, setActionError] = useRepeatableMessage();
+  const [actionMessage, setActionMessage] = useRepeatableMessage();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [serviceToRemove, setServiceToRemove] = useState<DocumentRecord<ServiceDocument> | null>(null);

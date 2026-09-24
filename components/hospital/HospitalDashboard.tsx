@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { countDocuments } from "@/services/firestore/firestoreService";
 import { getHospitalCapacity, saveHospitalCapacity } from "@/services/hospitals/capacityService";
 import { COLLECTIONS } from "@/constants/firestore";
+import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 
 type DashboardCounts = { services: number; bookings: number; requested: number; treatments: number };
 const EMPTY_COUNTS: DashboardCounts = { services: 0, bookings: 0, requested: 0, treatments: 0 };
@@ -22,8 +23,8 @@ export function HospitalDashboard() {
   const [occupiedRooms, setOccupiedRooms] = useState("0");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useRepeatableMessage();
+  const [message, setMessage] = useRepeatableMessage();
 
   useEffect(() => {
     if (!hospitalId) return;
@@ -55,7 +56,7 @@ export function HospitalDashboard() {
       setLoading(false);
     });
     return () => { active = false; };
-  }, [hospitalId]);
+  }, [hospitalId, setError]);
 
   async function saveCapacity(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

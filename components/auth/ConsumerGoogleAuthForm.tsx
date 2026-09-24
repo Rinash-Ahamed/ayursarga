@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import { AuthFormShell } from "@/components/auth/AuthFormShell";
 import { PortalToast } from "@/components/portal/PortalToast";
+import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import { useAuth } from "@/hooks/useAuth";
 
 export function ConsumerGoogleAuthForm({ requestedPath }: {
   requestedPath?: string | null;
 }) {
   const { loginConsumerWithGoogle, isLoading, error, clearError } = useAuth();
-  const [localError, setLocalError] = useState<string | null>(null);
+  const [localError, setLocalError] = useRepeatableMessage();
 
   async function continueWithGoogle() {
     clearError();

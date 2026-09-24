@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { type FormEvent } from "react";
 import { ROUTES } from "@/config/routes";
 import type { PortalRole } from "@/features/auth/contracts";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthFormShell } from "@/components/auth/AuthFormShell";
 import { PasswordField } from "@/components/auth/PasswordField";
 import { PortalToast } from "@/components/portal/PortalToast";
+import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 
 const COPY = {
   admin: { title: "Admin login", description: "Secure access for authorised Ayursarga administrators." },
@@ -16,7 +17,7 @@ const COPY = {
 
 export function LoginForm({ role, requestedPath }: { role: Exclude<PortalRole, "consumer">; requestedPath?: string | null }) {
   const { login, isLoading, error, clearError } = useAuth();
-  const [localError, setLocalError] = useState<string | null>(null);
+  const [localError, setLocalError] = useRepeatableMessage();
   const copy = COPY[role];
   const forgotPath = role === "admin" ? ROUTES.admin.forgotPassword : ROUTES.hospital.forgotPassword;
 

@@ -63,6 +63,14 @@ export type HospitalDocument = AuditedDocument & {
   facilities?: string;
   legalPolicies?: string;
   locationUrl?: string | null;
+  additionalBystandersAllowed?: boolean;
+  maxAdditionalBystanders?: number;
+  additionalBystanderCharge?: number;
+  blockedDateRanges?: Array<{
+    availabilityId: string;
+    startDate: Timestamp;
+    endDate: Timestamp;
+  }>;
   status: UserStatus;
   isPublic: boolean;
   commissionPercentage: number;
@@ -88,6 +96,7 @@ export type ServiceDocument = AuditedDocument & {
   durationUnit?: "minutes" | "hours" | "days" | null;
   packageDurationDays?: number;
   procedures?: Record<string, number>;
+  otherProcedures?: Array<{ name: string; days: number }>;
   otherProcedureName?: string | null;
   otherProcedureDays?: number | null;
   status: "active" | "inactive" | "archived";
@@ -115,6 +124,8 @@ export type BookingDocument = AuditedDocument & {
   preferredEndDate?: Timestamp | null;
   preferredTime: string;
   bystanderCount?: number;
+  additionalBystanderCharge?: number;
+  additionalBystanderTotal?: number;
   confirmedDate: Timestamp | null;
   confirmedTime: string | null;
   status: BookingStatus;
@@ -171,11 +182,14 @@ export type DoctorDocument = AuditedDocument & {
 
 export type AvailabilityDocument = AuditedDocument & {
   hospitalId: string;
-  doctorId: string | null;
-  serviceId: string | null;
-  startsAt: Timestamp;
-  endsAt: Timestamp;
-  status: RecordStatus;
+  hospitalName: string;
+  startDate: Timestamp;
+  endDate: Timestamp;
+  reason: string;
+  source: "hospital_portal" | "admin_call";
+  status: "pending" | "blocked" | "rejected" | "cancelled";
+  reviewedAt: Timestamp | null;
+  reviewedBy: string | null;
 };
 
 export type PaymentDocument = AuditedDocument & {

@@ -187,7 +187,7 @@ function PublicNav({ sectionPrefix = "", solid = false }: NavProps) {
             <span><strong>I&apos;m looking for care</strong><small>{isLoading ? "Connecting securely..." : "Continue with Google Sign-In"}</small></span>
           </button>
           <a className="nav-auth-option" href={ROUTES.hospital.login}>
-            <span className="nav-auth-option-icon hospital" aria-hidden="true"><Image className="nav-hospital-partner-image" src="/hospital-partner.png" alt="" width={44} height={44} sizes="44px" /></span>
+            <span className="nav-auth-option-icon hospital" aria-hidden="true"><Image className="nav-hospital-partner-image" src="/hospital-partner.png" alt="" fill sizes="44px" /></span>
             <span><strong>I&apos;m a hospital partner</strong><small>Continue to Hospital Login</small></span>
           </a>
         </div>

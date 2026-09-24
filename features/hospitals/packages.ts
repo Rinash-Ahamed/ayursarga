@@ -62,6 +62,7 @@ export type PackageLike = {
   name?: string;
   packageDurationDays?: number;
   procedures?: Record<string, number>;
+  otherProcedures?: Array<{ name: string; days: number }>;
   otherProcedureName?: string | null;
   otherProcedureDays?: number | null;
 };
@@ -82,7 +83,12 @@ export function packageProcedureEntries(service: PackageLike): { id: string; lab
     const days = procedures[id];
     return Number.isInteger(days) && days > 0 ? [{ id, label, days }] : [];
   });
-  if (service.otherProcedureName?.trim() && Number.isInteger(service.otherProcedureDays) && Number(service.otherProcedureDays) > 0) {
+  for (const [index, procedure] of (service.otherProcedures ?? []).entries()) {
+    if (procedure.name?.trim() && Number.isInteger(procedure.days) && procedure.days > 0) {
+      entries.push({ id: `other-${index}`, label: procedure.name.trim(), days: procedure.days });
+    }
+  }
+  if (!service.otherProcedures?.length && service.otherProcedureName?.trim() && Number.isInteger(service.otherProcedureDays) && Number(service.otherProcedureDays) > 0) {
     entries.push({ id: "other", label: service.otherProcedureName.trim(), days: Number(service.otherProcedureDays) });
   }
   return entries;
@@ -103,26 +109,40 @@ export function readPackageForm(form: HTMLFormElement) {
     procedures[id] = days;
   }
 
-  const includesOther = data.get("procedure_other") === "on";
-  const otherProcedureName = includesOther ? String(data.get("otherProcedureName") ?? "").trim() : "";
-  const otherProcedureDays = includesOther ? Number(data.get("otherProcedureDays")) : null;
-  if (includesOther && (otherProcedureName.length < 2 || otherProcedureName.length > 100)) {
-    throw new Error("Enter an Other procedure name between 2 and 100 characters.");
+  const otherProcedures: Array<{ name: string; days: number }> = [];
+  for (let index = 0; index < 5; index += 1) {
+    const name = String(data.get(`otherProcedureName_${index}`) ?? "").trim();
+    const rawDays = String(data.get(`otherProcedureDays_${index}`) ?? "").trim();
+    if (!name && !rawDays) continue;
+    if (name.length < 2 || name.length > 100) throw new Error("Enter each custom procedure name between 2 and 100 characters.");
+    if (PACKAGE_PROCEDURES.some(([, label]) => label.toLocaleLowerCase() === name.toLocaleLowerCase())) {
+      throw new Error(`${name} is already available in the procedure list. Select it there instead.`);
+    }
+    if (otherProcedures.some((procedure) => procedure.name.toLocaleLowerCase() === name.toLocaleLowerCase())) {
+      throw new Error(`${name} has been added more than once to this package.`);
+    }
+    const days = Number(rawDays);
+    if (!Number.isInteger(days) || days < 1 || days > packageDurationDays) {
+      throw new Error(`Enter between 1 and ${packageDurationDays} days for ${name}.`);
+    }
+    otherProcedures.push({ name, days });
   }
-  if (includesOther && PACKAGE_PROCEDURES.some(([, label]) => label.toLocaleLowerCase() === otherProcedureName.toLocaleLowerCase())) {
-    throw new Error("This procedure is already available in the list. Select it there instead of adding it under Others.");
+  if (Object.keys(procedures).length === 0 && otherProcedures.length === 0) throw new Error("Select or add at least one procedure for this package.");
+  const assignedProcedureDays = [
+    ...Object.values(procedures),
+    ...otherProcedures.map((procedure) => procedure.days),
+  ].reduce((total, days) => total + (days ?? 0), 0);
+  if (assignedProcedureDays > packageDurationDays) {
+    throw new Error(`The procedures total ${assignedProcedureDays} days. A ${packageDurationDays}-day package cannot exceed ${packageDurationDays} assigned procedure days.`);
   }
-  if (includesOther && (!Number.isInteger(otherProcedureDays) || Number(otherProcedureDays) < 1 || Number(otherProcedureDays) > packageDurationDays)) {
-    throw new Error(`Enter between 1 and ${packageDurationDays} days for the Other procedure.`);
-  }
-  if (Object.keys(procedures).length === 0 && !includesOther) throw new Error("Select at least one procedure for this package.");
 
   return {
     name: `${packageDurationDays}-day package`,
     description: String(data.get("description") ?? "").trim().slice(0, 2_000),
     packageDurationDays,
     procedures,
-    otherProcedureName: includesOther ? otherProcedureName : null,
-    otherProcedureDays: includesOther ? Number(otherProcedureDays) : null,
+    otherProcedures,
+    otherProcedureName: null,
+    otherProcedureDays: null,
   };
 }

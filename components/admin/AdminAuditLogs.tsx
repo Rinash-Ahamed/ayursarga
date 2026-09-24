@@ -11,6 +11,7 @@ import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 import { PortalDialog } from "@/components/portal/PortalDialog";
+import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import { formatStatus } from "@/utils/text";
 import { toDate } from "@/utils/date";
 
@@ -29,6 +30,7 @@ function areaLabel(module: string) {
     users: "Users",
     hospitals: "Hospitals",
     consultants: "Our Consultants",
+    availability: "Availability",
     services: "Services",
     bookings: "Bookings",
   };
@@ -45,8 +47,8 @@ export function AdminAuditLogs() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [actionError, setActionError] = useRepeatableMessage();
+  const [message, setMessage] = useRepeatableMessage();
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [reloadVersion, setReloadVersion] = useState(0);
   const requestVersion = useRef(0);
@@ -81,7 +83,7 @@ export function AdminAuditLogs() {
       window.clearTimeout(timeout);
       requestVersion.current += 1;
     };
-  }, [cursor, pageIndex, reloadVersion]);
+  }, [cursor, pageIndex, reloadVersion, setActionError]);
 
   const rows = useMemo(() => items.map((item) => ({
     ...item,

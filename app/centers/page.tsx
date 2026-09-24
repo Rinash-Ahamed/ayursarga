@@ -14,7 +14,6 @@ type CentersPageProps = {
     service?: string | string[];
     startDate?: string | string[];
     endDate?: string | string[];
-    bystanders?: string | string[];
     q?: string | string[];
   }>;
 };

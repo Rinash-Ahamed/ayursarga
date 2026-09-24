@@ -12,8 +12,9 @@ import { groupHospitalFacilities } from "@/features/hospitals/facilities";
 import { packageProcedureEntries, packageTitle } from "@/features/hospitals/packages";
 import { getHospitalMapEmbedUrl } from "@/features/hospitals/location";
 import { FacilityIcon } from "@/components/icons/FacilityIcon";
-import { addCentreSearchContext, formatBystanders, type CentreSearchContext } from "@/features/hospitals/searchContext";
+import { addCentreSearchContext, type CentreSearchContext } from "@/features/hospitals/searchContext";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { isHospitalUnavailable } from "@/features/hospitals/availability";
 
 function formatCareDates(context: CentreSearchContext) {
   if (!context.startDate && !context.endDate) return "Dates are flexible";
@@ -91,6 +92,7 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
   const secondaryHospitalPhone = hospital.hospitalPhone2?.trim();
   const centreAddress = `${hospital.address}, ${hospital.city}${hospital.district ? `, ${hospital.district}` : ""}, ${hospital.state}`;
   const mapEmbedUrl = hospital.locationUrl ? getHospitalMapEmbedUrl(hospital.locationUrl, centreAddress) : null;
+  const unavailableForSelectedDates = Boolean(searchContext.startDate && isHospitalUnavailable(hospital, searchContext.startDate, searchContext.endDate || null));
 
   return <section className="section public-centre-detail-page">
     <div className="section-inner public-centre-detail-inner">
@@ -113,9 +115,9 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
 
       <div className="public-centre-context" aria-label="Selected care preferences">
         <div><span>Preferred care dates</span><strong>{formatCareDates(searchContext)}</strong></div>
-        <div><span>Accompanying support</span><strong>{formatBystanders(searchContext.bystanders)}</strong></div>
         <Link href={backHref}>Change search</Link>
       </div>
+      {unavailableForSelectedDates && <div className="public-centre-inline-error" role="status">This centre is unavailable for the selected date. Change the search date to request an appointment.</div>}
 
       <div className="public-centre-content-grid">
         <main>
@@ -147,7 +149,7 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
                   })}>{expanded ? "View less" : "View more"}</button>}
                   {expanded && <ul className="public-package-procedures">{procedures.map((procedure) => <li key={procedure.id}><span>{procedure.label}</span><strong>{procedure.days} {procedure.days === 1 ? "day" : "days"}</strong></li>)}</ul>}
                 </div>
-                <div><Link href={`/app/bookings/new?${bookingParams.toString()}`}>Request appointment</Link></div>
+                <div>{unavailableForSelectedDates ? <span className="public-package-unavailable">Unavailable for selected date</span> : <Link href={`/app/bookings/new?${bookingParams.toString()}`}>Request appointment</Link>}</div>
               </article>;
             })}</div>
             {hasMore && <button className="public-load-more" type="button" disabled={servicesLoading} onClick={() => void loadMore()}>{servicesLoading ? "Loading..." : "Show more packages"}</button>}

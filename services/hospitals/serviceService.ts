@@ -13,7 +13,7 @@ export { listPublicHospitalServices as listActiveHospitalServices } from "@/serv
 
 type ServiceInput = Pick<ServiceDocument,
   "hospitalId" | "name" | "description" | "packageDurationDays" | "procedures" |
-  "otherProcedureName" | "otherProcedureDays" | "status"
+  "otherProcedures" | "otherProcedureName" | "otherProcedureDays" | "status"
 >;
 
 export const getService = (id: string) => readDocument<ServiceDocument>(COLLECTIONS.services, id);
@@ -55,6 +55,7 @@ export function updateService(id: string, input: Partial<Omit<ServiceInput, "hos
       description: input.description ?? "",
       packageDurationDays: input.packageDurationDays,
       procedures: input.procedures ?? {},
+      otherProcedures: input.otherProcedures ?? [],
       otherProcedureName: input.otherProcedureName ?? null,
       otherProcedureDays: input.otherProcedureDays ?? null,
       status: input.status ?? previousValues.status,

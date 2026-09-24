@@ -5,6 +5,7 @@ import type { HospitalCapacityDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import { getHospitalCapacity, saveHospitalCapacity } from "@/services/hospitals/capacityService";
 import { PortalToast } from "@/components/portal/PortalToast";
+import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 
 export function AdminHospitalCapacity({ hospitalId }: { hospitalId: string }) {
   const [capacity, setCapacity] = useState<DocumentRecord<HospitalCapacityDocument> | null>(null);
@@ -12,8 +13,8 @@ export function AdminHospitalCapacity({ hospitalId }: { hospitalId: string }) {
   const [occupiedRooms, setOccupiedRooms] = useState("0");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useRepeatableMessage();
+  const [message, setMessage] = useRepeatableMessage();
 
   useEffect(() => {
     let active = true;
@@ -28,7 +29,7 @@ export function AdminHospitalCapacity({ hospitalId }: { hospitalId: string }) {
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, [hospitalId]);
+  }, [hospitalId, setError]);
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

@@ -1,16 +1,17 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { type FormEvent } from "react";
 import { PasswordField } from "@/components/auth/PasswordField";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalToast } from "@/components/portal/PortalToast";
+import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import { isValidPassword } from "@/features/auth/password";
 import { useAuth } from "@/hooks/useAuth";
 
 export function HospitalChangePasswordForm() {
   const { changePassword, isLoading, error, clearError } = useAuth();
-  const [message, setMessage] = useState<string | null>(null);
-  const [localError, setLocalError] = useState<string | null>(null);
+  const [message, setMessage] = useRepeatableMessage();
+  const [localError, setLocalError] = useRepeatableMessage();
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
