@@ -73,12 +73,29 @@ function renderText(block: PreparedBlock) {
   return <span className={className || undefined}>{block.text}</span>;
 }
 
+function renderHeadingText(text: string) {
+  const match = text.match(/^(\d+[A-Z]?(?:\.\d+)*\.?)\s+(.+)$/);
+  if (!match) return text;
+  return <><span className="legal-heading-number">{match[1]}</span><span>{match[2]}</span></>;
+}
+
 function isEmergencyNotice(block: PreparedBlock) {
   return block.bold && block.text.length > 100 && block.text === block.text.toUpperCase();
 }
 
+function renderNumberedClause(block: PreparedBlock) {
+  const match = block.text.match(/^(\d+\.?)(?:\s*)(.+)$/s);
+  if (!match) return null;
+  const className = [block.bold ? "legal-document-bold" : "", block.italic ? "legal-document-italic" : ""].filter(Boolean).join(" ");
+  return <p className="legal-numbered-clause" key={block.sourceIndex}>
+    <span className="legal-clause-number">{match[1]}</span>
+    <span className={className || undefined}>{match[2]}</span>
+  </p>;
+}
+
 function renderBlocks(blocks: PreparedBlock[]) {
   const rendered: ReactNode[] = [];
+  let numberedClauseActive = false;
   for (let index = 0; index < blocks.length; index += 1) {
     const block = blocks[index];
     if (block.list) {
@@ -88,21 +105,36 @@ function renderBlocks(blocks: PreparedBlock[]) {
         index += 1;
       }
       index -= 1;
-      rendered.push(<ul className="legal-document-list" key={`list-${list[0].sourceIndex}`}>
+      rendered.push(<ul className={`legal-document-list${numberedClauseActive ? " legal-numbered-clause-list" : ""}`} key={`list-${list[0].sourceIndex}`}>
         {list.map((item) => <li key={item.sourceIndex}>{renderText(item)}</li>)}
       </ul>);
       continue;
     }
     if (block.headingLevel === 2) {
-      rendered.push(<h2 id={block.id} key={block.sourceIndex}>{block.text}</h2>);
+      numberedClauseActive = false;
+      rendered.push(<h2 id={block.id} key={block.sourceIndex}>{renderHeadingText(block.text)}</h2>);
       continue;
     }
     if (block.headingLevel === 3) {
-      rendered.push(<h3 id={block.id} key={block.sourceIndex}>{block.text}</h3>);
+      numberedClauseActive = false;
+      rendered.push(<h3 id={block.id} key={block.sourceIndex}>{renderHeadingText(block.text)}</h3>);
+      continue;
+    }
+    const numberedClause = renderNumberedClause(block);
+    if (numberedClause) {
+      numberedClauseActive = true;
+      rendered.push(numberedClause);
       continue;
     }
     const metadata = /(EFFECTIVE DATE|LAST UPDATED)/i.test(block.text) && block.text.length < 100;
-    rendered.push(<p className={isEmergencyNotice(block) ? "legal-document-alert" : metadata ? "legal-document-metadata" : undefined} key={block.sourceIndex}>{renderText(block)}</p>);
+    const className = isEmergencyNotice(block)
+      ? "legal-document-alert"
+      : metadata
+        ? "legal-document-metadata"
+        : numberedClauseActive
+          ? "legal-clause-continuation"
+          : undefined;
+    rendered.push(<p className={className} key={block.sourceIndex}>{renderText(block)}</p>);
   }
   return rendered;
 }
@@ -111,6 +143,14 @@ export function LegalDocumentPage({ slug }: { slug: LegalSlug }) {
   const document = getLegalDocument(slug);
   const blocks = prepareBlocks(document.blocks);
   const sections = blocks.filter((block) => block.headingLevel === 2);
+  const firstSectionIndex = blocks.findIndex((block) => block.headingLevel === 2);
+  const introduction = firstSectionIndex < 0 ? blocks : blocks.slice(0, firstSectionIndex);
+  const sectionGroups = sections.map((section, index) => {
+    const start = blocks.indexOf(section);
+    const nextSection = sections[index + 1];
+    const end = nextSection ? blocks.indexOf(nextSection) : blocks.length;
+    return blocks.slice(start, end);
+  });
 
   return <main className="legal-page">
     <header id="legal-page-top" className="legal-hero">
@@ -128,7 +168,12 @@ export function LegalDocumentPage({ slug }: { slug: LegalSlug }) {
           {sections.map((section) => <a href={`#${section.id}`} key={section.sourceIndex}>{section.text}</a>)}
         </nav>
       </aside>
-      <article className="legal-document">{renderBlocks(blocks)}</article>
+      <article className="legal-document">
+        {introduction.length > 0 && <div className="legal-document-introduction">{renderBlocks(introduction)}</div>}
+        {sectionGroups.map((section) => <section className="legal-document-section" key={section[0].sourceIndex}>
+          {renderBlocks(section)}
+        </section>)}
+      </article>
     </div>
   </main>;
 }
