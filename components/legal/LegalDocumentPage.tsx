@@ -79,6 +79,10 @@ function renderHeadingText(text: string) {
   return <><span className="legal-heading-number">{match[1]}</span><span>{match[2]}</span></>;
 }
 
+function hasHeadingNumber(text: string) {
+  return /^(\d+[A-Z]?(?:\.\d+)*\.?)\s+/.test(text);
+}
+
 function isEmergencyNotice(block: PreparedBlock) {
   return block.bold && block.text.length > 100 && block.text === block.text.toUpperCase();
 }
@@ -112,12 +116,12 @@ function renderBlocks(blocks: PreparedBlock[]) {
     }
     if (block.headingLevel === 2) {
       numberedClauseActive = false;
-      rendered.push(<h2 id={block.id} key={block.sourceIndex}>{renderHeadingText(block.text)}</h2>);
+      rendered.push(<h2 className={hasHeadingNumber(block.text) ? "legal-heading-numbered" : undefined} id={block.id} key={block.sourceIndex}>{renderHeadingText(block.text)}</h2>);
       continue;
     }
     if (block.headingLevel === 3) {
       numberedClauseActive = false;
-      rendered.push(<h3 id={block.id} key={block.sourceIndex}>{renderHeadingText(block.text)}</h3>);
+      rendered.push(<h3 className={hasHeadingNumber(block.text) ? "legal-heading-numbered" : undefined} id={block.id} key={block.sourceIndex}>{renderHeadingText(block.text)}</h3>);
       continue;
     }
     const numberedClause = renderNumberedClause(block);
