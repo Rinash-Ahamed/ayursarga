@@ -13,6 +13,10 @@ export const ROUTES = {
     howAyursargaWorks: "/about/how-ayursarga-works",
     whyAyursarga: "/about/why-ayursarga",
     missionVision: "/mission-vision",
+    privacyPolicy: "/legal/privacy-policy",
+    termsAndConditions: "/legal/terms-and-conditions",
+    cancellationRefundPolicy: "/legal/cancellation-refund-policy",
+    patientServiceDisclaimer: "/legal/patient-service-disclaimer-consent",
   },
   consumer: {
     home: "/app",

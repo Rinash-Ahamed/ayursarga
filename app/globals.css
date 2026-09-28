@@ -61,7 +61,8 @@ em{ font-style: italic; color: var(--clay-dark); }
   position:fixed; left:24px; top:calc(50% - 27px); z-index:50;
   width:54px; height:54px; display:grid; place-items:center; pointer-events:none; will-change:transform;
 }
-.scroll-logo-mark{ width:54px; height:54px; opacity:.48; transform:scale(.72); transform-origin:center; will-change:transform,opacity; }
+.scroll-logo-mark{ position:relative; width:54px; height:54px; opacity:.48; transform:scale(.72); transform-origin:center; will-change:transform,opacity; }
+.scroll-logo-crop{ position:absolute; inset:6px 0 auto; height:41px; overflow:hidden; }
 .scroll-logo-mark img{ width:54px; height:54px; object-fit:contain; }
 @media (max-width:1024px){ .scroll-logo{ display:none; } }
 
@@ -688,6 +689,55 @@ main>.dark-section{
 }
 
 /* ==========================================================================
+   Legal and policy pages
+   ========================================================================== */
+.legal-page{ min-height:100vh; background:#fff; }
+.legal-hero{ position:relative; overflow:hidden; padding:clamp(150px,13vw,192px) 0 clamp(62px,7vw,92px); background:linear-gradient(135deg,#142d1e 0%,var(--forest) 62%,#31533d 100%); color:#fff; }
+.legal-hero::before{ content:""; position:absolute; top:-190px; right:-130px; width:520px; height:520px; border:1px solid rgba(184,135,47,.25); border-radius:50%; box-shadow:0 0 0 70px rgba(255,255,255,.018),0 0 0 140px rgba(184,135,47,.028); pointer-events:none; }
+.legal-hero::after{ content:""; position:absolute; right:7%; bottom:-90px; width:230px; height:230px; background:url("/neem-leaf.svg") center/contain no-repeat; opacity:.075; transform:rotate(25deg); pointer-events:none; }
+.legal-hero-inner{ position:relative; z-index:1; width:min(1180px,calc(100% - 80px)); margin:0 auto; }
+.legal-hero .eyebrow{ margin-bottom:20px; color:var(--gold); }
+.legal-hero h1{ max-width:980px; color:#fff; font-family:"Cormorant Garamond",Georgia,serif; font-size:clamp(52px,7.6vw,96px); font-style:italic; font-weight:500; line-height:.98; letter-spacing:-.025em; text-wrap:balance; }
+.legal-hero p{ max-width:720px; margin-top:24px; color:rgba(255,255,255,.82); font-size:clamp(15px,1.7vw,20px); font-weight:550; line-height:1.7; }
+.legal-layout{ width:min(1180px,calc(100% - 80px)); margin:0 auto; padding:clamp(56px,7vw,92px) 0; display:grid; grid-template-columns:250px minmax(0,1fr); align-items:start; gap:clamp(42px,7vw,92px); }
+.legal-contents{ position:sticky; top:112px; max-height:calc(100vh - 140px); overflow:auto; padding:22px 20px; border:1px solid rgba(31,61,43,.18); border-radius:17px; background:linear-gradient(145deg,#fff,rgba(31,61,43,.035)); box-shadow:0 12px 34px rgba(31,61,43,.07); scrollbar-width:thin; scrollbar-color:rgba(31,61,43,.3) transparent; }
+.legal-contents>span{ display:block; padding-bottom:13px; border-bottom:1px solid rgba(31,61,43,.16); color:var(--gold); font-size:9px; font-weight:850; letter-spacing:.16em; text-transform:uppercase; }
+.legal-contents nav{ margin-top:10px; display:grid; }
+.legal-contents a{ padding:8px 0; color:var(--sage); font-size:10px; font-weight:650; line-height:1.45; transition:color .18s; }
+.legal-contents a:hover,.legal-contents a:focus-visible{ color:var(--forest); }
+.legal-document{ min-width:0; padding:clamp(29px,4.5vw,58px); border:1px solid rgba(31,61,43,.17); border-radius:24px; background:#fff; box-shadow:0 18px 54px rgba(31,61,43,.075); }
+.legal-document h2,.legal-document h3{ scroll-margin-top:112px; color:var(--forest); text-wrap:balance; }
+.legal-document h2{ margin-top:clamp(42px,5vw,64px); padding-top:clamp(38px,4vw,54px); border-top:1px solid rgba(31,61,43,.17); font-family:var(--font-display); font-size:clamp(27px,3.2vw,40px); font-weight:550; line-height:1.2; letter-spacing:-.018em; }
+.legal-document h2:first-child{ margin-top:0; padding-top:0; border-top:0; }
+.legal-document h3{ margin-top:30px; font-size:clamp(16px,1.7vw,20px); font-weight:750; line-height:1.42; }
+.legal-document p{ margin-top:16px; color:var(--sage); font-size:13px; font-weight:520; line-height:1.85; white-space:pre-line; }
+.legal-document-bold{ color:var(--forest); font-weight:750; }
+.legal-document-italic{ font-style:italic; }
+.legal-document-metadata{ width:fit-content; min-width:min(100%,230px); padding:13px 16px; border-left:3px solid var(--gold); border-radius:0 10px 10px 0; background:rgba(184,135,47,.075); color:var(--forest)!important; font-size:11px!important; font-weight:700!important; }
+.legal-document-list{ margin:18px 0 5px; display:grid; gap:9px; list-style:none; }
+.legal-document-list li{ position:relative; padding-left:22px; color:var(--sage); font-size:13px; font-weight:520; line-height:1.7; white-space:pre-line; }
+.legal-document-list li::before{ content:""; position:absolute; left:2px; top:.72em; width:6px; height:6px; border-radius:50%; background:var(--gold); box-shadow:0 0 0 4px rgba(184,135,47,.1); }
+.legal-document-alert{ margin-top:28px!important; padding:22px 24px; border:1px solid rgba(139,94,60,.32); border-left:4px solid var(--rust); border-radius:0 14px 14px 0; background:rgba(139,94,60,.07); color:var(--rust)!important; font-weight:800!important; }
+@media(max-width:900px){
+  .legal-layout{ grid-template-columns:1fr; gap:25px; }
+  .legal-contents{ position:static; max-height:none; overflow:hidden; padding:17px; }
+  .legal-contents nav{ grid-auto-flow:column; grid-auto-columns:minmax(190px,72vw); gap:8px; overflow-x:auto; overscroll-behavior-inline:contain; scroll-snap-type:x proximity; scrollbar-width:none; }
+  .legal-contents nav::-webkit-scrollbar{ display:none; }
+  .legal-contents a{ padding:10px 12px; border:1px solid rgba(31,61,43,.16); border-radius:10px; background:#fff; scroll-snap-align:start; }
+}
+@media(max-width:760px){
+  .legal-hero{ padding:132px 0 60px; }
+  .legal-hero-inner,.legal-layout{ width:min(100% - 44px,1180px); }
+  .legal-hero::before{ width:340px; height:340px; top:-130px; right:-170px; }
+  .legal-hero h1{ font-size:clamp(43px,13vw,64px); }
+  .legal-layout{ padding:40px 0 58px; }
+  .legal-document{ padding:30px 22px; border-radius:19px; }
+  .legal-document h2{ margin-top:38px; padding-top:34px; font-size:clamp(25px,8vw,34px); }
+  .legal-document h3{ margin-top:25px; }
+  .legal-document p,.legal-document-list li{ font-size:12px; }
+}
+
+/* ==========================================================================
    Discover care guides
    ========================================================================== */
 .discover-care-page{ min-height:100vh; background:#fff; }
@@ -830,9 +880,10 @@ main>.dark-section{
 .footer-column-about{ order:3; }
 .footer-column-consumers{ order:4; }
 .footer-column-hospitals{ order:5; }
-.footer-mark{ width:max-content; display:flex; align-items:center; gap:13px; }
-.footer-mark img{ width:58px; height:58px; object-fit:cover; border-radius:50%; }
+.footer-mark{ width:max-content; display:grid; grid-template-columns:58px auto; align-items:center; gap:11px; }
+.footer-mark img{ width:58px; height:58px; object-fit:contain; }
 .footer-logo-wrap{ position:relative; width:58px; height:58px; border-radius:50%; }
+.footer-logo-crop{ position:absolute; inset:7px 0 auto; height:44px; overflow:hidden; }
 .footer-logo-wrap::after{
   content:""; position:absolute; inset:-7px; border:1px solid rgba(201,166,107,.38); border-radius:50%;
   animation:footerLogoPulse 3.8s ease-in-out infinite;
@@ -1285,7 +1336,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   .footer-column h3{ margin-bottom:4px; }
   .footer-column a,.footer-pending-link{ max-width:100%; overflow-wrap:break-word; text-wrap:pretty; }
   .footer-identity{ padding:28px 0; border-bottom:1px solid rgba(249,245,234,.2); }
-  .footer-identity .footer-contact{ margin-top:16px; gap:8px 18px; }
+  .footer-identity .footer-contact{ margin-top:16px; display:grid; justify-items:center; gap:9px; }
+  .footer-identity .footer-contact a{ width:auto; }
   .footer-bottom{ padding:20px 0 0; }
   .footer-bottom{ grid-template-columns:1fr; gap:12px; }
   .footer-bottom p:nth-child(2){ grid-column:auto; grid-row:auto; }
