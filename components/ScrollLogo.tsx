@@ -10,9 +10,8 @@ export default function ScrollLogo() {
   useEffect(() => {
     const container = containerRef.current;
     const logo = logoRef.current;
-    const footerLogo = document.querySelector<HTMLElement>("[data-scroll-logo-target]");
-    const footerIdentity = footerLogo?.closest<HTMLElement>(".footer-identity");
-    if (!container || !logo || !footerLogo || !footerIdentity) return;
+    const footer = document.querySelector<HTMLElement>("#site-footer");
+    if (!container || !logo || !footer) return;
     const desktop = window.matchMedia("(min-width: 1025px) and (prefers-reduced-motion: no-preference)");
     if (!desktop.matches) return;
 
@@ -22,26 +21,16 @@ export default function ScrollLogo() {
       frame = window.requestAnimationFrame(() => {
         const maximum = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
         const progress = Math.min(1, Math.max(0, window.scrollY / maximum));
-        const target = footerLogo.getBoundingClientRect();
-        const targetCenterY = target.top + target.height / 2;
-        const identityTop = window.scrollY + footerIdentity.getBoundingClientRect().top;
-        const dockStartScroll = Math.min(maximum - 1, identityTop - window.innerHeight * 0.72);
-        const dockingDistance = Math.max(1, maximum - dockStartScroll);
-        const linearDock = Math.min(1, Math.max(0, (window.scrollY - dockStartScroll) / dockingDistance));
-        const dock = linearDock * linearDock * (3 - 2 * linearDock);
-        const baseCenterX = 24 + 27;
-        const baseCenterY = window.innerHeight / 2;
-        const targetCenterX = target.left + target.width / 2;
-        const translateX = (targetCenterX - baseCenterX) * dock;
-        const translateY = (targetCenterY - baseCenterY) * dock;
+        const footerTop = footer.getBoundingClientRect().top;
+        const fadeStartY = window.innerHeight;
+        const fadeFinishY = window.innerHeight * 0.72;
+        const linearFade = Math.min(1, Math.max(0, (fadeStartY - footerTop) / Math.max(1, fadeStartY - fadeFinishY)));
+        const footerFade = linearFade * linearFade * (3 - 2 * linearFade);
         const journeyScale = 0.72 + progress * 0.34;
-        const targetScale = target.width / 54;
-        const scale = journeyScale + (targetScale - journeyScale) * dock;
 
-        container.style.transform = `translate3d(${translateX}px, ${translateY}px, 0)`;
-        logo.style.transform = `scale(${scale})`;
-        logo.style.opacity = `${0.48 + progress * 0.52 + dock * (0.52 - progress * 0.52)}`;
-        footerLogo.style.opacity = `${1 - dock}`;
+        container.style.transform = "translate3d(0,0,0)";
+        logo.style.transform = `scale(${journeyScale})`;
+        logo.style.opacity = `${(0.48 + progress * 0.52) * (1 - footerFade)}`;
         frame = 0;
       });
     };
@@ -53,14 +42,18 @@ export default function ScrollLogo() {
       window.removeEventListener("scroll", update);
       window.removeEventListener("resize", update);
       if (frame) window.cancelAnimationFrame(frame);
-      footerLogo.style.removeProperty("opacity");
+      container.style.removeProperty("transform");
+      logo.style.removeProperty("transform");
+      logo.style.removeProperty("opacity");
     };
   }, []);
 
   return (
     <div ref={containerRef} className="scroll-logo" aria-hidden="true">
       <div ref={logoRef} className="scroll-logo-mark">
-        <Image src="/mainlogo.png" alt="" width={54} height={54} loading="eager" quality={90} sizes="54px" />
+        <span className="scroll-logo-crop">
+          <Image src="/mainlogo.png" alt="" width={54} height={54} loading="eager" quality={90} sizes="54px" />
+        </span>
       </div>
     </div>
   );

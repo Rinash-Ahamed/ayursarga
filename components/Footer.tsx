@@ -42,25 +42,25 @@ export default function Footer({ sectionPrefix = "", backToTopHref }: { sectionP
         <div className="footer-directory-track">
           <nav className="footer-column footer-column-discover" aria-label="Discover Ayurvedic care">
             <h3>Discover</h3>
-            <a href={ROUTES.public.postnatalCare}>Postnatal care</a>
-            <a href={ROUTES.public.prenatalCare}>Prenatal care</a>
-            <a href={ROUTES.public.babyCare}>Baby care</a>
-            <a href={ROUTES.public.womensWellness}>Women wellness</a>
-            <a href={ROUTES.public.ayurvedicWellness}>Ayurvedic wellness</a>
-            <a href={ROUTES.public.onlineConsultation}>Online consultation</a>
+            <a href={ROUTES.public.postnatalCare}>Postnatal Care</a>
+            <a href={ROUTES.public.prenatalCare}>Prenatal Care</a>
+            <a href={ROUTES.public.babyCare}>Baby Care</a>
+            <a href={ROUTES.public.womensWellness}>Women Wellness</a>
+            <a href={ROUTES.public.ayurvedicWellness}>Ayurvedic Wellness</a>
+            <a href={ROUTES.public.onlineConsultation}>Online Consultation</a>
           </nav>
 
           <nav className="footer-column footer-column-about" aria-label="Explore Ayursarga">
             <h3>About Us</h3>
             <a href={ROUTES.public.whoWeAre}>Who we are</a>
-            <a href={ROUTES.public.howAyursargaWorks}>How Ayursarga works</a>
+            <a href={ROUTES.public.howAyursargaWorks}>How Ayursarga Works</a>
             <a href={ROUTES.public.whyAyursarga}>Why Ayursarga</a>
             <a href={ROUTES.public.missionVision}>Mission &amp; Vision</a>
           </nav>
 
           <nav className="footer-column footer-column-hospitals" aria-label="Hospital links">
             <h3>For hospitals</h3>
-            <a href={ROUTES.hospital.login}>Hospital login</a>
+            <a href={ROUTES.hospital.login}>Hospital Login</a>
             <a href={`${ROUTES.public.contact}?interest=partnership`}>Partner with Ayursarga</a>
             <a href={`${ROUTES.public.contact}?interest=partnership`}>Speak with our team</a>
           </nav>
@@ -69,9 +69,10 @@ export default function Footer({ sectionPrefix = "", backToTopHref }: { sectionP
         <div className="footer-directory-track">
           <nav className="footer-column footer-column-legal" aria-label="Legal and policy information">
             <h3>Legal &amp; policies</h3>
-            <span className="footer-pending-link">Privacy policy</span>
-            <span className="footer-pending-link">Terms &amp; conditions</span>
-            <span className="footer-pending-link">Cancellation &amp; refund policy</span>
+            <a href={ROUTES.public.privacyPolicy}>Privacy Policy</a>
+            <a href={ROUTES.public.termsAndConditions}>Terms &amp; Conditions</a>
+            <a href={ROUTES.public.cancellationRefundPolicy}>Cancellation &amp; Refund Policy</a>
+            <a href={ROUTES.public.patientServiceDisclaimer}>Patient / Service Disclaimer &amp; Consent</a>
           </nav>
 
           <nav className="footer-column footer-column-consumers" aria-label="Consumer links">
@@ -82,10 +83,12 @@ export default function Footer({ sectionPrefix = "", backToTopHref }: { sectionP
         </div>
       </div>
 
-      <motion.div className="footer-identity" {...reveal}>
+      <div className="footer-identity">
         <a href={sectionPrefix ? ROUTES.public.home : "#hero"} className="footer-mark" aria-label="Return to the Ayursarga home section">
-          <span className="footer-logo-wrap" data-scroll-logo-target>
-            <Image src="/mainlogo.png" alt="" width={58} height={58} loading="lazy" quality={90} sizes="58px" />
+          <span className="footer-logo-wrap">
+            <span className="footer-logo-crop">
+              <Image src="/mainlogo.png" alt="" width={58} height={58} loading="lazy" quality={90} sizes="58px" />
+            </span>
           </span>
           <motion.span
             className="footer-wordmark"
@@ -112,7 +115,7 @@ export default function Footer({ sectionPrefix = "", backToTopHref }: { sectionP
             <span>info@ayursarga.com</span>
           </a>
         </div>
-      </motion.div>
+      </div>
 
       <div className="footer-bottom">
         <p>© {new Date().getFullYear()} Ayursarga. All rights reserved.</p>

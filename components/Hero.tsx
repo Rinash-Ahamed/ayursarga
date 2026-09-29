@@ -60,7 +60,7 @@ export default function Hero() {
         autoPlay muted loop playsInline preload="none" poster="/hero-video-poster.webp" aria-hidden="true" tabIndex={-1}
         onCanPlay={() => setVideoReady(true)}
       >
-        {canLoadVideo && <source src="/hero%20image%20video%20new.mp4" type="video/mp4" media="(min-width: 901px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)" />}
+        {canLoadVideo && <source src="/hero%20image%20video.mp4" type="video/mp4" media="(min-width: 901px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)" />}
       </video>
       <div className="hero-content">
         <p className="eyebrow hero-enter-eyebrow">Ayurvedic care, guided with trust</p>
