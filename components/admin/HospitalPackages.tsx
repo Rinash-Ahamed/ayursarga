@@ -9,6 +9,7 @@ import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalPagination } from "@/components/portal/PortalPagination";
 import { formatStatus } from "@/utils/text";
 import { packageProcedureEntries, packageTitle } from "@/features/hospitals/packages";
+import { formatCurrency } from "@/utils/currency";
 
 export function AdminHospitalPackages({ hospitalId }: { hospitalId: string }) {
   const loader = useCallback(
@@ -40,9 +41,10 @@ export function AdminHospitalPackages({ hospitalId }: { hospitalId: string }) {
           <p>{service.description || "No description provided."}</p>
           <div className="portal-card-meta">
             <span>{service.packageDurationDays ? `${service.packageDurationDays} days` : "Legacy service"}</span>
+            {typeof service.price === "number" && <span>{formatCurrency(service.price)}</span>}
             <span>{packageProcedureEntries(service).length} procedures</span>
           </div>
-          {packageProcedureEntries(service).length > 0 && <ul className="portal-package-summary">{packageProcedureEntries(service).map((procedure) => <li key={procedure.id}>{procedure.label} <span>{procedure.days} days</span></li>)}</ul>}
+          {packageProcedureEntries(service).length > 0 && <ul className="portal-package-summary">{packageProcedureEntries(service).map((procedure) => <li key={procedure.id}>{procedure.label} {procedure.days !== null && <span>{procedure.days} days</span>}</li>)}</ul>}
         </div>
         <span className="portal-status" data-status={service.status}>{formatStatus(service.status)}</span>
       </article>)}

@@ -140,13 +140,14 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
                   <h3>{packageTitle(service)}</h3>
                   <p>{service.description || `${procedures.length} procedures included in this package.`}</p>
                   {service.packageDurationDays && <span>{service.packageDurationDays} days</span>}
+                  {typeof service.price === "number" && <span>₹{service.price.toLocaleString("en-IN")}</span>}
                   {procedures.length > 0 && <button className="public-package-toggle" type="button" aria-expanded={expanded} onClick={() => setExpandedPackages((current) => {
                     const next = new Set(current);
                     if (next.has(service.id)) next.delete(service.id);
                     else next.add(service.id);
                     return next;
                   })}>{expanded ? "View less" : "View more"}</button>}
-                  {expanded && <ul className="public-package-procedures">{procedures.map((procedure) => <li key={procedure.id}><span>{procedure.label}</span><strong>{procedure.days} {procedure.days === 1 ? "day" : "days"}</strong></li>)}</ul>}
+                  {expanded && <ul className="public-package-procedures">{procedures.map((procedure) => <li key={procedure.id}><span>{procedure.label}</span>{procedure.days !== null && <strong>{procedure.days} {procedure.days === 1 ? "day" : "days"}</strong>}</li>)}</ul>}
                 </div>
                 <div>{unavailableForSelectedDates ? <span className="public-package-unavailable">Unavailable for selected date</span> : <Link href={`/app/bookings/new?${bookingParams.toString()}`}>Request appointment</Link>}</div>
               </article>;

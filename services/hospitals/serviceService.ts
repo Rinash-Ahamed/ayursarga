@@ -10,7 +10,7 @@ import {
 import { createAuditedDocument, getArchiveMetadata, getAuditActorId, replaceAuditedDocument, updateAuditedDocument } from "@/services/firestore/auditService";
 
 type ServiceInput = Pick<ServiceDocument,
-  "hospitalId" | "name" | "description" | "packageDurationDays" | "procedures" |
+  "hospitalId" | "name" | "description" | "price" | "packageDurationDays" | "procedures" |
   "otherProcedures" | "otherProcedureName" | "otherProcedureDays" | "status"
 >;
 
@@ -51,6 +51,7 @@ export function updateService(id: string, input: Partial<Omit<ServiceInput, "hos
       hospitalId: previousValues.hospitalId,
       name: input.name,
       description: input.description ?? "",
+      price: input.price,
       packageDurationDays: input.packageDurationDays,
       procedures: input.procedures ?? {},
       otherProcedures: input.otherProcedures ?? [],

@@ -276,7 +276,9 @@ service cloud.firestore {
               && durationMinutes > 0
               && durationUnit in ['minutes', 'hours', 'days'])))
         || (packageDurationDays in [7, 10, 14, 21, 28, 35]
-          && !request.resource.data.keys().hasAny(['price', 'durationMinutes', 'durationUnit'])
+          && !request.resource.data.keys().hasAny(['durationMinutes', 'durationUnit'])
+          && request.resource.data.price is number
+          && request.resource.data.price > 0
           && procedures is map
           && procedures.keys().hasOnly([
             'headMassage', 'hairPack', 'faceMassage', 'facePack',
@@ -287,59 +289,49 @@ service cloud.firestore {
             'abdominalBinding'
           ])
           && (procedures.keys().size() > 0 || otherProcedures.size() > 0 || otherProcedureName != null)
-          && validPackageProcedureDays(procedures, packageDurationDays, 'headMassage')
-          && validPackageProcedureDays(procedures, packageDurationDays, 'hairPack')
-          && validPackageProcedureDays(procedures, packageDurationDays, 'faceMassage')
-          && validPackageProcedureDays(procedures, packageDurationDays, 'facePack')
-          && validPackageProcedureDays(procedures, packageDurationDays, 'fullBodyMassage')
-          && validPackageProcedureDays(procedures, packageDurationDays, 'fullBodyPack')
-          && validPackageProcedureDays(procedures, packageDurationDays, 'podiKizhi')
-          && validPackageProcedureDays(procedures, packageDurationDays, 'narangaKizhi')
-          && validPackageProcedureDays(procedures, packageDurationDays, 'elaKizhi')
-          && validPackageProcedureDays(procedures, packageDurationDays, 'njavaraKizhi')
-          && validPackageProcedureDays(procedures, packageDurationDays, 'njavaraTheppu')
-          && validPackageProcedureDays(procedures, packageDurationDays, 'njavaraFacial')
-          && validPackageProcedureDays(procedures, packageDurationDays, 'vethuKuli')
-          && validPackageProcedureDays(procedures, packageDurationDays, 'thakraDhara')
-          && validPackageProcedureDays(procedures, packageDurationDays, 'ksheeraDhara')
-          && validPackageProcedureDays(procedures, packageDurationDays, 'tailaDhara')
-          && validPackageProcedureDays(procedures, packageDurationDays, 'anjanam')
-          && validPackageProcedureDays(procedures, packageDurationDays, 'dhoomapanam')
-          && validPackageProcedureDays(procedures, packageDurationDays, 'keshaDhoopanam')
-          && validPackageProcedureDays(procedures, packageDurationDays, 'yoniDhoopanam')
-          && validPackageProcedureDays(procedures, packageDurationDays, 'abdominalBinding')
+          && validPackageProcedureDays(procedures, 'headMassage')
+          && validPackageProcedureDays(procedures, 'hairPack')
+          && validPackageProcedureDays(procedures, 'faceMassage')
+          && validPackageProcedureDays(procedures, 'facePack')
+          && validPackageProcedureDays(procedures, 'fullBodyMassage')
+          && validPackageProcedureDays(procedures, 'fullBodyPack')
+          && validPackageProcedureDays(procedures, 'podiKizhi')
+          && validPackageProcedureDays(procedures, 'narangaKizhi')
+          && validPackageProcedureDays(procedures, 'elaKizhi')
+          && validPackageProcedureDays(procedures, 'njavaraKizhi')
+          && validPackageProcedureDays(procedures, 'njavaraTheppu')
+          && validPackageProcedureDays(procedures, 'njavaraFacial')
+          && validPackageProcedureDays(procedures, 'vethuKuli')
+          && validPackageProcedureDays(procedures, 'thakraDhara')
+          && validPackageProcedureDays(procedures, 'ksheeraDhara')
+          && validPackageProcedureDays(procedures, 'tailaDhara')
+          && validPackageProcedureDays(procedures, 'anjanam')
+          && validPackageProcedureDays(procedures, 'dhoomapanam')
+          && validPackageProcedureDays(procedures, 'keshaDhoopanam')
+          && validPackageProcedureDays(procedures, 'yoniDhoopanam')
+          && validPackageProcedureDays(procedures, 'abdominalBinding')
           && otherProcedures is list
           && otherProcedures.size() <= 5
-          && validOtherProcedure(otherProcedures, packageDurationDays, 0)
-          && validOtherProcedure(otherProcedures, packageDurationDays, 1)
-          && validOtherProcedure(otherProcedures, packageDurationDays, 2)
-          && validOtherProcedure(otherProcedures, packageDurationDays, 3)
-          && validOtherProcedure(otherProcedures, packageDurationDays, 4)
-          && packageProcedureDayTotal(procedures)
-            + otherProcedureDayAt(otherProcedures, 0)
-            + otherProcedureDayAt(otherProcedures, 1)
-            + otherProcedureDayAt(otherProcedures, 2)
-            + otherProcedureDayAt(otherProcedures, 3)
-            + otherProcedureDayAt(otherProcedures, 4)
-            + legacyOtherProcedureDayTotal(otherProcedureName, otherProcedureDays)
-            <= packageDurationDays
+          && validOtherProcedure(otherProcedures, 0)
+          && validOtherProcedure(otherProcedures, 1)
+          && validOtherProcedure(otherProcedures, 2)
+          && validOtherProcedure(otherProcedures, 3)
+          && validOtherProcedure(otherProcedures, 4)
           && ((otherProcedureName == null && otherProcedureDays == null)
             || (otherProcedureName is string
               && otherProcedureName.size() >= 2
               && otherProcedureName.size() <= 100
               && otherProcedureDays is int
-              && otherProcedureDays >= 1
-              && otherProcedureDays <= packageDurationDays))));
+              && otherProcedureDays >= 1))));
     }
 
-    function validPackageProcedureDays(procedures, packageDurationDays, procedureId) {
+    function validPackageProcedureDays(procedures, procedureId) {
       return !procedures.keys().hasAny([procedureId])
         || (procedures[procedureId] is int
-          && procedures[procedureId] >= 1
-          && procedures[procedureId] <= packageDurationDays);
+          && procedures[procedureId] >= 1);
     }
 
-    function validOtherProcedure(otherProcedures, packageDurationDays, index) {
+    function validOtherProcedure(otherProcedures, index) {
       return otherProcedures.size() <= index || (
         otherProcedures[index] is map
         && otherProcedures[index].keys().hasOnly(['name', 'days'])
@@ -348,40 +340,7 @@ service cloud.firestore {
         && otherProcedures[index].name.size() <= 100
         && otherProcedures[index].days is int
         && otherProcedures[index].days >= 1
-        && otherProcedures[index].days <= packageDurationDays
       );
-    }
-
-    function otherProcedureDayAt(otherProcedures, index) {
-      return otherProcedures.size() <= index ? 0 : otherProcedures[index].days;
-    }
-
-    function legacyOtherProcedureDayTotal(otherProcedureName, otherProcedureDays) {
-      return otherProcedureName == null ? 0 : otherProcedureDays;
-    }
-
-    function packageProcedureDayTotal(procedures) {
-      return procedures.get('headMassage', 0)
-        + procedures.get('hairPack', 0)
-        + procedures.get('faceMassage', 0)
-        + procedures.get('facePack', 0)
-        + procedures.get('fullBodyMassage', 0)
-        + procedures.get('fullBodyPack', 0)
-        + procedures.get('podiKizhi', 0)
-        + procedures.get('narangaKizhi', 0)
-        + procedures.get('elaKizhi', 0)
-        + procedures.get('njavaraKizhi', 0)
-        + procedures.get('njavaraTheppu', 0)
-        + procedures.get('njavaraFacial', 0)
-        + procedures.get('vethuKuli', 0)
-        + procedures.get('thakraDhara', 0)
-        + procedures.get('ksheeraDhara', 0)
-        + procedures.get('tailaDhara', 0)
-        + procedures.get('anjanam', 0)
-        + procedures.get('dhoomapanam', 0)
-        + procedures.get('keshaDhoopanam', 0)
-        + procedures.get('yoniDhoopanam', 0)
-        + procedures.get('abdominalBinding', 0);
     }
 
     function isAuditedModule(module) {
@@ -741,12 +700,22 @@ service cloud.firestore {
         && request.resource.data.archivedBy == null
         && hasCreateAudit('services', serviceId);
       allow update: if hasLinkedAudit('services', serviceId)
-        && hasValidServiceFields()
         && request.resource.data.updatedAt == request.time
         && request.resource.data.updatedBy == request.auth.uid
-        && ((linkedAuditAction() == 'archive' && request.resource.data.status == 'archived')
-          || (linkedAuditAction() == 'status_change' && request.resource.data.status != resource.data.status && request.resource.data.status != 'archived')
-          || (linkedAuditAction() == 'update' && request.resource.data.status == resource.data.status))
+        && ((linkedAuditAction() == 'archive'
+            && request.resource.data.status == 'archived'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status', 'updatedAt', 'updatedBy', 'archivedAt', 'archivedBy', 'lastAuditId'
+            ]))
+          || (linkedAuditAction() == 'status_change'
+            && request.resource.data.status != resource.data.status
+            && request.resource.data.status != 'archived'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status', 'updatedAt', 'updatedBy', 'lastAuditId'
+            ]))
+          || (linkedAuditAction() == 'update'
+            && request.resource.data.status == resource.data.status
+            && hasValidServiceFields()))
         && (isAdmin() || (
           hasOperationalHospitalAccess(resource.data.hospitalId)
           && request.resource.data.hospitalId == resource.data.hospitalId

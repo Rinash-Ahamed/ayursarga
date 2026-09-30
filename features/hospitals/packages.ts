@@ -57,6 +57,13 @@ export const PACKAGE_PROCEDURES = PACKAGE_PROCEDURE_GROUPS.flatMap<readonly [Pac
   (group) => group.options as readonly (readonly [PackageProcedureId, string])[],
 );
 export const PACKAGE_PROCEDURE_LABELS = new Map<string, string>(PACKAGE_PROCEDURES.map(([id, label]) => [id, label] as const));
+export const DAYLESS_PACKAGE_PROCEDURE_IDS = new Set<string>([
+  "anjanam",
+  "dhoomapanam",
+  "keshaDhoopanam",
+  "yoniDhoopanam",
+  "abdominalBinding",
+]);
 
 export type PackageLike = {
   name?: string;
@@ -77,11 +84,11 @@ export function packageTitle(service: PackageLike) {
     : service.name || "Care package";
 }
 
-export function packageProcedureEntries(service: PackageLike): { id: string; label: string; days: number }[] {
+export function packageProcedureEntries(service: PackageLike): { id: string; label: string; days: number | null }[] {
   const procedures = service.procedures ?? {};
-  const entries: { id: string; label: string; days: number }[] = PACKAGE_PROCEDURES.flatMap(([id, label]) => {
+  const entries: { id: string; label: string; days: number | null }[] = PACKAGE_PROCEDURES.flatMap(([id, label]) => {
     const days = procedures[id];
-    return Number.isInteger(days) && days > 0 ? [{ id, label, days }] : [];
+    return Number.isInteger(days) && days > 0 ? [{ id, label, days: DAYLESS_PACKAGE_PROCEDURE_IDS.has(id) ? null : days }] : [];
   });
   for (const [index, procedure] of (service.otherProcedures ?? []).entries()) {
     if (procedure.name?.trim() && Number.isInteger(procedure.days) && procedure.days > 0) {
@@ -98,13 +105,19 @@ export function readPackageForm(form: HTMLFormElement) {
   const data = new FormData(form);
   const packageDurationDays = Number(data.get("packageDurationDays"));
   if (!isPackageDuration(packageDurationDays)) throw new Error("Choose a valid package duration.");
+  const price = Number(data.get("price"));
+  if (!Number.isFinite(price) || price <= 0) throw new Error("Enter a valid package amount.");
 
   const procedures: PackageProcedures = {};
   for (const [id] of PACKAGE_PROCEDURES) {
     if (data.get(`procedure_${id}`) !== "on") continue;
+    if (DAYLESS_PACKAGE_PROCEDURE_IDS.has(id)) {
+      procedures[id] = 1;
+      continue;
+    }
     const days = Number(data.get(`procedureDays_${id}`));
-    if (!Number.isInteger(days) || days < 1 || days > packageDurationDays) {
-      throw new Error(`Enter between 1 and ${packageDurationDays} days for ${PACKAGE_PROCEDURE_LABELS.get(id)}.`);
+    if (!Number.isInteger(days) || days < 1) {
+      throw new Error(`Enter the number of days for ${PACKAGE_PROCEDURE_LABELS.get(id)}.`);
     }
     procedures[id] = days;
   }
@@ -122,23 +135,16 @@ export function readPackageForm(form: HTMLFormElement) {
       throw new Error(`${name} has been added more than once to this package.`);
     }
     const days = Number(rawDays);
-    if (!Number.isInteger(days) || days < 1 || days > packageDurationDays) {
-      throw new Error(`Enter between 1 and ${packageDurationDays} days for ${name}.`);
+    if (!Number.isInteger(days) || days < 1) {
+      throw new Error(`Enter the number of days for ${name}.`);
     }
     otherProcedures.push({ name, days });
   }
   if (Object.keys(procedures).length === 0 && otherProcedures.length === 0) throw new Error("Select or add at least one procedure for this package.");
-  const assignedProcedureDays = [
-    ...Object.values(procedures),
-    ...otherProcedures.map((procedure) => procedure.days),
-  ].reduce((total, days) => total + (days ?? 0), 0);
-  if (assignedProcedureDays > packageDurationDays) {
-    throw new Error(`The procedures total ${assignedProcedureDays} days. A ${packageDurationDays}-day package cannot exceed ${packageDurationDays} assigned procedure days.`);
-  }
-
   return {
     name: `${packageDurationDays}-day package`,
     description: String(data.get("description") ?? "").trim().slice(0, 2_000),
+    price,
     packageDurationDays,
     procedures,
     otherProcedures,

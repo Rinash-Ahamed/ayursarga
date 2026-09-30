@@ -7,6 +7,7 @@ import { archiveService, createService, listHospitalServices, updateService } fr
 import {
   PACKAGE_DURATIONS,
   PACKAGE_PROCEDURE_GROUPS,
+  DAYLESS_PACKAGE_PROCEDURE_IDS,
   packageProcedureEntries,
   packageTitle,
   readPackageForm,
@@ -25,7 +26,7 @@ import { PortalDialog } from "@/components/portal/PortalDialog";
 
 type UsedProcedureMap = Map<string, string[]>;
 
-function PackageFields({ service, usedIn }: { service?: DocumentRecord<ServiceDocument>; usedIn: UsedProcedureMap }) {
+function PackageFields({ service, usedIn, onAmountValidityChange }: { service?: DocumentRecord<ServiceDocument>; usedIn: UsedProcedureMap; onAmountValidityChange?: (valid: boolean) => void }) {
   const initialSelected = Object.keys(service?.procedures ?? {});
   const [selected, setSelected] = useState(() => new Set(initialSelected));
   const [duration, setDuration] = useState<number>(service?.packageDurationDays ?? PACKAGE_DURATIONS[0]);
@@ -71,7 +72,7 @@ function PackageFields({ service, usedIn }: { service?: DocumentRecord<ServiceDo
     </label>
     <fieldset className="portal-package-procedures full">
       <legend>Included procedures</legend>
-      <p className="portal-form-note">Select each procedure included in this package and enter how many days it will be provided.</p>
+      <p className="portal-form-note">Select each procedure included in this package. Enter the number of days where the field is shown.</p>
       <div className="portal-package-procedure-groups">
         {PACKAGE_PROCEDURE_GROUPS.map((group, groupIndex) => <section key={`${group.title ?? "general"}-${groupIndex}`}>
           {group.title && <h3>{group.title}</h3>}
@@ -84,7 +85,7 @@ function PackageFields({ service, usedIn }: { service?: DocumentRecord<ServiceDo
                   <input type="checkbox" name={`procedure_${id}`} checked={checked} onChange={(event) => toggle(id, event.target.checked)} />
                   <span><strong>{label}</strong>{includedElsewhere.length > 0 && <small>Also in {includedElsewhere.join(", ")}</small>}</span>
                 </span>
-                <span className="portal-package-days"><input type="number" name={`procedureDays_${id}`} min="1" max={duration} step="1" defaultValue={service?.procedures?.[id] ?? ""} disabled={!checked} required={checked} aria-label={`Number of days for ${label}`} /><small>days</small></span>
+                {!DAYLESS_PACKAGE_PROCEDURE_IDS.has(id) && <span className="portal-package-days"><input type="number" name={`procedureDays_${id}`} min="1" step="1" defaultValue={service?.procedures?.[id] ?? ""} disabled={!checked} required={checked} aria-label={`Number of days for ${label}`} /><small>days</small></span>}
               </label>;
             })}
           </div>
@@ -97,13 +98,16 @@ function PackageFields({ service, usedIn }: { service?: DocumentRecord<ServiceDo
           <div className="portal-package-custom-list">
             {customProcedures.map((procedure, index) => <div className="portal-package-custom-row" key={procedure.id}>
               <input name={`otherProcedureName_${index}`} maxLength={100} value={procedure.name} onChange={(event) => updateCustomProcedure(procedure.id, { name: event.target.value })} placeholder="Procedure name" aria-label={`Custom procedure ${index + 1} name`} />
-              <span className="portal-package-days"><input type="number" name={`otherProcedureDays_${index}`} min="1" max={duration} step="1" value={procedure.days || ""} onChange={(event) => updateCustomProcedure(procedure.id, { days: Number(event.target.value) })} aria-label={`Number of days for custom procedure ${index + 1}`} /><small>days</small></span>
+              <span className="portal-package-days"><input type="number" name={`otherProcedureDays_${index}`} min="1" step="1" value={procedure.days || ""} onChange={(event) => updateCustomProcedure(procedure.id, { days: Number(event.target.value) })} aria-label={`Number of days for custom procedure ${index + 1}`} /><small>days</small></span>
               <button className="portal-custom-remove" type="button" onClick={() => removeCustomProcedure(procedure.id)} aria-label={`Remove custom procedure ${index + 1}`}>Remove</button>
             </div>)}
           </div>
         </section>
       </div>
     </fieldset>
+    <label className="full">Package amount
+      <input name="price" type="number" min="0.01" step="0.01" defaultValue={service?.price ?? ""} required placeholder="Enter package amount" onChange={(event) => onAmountValidityChange?.(Number(event.target.value) > 0)} />
+    </label>
     <label className="full">Package notes <small>Optional</small><textarea name="description" defaultValue={service?.description ?? ""} maxLength={2_000} placeholder="Add any helpful information about this package." /></label>
   </>;
 }
@@ -134,6 +138,7 @@ export function ServicesManager() {
   const [serviceToToggle, setServiceToToggle] = useState<DocumentRecord<ServiceDocument> | null>(null);
   const [search, setSearch] = useState("");
   const [createFormKey, setCreateFormKey] = useState(0);
+  const [hasPackageAmount, setHasPackageAmount] = useState(false);
   const deferredSearch = useDebouncedValue(search.trim(), 300);
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) => hospitalId
     ? listHospitalServices(hospitalId, { pageSize: 20, cursor }, deferredSearch)
@@ -156,6 +161,7 @@ export function ServicesManager() {
     beginAction("create");
     try {
       await createService({ hospitalId, ...readPackageForm(event.currentTarget), status: "active" });
+      setHasPackageAmount(false);
       setCreateFormKey((current) => current + 1);
       await reload();
       setActionMessage("The package has been added.");
@@ -222,8 +228,8 @@ export function ServicesManager() {
   return <PortalShell role="hospital" title="Services">
     <PortalLoadGuard loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/hospital" loadingMessage="Loading hospital packages..." />
     <form className="portal-card portal-form portal-service-form" onSubmit={addService} noValidate key={createFormKey}>
-      <PackageFields usedIn={usedInCreate} />
-      <div className="portal-actions full"><button className="portal-button" disabled={busyId !== null}>{busyId === "create" ? "Adding..." : "Add package"}</button></div>
+      <PackageFields usedIn={usedInCreate} onAmountValidityChange={setHasPackageAmount} />
+      <div className="portal-actions full"><button className="portal-button" disabled={busyId !== null || !hasPackageAmount}>{busyId === "create" ? "Adding..." : "Add package"}</button></div>
     </form>
     <label className="portal-search">Search packages
       <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by package duration" autoComplete="off" />
@@ -241,7 +247,7 @@ export function ServicesManager() {
           </form>
         </article>
         : <article className="portal-row portal-service-row" key={item.id}>
-          <div><h3>{packageTitle(item)}</h3><p>{packageProcedureEntries(item).length} procedures included</p>{item.description && <p>{item.description}</p>}<ul className="portal-package-summary">{packageProcedureEntries(item).slice(0, 4).map((procedure) => <li key={procedure.id}>{procedure.label} <span>{procedure.days} days</span></li>)}</ul></div>
+          <div><h3>{packageTitle(item)}</h3><p>{packageProcedureEntries(item).length} procedures included</p>{typeof item.price === "number" && <p>₹{item.price.toLocaleString("en-IN")}</p>}{item.description && <p>{item.description}</p>}<ul className="portal-package-summary">{packageProcedureEntries(item).slice(0, 4).map((procedure) => <li key={procedure.id}>{procedure.label} {procedure.days !== null && <span>{procedure.days} days</span>}</li>)}</ul></div>
           <div className="portal-service-controls"><span className="portal-status portal-service-status" data-status={item.status}>{formatStatus(item.status)}</span><div className="portal-actions"><button className="portal-button secondary" type="button" disabled={busyId !== null} onClick={() => { setEditingId(item.id); setActionError(null); setActionMessage(null); }}>Edit package</button><button className="portal-button secondary" type="button" disabled={busyId !== null} onClick={() => void toggleStatus(item)}>{item.status === "active" ? "Deactivate" : "Activate"}</button><button className="portal-button danger" type="button" disabled={busyId !== null} onClick={() => setServiceToRemove(item)}>Delete</button></div></div>
         </article>)}
     </div>
