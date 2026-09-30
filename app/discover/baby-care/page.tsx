@@ -45,7 +45,8 @@ const BABY_CARE_AREAS = [
 ] as const;
 
 const AYURVEDIC_PERSONALISATION = [
-  "Baby’s age",
+  "Baby’s weight",
+  "Baby's growth",
   "Birth history",
   "Current health",
   "Skin sensitivity",
