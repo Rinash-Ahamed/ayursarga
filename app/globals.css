@@ -310,7 +310,7 @@ main>.dark-section{
 .public-center-search{ background:#fff; border-bottom:1px solid rgba(31,61,43,.12); }
 .public-center-search:focus{ outline:none; }
 .centers-directory-page{ min-height:100svh; background:#fff; }
-.centers-directory-page .public-center-search{ padding-top:clamp(150px,14vw,190px); }
+.centers-directory-page .public-center-search{ padding-top:calc(96px + env(safe-area-inset-top)); }
 .public-search-heading{ max-width:760px; margin:0 auto 34px; text-align:center; }
 .public-search-heading .section-title{ margin-bottom:16px; }
 .public-search-heading>p{ max-width:680px; margin-inline:auto; color:var(--sage); font-size:15px; line-height:1.75; }
@@ -524,7 +524,7 @@ main>.dark-section{
   .public-centre-contact-card{ position:static; }
 }
 @media(max-width:720px){
-  .centers-directory-page .public-center-search{ padding-top:120px; }
+  .centers-directory-page .public-center-search{ padding-top:calc(88px + env(safe-area-inset-top)); }
   .public-search-filters{ grid-template-columns:1fr; gap:8px; border-radius:16px; }
   .public-search-field{ min-height:66px; }
   .public-search-submit{ min-height:56px; }

@@ -176,7 +176,6 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
                 <div className="public-centre-package-copy">
                   <h3>{packageTitle(service)}</h3>
                   <p>{service.description || `${procedures.length} procedures included in this package.`}</p>
-                  {service.packageDurationDays && <span>{service.packageDurationDays} days</span>}
                   {typeof service.price === "number" && <span className="public-package-price">₹{service.price.toLocaleString("en-IN")}</span>}
                   {procedures.length > 0 && <button className="public-package-toggle" type="button" aria-expanded={expanded} onClick={() => setExpandedPackages((current) => {
                     const next = new Set(current);
