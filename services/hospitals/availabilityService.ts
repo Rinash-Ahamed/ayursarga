@@ -57,7 +57,7 @@ export function listAdminAvailabilityRequests(options: Pick<QueryPageOptions, "p
 }
 
 export function createAdminAvailabilityBlock(input: { hospitalId: string; startDate: string; endDate: string; reason: string }) {
-  const range = validateAvailabilityRange(input.startDate, input.endDate);
+  validateAvailabilityRange(input.startDate, input.endDate);
   const reason = input.reason.trim();
   if (reason.length < 3 || reason.length > 500) throw new Error("Enter a short reason between 3 and 500 characters.");
   return authorizedApiRequest<{ ok: true }>("/api/admin/availability", {
@@ -65,8 +65,8 @@ export function createAdminAvailabilityBlock(input: { hospitalId: string; startD
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       hospitalId: input.hospitalId,
-      startDate: range.startDate.toISOString(),
-      endDate: range.endDate.toISOString(),
+      startDate: input.startDate,
+      endDate: input.endDate,
       reason,
     }),
     signedOutMessage: "Your Admin session has expired. Sign in again to block availability.",

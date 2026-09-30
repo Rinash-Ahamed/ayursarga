@@ -19,26 +19,42 @@ function device(request: Request) {
   };
 }
 
+function indiaDateKey(date: Date) {
+  const parts = new Intl.DateTimeFormat("en", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const value = (type: "year" | "month" | "day") => parts.find((part) => part.type === type)?.value ?? "";
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
+function dateKeyAsUtc(dateKey: string) {
+  return new Date(`${dateKey}T00:00:00.000Z`);
+}
+
 function activeRanges(value: unknown) {
   if (!Array.isArray(value)) return [] as StoredRange[];
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const todayKey = indiaDateKey(new Date());
   return value.filter((range): range is StoredRange => Boolean(
     range && typeof range === "object"
     && typeof (range as StoredRange).availabilityId === "string"
     && (range as StoredRange).startDate instanceof Timestamp
     && (range as StoredRange).endDate instanceof Timestamp
-    && (range as StoredRange).endDate.toDate() >= today,
+    && indiaDateKey((range as StoredRange).endDate.toDate()) >= todayKey,
   ));
 }
 
 function validateRange(startDate: Date, endDate: Date) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const maximumEnd = new Date(startDate);
-  maximumEnd.setFullYear(maximumEnd.getFullYear() + 1);
-  if (startDate < today || endDate < startDate || endDate > maximumEnd) {
-    throw new Error("Choose a future date range no longer than one year.");
+  const todayKey = indiaDateKey(new Date());
+  const startKey = indiaDateKey(startDate);
+  const endKey = indiaDateKey(endDate);
+  const maximumEnd = dateKeyAsUtc(startKey);
+  maximumEnd.setUTCFullYear(maximumEnd.getUTCFullYear() + 1);
+  const maximumEndKey = maximumEnd.toISOString().slice(0, 10);
+  if (startKey < todayKey || endKey < startKey || endKey > maximumEndKey) {
+    throw new AvailabilityOperationError("Choose a date range from today onwards and no longer than one year.", 409);
   }
 }
 

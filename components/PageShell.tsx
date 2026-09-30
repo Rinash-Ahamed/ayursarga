@@ -13,6 +13,7 @@ import Voices from "@/components/Voices";
 import GeneralQuestions from "@/components/GeneralQuestions";
 import Footer from "@/components/Footer";
 import { useBrowserIdle } from "@/hooks/useBrowserIdle";
+import PublicOpening from "@/components/PublicOpening";
 
 // Nonessential ambient effects begin only after initial content has painted.
 const ParticleField = dynamic(() => import("@/components/ParticleField"), { ssr: false });
@@ -22,6 +23,7 @@ export default function PageShell() {
 
   return (
     <>
+      <PublicOpening />
       {ambientEffectsReady && <ParticleField />}
       <WhatsAppBubble />
       <Nav />
