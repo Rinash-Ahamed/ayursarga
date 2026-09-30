@@ -46,9 +46,9 @@ export type QueryPageOptions = {
   excludeArchived?: boolean;
 };
 
-export type QueryPage<T> = {
+export type QueryPage<T, TCursor = QueryDocumentSnapshot<DocumentData>> = {
   documents: DocumentRecord<T>[];
-  cursor: QueryDocumentSnapshot<DocumentData> | null;
+  cursor: TCursor | null;
   hasMore: boolean;
 };
 

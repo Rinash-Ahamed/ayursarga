@@ -90,24 +90,20 @@ export async function updateAuditedDocument(
   id: string,
   changes: DocumentData,
   context: AuditContext,
-  previousValues?: DocumentData,
+  _previousValues?: DocumentData,
 ) {
+  void _previousValues;
   const firestore = getClientFirestore();
   const target = doc(firestore, collectionPath, id);
-  let previous = previousValues;
-  if (!previous) {
-    const current = await getDoc(target);
-    if (!current.exists()) throw new Error("The requested record could not be found.");
-    previous = current.data();
-  } else if ("id" in previous) {
-    previous = { ...previous };
-    delete previous.id;
-  }
+  const current = await getDoc(target);
+  if (!current.exists()) throw new Error("The requested record could not be found.");
+  const previous = current.data();
 
   const audit = doc(collection(firestore, COLLECTIONS.auditLogs));
-  const updatedValues = { ...changes, lastAuditId: audit.id };
+  const documentChanges = { ...changes, lastAuditId: audit.id };
+  const updatedValues = { ...previous, ...documentChanges };
   const batch = writeBatch(firestore);
-  batch.update(target, updatedValues);
+  batch.update(target, documentChanges);
   batch.set(audit, auditEntry(collectionPath, id, context, previous, updatedValues));
   await batch.commit();
 }
@@ -117,12 +113,14 @@ export async function replaceAuditedDocument(
   id: string,
   replacement: DocumentData,
   context: AuditContext,
-  previousValues: DocumentData,
+  _previousValues: DocumentData,
 ) {
+  void _previousValues;
   const firestore = getClientFirestore();
   const target = doc(firestore, collectionPath, id);
-  const previous = { ...previousValues };
-  delete previous.id;
+  const current = await getDoc(target);
+  if (!current.exists()) throw new Error("The requested record could not be found.");
+  const previous = current.data();
   const audit = doc(collection(firestore, COLLECTIONS.auditLogs));
   const documentData = { ...replacement, lastAuditId: audit.id };
   const batch = writeBatch(firestore);

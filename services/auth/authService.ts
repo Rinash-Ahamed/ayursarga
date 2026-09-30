@@ -87,6 +87,19 @@ export const authService: AuthAdapter = {
       throw toAuthenticationError(error);
     }
   },
+  async reauthenticate(currentPassword: string) {
+    try {
+      const user = getClientAuth().currentUser;
+      if (!user?.email) throw new AuthenticationError("unauthenticated");
+      await reauthenticateWithCredential(
+        user,
+        EmailAuthProvider.credential(user.email, currentPassword),
+      );
+      await user.getIdToken(true);
+    } catch (error) {
+      throw toAuthenticationError(error);
+    }
+  },
   async changePassword(currentPassword: string, newPassword: string) {
     try {
       if (!isValidPassword(newPassword)) throw new AuthenticationError("weak-password");

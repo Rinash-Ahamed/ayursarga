@@ -103,12 +103,11 @@ implementation work unless the project owner explicitly changes a decision.
 - Our Consultants is an Admin-only operational collection. Consultant records
   do not create authentication accounts. Their IDs use the sequential `AS001`
   format, and creates, profile edits, and Active/Inactive changes are audited.
-- The accepted current scope does not require mirrored public/private hospital
-  collections because Firebase project access is controlled by trusted Admins.
-  Do not introduce that migration casually. If future requirements demand
-  field-level confidentiality from an SDK client that may read the document,
-  document and review a public/private split first because Firestore cannot
-  return only selected fields from an allowed document read.
+- Public centre discovery uses the bounded `/api/public/hospitals` server
+  projection. Do not restore anonymous SDK reads of full `hospitals` or
+  `services` documents: those records contain contract, commission, actor, and
+  audit metadata. A mirrored public collection is not currently required; if
+  one is proposed later, document and review the migration first.
 
 ## Hospital and booking workflow
 
@@ -119,7 +118,8 @@ implementation work unless the project owner explicitly changes a decision.
 - Activation requires contract generation, signed-contract confirmation, and a
   valid URL and signing date for each of the two required contracts. Preserve
   created, both signed, and activated dates and audit each transition.
-- Consumer booking creation snapshots service price and commission values for
+- Consumer booking creation runs through the authenticated server endpoint and
+  snapshots service price and commission values for
   historical consistency. It also snapshots the Consumer's name, Google email,
   phone, optional address, preferred care period, and bystander count so only
   Admin and the assigned Hospital can use

@@ -28,6 +28,7 @@ type AuthContextValue = {
   loginConsumerWithGoogle(requestedPath?: string | null, stayOnPage?: boolean): Promise<UserProfile>;
   logout(): Promise<void>;
   resetPassword(email: string): Promise<void>;
+  reauthenticate(currentPassword: string): Promise<void>;
   changePassword(currentPassword: string, newPassword: string): Promise<void>;
   refreshUserProfile(): Promise<UserProfile | null>;
   clearError(): void;
@@ -97,6 +98,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resetPassword = useCallback((email: string) =>
     run(() => authService.resetPassword(email)), [run]);
 
+  const reauthenticate = useCallback((currentPassword: string) =>
+    authService.reauthenticate(currentPassword), []);
+
   const changePassword = useCallback((currentPassword: string, newPassword: string) =>
     run(() => authService.changePassword(currentPassword, newPassword)), [run]);
 
@@ -133,10 +137,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loginConsumerWithGoogle,
     logout,
     resetPassword,
+    reauthenticate,
     changePassword,
     refreshUserProfile,
     clearError,
-  }), [changePassword, clearError, error, login, loginConsumerWithGoogle, logout, processing, refreshUserProfile, resetPassword, snapshot, status]);
+  }), [changePassword, clearError, error, login, loginConsumerWithGoogle, logout, processing, reauthenticate, refreshUserProfile, resetPassword, snapshot, status]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

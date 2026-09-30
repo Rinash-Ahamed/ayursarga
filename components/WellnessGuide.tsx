@@ -85,6 +85,8 @@ function ConsultationIcon({ name }: { name: ConsultationIconName }) {
 
 export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (profile: GuidanceProfile | null) => void }) {
   const guidePanelRef = useRef<HTMLDivElement>(null);
+  const pathGridRef = useRef<HTMLDivElement>(null);
+  const pendingScrollTarget = useRef<"guide" | "grid" | null>(null);
   const [selectedPath, setSelectedPath] = useState<WellnessPath | null>(null);
   const [step, setStep] = useState<GuideStep>(0);
   const [preferences, setPreferences] = useState<string[]>([]);
@@ -115,17 +117,29 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
   const earliestAppointmentDate = new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
-    if (!selectedPath) return;
-
-    const frame = window.requestAnimationFrame(() => {
-      const panel = guidePanelRef.current;
-      if (!panel) return;
-      const navigationHeight = document.getElementById("site-nav")?.getBoundingClientRect().height ?? 0;
-      const top = window.scrollY + panel.getBoundingClientRect().top - navigationHeight - 16;
-      window.scrollTo({ top: Math.max(0, top), behavior: reduceMotion ? "auto" : "smooth" });
+    if (!pendingScrollTarget.current) return;
+    let secondFrame = 0;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        const target = pendingScrollTarget.current === "guide" ? guidePanelRef.current : pathGridRef.current;
+        pendingScrollTarget.current = null;
+        if (!target) return;
+        const request = new CustomEvent("ayursarga:scroll-to", {
+          cancelable: true,
+          detail: { target, offset: 16 },
+        });
+        const handled = !window.dispatchEvent(request);
+        if (handled) return;
+        const navigationHeight = document.getElementById("site-nav")?.getBoundingClientRect().height ?? 0;
+        const top = window.scrollY + target.getBoundingClientRect().top - navigationHeight - 16;
+        window.scrollTo({ top: Math.max(0, top), behavior: reduceMotion ? "auto" : "smooth" });
+      });
     });
 
-    return () => window.cancelAnimationFrame(frame);
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      window.cancelAnimationFrame(secondFrame);
+    };
   }, [selectedPath, reduceMotion]);
 
   function resetAnswers() {
@@ -146,6 +160,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
 
   function selectPath(path: WellnessPath) {
     if (selectedPath?.id === path.id) return;
+    pendingScrollTarget.current = "guide";
     setSelectedPath(path);
     resetAnswers();
   }
@@ -181,6 +196,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
   }
 
   function restart() {
+    pendingScrollTarget.current = "grid";
     setSelectedPath(null);
     resetAnswers();
   }
@@ -355,6 +371,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
           </AnimatePresence>
         </motion.div>}
         {(!selectedPath || step === 2) && <motion.div
+          ref={pathGridRef}
           className="path-grid wellness-path-grid"
           aria-label="Choose a wellness path"
           initial={reduceMotion ? false : { opacity: 0 }}

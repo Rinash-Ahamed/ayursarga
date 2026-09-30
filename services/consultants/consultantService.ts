@@ -6,7 +6,8 @@ import type { ConsultantFields } from "@/features/consultants/validation";
 import { validateConsultantFields } from "@/features/consultants/validation";
 import { COLLECTIONS } from "@/constants/firestore";
 import { firestoreTimestamp, runFilteredQuery, type QueryPageOptions } from "@/services/firestore/firestoreService";
-import { createAuditedDocument, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
+import { getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
+import { authorizedApiRequest } from "@/services/api/client";
 
 export function listConsultants(options: Pick<QueryPageOptions, "pageSize" | "cursor"> = {}, searchTerm = "") {
   const trimmedSearch = searchTerm.trim();
@@ -25,34 +26,17 @@ export function listConsultants(options: Pick<QueryPageOptions, "pageSize" | "cu
   });
 }
 
-async function nextEmployeeIdentity() {
-  const latest = await runFilteredQuery<ConsultantDocument>({
-    collectionPath: COLLECTIONS.consultants,
-    sort: { field: "employeeSequence", direction: "desc" },
-    pageSize: 1,
-    excludeArchived: false,
-  });
-  const employeeSequence = (latest.documents[0]?.employeeSequence ?? 0) + 1;
-  return { employeeSequence, employeeId: `AS${String(employeeSequence).padStart(3, "0")}` };
-}
-
 export async function createConsultant(input: ConsultantFields) {
   const validation = validateConsultantFields(input);
   if (!validation.isValid) throw new Error(Object.values(validation.errors)[0] ?? "Consultant details are invalid.");
-  const identity = await nextEmployeeIdentity();
-  const actorId = getAuditActorId();
-  await createAuditedDocument(COLLECTIONS.consultants, {
-    ...identity,
-    ...validation.data,
-    status: "active",
-    createdAt: firestoreTimestamp.server(),
-    createdBy: actorId,
-    updatedAt: firestoreTimestamp.server(),
-    updatedBy: actorId,
-    archivedAt: null,
-    archivedBy: null,
-  }, { action: "create", actorRole: "admin" }, identity.employeeId);
-  return identity.employeeId;
+  const response = await authorizedApiRequest<{ ok: true; employeeId: string }>("/api/admin/consultants", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(validation.data),
+    signedOutMessage: "Sign in as Admin before adding a consultant.",
+    failureMessage: "We could not add the consultant.",
+  });
+  return response.employeeId;
 }
 
 export function updateConsultant(id: string, input: ConsultantFields, previous: DocumentData) {

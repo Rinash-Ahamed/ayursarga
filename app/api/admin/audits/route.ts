@@ -11,7 +11,13 @@ export function GET() {
 
 export async function DELETE(request: Request) {
   try {
-    const { firestore } = await requireActiveAdmin(request);
+    if (request.headers.get("x-ayursarga-confirm") !== "clear-all-audits") {
+      return apiJson({ error: "Confirm the permanent audit-log removal before continuing." }, 400);
+    }
+    const { decoded, firestore } = await requireActiveAdmin(request);
+    if (!decoded.auth_time || Math.floor(Date.now() / 1000) - decoded.auth_time > 5 * 60) {
+      return apiJson({ error: "Re-enter your Admin password before permanently clearing audit history." }, 401);
+    }
     let deletedCount = 0;
     for (let batchNumber = 0; batchNumber < 250; batchNumber += 1) {
       const snapshot = await firestore.collection("auditLogs").limit(400).get();

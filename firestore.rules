@@ -37,48 +37,11 @@ service cloud.firestore {
 
     function hasOperationalHospitalAccess(hospitalId) {
       return belongsToHospital(hospitalId)
-        && get(/databases/$(database)/documents/hospitals/$(hospitalId)).data.status != 'archived';
+        && get(/databases/$(database)/documents/hospitals/$(hospitalId)).data.status == 'active';
     }
 
     function isDocumentOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function isApprovedHospital(hospitalId) {
-      let hospital = get(/databases/$(database)/documents/hospitals/$(hospitalId)).data;
-      return hospital.status == 'active' && hospital.isPublic == true;
-    }
-
-    function blockedRangeAllowsBooking(ranges, index, startDate, endDate) {
-      return ranges.size() <= index
-        || endDate < ranges[index].startDate
-        || startDate > ranges[index].endDate;
-    }
-
-    function hospitalAllowsBookingDates(hospitalId, startDate, endDate) {
-      let ranges = get(/databases/$(database)/documents/hospitals/$(hospitalId)).data.get('blockedDateRanges', []);
-      return ranges is list
-        && ranges.size() <= 20
-        && blockedRangeAllowsBooking(ranges, 0, startDate, endDate)
-        && blockedRangeAllowsBooking(ranges, 1, startDate, endDate)
-        && blockedRangeAllowsBooking(ranges, 2, startDate, endDate)
-        && blockedRangeAllowsBooking(ranges, 3, startDate, endDate)
-        && blockedRangeAllowsBooking(ranges, 4, startDate, endDate)
-        && blockedRangeAllowsBooking(ranges, 5, startDate, endDate)
-        && blockedRangeAllowsBooking(ranges, 6, startDate, endDate)
-        && blockedRangeAllowsBooking(ranges, 7, startDate, endDate)
-        && blockedRangeAllowsBooking(ranges, 8, startDate, endDate)
-        && blockedRangeAllowsBooking(ranges, 9, startDate, endDate)
-        && blockedRangeAllowsBooking(ranges, 10, startDate, endDate)
-        && blockedRangeAllowsBooking(ranges, 11, startDate, endDate)
-        && blockedRangeAllowsBooking(ranges, 12, startDate, endDate)
-        && blockedRangeAllowsBooking(ranges, 13, startDate, endDate)
-        && blockedRangeAllowsBooking(ranges, 14, startDate, endDate)
-        && blockedRangeAllowsBooking(ranges, 15, startDate, endDate)
-        && blockedRangeAllowsBooking(ranges, 16, startDate, endDate)
-        && blockedRangeAllowsBooking(ranges, 17, startDate, endDate)
-        && blockedRangeAllowsBooking(ranges, 18, startDate, endDate)
-        && blockedRangeAllowsBooking(ranges, 19, startDate, endDate);
     }
 
     function hasExactUserFields() {
@@ -421,10 +384,6 @@ service cloud.firestore {
         + procedures.get('abdominalBinding', 0);
     }
 
-    function isBootstrapAdminIdentity() {
-      return isSignedIn() && request.auth.token.email == 'info@ayursarga.com';
-    }
-
     function isAuditedModule(module) {
       return module in ['users', 'hospitals', 'consultants', 'services', 'bookings', 'hospitalCapacity', 'availability'];
     }
@@ -440,12 +399,22 @@ service cloud.firestore {
         && audit.action in ['create', 'update', 'archive', 'restore', 'status_change',
           'contract_generated', 'contract_signed', 'hospital_activated']
         && audit.timestamp == request.time
+        && audit.previousValues == resource.data
+        && audit.updatedValues == request.resource.data
         && audit.updatedValues.lastAuditId == auditId;
     }
 
     function hasCreateAudit(module, recordId) {
       let audit = getAfter(/databases/$(database)/documents/auditLogs/$(request.resource.data.lastAuditId)).data;
-      return hasLinkedAudit(module, recordId) && audit.action == 'create';
+      return request.resource.data.lastAuditId is string
+        && audit.module == module
+        && audit.recordId == recordId
+        && audit.actorId == request.auth.uid
+        && audit.actorRole == getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        && audit.action == 'create'
+        && audit.timestamp == request.time
+        && audit.previousValues == null
+        && audit.updatedValues == request.resource.data;
     }
 
     function linkedAuditAction() {
@@ -511,7 +480,7 @@ service cloud.firestore {
           && request.resource.data.contractUrl is string
           && request.resource.data.contractUrl.size() > 8
           && request.resource.data.contractUrl.size() <= 500
-          && request.resource.data.contractUrl.matches('https?://.+')
+          && request.resource.data.contractUrl.matches('https://.+')
           && request.resource.data.contractSignedAt2
             == (resource.data.get('contractSignedAt2', null) == null ? request.time : resource.data.contractSignedAt2)
           && request.resource.data.contractSignedBy2
@@ -519,7 +488,7 @@ service cloud.firestore {
           && request.resource.data.contractUrl2 is string
           && request.resource.data.contractUrl2.size() > 8
           && request.resource.data.contractUrl2.size() <= 500
-          && request.resource.data.contractUrl2.matches('https?://.+')
+          && request.resource.data.contractUrl2.matches('https://.+')
           && changed.hasOnly([
             'contractStatus', 'contractSignedAt', 'contractSignedBy', 'contractUrl',
             'contractSignedAt2', 'contractSignedBy2', 'contractUrl2',
@@ -533,11 +502,11 @@ service cloud.firestore {
           && resource.data.contractUrl is string
           && resource.data.contractUrl.size() > 8
           && resource.data.contractUrl.size() <= 500
-          && resource.data.contractUrl.matches('https?://.+')
+          && resource.data.contractUrl.matches('https://.+')
           && resource.data.contractUrl2 is string
           && resource.data.contractUrl2.size() > 8
           && resource.data.contractUrl2.size() <= 500
-          && resource.data.contractUrl2.matches('https?://.+')
+          && resource.data.contractUrl2.matches('https://.+')
           && request.resource.data.status == 'active'
           && request.resource.data.isPublic == true
           && request.resource.data.contractStatus == 'signed'
@@ -609,20 +578,18 @@ service cloud.firestore {
         && request.resource.data.archivedAt == null
         && request.resource.data.archivedBy == null
         && hasCreateAudit('users', userId)
-        && (
-          (request.resource.data.role == 'consumer'
-            && request.auth.token.firebase.sign_in_provider == 'google.com'
-            && request.resource.data.get('privacyConsentAt', null) == null
-            && request.resource.data.get('privacyConsentVersion', null) == null
-            && request.resource.data.get('customerTermsAcceptedAt', null) == null
-            && request.resource.data.get('customerTermsVersion', null) == null)
-          || (isBootstrapAdminIdentity() && request.resource.data.role == 'admin')
-        );
+        && request.resource.data.role == 'consumer'
+        && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && request.resource.data.get('privacyConsentAt', null) == null
+        && request.resource.data.get('privacyConsentVersion', null) == null
+        && request.resource.data.get('customerTermsAcceptedAt', null) == null
+        && request.resource.data.get('customerTermsVersion', null) == null;
       allow update: if hasLinkedAudit('users', userId)
         && request.resource.data.updatedAt == request.time
         && request.resource.data.updatedBy == request.auth.uid
         && ((isAdmin() && validAdminUserUpdate()) || (
           isDocumentOwner(userId)
+          && linkedAuditAction() == 'update'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name', 'phone', 'address', 'privacyConsentAt', 'privacyConsentVersion',
             'customerTermsAcceptedAt', 'customerTermsVersion',
@@ -657,9 +624,7 @@ service cloud.firestore {
     }
 
     match /hospitals/{hospitalId} {
-      allow read: if isAdmin()
-        || hasOperationalHospitalAccess(hospitalId)
-        || (resource.data.status == 'active' && resource.data.isPublic == true);
+      allow read: if isAdmin() || hasOperationalHospitalAccess(hospitalId);
       allow create: if isAdmin()
         && hasExactHospitalFields()
         && hasValidRequiredHospitalFields()
@@ -692,6 +657,7 @@ service cloud.firestore {
           && (!(linkedAuditAction() in ['update', 'hospital_activated'])
             || hasValidRequiredHospitalFields())) || (
           hasOperationalHospitalAccess(hospitalId)
+          && linkedAuditAction() == 'update'
           && hasValidHospitalProfileFields()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name', 'description', 'email', 'phone', 'hospitalPhone1', 'hospitalPhone2',
@@ -706,17 +672,7 @@ service cloud.firestore {
 
     match /consultants/{consultantId} {
       allow read: if isAdmin();
-      allow create: if isAdmin()
-        && hasValidConsultantFields()
-        && request.resource.data.employeeId == consultantId
-        && request.resource.data.status == 'active'
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.createdBy == request.auth.uid
-        && request.resource.data.updatedAt == request.time
-        && request.resource.data.updatedBy == request.auth.uid
-        && request.resource.data.archivedAt == null
-        && request.resource.data.archivedBy == null
-        && hasCreateAudit('consultants', consultantId);
+      allow create: if false;
       allow update: if isAdmin()
         && hasValidConsultantFields()
         && hasLinkedAudit('consultants', consultantId)
@@ -774,9 +730,7 @@ service cloud.firestore {
     }
 
     match /services/{serviceId} {
-      allow read: if isAdmin()
-        || hasOperationalHospitalAccess(resource.data.hospitalId)
-        || (resource.data.status == 'active' && isApprovedHospital(resource.data.hospitalId));
+      allow read: if isAdmin() || hasOperationalHospitalAccess(resource.data.hospitalId);
       allow create: if (isAdmin() || hasOperationalHospitalAccess(request.resource.data.hospitalId))
         && hasValidServiceFields()
         && request.resource.data.createdAt == request.time
@@ -790,6 +744,9 @@ service cloud.firestore {
         && hasValidServiceFields()
         && request.resource.data.updatedAt == request.time
         && request.resource.data.updatedBy == request.auth.uid
+        && ((linkedAuditAction() == 'archive' && request.resource.data.status == 'archived')
+          || (linkedAuditAction() == 'status_change' && request.resource.data.status != resource.data.status && request.resource.data.status != 'archived')
+          || (linkedAuditAction() == 'update' && request.resource.data.status == resource.data.status))
         && (isAdmin() || (
           hasOperationalHospitalAccess(resource.data.hospitalId)
           && request.resource.data.hospitalId == resource.data.hospitalId
@@ -802,88 +759,10 @@ service cloud.firestore {
         || (isConsumer() && resource.data.consumerId == request.auth.uid)
         || hasOperationalHospitalAccess(resource.data.hospitalId);
 
-      allow create: if isConsumer()
-        && request.resource.data.keys().hasOnly([
-          'consumerId', 'consumerName', 'consumerEmail', 'consumerPhone',
-          'consumerAddress', 'hospitalId', 'serviceId', 'preferredDate', 'preferredEndDate',
-          'preferredTime', 'bystanderCount', 'additionalBystanderCharge', 'additionalBystanderTotal',
-          'confirmedDate', 'confirmedTime', 'status', 'servicePrice',
-          'commissionPercentage', 'estimatedCommission', 'consumerNotes',
-          'hospitalNotes', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
-          'archivedAt', 'archivedBy', 'lastAuditId', 'confirmedAt', 'completedAt',
-          'treatmentStatus', 'treatmentStartedAt', 'treatmentCompletedAt',
-          'bookingTermsAcceptedAt', 'bookingTermsVersion'
-        ])
-        && request.resource.data.consumerId == request.auth.uid
-        && request.resource.data.consumerName == getCurrentUser().name
-        && request.resource.data.consumerEmail == getCurrentUser().email
-        && request.resource.data.consumerPhone == getCurrentUser().phone
-        && request.resource.data.consumerPhone is string
-        && request.resource.data.consumerPhone.size() >= 7
-        && request.resource.data.consumerPhone.size() <= 25
-        && request.resource.data.consumerAddress == getCurrentUser().address
-        && (request.resource.data.consumerAddress == null || (
-          request.resource.data.consumerAddress is string
-          && request.resource.data.consumerAddress.size() <= 300
-        ))
-        && request.resource.data.preferredDate is timestamp
-        && (request.resource.data.preferredEndDate == null || (
-          request.resource.data.preferredEndDate is timestamp
-          && request.resource.data.preferredEndDate >= request.resource.data.preferredDate
-        ))
-        && hospitalAllowsBookingDates(
-          request.resource.data.hospitalId,
-          request.resource.data.preferredDate,
-          request.resource.data.preferredEndDate == null
-            ? request.resource.data.preferredDate
-            : request.resource.data.preferredEndDate
-        )
-        && request.resource.data.preferredTime is string
-        && request.resource.data.preferredTime.size() > 0
-        && request.resource.data.preferredTime.size() <= 20
-        && request.resource.data.bystanderCount is int
-        && request.resource.data.bystanderCount >= 1
-        && request.resource.data.bystanderCount <= 4
-        && request.resource.data.bystanderCount <= 1 + get(/databases/$(database)/documents/hospitals/$(request.resource.data.hospitalId)).data.get('maxAdditionalBystanders', 0)
-        && (request.resource.data.bystanderCount == 1
-          || get(/databases/$(database)/documents/hospitals/$(request.resource.data.hospitalId)).data.get('additionalBystandersAllowed', false) == true)
-        && request.resource.data.additionalBystanderCharge is number
-        && request.resource.data.additionalBystanderCharge
-          == get(/databases/$(database)/documents/hospitals/$(request.resource.data.hospitalId)).data.get('additionalBystanderCharge', 0)
-        && request.resource.data.additionalBystanderTotal is number
-        && request.resource.data.additionalBystanderTotal
-          == (request.resource.data.bystanderCount - 1) * request.resource.data.additionalBystanderCharge
-        && request.resource.data.status == 'requested'
-        && request.resource.data.confirmedDate == null
-        && request.resource.data.confirmedTime == null
-        && request.resource.data.hospitalNotes == null
-        && request.resource.data.confirmedAt == null
-        && request.resource.data.completedAt == null
-        && request.resource.data.treatmentStatus == 'not_started'
-        && request.resource.data.treatmentStartedAt == null
-        && request.resource.data.treatmentCompletedAt == null
-        && request.resource.data.bookingTermsAcceptedAt == request.time
-        && request.resource.data.bookingTermsVersion == '2026-09-23'
-        && isApprovedHospital(request.resource.data.hospitalId)
-        && get(/databases/$(database)/documents/services/$(request.resource.data.serviceId)).data.hospitalId
-          == request.resource.data.hospitalId
-        && get(/databases/$(database)/documents/services/$(request.resource.data.serviceId)).data.status
-          == 'active'
-        && request.resource.data.servicePrice
-          == get(/databases/$(database)/documents/services/$(request.resource.data.serviceId)).data.get('price', 0)
-        && request.resource.data.commissionPercentage
-          == get(/databases/$(database)/documents/hospitals/$(request.resource.data.hospitalId)).data.commissionPercentage
-        && request.resource.data.estimatedCommission
-          == request.resource.data.servicePrice * request.resource.data.commissionPercentage / 100
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.createdBy == request.auth.uid
-        && request.resource.data.updatedAt == request.time
-        && request.resource.data.updatedBy == request.auth.uid
-        && request.resource.data.archivedAt == null
-        && request.resource.data.archivedBy == null
-        && hasCreateAudit('bookings', bookingId);
+      allow create: if false;
 
       allow update: if hasLinkedAudit('bookings', bookingId)
+        && linkedAuditAction() == 'status_change'
         && request.resource.data.updatedAt == request.time
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.get('bookingTermsAcceptedAt', null)
@@ -944,6 +823,7 @@ service cloud.firestore {
         && hasCreateAudit('hospitalCapacity', hospitalId);
       allow update: if (isAdmin() || hasOperationalHospitalAccess(hospitalId))
         && hasLinkedAudit('hospitalCapacity', hospitalId)
+        && linkedAuditAction() == 'update'
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'totalRooms', 'occupiedRooms', 'updatedAt', 'updatedBy', 'lastAuditId'
         ])

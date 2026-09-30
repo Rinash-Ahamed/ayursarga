@@ -11,6 +11,8 @@ import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 import { PortalDialog } from "@/components/portal/PortalDialog";
+import { PasswordField } from "@/components/auth/PasswordField";
+import { useAuth } from "@/hooks/useAuth";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import { formatStatus } from "@/utils/text";
 import { toDate } from "@/utils/date";
@@ -38,6 +40,7 @@ function areaLabel(module: string) {
 }
 
 export function AdminAuditLogs() {
+  const { reauthenticate } = useAuth();
   const [items, setItems] = useState<DocumentRecord<AuditLogDocument>[]>([]);
   const [actorNames, setActorNames] = useState<Map<string, string>>(new Map());
   const [pageIndex, setPageIndex] = useState(0);
@@ -50,6 +53,7 @@ export function AdminAuditLogs() {
   const [actionError, setActionError] = useRepeatableMessage();
   const [message, setMessage] = useRepeatableMessage();
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("");
   const [reloadVersion, setReloadVersion] = useState(0);
   const requestVersion = useRef(0);
   const cursor = pageCursors[pageIndex] ?? null;
@@ -105,16 +109,22 @@ export function AdminAuditLogs() {
 
   async function clearAudits() {
     if (busy) return;
+    if (!adminPassword) {
+      setActionError("Enter your Admin password to confirm this permanent action.");
+      return;
+    }
     setBusy(true);
     setActionError(null);
     setMessage(null);
     try {
+      await reauthenticate(adminPassword);
       const deletedCount = await clearAllAuditLogs();
       setPageIndex(0);
       setPageCursors([null]);
       setReloadVersion((current) => current + 1);
       setMessage(`${deletedCount} audit ${deletedCount === 1 ? "record" : "records"} permanently cleared.`);
       setClearDialogOpen(false);
+      setAdminPassword("");
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : "We could not clear the audit log.");
     } finally {
@@ -148,6 +158,9 @@ export function AdminAuditLogs() {
       <span>Page {pageIndex + 1}</span>
       <button type="button" className="portal-button secondary" disabled={!hasMore || isLoading} onClick={nextPage}>Next</button>
     </div>}
-    <PortalDialog open={clearDialogOpen} tone="danger" title="Clear all audit history?" message="This permanently removes every audit record. This action cannot be undone." confirmLabel="Clear audit history" busy={busy} onCancel={() => setClearDialogOpen(false)} onConfirm={() => void clearAudits()} />
+    <PortalDialog open={clearDialogOpen} tone="danger" title="Clear all audit history?" message="This permanently removes every audit record. Re-enter your Admin password to continue." confirmLabel="Clear audit history" busy={busy} onCancel={() => { setClearDialogOpen(false); setAdminPassword(""); }} onConfirm={() => void clearAudits()}>
+      <PasswordField label="Admin password" value={adminPassword} onChange={(event) => setAdminPassword(event.target.value)} autoComplete="current-password" />
+      {actionError && <p className="portal-form-error" role="alert">{actionError}</p>}
+    </PortalDialog>
   </PortalShell>;
 }

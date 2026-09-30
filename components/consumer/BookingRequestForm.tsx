@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { createBookingRequest } from "@/services/bookings/bookingService";
@@ -9,7 +9,7 @@ import { PortalToast } from "@/components/portal/PortalToast";
 import { formatBystanders, type CentreSearchContext } from "@/features/hospitals/searchContext";
 import type { HospitalDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
-import { getHospital } from "@/services/hospitals/hospitalService";
+import { getPublicHospital } from "@/services/hospitals/publicHospitalService";
 import { INCLUDED_BYSTANDERS, resolveHospitalBystanderPolicy } from "@/features/hospitals/bystanders";
 import { formatCurrency } from "@/utils/currency";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
@@ -24,10 +24,11 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
   const [hospitalLoading, setHospitalLoading] = useState(true);
   const [bystanderCount, setBystanderCount] = useState(INCLUDED_BYSTANDERS);
   const [busy, setBusy] = useState(false); const [error, setError] = useRepeatableMessage();
+  const requestId = useRef<string>(globalThis.crypto.randomUUID());
 
   useEffect(() => {
     let active = true;
-    void getHospital(hospitalId).then((record) => {
+    void getPublicHospital(hospitalId).then((record) => {
       if (active) setHospital(record);
     }).catch(() => {
       if (active) setError("We could not load this hospital's bystander policy. Return to the centre page and try again.");
@@ -63,7 +64,7 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
         preferredDate: new Date(`${preferredDate}T00:00:00`),
         preferredEndDate: preferredEndDate ? new Date(`${preferredEndDate}T00:00:00`) : null,
         preferredTime: "Flexible", bystanderCount,
-        consumerNotes: String(data.get("notes") || ""), bookingTermsAccepted });
+        consumerNotes: String(data.get("notes") || ""), bookingTermsAccepted, requestId: requestId.current });
       router.replace("/app/bookings");
     } catch (caught) { setError(caught instanceof Error ? caught.message : "We could not send your appointment request. Check the details and try again."); }
     finally { setBusy(false); }

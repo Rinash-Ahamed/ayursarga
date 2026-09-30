@@ -18,7 +18,6 @@ moving or duplicating the public implementation.
   audit, Firebase client, and Firestore data-access modules.
 
 Consumer registration is self-service and always assigns the consumer role.
-The initial `info@ayursarga.com` Authentication account receives its protected
-admin profile automatically on first admin login. All other admin and hospital
-profiles must be created through a controlled process; users cannot assign or
-change their own role.
+Admin and Hospital profiles are created only through controlled provisioning;
+users cannot assign or change their own role. There is no email-based Admin
+bootstrap path in the client or Firestore rules.

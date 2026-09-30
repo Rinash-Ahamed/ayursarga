@@ -42,6 +42,36 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     window.addEventListener("ayursarga:scroll-lock", handleScrollLock);
     if (document.documentElement.classList.contains("nav-overlay-open")) lenis?.stop();
 
+    const navigationOffset = () => {
+      const navigation = document.getElementById("site-nav");
+      const navigationContentHeight = navigation?.querySelector<HTMLElement>(".nav-inner")?.getBoundingClientRect().height;
+      return navigationContentHeight
+        ? navigationContentHeight + 28
+        : navigation?.getBoundingClientRect().height ?? 0;
+    };
+
+    const scrollToElement = (target: HTMLElement, offset = 12, onComplete?: () => void, duration = 1.05) => {
+      const destination = Math.max(0, window.scrollY + target.getBoundingClientRect().top - navigationOffset() - offset);
+      if (lenis) {
+        lenis.scrollTo(destination, {
+          duration,
+          easing: anchorEasing,
+          onComplete,
+        });
+      } else {
+        window.scrollTo({ top: destination, behavior: reduced ? "auto" : "smooth" });
+        onComplete?.();
+      }
+    };
+
+    const handleScrollRequest = (event: Event) => {
+      const request = event as CustomEvent<{ target?: HTMLElement; offset?: number }>;
+      if (!(request.detail?.target instanceof HTMLElement)) return;
+      event.preventDefault();
+      scrollToElement(request.detail.target, request.detail.offset);
+    };
+    window.addEventListener("ayursarga:scroll-to", handleScrollRequest);
+
     const handleAnchorClick = (event: MouseEvent) => {
       const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="#"]');
       if (!link) return;
@@ -53,29 +83,26 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
       const scrollTarget = target.matches("section")
         ? target.querySelector<HTMLElement>(":scope > .section-inner") ?? target
         : target;
-      const navigation = document.getElementById("site-nav");
-      const navigationContentHeight = navigation?.querySelector<HTMLElement>(".nav-inner")?.getBoundingClientRect().height;
-      const navigationHeight = navigationContentHeight
-        ? navigationContentHeight + 28
-        : navigation?.getBoundingClientRect().height ?? 0;
       const destination = hash === "#hero"
         ? 0
-        : Math.max(0, window.scrollY + scrollTarget.getBoundingClientRect().top - navigationHeight - 12);
+        : Math.max(0, window.scrollY + scrollTarget.getBoundingClientRect().top - navigationOffset() - 12);
       const complete = () => {
         window.history.replaceState(null, "", hash);
         target.focus({ preventScroll: true });
       };
 
       event.preventDefault();
-      if (lenis) {
+      if (hash === "#hero" && lenis) {
         lenis.scrollTo(destination, {
           duration: 1.25,
           easing: anchorEasing,
           onComplete: complete,
         });
-      } else {
+      } else if (hash === "#hero") {
         window.scrollTo({ top: destination, behavior: reduced ? "auto" : "smooth" });
         complete();
+      } else {
+        scrollToElement(scrollTarget, 12, complete, 1.25);
       }
     };
 
@@ -84,6 +111,7 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     return () => {
       if (lenis) document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("ayursarga:scroll-lock", handleScrollLock);
+      window.removeEventListener("ayursarga:scroll-to", handleScrollRequest);
       document.removeEventListener("click", handleAnchorClick);
       lenis?.destroy();
     };

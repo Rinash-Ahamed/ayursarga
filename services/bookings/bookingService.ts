@@ -3,24 +3,20 @@
 import { Timestamp, type DocumentData } from "firebase/firestore";
 import type { BookingDocument, BookingStatus, TreatmentStatus } from "@/features/firestore/models";
 import { getTreatmentStatus } from "@/features/bookings/treatmentStatus";
-import { BOOKING_TERMS_VERSION } from "@/features/consumers/privacyConsent";
 import { COLLECTIONS } from "@/constants/firestore";
 import {
   firestoreTimestamp, runFilteredQuery,
   type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
-import { createAuditedDocument, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
-import { getHospital } from "@/services/hospitals/hospitalService";
-import { getService } from "@/services/hospitals/serviceService";
-import { INCLUDED_BYSTANDERS, resolveHospitalBystanderPolicy } from "@/features/hospitals/bystanders";
-import { isHospitalUnavailable } from "@/features/hospitals/availability";
+import { getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
+import { authorizedApiRequest } from "@/services/api/client";
 
 type BookingRequestInput = {
   consumerId: string; hospitalId: string; serviceId: string; preferredDate: Date;
   preferredEndDate?: Date | null; preferredTime: string; bystanderCount: number;
   consumerNotes?: string | null; consumerName: string;
   consumerEmail: string; consumerPhone: string; consumerAddress: string | null;
-  bookingTermsAccepted: boolean;
+  bookingTermsAccepted: boolean; requestId: string;
 };
 
 export async function createBookingRequest(input: BookingRequestInput) {
@@ -32,41 +28,28 @@ export async function createBookingRequest(input: BookingRequestInput) {
   if (input.preferredEndDate && (Number.isNaN(input.preferredEndDate.getTime()) || input.preferredEndDate < input.preferredDate)) {
     throw new Error("Choose an end date on or after the preferred start date.");
   }
-  const [hospital, service] = await Promise.all([getHospital(input.hospitalId), getService(input.serviceId)]);
-  if (!hospital || hospital.status !== "active" || !hospital.isPublic) throw new Error("This hospital is not accepting appointment requests right now. Choose another hospital and try again.");
-  if (!service || service.hospitalId !== hospital.id || service.status !== "active") throw new Error("This service is not accepting appointment requests right now. Return to the hospital page and choose another service.");
-  if (isHospitalUnavailable(hospital, input.preferredDate, input.preferredEndDate)) {
-    throw new Error("This hospital is unavailable for the selected dates. Choose another date and try again.");
-  }
-  const bystanderPolicy = resolveHospitalBystanderPolicy(hospital);
-  const maximumBystanders = INCLUDED_BYSTANDERS + bystanderPolicy.maxAdditionalBystanders;
-  if (!Number.isInteger(input.bystanderCount) || input.bystanderCount < INCLUDED_BYSTANDERS || input.bystanderCount > maximumBystanders) {
-    throw new Error(bystanderPolicy.additionalBystandersAllowed
-      ? `Choose between one and ${maximumBystanders} accompanying bystanders.`
-      : "This hospital currently includes one bystander and does not allow additional bystanders.");
-  }
-  const servicePrice = service.price ?? 0;
-  const additionalBystanderTotal = (input.bystanderCount - INCLUDED_BYSTANDERS) * bystanderPolicy.additionalBystanderCharge;
-  return createAuditedDocument(COLLECTIONS.bookings, {
-    consumerId: input.consumerId,
-    consumerName: input.consumerName.trim(), consumerEmail: input.consumerEmail.trim().toLowerCase(),
-    consumerPhone: input.consumerPhone.trim(), consumerAddress: input.consumerAddress?.trim() || null,
-    hospitalId: hospital.id, serviceId: service.id,
-    preferredDate: Timestamp.fromDate(input.preferredDate),
-    preferredEndDate: input.preferredEndDate ? Timestamp.fromDate(input.preferredEndDate) : null,
-    preferredTime: input.preferredTime, bystanderCount: input.bystanderCount,
-    additionalBystanderCharge: bystanderPolicy.additionalBystanderCharge,
-    additionalBystanderTotal,
-    confirmedDate: null, confirmedTime: null, status: "requested", treatmentStatus: "not_started",
-    servicePrice, commissionPercentage: hospital.commissionPercentage,
-    estimatedCommission: servicePrice * hospital.commissionPercentage / 100,
-    consumerNotes: input.consumerNotes?.trim() || null, hospitalNotes: null,
-    createdAt: firestoreTimestamp.server(), createdBy: input.consumerId,
-    updatedAt: firestoreTimestamp.server(), updatedBy: input.consumerId,
-    archivedAt: null, archivedBy: null,
-    confirmedAt: null, completedAt: null, treatmentStartedAt: null, treatmentCompletedAt: null,
-    bookingTermsAcceptedAt: firestoreTimestamp.server(), bookingTermsVersion: BOOKING_TERMS_VERSION,
-  }, { action: "create", actorRole: "consumer" });
+  const localDate = (value: Date) => {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, "0");
+    const day = String(value.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+  return authorizedApiRequest<{ ok: true; bookingId: string }>("/api/consumer/bookings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      hospitalId: input.hospitalId,
+      serviceId: input.serviceId,
+      preferredDate: localDate(input.preferredDate),
+      preferredEndDate: input.preferredEndDate ? localDate(input.preferredEndDate) : null,
+      bystanderCount: input.bystanderCount,
+      consumerNotes: input.consumerNotes?.trim() || null,
+      bookingTermsAccepted: input.bookingTermsAccepted,
+      requestId: input.requestId,
+    }),
+    signedOutMessage: "Sign in before sending an appointment request.",
+    failureMessage: "We could not send your appointment request. Please try again.",
+  });
 }
 
 function listBookings(filters: QueryPageOptions["filters"], options: Pick<QueryPageOptions, "pageSize" | "cursor"> = {}) {
