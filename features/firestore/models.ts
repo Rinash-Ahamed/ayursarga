@@ -204,8 +204,12 @@ export type PaymentDocument = AuditedDocument & {
 
 export type NotificationDocument = AuditedDocument & {
   recipientId: string;
+  recipientRole: "admin" | "hospital" | "consumer";
+  type: "availability_requested" | "availability_approved" | "availability_rejected" | "availability_cancelled";
   title: string;
   message: string;
+  actionHref: string;
+  recordId: string;
   readAt: Timestamp | null;
   status: "active" | "archived";
 };

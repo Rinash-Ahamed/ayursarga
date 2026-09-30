@@ -657,35 +657,34 @@ service cloud.firestore {
 
     match /availability/{availabilityId} {
       allow read: if isAdmin() || hasOperationalHospitalAccess(resource.data.hospitalId);
-      allow create: if hasOperationalHospitalAccess(request.resource.data.hospitalId)
-        && request.resource.data.keys().hasOnly([
-          'hospitalId', 'hospitalName', 'startDate', 'endDate', 'reason', 'source', 'status',
-          'reviewedAt', 'reviewedBy', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
-          'archivedAt', 'archivedBy', 'lastAuditId'
-        ])
-        && request.resource.data.hospitalId == getCurrentUser().hospitalId
-        && request.resource.data.hospitalName
-          == get(/databases/$(database)/documents/hospitals/$(request.resource.data.hospitalId)).data.name
-        && request.resource.data.startDate is timestamp
-        && request.resource.data.endDate is timestamp
-        && request.resource.data.startDate >= request.time - duration.value(1, 'd')
-        && request.resource.data.endDate >= request.resource.data.startDate
-        && request.resource.data.endDate <= request.resource.data.startDate + duration.value(366, 'd')
-        && request.resource.data.reason is string
-        && request.resource.data.reason.size() >= 3
-        && request.resource.data.reason.size() <= 500
-        && request.resource.data.source == 'hospital_portal'
-        && request.resource.data.status == 'pending'
-        && request.resource.data.reviewedAt == null
-        && request.resource.data.reviewedBy == null
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.createdBy == request.auth.uid
+      allow create, update, delete: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if hasActiveProfile()
+        && resource.data.recipientId == request.auth.uid;
+      allow create, delete: if false;
+      allow update: if hasActiveProfile()
+        && resource.data.recipientId == request.auth.uid
+        && request.resource.data.recipientId == resource.data.recipientId
+        && request.resource.data.recipientRole == resource.data.recipientRole
+        && request.resource.data.type == resource.data.type
+        && request.resource.data.title == resource.data.title
+        && request.resource.data.message == resource.data.message
+        && request.resource.data.actionHref == resource.data.actionHref
+        && request.resource.data.recordId == resource.data.recordId
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.archivedAt == resource.data.archivedAt
+        && request.resource.data.archivedBy == resource.data.archivedBy
+        && request.resource.data.lastAuditId == resource.data.lastAuditId
+        && request.resource.data.readAt == request.time
         && request.resource.data.updatedAt == request.time
         && request.resource.data.updatedBy == request.auth.uid
-        && request.resource.data.archivedAt == null
-        && request.resource.data.archivedBy == null
-        && hasCreateAudit('availability', availabilityId);
-      allow update, delete: if false;
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'readAt', 'updatedAt', 'updatedBy'
+        ]);
     }
 
     match /services/{serviceId} {

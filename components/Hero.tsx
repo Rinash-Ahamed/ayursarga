@@ -43,7 +43,7 @@ export default function Hero() {
   }, []);
 
   useEffect(() => {
-    let settleTimer: ReturnType<typeof window.setTimeout> | undefined;
+    let settleTimer: number | undefined;
     const settle = () => {
       settleTimer = window.setTimeout(() => setPageSettled(true), 1_200);
     };
@@ -81,7 +81,7 @@ export default function Hero() {
     if (!video || !canLoadVideo) return;
 
     let scrollFrame = 0;
-    let resumeTimer: ReturnType<typeof window.setTimeout> | undefined;
+    let resumeTimer: number | undefined;
     const playWhenAppropriate = () => {
       if (shouldReduceMotion || !isHeroVisible || document.hidden) {
         video.pause();

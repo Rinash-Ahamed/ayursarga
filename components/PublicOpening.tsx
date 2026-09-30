@@ -16,22 +16,18 @@ export default function PublicOpening() {
       // The reveal remains safe when browser storage is unavailable.
     }
 
-    if (hasOpened) {
-      setPhase("hidden");
-      return;
-    }
-
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    try {
-      window.sessionStorage.setItem(OPENING_SESSION_KEY, "true");
-    } catch {
-      // A blocked storage API should not prevent the page from opening.
+    if (!hasOpened) {
+      try {
+        window.sessionStorage.setItem(OPENING_SESSION_KEY, "true");
+      } catch {
+        // A blocked storage API should not prevent the page from opening.
+      }
     }
-
-    if (reducedMotion) {
+    if (hasOpened || reducedMotion) {
       document.documentElement.dataset.ayursargaOpening = "seen";
-      setPhase("hidden");
-      return;
+      const hideTimer = window.setTimeout(() => setPhase("hidden"), 0);
+      return () => window.clearTimeout(hideTimer);
     }
 
     const leaveTimer = window.setTimeout(() => setPhase("leaving"), 360);

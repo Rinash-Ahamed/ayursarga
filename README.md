@@ -201,3 +201,16 @@ enabled safely from repository code):
   upgrading from Spark or materially increasing traffic.
 - Never include request bodies, identity tokens, contact details, or Firebase
   credentials in monitoring logs or alert notifications.
+
+## Portal notifications
+
+Admin and Hospital portals share one bounded in-app notification system. A
+Hospital availability-block request notifies active Admin accounts; approval,
+rejection, an Admin-created block, or removal notifies the connected active
+Hospital account. The bell subscribes only to the signed-in user's latest 20
+notifications, and notification documents cannot be created or deleted by the
+client. Deploy both Firestore rules and indexes after notification changes:
+
+```bash
+npm run firebase:deploy:firestore
+```
