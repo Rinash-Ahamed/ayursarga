@@ -17,6 +17,7 @@ type DashboardStats = {
   consumers: number | null;
   monthlyBookings: number | null;
   monthlyCommission: number | null;
+  pendingAvailability: number | null;
 };
 
 const EMPTY_STATS: DashboardStats = {
@@ -26,6 +27,7 @@ const EMPTY_STATS: DashboardStats = {
   consumers: null,
   monthlyBookings: null,
   monthlyCommission: null,
+  pendingAvailability: null,
 };
 
 export function AdminDashboard() {
@@ -52,6 +54,7 @@ export function AdminDashboard() {
       countDocuments(COLLECTIONS.users, [{ field: "role", operator: "==", value: "consumer" }]),
       countDocuments(COLLECTIONS.bookings, createdThisMonth),
       sumDocuments(COLLECTIONS.bookings, "estimatedCommission", completedThisMonth),
+      countDocuments(COLLECTIONS.availability, [{ field: "status", operator: "==", value: "pending" }]),
     ]).then((results) => {
       const resultValue = (result: PromiseSettledResult<number>) =>
         result.status === "fulfilled" ? result.value : null;
@@ -62,6 +65,7 @@ export function AdminDashboard() {
         consumers: resultValue(results[3]),
         monthlyBookings: resultValue(results[4]),
         monthlyCommission: resultValue(results[5]),
+        pendingAvailability: resultValue(results[6]),
       });
       setError(results.some((result) => result.status === "rejected")
         ? "Some dashboard totals are temporarily unavailable. The available figures are shown below."
@@ -88,6 +92,7 @@ export function AdminDashboard() {
       <article className="portal-card portal-stat"><strong>{value(stats.consumers)}</strong><span>Registered consumers</span></article>
       <article className="portal-card portal-stat"><strong>{value(stats.monthlyBookings)}</strong><span>Bookings · {monthLabel}</span></article>
       <article className="portal-card portal-stat"><strong>{isLoading || stats.monthlyCommission === null ? "…" : formatCurrency(stats.monthlyCommission)}</strong><span>Estimated commission · {monthLabel}</span></article>
+      <article className="portal-card portal-stat"><strong>{value(stats.pendingAvailability)}</strong><span>Pending availability requests</span></article>
     </div>
   </PortalShell>;
 }
