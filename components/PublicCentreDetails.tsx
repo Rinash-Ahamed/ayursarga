@@ -14,6 +14,17 @@ import { FacilityIcon } from "@/components/icons/FacilityIcon";
 import { addCentreSearchContext, type CentreSearchContext } from "@/features/hospitals/searchContext";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { isHospitalUnavailable } from "@/features/hospitals/availability";
+import { ROUTES } from "@/config/routes";
+
+const CENTRE_DETAIL_SECTIONS = [
+  ["overview", "Overview"],
+  ["packages", "Services"],
+  ["facilities", "Facilities"],
+  ["rules", "Centre Rules"],
+  ["legal", "Legal and Policies"],
+  ["reviews", "Guest Reviews"],
+  ["cancellation", "Cancellation Policy"],
+] as const;
 
 function formatCareDates(context: CentreSearchContext) {
   if (!context.startDate && !context.endDate) return "Dates are flexible";
@@ -54,6 +65,7 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
   const [hospitalLoading, setHospitalLoading] = useState(true);
   const [hospitalError, setHospitalError] = useState<string | null>(null);
   const [expandedPackages, setExpandedPackages] = useState<Set<string>>(() => new Set());
+  const [activeSection, setActiveSection] = useState<(typeof CENTRE_DETAIL_SECTIONS)[number][0]>("overview");
   const loader = useCallback((cursor: PublicPageCursor | null) => listPublicHospitalServices(hospitalId, { pageSize: 12, cursor }), [hospitalId]);
   const { items: services, error: serviceError, isLoading: servicesLoading, hasMore, loadMore } = usePaginatedList<ServiceDocument, PublicPageCursor>(loader, "We could not load this centre's packages. Please try again.");
 
@@ -74,6 +86,32 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
     return () => { active = false; };
   }, [hospitalId]);
 
+  useEffect(() => {
+    if (!hospital) return;
+    let frame = 0;
+    const updateActiveSection = () => {
+      frame = 0;
+      const activationLine = window.innerWidth <= 720 ? 132 : 150;
+      let nextSection: (typeof CENTRE_DETAIL_SECTIONS)[number][0] = "overview";
+      for (const [id] of CENTRE_DETAIL_SECTIONS) {
+        const section = document.getElementById(id);
+        if (section && section.getBoundingClientRect().top <= activationLine) nextSection = id;
+      }
+      setActiveSection((current) => current === nextSection ? current : nextSection);
+    };
+    const requestUpdate = () => {
+      if (!frame) frame = window.requestAnimationFrame(updateActiveSection);
+    };
+    updateActiveSection();
+    window.addEventListener("scroll", requestUpdate, { passive: true });
+    window.addEventListener("resize", requestUpdate, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", requestUpdate);
+      window.removeEventListener("resize", requestUpdate);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, [hospital]);
+
   const backHref = useMemo(() => {
     const params = addCentreSearchContext(new URLSearchParams(), searchContext);
     if (initialService) params.set("service", initialService);
@@ -87,8 +125,6 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
   const guidelines = resolveCentreGuidelines(hospital);
   const additionalRules = hospital.additionalCentreRules?.trim();
   const { groups: facilityGroups, custom: customFacilities, hasFacilities } = groupHospitalFacilities(hospital.facilities);
-  const primaryHospitalPhone = hospital.hospitalPhone1?.trim() || hospital.phone;
-  const secondaryHospitalPhone = hospital.hospitalPhone2?.trim();
   const centreAddress = `${hospital.address}, ${hospital.city}${hospital.district ? `, ${hospital.district}` : ""}, ${hospital.state}`;
   const mapEmbedUrl = hospital.locationUrl ? getHospitalMapEmbedUrl(hospital.locationUrl, centreAddress) : null;
   const unavailableForSelectedDates = Boolean(searchContext.startDate && isHospitalUnavailable(hospital, searchContext.startDate, searchContext.endDate || null));
@@ -97,7 +133,7 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
     <div className="section-inner public-centre-detail-inner">
       <Link href={backHref} className="public-centre-back">← Back to centre search</Link>
       <nav className="public-centre-detail-nav" aria-label="Centre details sections">
-        <a href="#overview">Overview</a><a href="#packages">Services</a><a href="#facilities">Facilities</a><a href="#rules">Centre Rules</a><a href="#legal">Legal and Policies</a><a href="#reviews">Guest Reviews</a>
+        {CENTRE_DETAIL_SECTIONS.map(([id, label]) => <a href={`#${id}`} className={activeSection === id ? "is-active" : undefined} aria-current={activeSection === id ? "location" : undefined} onClick={() => setActiveSection(id)} key={id}>{label}</a>)}
       </nav>
 
       <header className="public-centre-detail-header">
@@ -127,6 +163,7 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
           </section>
 
           <section id="packages" className="public-centre-content-section">
+            <div className="public-centre-treatment-note" role="note"><strong>Note:</strong> Treatment and services may be modified, continued, or discontinued based on the individual’s condition and professional assessment.</div>
             <span className="eyebrow">Available packages</span><h2>Choose the care you would like to discuss</h2>
             {serviceError && <div className="public-centre-inline-error" role="alert">{serviceError}</div>}
             {servicesLoading && services.length === 0 && <p role="status">Loading available packages...</p>}
@@ -183,22 +220,35 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
             <span className="eyebrow">Guest reviews</span><h2>Verified care experiences</h2>
             <div className="public-centre-empty-note">No verified guest reviews are available yet. Ayursarga will display reviews here only when they are linked to a completed booking.</div>
           </section>
+
+          <section id="cancellation" className="public-centre-content-section public-centre-cancellation-section">
+            <span className="eyebrow">Cancellation and refunds</span><h2>Standard cancellation framework</h2>
+            <p>Unless a different Partner Centre policy is expressly disclosed, the following standard framework may apply.</p>
+            <div className="public-centre-policy-table-wrap">
+              <table className="public-centre-policy-table">
+                <thead><tr><th>Cancellation period</th><th>Refund position</th><th>Important conditions</th></tr></thead>
+                <tbody>
+                  <tr><td>More than 45 days before service commencement</td><td>Up to 100% of the eligible amount may be refunded.</td><td>Applicable non-refundable payment gateway charges and other deductions disclosed at booking may apply.</td></tr>
+                  <tr><td>30 to 45 days before service commencement</td><td>Up to 50% of the eligible amount may be refunded.</td><td>Subject to the applicable cancellation terms.</td></tr>
+                  <tr><td>Less than 30 days before service commencement</td><td>The booking amount is generally non-refundable.</td><td>Genuine medical or other special circumstances may be considered with valid supporting documentation and Ayursarga approval.</td></tr>
+                  <tr><td>After service commencement</td><td>Amounts relating to services already provided are generally non-refundable.</td><td>The booking-specific and Partner Centre terms communicated for the service will apply.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="public-centre-policy-link">Review the complete <Link href={ROUTES.public.cancellationRefundPolicy}>Cancellation and Refund Policy</Link> before booking.</p>
+          </section>
         </main>
 
         <aside className="public-centre-contact-card">
-          <span>Centre information</span><h2>Speak with the centre</h2>
-          <p>Contact the centre for practical questions. Treatment suitability is confirmed by its qualified clinical team.</p>
-          <a href={`tel:${primaryHospitalPhone}`}>{primaryHospitalPhone}</a>
-          {secondaryHospitalPhone && <a href={`tel:${secondaryHospitalPhone}`}>{secondaryHospitalPhone}</a>}
-          <a href={`mailto:${hospital.email}`}>{hospital.email}</a>
-          {hospital.locationUrl && <div className="public-centre-location">
+          <span>Centre information</span><h2>Location</h2>
+          <div className="public-centre-location">
             <span>Centre location</span>
             <p>{centreAddress}</p>
             {mapEmbedUrl && <div className="public-centre-map-frame">
               <iframe src={mapEmbedUrl} title={`${hospital.name} location map`} loading="lazy" referrerPolicy="no-referrer-when-downgrade" allowFullScreen />
             </div>}
-            <a href={hospital.locationUrl} target="_blank" rel="noopener noreferrer">Open location in maps <span aria-hidden="true">↗</span></a>
-          </div>}
+            {hospital.locationUrl && <a href={hospital.locationUrl} target="_blank" rel="noopener noreferrer">Open location in maps <span aria-hidden="true">↗</span></a>}
+          </div>
         </aside>
       </div>
     </div>
