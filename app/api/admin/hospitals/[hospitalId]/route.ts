@@ -5,6 +5,7 @@ import { validateHospitalFields } from "@/features/hospitals/validation";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
 import { apiHealth, apiJson } from "@/services/api/server";
+import { readJsonBody, RequestBodyError } from "@/services/api/request";
 
 export const runtime = "nodejs";
 
@@ -25,7 +26,7 @@ function validContractUrl(value: unknown) {
   if (typeof value !== "string" || value.length > 500) return false;
   try {
     const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
+    return url.protocol === "https:";
   } catch {
     return false;
   }
@@ -33,13 +34,14 @@ function validContractUrl(value: unknown) {
 
 export async function PATCH(request: Request, context: { params: Promise<{ hospitalId: string }> }) {
   try {
-    const { uid: adminUid, firestore } = await requireActiveAdmin(request);
-    const body = await request.json().catch(() => null) as { action?: HospitalAdminAction; data?: Record<string, unknown> } | null;
+    const { uid: adminUid, auth, firestore } = await requireActiveAdmin(request);
+    const body = await readJsonBody(request, 32_000) as { action?: HospitalAdminAction; data?: Record<string, unknown> } | null;
     if (!body?.action || !HOSPITAL_ADMIN_ACTIONS.includes(body.action)) {
       return apiJson({ error: "Select a valid hospital action." }, 400);
     }
 
     const { hospitalId } = await context.params;
+    if (!hospitalId || hospitalId.length > 160 || hospitalId.includes("/")) return apiJson({ error: "The hospital could not be found." }, 404);
     const hospitalReference = firestore.collection("hospitals").doc(hospitalId);
     const hospitalSnapshot = await hospitalReference.get();
     const hospital = hospitalSnapshot.data();
@@ -136,7 +138,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ hospi
       actorId: adminUid,
       actorRole: "admin",
       previousValues: hospital,
-      updatedValues: auditedChanges,
+      updatedValues: { ...hospital, ...auditedChanges },
       timestamp: now,
       source: "server",
       device: {
@@ -145,10 +147,55 @@ export async function PATCH(request: Request, context: { params: Promise<{ hospi
         ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
       },
     });
+    const officialEmailChanged = body.action === "update"
+      && Object.hasOwn(changes, "email")
+      && String(changes.email ?? "").trim().toLowerCase() !== String(hospital.email ?? "").trim().toLowerCase();
+    const closesHospitalAccess = body.action === "deactivate" || body.action === "archive" || officialEmailChanged;
+    const linkedUsers = closesHospitalAccess
+      ? await firestore.collection("users").where("hospitalId", "==", hospitalId).get()
+      : null;
+    const affectedAuthUids: string[] = [];
+    linkedUsers?.docs.forEach((userDocument) => {
+      const user = userDocument.data();
+      if (user.role !== "hospital" || user.status === "archived"
+        || (body.action !== "archive" && user.status === "inactive")) return;
+      const userAudit = firestore.collection("auditLogs").doc();
+      const userChanges = body.action === "archive"
+        ? { status: "archived", archivedAt: now, archivedBy: adminUid, updatedAt: now, updatedBy: adminUid, lastAuditId: userAudit.id }
+        : { status: "inactive", updatedAt: now, updatedBy: adminUid, lastAuditId: userAudit.id };
+      batch.update(userDocument.ref, userChanges);
+      batch.set(userAudit, {
+        action: body.action === "archive" ? "archive" : "status_change",
+        module: "users",
+        recordId: userDocument.id,
+        actorId: adminUid,
+        actorRole: "admin",
+        previousValues: user,
+        updatedValues: { ...user, ...userChanges },
+        timestamp: now,
+        source: "server",
+        device: {
+          userAgent: request.headers.get("user-agent")?.slice(0, 500) || null,
+          platform: null,
+          ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
+        },
+      });
+      affectedAuthUids.push(userDocument.id);
+    });
     await batch.commit();
+
+    if (affectedAuthUids.length) {
+      await Promise.all(affectedAuthUids.flatMap((uid) => [
+        auth.updateUser(uid, { disabled: true }),
+        auth.revokeRefreshTokens(uid),
+      ])).catch((authError) => {
+        console.error("Hospital access was closed in Firestore, but Firebase Auth disabling needs attention", authError instanceof Error ? authError.message : authError);
+      });
+    }
 
     return apiJson({ ok: true });
   } catch (error) {
+    if (error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
     if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
     console.error("Admin hospital update failed", error instanceof Error ? error.message : error);
     return apiJson({ error: "We could not update the hospital. Check the server Firebase configuration and try again." }, 503);

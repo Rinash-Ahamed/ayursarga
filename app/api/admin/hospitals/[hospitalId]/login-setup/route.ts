@@ -14,6 +14,7 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
     const { uid: adminUid, auth, firestore } = await requireActiveAdmin(request);
 
     const { hospitalId } = await context.params;
+    if (!hospitalId || hospitalId.length > 160 || hospitalId.includes("/")) return apiJson({ error: "The hospital could not be found." }, 404);
     const hospitalReference = firestore.collection("hospitals").doc(hospitalId);
     const hospitalSnapshot = await hospitalReference.get();
     const hospital = hospitalSnapshot.data();
@@ -26,25 +27,29 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
     if (!email || !name) return apiJson({ error: "The hospital name and official email are required." }, 409);
 
     let authUser;
+    let createdAuthUser = false;
     try {
       authUser = await auth.getUserByEmail(email);
     } catch (error) {
       if ((error as { code?: string }).code !== "auth/user-not-found") throw error;
       authUser = await auth.createUser({ email, displayName: name, emailVerified: false, disabled: false });
+      createdAuthUser = true;
     }
 
     const userReference = firestore.collection("users").doc(authUser.uid);
     const userSnapshot = await userReference.get();
     const previous = userSnapshot.data() ?? null;
-    if (previous && previous.role !== "hospital") {
+    if (!createdAuthUser && !previous) {
+      return apiJson({
+        error: "This email already has an unrecognized Firebase account. Review it in Firebase Authentication before linking this Hospital login.",
+      }, 409);
+    }
+    if (previous && (previous.role !== "hospital" || previous.hospitalId !== hospitalId)) {
       return apiJson({ error: "This email already belongs to a different Ayursarga account." }, 409);
     }
-    if (previous?.hospitalId && previous.hospitalId !== hospitalId && previous.status === "active") {
-      const previousHospital = await firestore.collection("hospitals").doc(previous.hospitalId).get();
-      if (previousHospital.exists && previousHospital.data()?.status !== "archived") {
-        return apiJson({ error: "This Hospital login is already connected to another active hospital." }, 409);
-      }
-    }
+
+    const linkedUsers = await firestore.collection("users").where("hospitalId", "==", hospitalId).get();
+    const replacedUsers = linkedUsers.docs.filter((document) => document.id !== authUser.uid && document.data().role === "hospital" && document.data().status === "active");
 
     const auditReference = firestore.collection("auditLogs").doc();
     const now = FieldValue.serverTimestamp();
@@ -86,7 +91,7 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
       actorId: adminUid,
       actorRole: "admin",
       previousValues: previous,
-      updatedValues: userData,
+      updatedValues: previous ? { ...previous, ...userData } : userData,
       timestamp: now,
       source: "server",
       device: {
@@ -95,7 +100,48 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
         ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
       },
     });
-    await batch.commit();
+    for (const replacedUser of replacedUsers) {
+      const replacedAudit = firestore.collection("auditLogs").doc();
+      const replacedData = replacedUser.data();
+      const replacedChanges = {
+        status: "inactive",
+        updatedAt: now,
+        updatedBy: adminUid,
+        lastAuditId: replacedAudit.id,
+      };
+      batch.update(replacedUser.ref, replacedChanges);
+      batch.set(replacedAudit, {
+        action: "status_change",
+        module: "users",
+        recordId: replacedUser.id,
+        actorId: adminUid,
+        actorRole: "admin",
+        previousValues: replacedData,
+        updatedValues: { ...replacedData, ...replacedChanges },
+        timestamp: now,
+        source: "server",
+        device: {
+          userAgent: request.headers.get("user-agent")?.slice(0, 500) || null,
+          platform: null,
+          ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
+        },
+      });
+    }
+    try {
+      await batch.commit();
+    } catch (error) {
+      if (createdAuthUser) await auth.deleteUser(authUser.uid).catch(() => undefined);
+      throw error;
+    }
+
+    await Promise.all([
+      auth.updateUser(authUser.uid, { disabled: false, displayName: name }),
+      auth.revokeRefreshTokens(authUser.uid),
+      ...replacedUsers.flatMap((user) => [
+        auth.updateUser(user.id, { disabled: true }),
+        auth.revokeRefreshTokens(user.id),
+      ]),
+    ]);
 
     return apiJson({ ok: true, email });
   } catch (error) {

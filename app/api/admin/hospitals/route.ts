@@ -4,6 +4,7 @@ import { validateHospitalFields } from "@/features/hospitals/validation";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
 import { apiHealth, apiJson } from "@/services/api/server";
+import { readJsonBody, RequestBodyError } from "@/services/api/request";
 
 export const runtime = "nodejs";
 
@@ -14,7 +15,7 @@ export function GET() {
 export async function POST(request: Request) {
   try {
     const { uid: adminUid, firestore } = await requireActiveAdmin(request);
-    const body = await request.json().catch(() => null) as Record<string, unknown> | null;
+    const body = await readJsonBody(request, 32_000) as Record<string, unknown> | null;
     if (!body) return apiJson({ error: "Hospital details are required." }, 400);
 
     const validation = validateHospitalFields(body);
@@ -82,6 +83,7 @@ export async function POST(request: Request) {
 
     return apiJson({ ok: true, hospitalId: hospitalReference.id }, 201);
   } catch (error) {
+    if (error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
     if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
     console.error("Hospital creation failed", error instanceof Error ? error.message : error);
     return apiJson({ error: "We could not create the hospital. Check the server Firebase configuration and try again." }, 503);

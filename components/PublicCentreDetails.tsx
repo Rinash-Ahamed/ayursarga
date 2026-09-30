@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { HospitalDocument, ServiceDocument } from "@/features/firestore/models";
-import type { DocumentRecord, QueryPageOptions } from "@/services/firestore/firestoreService";
-import { getHospital } from "@/services/hospitals/hospitalService";
-import { listPublicHospitalServices } from "@/services/hospitals/publicHospitalService";
+import type { DocumentRecord } from "@/services/firestore/firestoreService";
+import { getPublicHospital, listPublicHospitalServices, type PublicPageCursor } from "@/services/hospitals/publicHospitalService";
 import { getHospitalImageUrls } from "@/features/hospitals/images";
 import { resolveCentreGuidelines } from "@/features/hospitals/guidelines";
 import { groupHospitalFacilities } from "@/features/hospitals/facilities";
@@ -55,12 +54,12 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
   const [hospitalLoading, setHospitalLoading] = useState(true);
   const [hospitalError, setHospitalError] = useState<string | null>(null);
   const [expandedPackages, setExpandedPackages] = useState<Set<string>>(() => new Set());
-  const loader = useCallback((cursor: QueryPageOptions["cursor"]) => listPublicHospitalServices(hospitalId, { pageSize: 12, cursor }), [hospitalId]);
-  const { items: services, error: serviceError, isLoading: servicesLoading, hasMore, loadMore } = usePaginatedList<ServiceDocument>(loader, "We could not load this centre's packages. Please try again.");
+  const loader = useCallback((cursor: PublicPageCursor | null) => listPublicHospitalServices(hospitalId, { pageSize: 12, cursor }), [hospitalId]);
+  const { items: services, error: serviceError, isLoading: servicesLoading, hasMore, loadMore } = usePaginatedList<ServiceDocument, PublicPageCursor>(loader, "We could not load this centre's packages. Please try again.");
 
   useEffect(() => {
     let active = true;
-    void getHospital(hospitalId).then((record) => {
+    void getPublicHospital(hospitalId).then((record) => {
       if (!active) return;
       if (!record || record.status !== "active" || !record.isPublic) {
         setHospitalError("This Ayurvedic centre is not currently available for public discovery.");

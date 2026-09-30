@@ -7,11 +7,9 @@ import { usePaginatedList } from "@/hooks/usePaginatedList";
 import {
   listPublicHospitals,
   listPublicHospitalsByServiceName,
+  type PublicPageCursor,
 } from "@/services/hospitals/publicHospitalService";
-import type {
-  DocumentRecord,
-  QueryPageOptions,
-} from "@/services/firestore/firestoreService";
+import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import { getHospitalImageUrls } from "@/features/hospitals/images";
 import { addCentreSearchContext, type CentreSearchContext } from "@/features/hospitals/searchContext";
 import { isHospitalUnavailable } from "@/features/hospitals/availability";
@@ -119,12 +117,12 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
   const [dateError, setDateError] = useState<string | null>(null);
   const today = new Date().toISOString().slice(0, 10);
   const hospitalLoader = useCallback(
-    (cursor: QueryPageOptions["cursor"]) => initialService
+    (cursor: PublicPageCursor | null) => initialService
       ? listPublicHospitalsByServiceName(initialService, { pageSize: 12, cursor })
       : listPublicHospitals({ pageSize: 12, cursor }),
     [initialService],
   );
-  const { items: hospitals, error, isLoading, hasMore, loadMore } = usePaginatedList<HospitalDocument>(
+  const { items: hospitals, error, isLoading, hasMore, loadMore } = usePaginatedList<HospitalDocument, PublicPageCursor>(
     hospitalLoader,
     "We could not load Ayurvedic centers right now. Please try again.",
   );

@@ -14,7 +14,7 @@ function validContractUrl(value: unknown) {
   if (typeof value !== "string" || value.length > 500) return false;
   try {
     const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
+    return url.protocol === "https:";
   } catch {
     return false;
   }
@@ -22,8 +22,9 @@ function validContractUrl(value: unknown) {
 
 export async function POST(request: Request, context: { params: Promise<{ hospitalId: string }> }) {
   try {
-    const { uid: adminUid, firestore } = await requireActiveAdmin(request);
+    const { uid: adminUid, auth, firestore } = await requireActiveAdmin(request);
     const { hospitalId } = await context.params;
+    if (!hospitalId || hospitalId.length > 160 || hospitalId.includes("/")) return apiJson({ error: "The hospital could not be found." }, 404);
     const hospitalReference = firestore.collection("hospitals").doc(hospitalId);
     const hospitalSnapshot = await hospitalReference.get();
     const hospital = hospitalSnapshot.data();
@@ -67,7 +68,7 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
       actorId: adminUid,
       actorRole: "admin",
       previousValues: hospital,
-      updatedValues: changes,
+      updatedValues: { ...hospital, ...changes },
       timestamp: now,
       source: "server",
       device: {
@@ -76,7 +77,60 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
         ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
       },
     });
+    const linkedUsers = await firestore.collection("users").where("hospitalId", "==", hospitalId).get();
+    const reactivatedAuthUids: string[] = [];
+    const revokedAuthUids: string[] = [];
+    const officialEmail = String(hospital.email ?? "").trim().toLowerCase();
+    linkedUsers.docs.forEach((userDocument) => {
+      const user = userDocument.data();
+      if (user.role !== "hospital") return;
+      const matchesOfficialEmail = String(user.email ?? "").trim().toLowerCase() === officialEmail;
+      if ((!matchesOfficialEmail && user.status !== "active") || (matchesOfficialEmail && user.status === "active")) return;
+      const userAudit = firestore.collection("auditLogs").doc();
+      const userChanges = matchesOfficialEmail
+        ? {
+          status: "active", archivedAt: null, archivedBy: null,
+          updatedAt: now, updatedBy: adminUid, lastAuditId: userAudit.id,
+        }
+        : {
+          status: "inactive", updatedAt: now, updatedBy: adminUid, lastAuditId: userAudit.id,
+        };
+      batch.update(userDocument.ref, userChanges);
+      batch.set(userAudit, {
+        action: matchesOfficialEmail && user.status === "archived" ? "restore" : "status_change",
+        module: "users",
+        recordId: userDocument.id,
+        actorId: adminUid,
+        actorRole: "admin",
+        previousValues: user,
+        updatedValues: { ...user, ...userChanges },
+        timestamp: now,
+        source: "server",
+        device: {
+          userAgent: request.headers.get("user-agent")?.slice(0, 500) || null,
+          platform: null,
+          ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
+        },
+      });
+      if (matchesOfficialEmail) reactivatedAuthUids.push(userDocument.id);
+      else revokedAuthUids.push(userDocument.id);
+    });
     await batch.commit();
+
+    if (reactivatedAuthUids.length || revokedAuthUids.length) {
+      await Promise.all([
+        ...reactivatedAuthUids.flatMap((uid) => [
+          auth.updateUser(uid, { disabled: false }),
+          auth.revokeRefreshTokens(uid),
+        ]),
+        ...revokedAuthUids.flatMap((uid) => [
+          auth.updateUser(uid, { disabled: true }),
+          auth.revokeRefreshTokens(uid),
+        ]),
+      ]).catch((authError) => {
+        console.error("Hospital was activated, but Firebase Auth account synchronization needs attention", authError instanceof Error ? authError.message : authError);
+      });
+    }
 
     return apiJson({ ok: true });
   } catch (error) {

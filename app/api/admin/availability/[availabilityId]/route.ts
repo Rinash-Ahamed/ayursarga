@@ -1,7 +1,8 @@
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
 import { apiHealth, apiJson } from "@/services/api/server";
-import { approveAvailabilityRequest, closeAvailability } from "@/services/hospitals/availabilityAdmin";
+import { approveAvailabilityRequest, AvailabilityOperationError, closeAvailability } from "@/services/hospitals/availabilityAdmin";
+import { readJsonBody, RequestBodyError } from "@/services/api/request";
 
 export const runtime = "nodejs";
 
@@ -12,9 +13,10 @@ export function GET() {
 export async function PATCH(request: Request, context: { params: Promise<{ availabilityId: string }> }) {
   try {
     const { uid: adminUid, firestore } = await requireActiveAdmin(request);
-    const body = await request.json().catch(() => null) as { action?: "approve" | "reject" | "cancel" } | null;
+    const body = await readJsonBody(request, 1_000) as { action?: "approve" | "reject" | "cancel" } | null;
     if (!body?.action || !["approve", "reject", "cancel"].includes(body.action)) return apiJson({ error: "Select a valid availability action." }, 400);
     const { availabilityId } = await context.params;
+    if (!availabilityId || availabilityId.length > 160 || availabilityId.includes("/")) return apiJson({ error: "The availability request could not be found." }, 404);
     const availabilityReference = firestore.collection("availability").doc(availabilityId);
     const snapshot = await availabilityReference.get();
     const availability = snapshot.data();
@@ -32,7 +34,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ avail
     }
     return apiJson({ ok: true });
   } catch (error) {
+    if (error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
     if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
-    return apiJson({ error: error instanceof Error ? error.message : "We could not update availability." }, 400);
+    if (error instanceof AvailabilityOperationError) return apiJson({ error: error.message }, error.status);
+    console.error("Availability update failed", error instanceof Error ? error.message : error);
+    return apiJson({ error: "We could not update availability. Refresh and try again." }, 503);
   }
 }

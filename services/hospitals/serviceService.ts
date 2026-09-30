@@ -9,8 +9,6 @@ import {
 } from "@/services/firestore/firestoreService";
 import { createAuditedDocument, getArchiveMetadata, getAuditActorId, replaceAuditedDocument, updateAuditedDocument } from "@/services/firestore/auditService";
 
-export { listPublicHospitalServices as listActiveHospitalServices } from "@/services/hospitals/publicHospitalService";
-
 type ServiceInput = Pick<ServiceDocument,
   "hospitalId" | "name" | "description" | "packageDurationDays" | "procedures" |
   "otherProcedures" | "otherProcedureName" | "otherProcedureDays" | "status"

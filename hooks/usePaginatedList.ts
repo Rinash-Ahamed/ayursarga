@@ -3,18 +3,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DocumentRecord, QueryPage } from "@/services/firestore/firestoreService";
 
-type PageCursor<T> = QueryPage<T>["cursor"];
-type PageLoader<T> = (cursor: PageCursor<T>) => Promise<QueryPage<T>>;
+type PageCursor<TCursor> = TCursor | null;
+type PageLoader<T, TCursor> = (cursor: PageCursor<TCursor>) => Promise<QueryPage<T, TCursor>>;
 
-export function usePaginatedList<T>(loader: PageLoader<T>, errorMessage: string) {
+export function usePaginatedList<T, TCursor = NonNullable<QueryPage<T>["cursor"]>>(loader: PageLoader<T, TCursor>, errorMessage: string) {
   const [items, setItems] = useState<DocumentRecord<T>[]>([]);
-  const [cursor, setCursor] = useState<PageCursor<T>>(null);
+  const [cursor, setCursor] = useState<PageCursor<TCursor>>(null);
   const [hasMore, setHasMore] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const requestVersion = useRef(0);
 
-  const load = useCallback(async (nextCursor: PageCursor<T>, replace: boolean) => {
+  const load = useCallback(async (nextCursor: PageCursor<TCursor>, replace: boolean) => {
     const version = ++requestVersion.current;
     setIsLoading(true);
     try {

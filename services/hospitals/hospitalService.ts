@@ -12,8 +12,6 @@ import {
 import { getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
 import { authorizedApiRequest } from "@/services/api/client";
 
-export { listPublicHospitals } from "@/services/hospitals/publicHospitalService";
-
 type HospitalAdminUpdate = Partial<HospitalFields & Pick<HospitalDocument,
   "status" | "isPublic" | "ayursargaRating" | "ayursargaReviewNote" | "imageUrls" | "locationUrl"
 >>;
@@ -74,9 +72,9 @@ function validatedContractUrl(value: string, label: string) {
   if (contractUrl.length > 500) throw new Error(`${label} must be 500 characters or fewer.`);
   try {
     const parsed = new URL(contractUrl);
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error();
+    if (parsed.protocol !== "https:") throw new Error();
   } catch {
-    throw new Error(`Enter a valid ${label.toLowerCase()} beginning with http:// or https://.`);
+    throw new Error(`Enter a valid ${label.toLowerCase()} beginning with https://.`);
   }
   return contractUrl;
 }

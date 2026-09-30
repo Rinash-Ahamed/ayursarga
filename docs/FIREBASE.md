@@ -46,8 +46,8 @@ The Firestore emulator requires a local Java runtime; Auth and Hosting do not.
 
 ## Privileged account provisioning
 
-Public registration can only create consumers. Activating a hospital from the
-Admin Hospital Details page now provisions or reconnects the hospital's
+Public registration can only create consumers. The Hospital login action on the
+Admin Hospital Details page provisions or reconnects the hospital's
 Firebase Authentication account and protected `users/{uid}` profile, then sends
 a Firebase password-setup email to its official email address. Admin can resend
 that setup/reset email from the same page. The trusted Next.js runtime must have
@@ -66,10 +66,9 @@ matching protected Firestore profile, and prints a one-time Firebase
 password-setup link. Passwords belong exclusively to Firebase Authentication
 and must never be stored in Firestore, even as application-managed hashes.
 
-The initial admin is simpler: create `info@ayursarga.com` once in Firebase
-Authentication. Its protected `admin` profile is created automatically on the
-first successful `/admin/login`. No password or password hash is written to
-Firestore.
+Provision the initial Admin with the same controlled script. The application
+does not create an Admin profile from an email address during login. No password
+or password hash is written to Firestore.
 
 The server reads the project ID from `NEXT_PUBLIC_FIREBASE_PROJECT_ID` and its
 credential from `FIREBASE_ADMIN_CLIENT_EMAIL` and
@@ -78,6 +77,17 @@ browser-visible. Use the same variables in `.env.local` and Vercel. In Firebase
 Authentication settings, enforce a minimum length of eight characters and
 require a numeric character so password-setup and reset flows use the same
 server-side policy as the application.
+
+### Public hospital data boundary
+
+Public centre search and centre-detail pages read through the bounded
+`/api/public/hospitals` routes. Those routes return only the fields needed by
+the public experience. The full `hospitals` and `services` documents remain
+readable only by an active Admin or the assigned active Hospital account, so
+contract links, commission data, actor IDs, and audit metadata are never sent
+to a public browser. Deploy the Next.js application before deploying the
+matching Firestore rules so an older public frontend is not cut off during a
+release.
 
 ### Vercel Admin credentials
 

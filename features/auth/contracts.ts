@@ -44,6 +44,7 @@ export interface AuthAdapter {
   loginConsumerWithGoogle(): Promise<UserProfile>;
   logout(): Promise<void>;
   resetPassword(email: string): Promise<void>;
+  reauthenticate(currentPassword: string): Promise<void>;
   changePassword(currentPassword: string, newPassword: string): Promise<void>;
   getCurrentUser(): AuthUser | null;
   getCurrentProfile(force?: boolean): Promise<UserProfile | null>;

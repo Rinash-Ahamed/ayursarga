@@ -4,7 +4,6 @@ import type { User } from "firebase/auth";
 import { COLLECTIONS } from "@/constants/firestore";
 import type { UserProfile } from "@/features/auth/contracts";
 import type { UserDocument } from "@/features/firestore/models";
-import { isBootstrapAdminEmail } from "@/features/auth/bootstrap";
 import { AuthenticationError } from "@/features/auth/errors";
 import { parseUserProfile } from "@/features/auth/profile";
 import { CONSUMER_PRIVACY_NOTICE_VERSION, CUSTOMER_TERMS_VERSION } from "@/features/consumers/privacyConsent";
@@ -35,27 +34,7 @@ export async function getUserProfile(uid: string, fallbackEmail = "", force = fa
 
   const request = readDocument<Record<string, unknown>>(COLLECTIONS.users, uid)
     .then(async (existingDocument) => {
-      let document: Record<string, unknown> | null = existingDocument;
-      if (!document && isBootstrapAdminEmail(fallbackEmail)) {
-        const bootstrapProfile = {
-          uid,
-          name: "Ayursarga Admin",
-          email: fallbackEmail.trim().toLowerCase(),
-          phone: null,
-          address: null,
-          role: "admin",
-          status: "active",
-          hospitalId: null,
-          createdAt: firestoreTimestamp.server(),
-          createdBy: uid,
-          updatedAt: firestoreTimestamp.server(),
-          updatedBy: uid,
-          archivedAt: null,
-          archivedBy: null,
-        };
-        await createAuditedDocument(COLLECTIONS.users, bootstrapProfile, { action: "create", actorRole: "admin" }, uid);
-        document = bootstrapProfile;
-      }
+      const document: Record<string, unknown> | null = existingDocument;
       if (!document) throw new AuthenticationError("profile-not-found");
       const profile = parseUserProfile(uid, document, fallbackEmail);
       profileCache.set(uid, profile);
