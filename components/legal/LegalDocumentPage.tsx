@@ -24,6 +24,15 @@ type PreparedBlock = LegalBlock & {
   id?: string;
 };
 
+type SourceBlock = LegalBlock & {
+  sourceIndex: number;
+};
+
+type LegalMetadata = {
+  effectiveDate?: string;
+  lastUpdated?: string;
+};
+
 export function isLegalSlug(value: string): value is LegalSlug {
   return LEGAL_SLUGS.includes(value as LegalSlug);
 }
@@ -55,8 +64,35 @@ function getHeadingLevel(block: LegalBlock): 2 | 3 | null {
   return null;
 }
 
-function prepareBlocks(blocks: LegalBlock[]) {
-  return blocks.flatMap<PreparedBlock>((block, sourceIndex) => {
+function separateDocumentDates(blocks: LegalBlock[]) {
+  const metadata: LegalMetadata = {};
+  const dateLine = /^(Effective Date|Last Updated)\s*:?\s*(.*)$/i;
+  const contentBlocks = blocks.flatMap<SourceBlock>((block, sourceIndex) => {
+    const lines = block.text.split("\n");
+    const retained: string[] = [];
+    for (let index = 0; index < lines.length; index += 1) {
+      const match = lines[index].trim().match(dateLine);
+      if (!match) {
+        retained.push(lines[index]);
+        continue;
+      }
+      let value = match[2].trim();
+      if (!value && lines[index + 1]?.trim()) {
+        value = lines[index + 1].trim();
+        index += 1;
+      }
+      const key = /^Effective Date$/i.test(match[1]) ? "effectiveDate" : "lastUpdated";
+      if (value && !metadata[key]) metadata[key] = value;
+    }
+    const text = retained.join("\n").trim();
+    return text ? [{ ...block, text, sourceIndex }] : [];
+  });
+  return { metadata, contentBlocks };
+}
+
+function prepareBlocks(blocks: SourceBlock[]) {
+  return blocks.flatMap<PreparedBlock>((block) => {
+    const { sourceIndex } = block;
     if (isDocumentTitle(block, sourceIndex)) return [];
     const headingLevel = getHeadingLevel(block);
     return [{
@@ -145,7 +181,8 @@ function renderBlocks(blocks: PreparedBlock[]) {
 
 export function LegalDocumentPage({ slug }: { slug: LegalSlug }) {
   const document = getLegalDocument(slug);
-  const blocks = prepareBlocks(document.blocks);
+  const { metadata, contentBlocks } = separateDocumentDates(document.blocks);
+  const blocks = prepareBlocks(contentBlocks);
   const sections = blocks.filter((block) => block.headingLevel === 2);
   const firstSectionIndex = blocks.findIndex((block) => block.headingLevel === 2);
   const introduction = firstSectionIndex < 0 ? blocks : blocks.slice(0, firstSectionIndex);
@@ -168,6 +205,10 @@ export function LegalDocumentPage({ slug }: { slug: LegalSlug }) {
     <div className="legal-layout">
       <aside className="legal-contents" aria-label={`${document.title} contents`}>
         <span>On this page</span>
+        {(metadata.effectiveDate || metadata.lastUpdated) && <div className="legal-document-dates" aria-label="Document dates">
+          {metadata.effectiveDate && <p><span>Effective date</span><strong>{metadata.effectiveDate}</strong></p>}
+          {metadata.lastUpdated && <p><span>Last updated</span><strong>{metadata.lastUpdated}</strong></p>}
+        </div>}
         <nav>
           {sections.map((section) => <a href={`#${section.id}`} key={section.sourceIndex}>{section.text}</a>)}
         </nav>
