@@ -20,8 +20,42 @@ export default function Hero() {
   const [activeValue, setActiveValue] = useState(0);
   const [isHeroVisible, setIsHeroVisible] = useState(true);
   const [videoReady, setVideoReady] = useState(false);
+  const [videoEligible, setVideoEligible] = useState(false);
+  const [pageSettled, setPageSettled] = useState(false);
   const shouldReduceMotion = useReducedMotion();
-  const canLoadVideo = useBrowserIdle(350);
+  const browserIdle = useBrowserIdle(1_800);
+  const canLoadVideo = browserIdle && pageSettled && videoEligible && !shouldReduceMotion;
+
+  useEffect(() => {
+    const desktopQuery = window.matchMedia("(min-width: 1100px) and (hover: hover) and (pointer: fine)");
+    const connection = Reflect.get(navigator, "connection") as { effectiveType?: string; saveData?: boolean } | undefined;
+    const deviceMemory = Number(Reflect.get(navigator, "deviceMemory") ?? 4);
+    const processorCount = navigator.hardwareConcurrency || 4;
+    const constrainedConnection = connection?.saveData === true || ["slow-2g", "2g", "3g"].includes(connection?.effectiveType ?? "");
+
+    const updateEligibility = () => {
+      setVideoEligible(desktopQuery.matches && !constrainedConnection && deviceMemory >= 4 && processorCount >= 4);
+    };
+
+    updateEligibility();
+    desktopQuery.addEventListener("change", updateEligibility);
+    return () => desktopQuery.removeEventListener("change", updateEligibility);
+  }, []);
+
+  useEffect(() => {
+    let settleTimer: ReturnType<typeof window.setTimeout> | undefined;
+    const settle = () => {
+      settleTimer = window.setTimeout(() => setPageSettled(true), 1_200);
+    };
+
+    if (document.readyState === "complete") settle();
+    else window.addEventListener("load", settle, { once: true });
+
+    return () => {
+      window.removeEventListener("load", settle);
+      if (settleTimer !== undefined) window.clearTimeout(settleTimer);
+    };
+  }, []);
 
   useEffect(() => {
     const hero = heroRef.current;
@@ -45,11 +79,37 @@ export default function Hero() {
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !canLoadVideo) return;
-    if (shouldReduceMotion || !isHeroVisible) {
+
+    let scrollFrame = 0;
+    let resumeTimer: ReturnType<typeof window.setTimeout> | undefined;
+    const playWhenAppropriate = () => {
+      if (shouldReduceMotion || !isHeroVisible || document.hidden) {
+        video.pause();
+        return;
+      }
+      void video.play().catch(() => undefined);
+    };
+    const handleScroll = () => {
+      if (!scrollFrame) {
+        scrollFrame = window.requestAnimationFrame(() => {
+          scrollFrame = 0;
+          video.pause();
+        });
+      }
+      if (resumeTimer !== undefined) window.clearTimeout(resumeTimer);
+      resumeTimer = window.setTimeout(playWhenAppropriate, 180);
+    };
+
+    playWhenAppropriate();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    document.addEventListener("visibilitychange", playWhenAppropriate);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      document.removeEventListener("visibilitychange", playWhenAppropriate);
+      if (scrollFrame) window.cancelAnimationFrame(scrollFrame);
+      if (resumeTimer !== undefined) window.clearTimeout(resumeTimer);
       video.pause();
-      return;
-    }
-    void video.play().catch(() => undefined);
+    };
   }, [canLoadVideo, isHeroVisible, shouldReduceMotion]);
 
   return (
@@ -57,10 +117,10 @@ export default function Hero() {
       <video
         ref={videoRef}
         className={`hero-background-video${videoReady ? " ready" : ""}`}
-        autoPlay muted loop playsInline preload="none" poster="/hero-video-poster.webp" aria-hidden="true" tabIndex={-1}
-        onCanPlay={() => setVideoReady(true)}
+        muted loop playsInline preload="none" poster="/hero-video-poster.webp" aria-hidden="true" tabIndex={-1}
+        onPlaying={() => setVideoReady(true)}
       >
-        {canLoadVideo && <source src="/hero%20image%20video.mp4" type="video/mp4" media="(min-width: 901px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)" />}
+        {canLoadVideo && <source src="/hero%20image%20video.mp4" type="video/mp4" />}
       </video>
       <div className="hero-content">
         <p className="eyebrow hero-enter-eyebrow">Ayurvedic care, guided with trust</p>
