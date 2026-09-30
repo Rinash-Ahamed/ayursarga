@@ -1337,8 +1337,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .treatment-film-copy>span{ color:var(--gold); font-size:11px; letter-spacing:.22em; text-transform:uppercase; }
 .treatment-film-copy h3{ font-family:var(--font-display); font-weight:400; font-size:clamp(32px,4.4vw,58px); line-height:1.12; margin:15px 0 18px; }
 .treatment-film-copy p{ max-width:450px; color:rgba(249,245,234,.84); font-size:14px; line-height:1.75; }
-.film-control{ position:absolute; z-index:4; right:28px; bottom:28px; width:50px; height:50px; border-radius:50%; border:1px solid rgba(249,245,234,.5); background:rgba(42,40,31,.32); backdrop-filter:blur(8px); color:var(--cream); display:grid; place-items:center; cursor:pointer; transition:.25s; }
-.film-control:hover{ background:var(--cream); color:var(--forest); transform:scale(1.05); }
 
 @media(hover:hover){
   .partner-image:hover img{ transform:translate3d(0,0,0) scale(1.05); }
@@ -1408,7 +1406,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   .treatment-film{ height:580px; border-radius:20px; }
   .treatment-film-shade{ background:linear-gradient(0deg,rgba(30,31,23,.78),rgba(30,31,23,.08) 75%); }
   .treatment-film-copy{ right:24px; bottom:92px; }
-  .film-control{ right:22px; bottom:22px; }
   .drifting-neem:nth-child(n+7){ display:none; }
 }
 @media(max-width:380px){
