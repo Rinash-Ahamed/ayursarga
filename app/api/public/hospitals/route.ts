@@ -1,5 +1,5 @@
 import { FieldPath } from "firebase-admin/firestore";
-import { apiJson } from "@/services/api/server";
+import { apiJson, logApiError } from "@/services/api/server";
 import { getFirebaseAdminFirestore } from "@/services/firebase/admin";
 import { publicHospitalProjection, publicPageSize, validPublicDocumentId } from "@/services/hospitals/publicProjection";
 import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
         documents,
         cursor: page.at(-1)?.id ?? null,
         hasMore: serviceSnapshot.size > pageSize,
-      });
+      }, 200, { cache: "public-short" });
     }
 
     let hospitalQuery: FirebaseFirestore.Query = firestore.collection("hospitals")
@@ -63,9 +63,9 @@ export async function GET(request: Request) {
       documents: page.map((document) => publicHospitalProjection(document.id, document.data())),
       cursor: page.at(-1)?.id ?? null,
       hasMore: snapshot.size > pageSize,
-    });
+    }, 200, { cache: "public-short" });
   } catch (error) {
-    console.error("Public hospital listing failed", error instanceof Error ? error.message : error);
+    logApiError("GET /api/public/hospitals", error);
     return apiJson({ error: "Ayurvedic centers are temporarily unavailable." }, 503);
   }
 }

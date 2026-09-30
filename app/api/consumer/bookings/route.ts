@@ -3,7 +3,7 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { BOOKING_TERMS_VERSION, CONSUMER_PRIVACY_NOTICE_VERSION, CUSTOMER_TERMS_VERSION } from "@/features/consumers/privacyConsent";
 import { INCLUDED_BYSTANDERS, resolveHospitalBystanderPolicy } from "@/features/hospitals/bystanders";
 import { AdminAuthorizationError, requireActiveUser } from "@/services/firebase/adminAuthorization";
-import { apiJson } from "@/services/api/server";
+import { apiJson, logApiError } from "@/services/api/server";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
 
@@ -161,7 +161,7 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
     if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
-    console.error("Booking creation failed", error instanceof Error ? error.message : error);
+    logApiError("POST /api/consumer/bookings", error);
     return apiJson({ error: "We could not send your appointment request. Please try again." }, 503);
   }
 }

@@ -1,4 +1,4 @@
-import { apiJson } from "@/services/api/server";
+import { apiJson, logApiError } from "@/services/api/server";
 import { getFirebaseAdminFirestore } from "@/services/firebase/admin";
 import { publicPageSize, publicServiceProjection, validPublicDocumentId } from "@/services/hospitals/publicProjection";
 import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
@@ -40,9 +40,9 @@ export async function GET(request: Request, context: { params: Promise<{ hospita
       documents: page.map((document) => publicServiceProjection(document.id, document.data())),
       cursor: page.at(-1)?.id ?? null,
       hasMore: snapshot.size > pageSize,
-    });
+    }, 200, { cache: "public-short" });
   } catch (error) {
-    console.error("Public hospital services failed", error instanceof Error ? error.message : error);
+    logApiError("GET /api/public/hospitals/:hospitalId/services", error);
     return apiJson({ error: "Centre packages are temporarily unavailable." }, 503);
   }
 }

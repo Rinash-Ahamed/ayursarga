@@ -1,4 +1,4 @@
-import { apiJson } from "@/services/api/server";
+import { apiJson, logApiError } from "@/services/api/server";
 import { getFirebaseAdminFirestore } from "@/services/firebase/admin";
 import { publicHospitalProjection, validPublicDocumentId } from "@/services/hospitals/publicProjection";
 import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
@@ -18,9 +18,9 @@ export async function GET(request: Request, context: { params: Promise<{ hospita
     if (!snapshot.exists || hospital?.status !== "active" || hospital.isPublic !== true) {
       return apiJson({ error: "The Ayurvedic centre could not be found." }, 404);
     }
-    return apiJson({ hospital: publicHospitalProjection(snapshot.id, hospital) });
+    return apiJson({ hospital: publicHospitalProjection(snapshot.id, hospital) }, 200, { cache: "public-short" });
   } catch (error) {
-    console.error("Public hospital details failed", error instanceof Error ? error.message : error);
+    logApiError("GET /api/public/hospitals/:hospitalId", error);
     return apiJson({ error: "This Ayurvedic centre is temporarily unavailable." }, 503);
   }
 }

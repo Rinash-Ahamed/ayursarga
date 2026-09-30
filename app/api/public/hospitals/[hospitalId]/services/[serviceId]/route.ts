@@ -1,4 +1,4 @@
-import { apiJson } from "@/services/api/server";
+import { apiJson, logApiError } from "@/services/api/server";
 import { getFirebaseAdminFirestore } from "@/services/firebase/admin";
 import { publicServiceProjection, validPublicDocumentId } from "@/services/hospitals/publicProjection";
 import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
@@ -25,9 +25,9 @@ export async function GET(request: Request, context: { params: Promise<{ hospita
       || !service.exists || serviceData?.status !== "active" || serviceData.hospitalId !== hospitalId) {
       return apiJson({ error: "The package could not be found." }, 404);
     }
-    return apiJson({ service: publicServiceProjection(service.id, serviceData) });
+    return apiJson({ service: publicServiceProjection(service.id, serviceData) }, 200, { cache: "public-short" });
   } catch (error) {
-    console.error("Public service details failed", error instanceof Error ? error.message : error);
+    logApiError("GET /api/public/hospitals/:hospitalId/services/:serviceId", error);
     return apiJson({ error: "This package is temporarily unavailable." }, 503);
   }
 }

@@ -11,7 +11,7 @@ type SerializedHospital = Omit<DocumentRecord<HospitalDocument>, "blockedDateRan
 type ApiPage<T> = { documents?: T[]; cursor?: string | null; hasMore?: boolean; error?: string };
 
 async function publicRequest<T>(url: string) {
-  const response = await fetch(url, { cache: "no-store" });
+  const response = await fetch(url);
   const body = await response.json().catch(() => ({})) as T & { error?: string };
   if (!response.ok) throw new Error(body.error || "The requested information is temporarily unavailable.");
   return body;
