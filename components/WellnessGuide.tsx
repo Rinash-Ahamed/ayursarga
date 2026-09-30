@@ -41,7 +41,7 @@ const WELLNESS_PATHS = [
     image: "/wellness/panchakarma.jpeg",
     question: "What should your care experience include?",
     hint: "Select the programme or stay preferences you would like us to consider.",
-    options: ["Detox programme", "Private stay", "Panchakarma therapy", "Cosmetologists"],
+    options: ["Detox programme", "Private stay", "Panchakarma therapy", "Cosmetologist consultation"],
   },
   {
     id: "womens-wellness",
@@ -59,7 +59,7 @@ const WELLNESS_PATHS = [
     image: "/wellness/stress-management.jpeg",
     question: "What should your care experience include?",
     hint: "Choose the kinds of support you would like included in your request.",
-    options: ["Yoga & relaxation therapies", "Pranayama & meditation", "Body therapies"],
+    options: ["Yoga & relaxation therapies", "Pranayama & meditation", "Body therapies", "Psychologist consultation"],
   },
 ] as const;
 

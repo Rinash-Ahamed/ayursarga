@@ -26,7 +26,7 @@ const STEPS = [
   {
     label: "Continue",
     title: "Receive and track the response",
-    body: "Track confirmations, changes, and responses in My Ayursarga.",
+    body: "Track confirmations, changes, and responses in your Ayursarga profile.",
   },
 ] as const;
 
