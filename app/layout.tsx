@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,5 +20,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
     <link rel="preload" as="image" href="/hero-video-poster.webp" fetchPriority="high" />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,500&family=Manrope:wght@300..800&display=swap" rel="stylesheet" />
-  </head><body>{children}</body></html>;
+  </head><body>
+    <Script id="ayursarga-opening-session" strategy="beforeInteractive">{`try{if(sessionStorage.getItem("ayursarga-public-opening-seen")==="true")document.documentElement.dataset.ayursargaOpening="seen"}catch{}`}</Script>
+    {children}
+  </body></html>;
 }
