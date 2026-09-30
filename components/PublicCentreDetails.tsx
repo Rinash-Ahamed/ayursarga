@@ -176,8 +176,7 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
                 <div className="public-centre-package-copy">
                   <h3>{packageTitle(service)}</h3>
                   <p>{service.description || `${procedures.length} procedures included in this package.`}</p>
-                  {service.packageDurationDays && <span>{service.packageDurationDays} days</span>}
-                  {typeof service.price === "number" && <span>₹{service.price.toLocaleString("en-IN")}</span>}
+                  {typeof service.price === "number" && <span className="public-package-price">₹{service.price.toLocaleString("en-IN")}</span>}
                   {procedures.length > 0 && <button className="public-package-toggle" type="button" aria-expanded={expanded} onClick={() => setExpandedPackages((current) => {
                     const next = new Set(current);
                     if (next.has(service.id)) next.delete(service.id);
@@ -222,8 +221,7 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
           </section>
 
           <section id="cancellation" className="public-centre-content-section public-centre-cancellation-section">
-            <span className="eyebrow">Cancellation and refunds</span><h2>Standard cancellation framework</h2>
-            <p>Unless a different Partner Centre policy is expressly disclosed, the following standard framework may apply.</p>
+            <span className="eyebrow">Cancellation and refunds</span><h2>Standard cancellation policy</h2>
             <div className="public-centre-policy-table-wrap">
               <table className="public-centre-policy-table">
                 <thead><tr><th>Cancellation period</th><th>Refund position</th><th>Important conditions</th></tr></thead>
