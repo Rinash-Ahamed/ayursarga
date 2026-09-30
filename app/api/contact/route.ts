@@ -1,5 +1,5 @@
 import type { ContactEmailData } from "@/lib/contactEmail";
-import { apiHealth, apiJson } from "@/services/api/server";
+import { apiHealth, apiJson, logApiError } from "@/services/api/server";
 import { isContactEmailReady, sendContactEmail } from "@/services/contact/contactEmailService";
 import { isValidEmail, toTrimmedString } from "@/utils/text";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     return apiJson({ ok: true });
   } catch (error) {
     if (error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
-    console.error("Contact email failed", error instanceof Error ? error.message : error);
+    logApiError("POST /api/contact", error);
     return apiJson({ error: "We could not send your request. Please try again." }, 502);
   }
 }

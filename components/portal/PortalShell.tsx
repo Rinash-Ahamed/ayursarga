@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { PortalRole } from "@/features/auth/contracts";
 import { ROUTES } from "@/config/routes";
 import { useAuth } from "@/hooks/useAuth";
+import { PortalNotifications } from "@/components/portal/PortalNotifications";
 
 type NavigationItem = readonly [label: string, href: string, nested?: boolean];
 
@@ -122,7 +123,9 @@ export function PortalShell({ role, title, children, focused = false }: {
         <div className="portal-page-heading">
           <h1>{title}</h1>
         </div>
-        {userProfile && role !== "consumer" && <div className="portal-header-account" ref={accountRef}>
+        {userProfile && role !== "consumer" && <div className="portal-header-tools">
+          <PortalNotifications recipientId={userProfile.uid} />
+          <div className="portal-header-account" ref={accountRef}>
           <button
             className="portal-header-account-trigger"
             type="button"
@@ -138,6 +141,7 @@ export function PortalShell({ role, title, children, focused = false }: {
             <small>{userProfile.email}</small>
             <button className="portal-signout" type="button" onClick={() => void logout()} disabled={isLoading}>Sign out</button>
           </div>}
+          </div>
         </div>}
       </header>
       {children}

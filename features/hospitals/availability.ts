@@ -42,6 +42,19 @@ export function isHospitalUnavailable(
   });
 }
 
+export function countUpcomingAvailabilityBlocks(
+  hospital: Pick<HospitalDocument, "blockedDateRanges">,
+  referenceDate = new Date(),
+) {
+  const startOfToday = new Date(referenceDate);
+  startOfToday.setHours(0, 0, 0, 0);
+
+  return (hospital.blockedDateRanges ?? []).filter((range) => {
+    const blockedEnd = asDate(range.endDate);
+    return Boolean(blockedEnd && blockedEnd >= startOfToday);
+  }).length;
+}
+
 export function formatAvailabilityRange(start: Timestamp, end: Timestamp) {
   const format = (date: Date) => date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
   const startLabel = format(start.toDate());

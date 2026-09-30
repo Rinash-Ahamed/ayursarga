@@ -10,13 +10,20 @@ export function GET() {
   return apiHealth("/api/admin/availability", [{ name: "firebaseAdmin", ready: isFirebaseAdminReady() }]);
 }
 
+function parseAvailabilityDate(value: unknown) {
+  const dateValue = String(value ?? "").trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(dateValue)
+    ? new Date(`${dateValue}T00:00:00+05:30`)
+    : new Date(dateValue);
+}
+
 export async function POST(request: Request) {
   try {
     const { uid: adminUid, firestore } = await requireActiveAdmin(request);
     const body = await readJsonBody(request, 4_000) as Record<string, unknown> | null;
     const hospitalId = String(body?.hospitalId ?? "").trim();
-    const startDate = new Date(String(body?.startDate ?? ""));
-    const endDate = new Date(String(body?.endDate ?? ""));
+    const startDate = parseAvailabilityDate(body?.startDate);
+    const endDate = parseAvailabilityDate(body?.endDate);
     const reason = String(body?.reason ?? "").trim();
     if (!hospitalId || hospitalId.length > 160 || hospitalId.includes("/") || Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || endDate < startDate) {
       return apiJson({ error: "Choose a hospital and a valid date range." }, 400);

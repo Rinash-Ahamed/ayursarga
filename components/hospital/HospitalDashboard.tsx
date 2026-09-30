@@ -1,18 +1,19 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import type { HospitalCapacityDocument } from "@/features/firestore/models";
+import type { HospitalCapacityDocument, HospitalDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { useAuth } from "@/hooks/useAuth";
-import { countDocuments } from "@/services/firestore/firestoreService";
+import { countDocuments, readDocument } from "@/services/firestore/firestoreService";
 import { getHospitalCapacity, saveHospitalCapacity } from "@/services/hospitals/capacityService";
 import { COLLECTIONS } from "@/constants/firestore";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
+import { countUpcomingAvailabilityBlocks } from "@/features/hospitals/availability";
 
-type DashboardCounts = { services: number; bookings: number; requested: number; treatments: number };
-const EMPTY_COUNTS: DashboardCounts = { services: 0, bookings: 0, requested: 0, treatments: 0 };
+type DashboardCounts = { services: number; bookings: number; requested: number; treatments: number; availabilityBlocks: number };
+const EMPTY_COUNTS: DashboardCounts = { services: 0, bookings: 0, requested: 0, treatments: 0, availabilityBlocks: 0 };
 
 export function HospitalDashboard() {
   const { userProfile } = useAuth();
@@ -35,20 +36,24 @@ export function HospitalDashboard() {
         countDocuments(COLLECTIONS.bookings, [{ field: "hospitalId", operator: "==", value: hospitalId }, { field: "status", operator: "==", value: "requested" }]),
         countDocuments(COLLECTIONS.bookings, [{ field: "hospitalId", operator: "==", value: hospitalId }, { field: "treatmentStatus", operator: "in", value: ["started", "ongoing"] }]),
         getHospitalCapacity(hospitalId),
-      ]).then(([services, bookings, requested, treatments, roomCapacity]) => {
+        readDocument<HospitalDocument>(COLLECTIONS.hospitals, hospitalId),
+      ]).then(([services, bookings, requested, treatments, roomCapacity, hospital]) => {
       if (!active) return;
       setCounts({
         services: services.status === "fulfilled" ? services.value : 0,
         bookings: bookings.status === "fulfilled" ? bookings.value : 0,
         requested: requested.status === "fulfilled" ? requested.value : 0,
         treatments: treatments.status === "fulfilled" ? treatments.value : 0,
+        availabilityBlocks: hospital.status === "fulfilled" && hospital.value
+          ? countUpcomingAvailabilityBlocks(hospital.value)
+          : 0,
       });
       if (roomCapacity.status === "fulfilled") {
         setCapacity(roomCapacity.value);
         setTotalRooms(String(roomCapacity.value?.totalRooms ?? 0));
         setOccupiedRooms(String(roomCapacity.value?.occupiedRooms ?? 0));
       }
-      if ([services, bookings, requested, treatments, roomCapacity].some((result) => result.status === "rejected")) {
+      if ([services, bookings, requested, treatments, roomCapacity, hospital].some((result) => result.status === "rejected")) {
         setError("Some Hospital dashboard information could not be loaded. The available totals are shown.");
       }
     }).finally(() => {
@@ -92,6 +97,7 @@ export function HospitalDashboard() {
       <article className="portal-card portal-stat"><strong>{loading ? "…" : counts.bookings}</strong><span>Total bookings</span></article>
       <article className="portal-card portal-stat"><strong>{loading ? "…" : counts.requested}</strong><span>New requests</span></article>
       <article className="portal-card portal-stat"><strong>{loading ? "…" : counts.treatments}</strong><span>Treatments in progress</span></article>
+      <article className="portal-card portal-stat"><strong>{loading ? "…" : counts.availabilityBlocks}</strong><span>Upcoming blocked date ranges</span></article>
     </div>
 
     <section className="portal-card portal-capacity-card" aria-labelledby="room-availability-title">

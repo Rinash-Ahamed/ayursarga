@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import MagneticButton from "./MagneticButton";
 
 const FILMS = [
   "/video/ayurvedic-treatment.mp4",
@@ -16,7 +15,6 @@ export default function TreatmentFilm() {
   const containerRef = useRef<HTMLDivElement>(null);
   const firstVideoRef = useRef<HTMLVideoElement>(null);
   const secondVideoRef = useRef<HTMLVideoElement>(null);
-  const userPaused = useRef(false);
   const inView = useRef(false);
   const activeSlotRef = useRef<VideoSlot>(0);
   const filmIndexRef = useRef(0);
@@ -25,7 +23,6 @@ export default function TreatmentFilm() {
   const transitionTimer = useRef<number | null>(null);
   const [activeSlot, setActiveSlot] = useState<VideoSlot>(0);
   const [slotSources, setSlotSources] = useState<[string, string]>([FILMS[0], FILMS[1]]);
-  const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -35,7 +32,7 @@ export default function TreatmentFilm() {
       const activeVideo = activeSlotRef.current === 0 ? firstVideoRef.current : secondVideoRef.current;
       const inactiveVideo = activeSlotRef.current === 0 ? secondVideoRef.current : firstVideoRef.current;
       if (!activeVideo) return;
-      if (entry.isIntersecting && !userPaused.current) {
+      if (entry.isIntersecting) {
         // Wait until the film is visible before buffering either cross-fade slot.
         if (!mediaPrepared.current) {
           mediaPrepared.current = true;
@@ -46,11 +43,10 @@ export default function TreatmentFilm() {
             inactiveVideo.load();
           }
         }
-        activeVideo.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+        void activeVideo.play().catch(() => undefined);
       } else {
         activeVideo.pause();
         inactiveVideo?.pause();
-        setPlaying(false);
       }
     }, { threshold: .01, rootMargin: "0px" });
     observer.observe(container);
@@ -61,7 +57,7 @@ export default function TreatmentFilm() {
   }, []);
 
   const advanceFilm = async (completedSlot: VideoSlot) => {
-    if (completedSlot !== activeSlotRef.current || transitioning.current || !inView.current || userPaused.current) return;
+    if (completedSlot !== activeSlotRef.current || transitioning.current || !inView.current) return;
     transitioning.current = true;
 
     const nextSlot: VideoSlot = completedSlot === 0 ? 1 : 0;
@@ -77,7 +73,7 @@ export default function TreatmentFilm() {
     nextVideo.currentTime = 0;
     try {
       await nextVideo.play();
-      if (!inView.current || userPaused.current) {
+      if (!inView.current) {
         nextVideo.pause();
         transitioning.current = false;
         return;
@@ -85,7 +81,6 @@ export default function TreatmentFilm() {
       filmIndexRef.current = nextIndex;
       activeSlotRef.current = nextSlot;
       setActiveSlot(nextSlot);
-      setPlaying(true);
 
       transitionTimer.current = window.setTimeout(() => {
         completedVideo?.pause();
@@ -99,21 +94,6 @@ export default function TreatmentFilm() {
       }, 950);
     } catch {
       transitioning.current = false;
-      setPlaying(false);
-    }
-  };
-
-  const togglePlayback = () => {
-    const video = activeSlotRef.current === 0 ? firstVideoRef.current : secondVideoRef.current;
-    if (!video) return;
-    if (video.paused) {
-      userPaused.current = false;
-      video.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
-    } else {
-      userPaused.current = true;
-      firstVideoRef.current?.pause();
-      secondVideoRef.current?.pause();
-      setPlaying(false);
     }
   };
 
@@ -122,6 +102,5 @@ export default function TreatmentFilm() {
     <video ref={secondVideoRef} src={slotSources[1]} className={`treatment-film-video${activeSlot === 1 ? " active" : ""}`} muted playsInline preload="none" aria-hidden={activeSlot !== 1} onEnded={() => void advanceFilm(1)} />
     <div className="treatment-film-shade" />
     <div className="treatment-film-copy"><span>The practice</span><h3>Ancient care, thoughtfully experienced.</h3><p>A glimpse into the therapies, attention and unhurried rhythm behind an Ayurvedic retreat.</p></div>
-    <MagneticButton type="button" className="film-control" onClick={togglePlayback} ariaLabel={playing ? "Pause treatment video" : "Play treatment video"}>{playing ? "Ⅱ" : "▶"}</MagneticButton>
   </motion.div>;
 }

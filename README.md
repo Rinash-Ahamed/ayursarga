@@ -165,3 +165,52 @@ Each API also supports its own lightweight `GET` readiness check:
 
 The checks validate local server configuration and SDK initialization only.
 They intentionally avoid billable database reads and external email delivery.
+
+## Public API caching
+
+Successful responses from the sanitized public hospital and package APIs use a
+short cache window: 30 seconds in the browser and 60 seconds on Vercel's CDN,
+with stale responses allowed briefly while the CDN refreshes them. Validation,
+rate-limit, not-found, and server-error responses are never cached. Authenticated
+Admin, Hospital, Consumer, booking, and profile APIs also remain `no-store`.
+
+This reduces repeated Firestore reads during public browsing without exposing
+private hospital fields or allowing personalized responses to enter a shared
+cache. Public updates can take up to about one minute to appear after a save.
+
+## Production monitoring and alerts
+
+Use `GET /api/health` as the production availability probe. It reports only
+safe readiness states for Firebase Admin and contact email configuration; it
+does not read Firestore, send email, or reveal credentials. Server failures in
+public discovery, contact submission, and booking creation are emitted as
+structured JSON logs so they can be filtered by `event=api_error` and `route`
+in Vercel logs.
+
+Configure these alerts in the hosting consoles after deployment (they cannot be
+enabled safely from repository code):
+
+- In Vercel, monitor `/api/health` every 5 minutes and alert when it returns a
+  non-200 response twice consecutively.
+- In Vercel, enable alerts for elevated function errors and unusual function
+  duration on `/api/public/*`, `/api/contact`, and `/api/consumer/bookings`.
+- In Google Cloud Billing, set project budget notifications at 50%, 80%, and
+  100% of the intended monthly limit. Spark projects with no billing account
+  should instead review Firebase usage and quota dashboards regularly.
+- In Google Cloud Monitoring, add Firestore read/write and quota alerts before
+  upgrading from Spark or materially increasing traffic.
+- Never include request bodies, identity tokens, contact details, or Firebase
+  credentials in monitoring logs or alert notifications.
+
+## Portal notifications
+
+Admin and Hospital portals share one bounded in-app notification system. A
+Hospital availability-block request notifies active Admin accounts; approval,
+rejection, an Admin-created block, or removal notifies the connected active
+Hospital account. The bell subscribes only to the signed-in user's latest 20
+notifications, and notification documents cannot be created or deleted by the
+client. Deploy both Firestore rules and indexes after notification changes:
+
+```bash
+npm run firebase:deploy:firestore
+```

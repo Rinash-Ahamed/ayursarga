@@ -42,6 +42,30 @@ a{ color:inherit; text-decoration:none; }
 em{ font-style: italic; color: var(--clay-dark); }
 ::selection{ background: var(--clay); color: var(--cream); }
 
+/* Brief first-visit brand reveal. Public content is already rendered beneath it. */
+.public-opening{
+  position:fixed; z-index:150; inset:0; display:grid; place-items:center;
+  background:#fff; opacity:1; pointer-events:auto;
+  animation:public-opening-dismiss .2s .36s forwards;
+  transition:opacity .2s var(--ease-out),visibility .2s var(--ease-out);
+}
+html[data-ayursarga-opening="seen"] .public-opening{ display:none; }
+.public-opening[data-phase="leaving"]{ opacity:0; visibility:hidden; pointer-events:none; }
+.public-opening-mark{ display:grid; justify-items:center; gap:9px; color:var(--forest); animation:public-opening-arrive .36s var(--ease-out) both; }
+.public-opening-mark img{ width:72px; height:72px; object-fit:cover; border-radius:50%; }
+.public-opening-mark span{ font-family:var(--font-display); font-size:18px; font-weight:600; letter-spacing:.06em; }
+@keyframes public-opening-arrive{
+  from{ opacity:0; transform:translate3d(0,7px,0) scale(.97); }
+  to{ opacity:1; transform:translate3d(0,0,0) scale(1); }
+}
+@keyframes public-opening-dismiss{
+  to{ opacity:0; visibility:hidden; }
+}
+@media(prefers-reduced-motion:reduce){
+  .public-opening{ display:none; }
+  .public-opening-mark{ animation:none; }
+}
+
 /* ==========================================================================
    Ambient layers
    ========================================================================== */
@@ -242,7 +266,7 @@ em{ font-style: italic; color: var(--clay-dark); }
     linear-gradient(90deg,rgba(18,23,20,.86) 0%,rgba(18,23,20,.66) 40%,rgba(18,23,20,.24) 70%,rgba(18,23,20,.1) 100%),
     linear-gradient(0deg,rgba(18,23,20,.34),rgba(18,23,20,.04) 48%);
 }
-.hero-background-video{ position:absolute; inset:0; z-index:1; width:100%; height:100%; object-fit:cover; object-position:62% center; opacity:0; filter:saturate(.88) contrast(1.03); pointer-events:none; transition:opacity .28s ease; }
+.hero-background-video{ position:absolute; inset:0; z-index:1; width:100%; height:100%; object-fit:cover; object-position:62% center; opacity:0; pointer-events:none; transform:translateZ(0); contain:paint; transition:opacity .28s ease; }
 .hero-background-video.ready{ opacity:1; }
 .hero-content{ position:relative; z-index:3; width:min(100%,1320px); max-width:1320px; margin:0 auto; padding-left:max(40px,env(safe-area-inset-left)); padding-right:max(40px,env(safe-area-inset-right)); }
 #hero .eyebrow{ color:var(--gold); text-shadow:0 2px 18px rgba(0,0,0,.28); }
@@ -1313,8 +1337,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .treatment-film-copy>span{ color:var(--gold); font-size:11px; letter-spacing:.22em; text-transform:uppercase; }
 .treatment-film-copy h3{ font-family:var(--font-display); font-weight:400; font-size:clamp(32px,4.4vw,58px); line-height:1.12; margin:15px 0 18px; }
 .treatment-film-copy p{ max-width:450px; color:rgba(249,245,234,.84); font-size:14px; line-height:1.75; }
-.film-control{ position:absolute; z-index:4; right:28px; bottom:28px; width:50px; height:50px; border-radius:50%; border:1px solid rgba(249,245,234,.5); background:rgba(42,40,31,.32); backdrop-filter:blur(8px); color:var(--cream); display:grid; place-items:center; cursor:pointer; transition:.25s; }
-.film-control:hover{ background:var(--cream); color:var(--forest); transform:scale(1.05); }
 
 @media(hover:hover){
   .partner-image:hover img{ transform:translate3d(0,0,0) scale(1.05); }
@@ -1384,7 +1406,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   .treatment-film{ height:580px; border-radius:20px; }
   .treatment-film-shade{ background:linear-gradient(0deg,rgba(30,31,23,.78),rgba(30,31,23,.08) 75%); }
   .treatment-film-copy{ right:24px; bottom:92px; }
-  .film-control{ right:22px; bottom:22px; }
   .drifting-neem:nth-child(n+7){ display:none; }
 }
 @media(max-width:380px){
