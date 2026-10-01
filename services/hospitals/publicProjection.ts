@@ -8,6 +8,11 @@ const PUBLIC_HOSPITAL_FIELDS = [
   "maxAdditionalBystanders", "additionalBystanderCharge", "status", "isPublic",
 ] as const;
 
+const PUBLIC_HOSPITAL_LIST_FIELDS = [
+  "name", "description", "address", "city", "district", "state",
+  "imageUrl", "imageUrls", "ayursargaRating", "ayursargaReviewNote",
+] as const;
+
 const PUBLIC_SERVICE_FIELDS = [
   "hospitalId", "name", "description", "price", "durationMinutes", "durationUnit",
   "packageDurationDays", "procedures", "otherProcedures", "otherProcedureName",
@@ -22,20 +27,33 @@ function timestampIso(value: unknown) {
   return date instanceof Date && !Number.isNaN(date.getTime()) ? date.toISOString() : null;
 }
 
+function projectedBlockedDateRanges(value: unknown) {
+  return Array.isArray(value)
+    ? value.flatMap((range: unknown) => {
+      if (!range || typeof range !== "object") return [];
+      const record = range as Record<string, unknown>;
+      const startDate = timestampIso(record.startDate);
+      const endDate = timestampIso(record.endDate);
+      return startDate && endDate ? [{ startDate, endDate }] : [];
+    })
+    : [];
+}
+
 export function publicHospitalProjection(id: string, data: FirebaseFirestore.DocumentData) {
   const projected: Record<string, unknown> = { id };
   PUBLIC_HOSPITAL_FIELDS.forEach((field) => {
     if (field in data) projected[field] = data[field];
   });
-  projected.blockedDateRanges = Array.isArray(data.blockedDateRanges)
-    ? data.blockedDateRanges.flatMap((range: unknown) => {
-      if (!range || typeof range !== "object") return [];
-      const value = range as Record<string, unknown>;
-      const startDate = timestampIso(value.startDate);
-      const endDate = timestampIso(value.endDate);
-      return startDate && endDate ? [{ startDate, endDate }] : [];
-    })
-    : [];
+  projected.blockedDateRanges = projectedBlockedDateRanges(data.blockedDateRanges);
+  return projected;
+}
+
+export function publicHospitalListProjection(id: string, data: FirebaseFirestore.DocumentData) {
+  const projected: Record<string, unknown> = { id };
+  PUBLIC_HOSPITAL_LIST_FIELDS.forEach((field) => {
+    if (field in data) projected[field] = data[field];
+  });
+  projected.blockedDateRanges = projectedBlockedDateRanges(data.blockedDateRanges);
   return projected;
 }
 

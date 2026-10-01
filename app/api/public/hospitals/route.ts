@@ -1,7 +1,7 @@
 import { FieldPath } from "firebase-admin/firestore";
 import { apiJson, logApiError } from "@/services/api/server";
 import { getFirebaseAdminFirestore } from "@/services/firebase/admin";
-import { publicHospitalProjection, publicPageSize, validPublicDocumentId } from "@/services/hospitals/publicProjection";
+import { publicHospitalListProjection, publicPageSize, validPublicDocumentId } from "@/services/hospitals/publicProjection";
 import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
 
 export const runtime = "nodejs";
@@ -37,7 +37,7 @@ export async function GET(request: Request) {
         : [];
       const documents = hospitalSnapshots
         .filter((document) => document.exists && document.data()?.status === "active" && document.data()?.isPublic === true)
-        .map((document) => publicHospitalProjection(document.id, document.data()!))
+        .map((document) => publicHospitalListProjection(document.id, document.data()!))
         .sort((left, right) => String(left.name ?? "").localeCompare(String(right.name ?? "")));
       return apiJson({
         documents,
@@ -60,7 +60,7 @@ export async function GET(request: Request) {
     const snapshot = await hospitalQuery.get();
     const page = snapshot.docs.slice(0, pageSize);
     return apiJson({
-      documents: page.map((document) => publicHospitalProjection(document.id, document.data())),
+      documents: page.map((document) => publicHospitalListProjection(document.id, document.data())),
       cursor: page.at(-1)?.id ?? null,
       hasMore: snapshot.size > pageSize,
     }, 200, { cache: "public-short" });
