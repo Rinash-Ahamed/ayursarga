@@ -27,31 +27,41 @@ export default function TreatmentFilm() {
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    const observer = new IntersectionObserver(([entry]) => {
+
+    const prepareMedia = () => {
+      if (mediaPrepared.current) return;
+      mediaPrepared.current = true;
+      [firstVideoRef.current, secondVideoRef.current].forEach((video) => {
+        if (!video) return;
+        video.preload = "auto";
+        video.load();
+      });
+    };
+
+    const preloadObserver = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      prepareMedia();
+      preloadObserver.disconnect();
+    }, { threshold: 0, rootMargin: "900px 0px" });
+
+    const playbackObserver = new IntersectionObserver(([entry]) => {
       inView.current = entry.isIntersecting;
       const activeVideo = activeSlotRef.current === 0 ? firstVideoRef.current : secondVideoRef.current;
       const inactiveVideo = activeSlotRef.current === 0 ? secondVideoRef.current : firstVideoRef.current;
       if (!activeVideo) return;
       if (entry.isIntersecting) {
-        // Wait until the film is visible before buffering either cross-fade slot.
-        if (!mediaPrepared.current) {
-          mediaPrepared.current = true;
-          activeVideo.preload = "auto";
-          activeVideo.load();
-          if (inactiveVideo) {
-            inactiveVideo.preload = "auto";
-            inactiveVideo.load();
-          }
-        }
+        prepareMedia();
         void activeVideo.play().catch(() => undefined);
       } else {
         activeVideo.pause();
         inactiveVideo?.pause();
       }
     }, { threshold: .01, rootMargin: "0px" });
-    observer.observe(container);
+    preloadObserver.observe(container);
+    playbackObserver.observe(container);
     return () => {
-      observer.disconnect();
+      preloadObserver.disconnect();
+      playbackObserver.disconnect();
       if (transitionTimer.current) window.clearTimeout(transitionTimer.current);
     };
   }, []);
