@@ -134,6 +134,16 @@ html[data-ayursarga-opening="seen"] .public-opening{ display:none; }
 .nav-links a{ font-size:13.5px; font-weight:650; letter-spacing:.03em; color:var(--sage); position:relative; transition:color .25s ease; }
 .nav-links .nav-search-link{ display:inline-flex; align-items:center; gap:7px; }
 .nav-search-link svg{ width:15px; height:15px; flex:0 0 15px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+@media (prefers-reduced-motion:no-preference){
+  .nav-search-link svg{ transform-origin:center; will-change:transform,opacity; animation:navSearchHeartbeat 2.6s ease-in-out infinite; }
+}
+@keyframes navSearchHeartbeat{
+  0%,34%,100%{ transform:scale(1); opacity:1; }
+  7%{ transform:scale(1.2); opacity:.78; }
+  13%{ transform:scale(.98); opacity:1; }
+  20%{ transform:scale(1.13); opacity:.84; }
+  27%{ transform:scale(1); opacity:1; }
+}
 #site-nav:not(.scrolled) .nav-mark span{ color:var(--cream); text-shadow:0 1px 12px rgba(0,0,0,.3); }
 #site-nav:not(.scrolled) .nav-links a{ color:rgba(255,255,255,.94); text-shadow:0 1px 10px rgba(0,0,0,.3); }
 #site-nav:not(.scrolled) .nav-links a:hover{ color:#fff; }
@@ -383,9 +393,18 @@ main>.dark-section{
 .public-date-control{ min-width:0; padding:7px 10px; display:block; border:1px solid rgba(31,61,43,.16); border-radius:10px; background:#fff; cursor:pointer; }
 .public-date-control>span{ margin-bottom:2px; display:block; color:var(--sage); font-size:8px; font-weight:750; letter-spacing:.06em; line-height:1.3; text-transform:uppercase; }
 .public-date-control input{ cursor:pointer; }
-.public-search-submit{ min-width:126px; padding:0 20px; display:flex; align-items:center; justify-content:center; gap:8px; border:0; border-radius:13px; background:var(--forest); color:#fff; font:inherit; font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; transition:background-color .2s ease,color .2s ease; }
-.public-search-submit svg{ width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; }
-.public-search-submit:hover,.public-search-submit:focus-visible{ background:#294f39; color:#fff; }
+.public-search-submit{
+  align-self:center; justify-self:center; min-width:108px; height:48px; padding:0 17px;
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  border:1px solid rgba(184,135,47,.58); border-radius:999px;
+  background:linear-gradient(135deg,var(--forest),#294f39); color:#fff;
+  font:inherit; font-size:12px; font-weight:750; letter-spacing:.01em;
+  box-shadow:0 8px 20px rgba(31,61,43,.18),inset 0 1px 0 rgba(255,255,255,.14);
+  cursor:pointer; transition:background-color .2s ease,border-color .2s ease,box-shadow .2s ease,color .2s ease;
+}
+.public-search-submit svg{ width:17px; height:17px; fill:none; stroke:var(--gold); stroke-width:2; stroke-linecap:round; }
+.public-search-submit:hover,.public-search-submit:focus-visible{ border-color:rgba(184,135,47,.9); background:#294f39; color:#fff; box-shadow:0 10px 24px rgba(31,61,43,.23),inset 0 1px 0 rgba(255,255,255,.18); }
+.public-search-submit:focus-visible{ outline:3px solid rgba(184,135,47,.24); outline-offset:3px; }
 .public-search-date-error{ max-width:1180px; margin:-14px auto 24px; color:var(--rust); font-size:11px; font-weight:700; text-align:center; }
 .public-search-status{ padding:24px; border:1px solid rgba(31,61,43,.18); border-radius:16px; background:var(--cream-2); color:var(--sage); font-size:13px; text-align:center; }
 .public-search-status strong,.public-search-status span{ display:block; }
@@ -548,7 +567,7 @@ main>.dark-section{
 .public-centre-detail-status.error{ color:var(--rust); }
 @media(max-width:1100px){
   .public-search-filters{ grid-template-columns:1fr 1fr; }
-  .public-search-submit{ min-height:62px; }
+  .public-search-submit{ grid-column:1/-1; justify-self:end; min-width:120px; height:48px; margin:4px 2px 2px; }
   .public-centre-content-grid{ grid-template-columns:1fr; }
   .public-centre-contact-card{ position:static; }
 }
@@ -556,7 +575,7 @@ main>.dark-section{
   .centers-directory-page .public-center-search{ padding-top:calc(88px + env(safe-area-inset-top)); }
   .public-search-filters{ grid-template-columns:1fr; gap:8px; border-radius:16px; }
   .public-search-field{ min-height:66px; }
-  .public-search-submit{ min-height:56px; }
+  .public-search-submit{ width:100%; height:50px; margin:0; justify-self:stretch; }
   .public-search-dates{ align-items:flex-start; padding-top:14px; padding-bottom:14px; }
   .public-search-dates>svg{ margin-top:2px; }
   .public-search-dates>span{ gap:8px; }
@@ -1463,7 +1482,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .public-search-field{ background:linear-gradient(145deg,#fff,rgba(31,61,43,.025)); }
 .public-search-field>svg{ color:var(--gold); }
 .public-search-field small{ color:var(--forest); font-weight:800; }
-.public-search-submit{ box-shadow:0 8px 22px rgba(31,61,43,.22); }
+.public-search-submit{ box-shadow:0 8px 20px rgba(31,61,43,.18),inset 0 1px 0 rgba(255,255,255,.14); }
 .public-center-grid{ gap:22px; }
 .public-center-card{
   isolation:isolate;
