@@ -19,6 +19,18 @@ import { PortalToast } from "@/components/portal/PortalToast";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 
+function TreatmentTrail({ status }: { status: string }) {
+  const steps = ["started", "ongoing", "completed"];
+  const currentIndex = steps.indexOf(status);
+  if (currentIndex === -1 && status !== "not_started") return null;
+  return <div className="portal-treatment-trail">
+    {steps.map((step, index) => <div className="portal-treatment-step" key={step}>
+      {index > 0 && <div className="portal-treatment-line" data-done={currentIndex >= index ? "true" : undefined} />}
+      <div className="portal-treatment-dot" data-done={currentIndex > index ? "true" : undefined} data-active={currentIndex === index ? "true" : undefined} />
+    </div>)}
+  </div>;
+}
+
 export function ConsumerBookings() {
   const { firebaseUser } = useAuth();
   const [actionError, setActionError] = useRepeatableMessage();
@@ -67,9 +79,10 @@ export function ConsumerBookings() {
           <span className="consumer-booking-reference">Booking {booking.id.slice(0, 8).toUpperCase()}</span>
           <h3>Appointment request</h3>
           <p>{formatBookingCarePreference(booking)}</p>
-          {booking.status === "confirmed" || booking.status === "completed"
-            ? <p className="consumer-booking-treatment">Treatment: {formatStatus(getTreatmentStatus(booking))}</p>
-            : null}
+          {(booking.status === "confirmed" || booking.status === "completed") && <>
+            <p className="consumer-booking-treatment">Treatment: {formatStatus(getTreatmentStatus(booking))}</p>
+            <TreatmentTrail status={getTreatmentStatus(booking)} />
+          </>}
         </div>
         <div className="consumer-booking-meta">
           <span className="portal-status" data-status={booking.status}>{formatStatus(booking.status)}</span>

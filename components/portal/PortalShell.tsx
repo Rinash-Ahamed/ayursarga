@@ -34,6 +34,12 @@ function getAccountInitials(name: string, email: string) {
   return (words[0]?.slice(0, 2) || email.slice(0, 2) || "AS").toUpperCase();
 }
 
+function isNavigationActive(pathname: string, href: string) {
+  if (pathname === href) return true;
+  const isPortalHome = href === ROUTES.admin.home || href === ROUTES.hospital.home;
+  return !isPortalHome && pathname.startsWith(`${href}/`);
+}
+
 export function PortalShell({ role, title, children, focused = false }: {
   role: PortalRole; title: string; children: ReactNode; focused?: boolean;
 }) {
@@ -83,7 +89,9 @@ export function PortalShell({ role, title, children, focused = false }: {
           <h1>{title}</h1>
         </div>
       </header>
-      <section className="portal-consumer-focus-content">{children}</section>
+      <section className="portal-consumer-focus-content">
+        <div className="portal-page-enter" key={pathname}>{children}</div>
+      </section>
     </main>;
   }
 
@@ -105,7 +113,7 @@ export function PortalShell({ role, title, children, focused = false }: {
         </div>
         <nav aria-label={`${role} navigation`}>
           {NAVIGATION[role].map(([label, href, nested]) =>
-            <Link className={nested ? "portal-nav-subitem" : undefined} key={href} href={href} aria-current={pathname === href ? "page" : undefined} onClick={() => { setAccountOpen(false); setMobileMenuOpen(false); }}>{label}</Link>)}
+            <Link className={nested ? "portal-nav-subitem" : undefined} key={href} href={href} aria-current={isNavigationActive(pathname, href) ? "page" : undefined} onClick={() => { setAccountOpen(false); setMobileMenuOpen(false); }}>{label}</Link>)}
         </nav>
         {userProfile && role !== "consumer" && <div className="portal-mobile-account">
           <span className="portal-header-account-avatar" aria-hidden="true">{getAccountInitials(userProfile.name, userProfile.email)}</span>
@@ -144,7 +152,9 @@ export function PortalShell({ role, title, children, focused = false }: {
           </div>
         </div>}
       </header>
-      {children}
+      <div className="portal-page-enter" key={pathname}>
+        {children}
+      </div>
     </section>
   </main>;
 }

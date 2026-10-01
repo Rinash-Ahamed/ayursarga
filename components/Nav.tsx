@@ -129,7 +129,10 @@ function PublicNav({ sectionPrefix = "", solid = false }: NavProps) {
           <span>Ayursarga</span>
         </a>
         <nav className="nav-links">
-          {LINKS.map((link) => <a key={link.href} href={linkHref(link.href)}>{link.label}</a>)}
+          {LINKS.map((link) => <a className={link.href === ROUTES.public.centers ? "nav-search-link" : undefined} key={link.href} href={linkHref(link.href)}>
+            {link.href === ROUTES.public.centers && <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>}
+            <span>{link.label}</span>
+          </a>)}
         </nav>
 
         <div ref={accountRef} className={`nav-account-actions${consumerSignedIn ? " has-consumer" : ""}`}>

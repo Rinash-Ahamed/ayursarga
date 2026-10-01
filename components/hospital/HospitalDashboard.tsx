@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
+import { ROUTES } from "@/config/routes";
 import type { HospitalCapacityDocument, HospitalDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import { PortalShell } from "@/components/portal/PortalShell";
@@ -14,6 +16,13 @@ import { countUpcomingAvailabilityBlocks } from "@/features/hospitals/availabili
 
 type DashboardCounts = { services: number; bookings: number; requested: number; treatments: number; availabilityBlocks: number };
 const EMPTY_COUNTS: DashboardCounts = { services: 0, bookings: 0, requested: 0, treatments: 0, availabilityBlocks: 0 };
+
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
 
 export function HospitalDashboard() {
   const { userProfile } = useAuth();
@@ -92,6 +101,11 @@ export function HospitalDashboard() {
   return <PortalShell role="hospital" title="Dashboard">
     <PortalToast message={error} tone="error" />
     <PortalToast message={message} />
+    <div className="portal-welcome">
+      <span className="portal-welcome-eyebrow">Your Centre</span>
+      <h2>{getGreeting()}.</h2>
+      <p>Your centre overview at a glance. Update room availability or review booking requests below.</p>
+    </div>
     <div className="portal-grid" aria-busy={loading}>
       <article className="portal-card portal-stat"><strong>{loading ? "…" : counts.services}</strong><span>Services</span></article>
       <article className="portal-card portal-stat"><strong>{loading ? "…" : counts.bookings}</strong><span>Total bookings</span></article>
@@ -117,9 +131,33 @@ export function HospitalDashboard() {
           </label>
           <div><span>Available</span><strong>{available}</strong></div>
           <div><span>Occupancy</span><strong>{occupancy}%</strong></div>
+          <div className="portal-occupancy-visual">
+            <div className="portal-occupancy-bar">
+              <div className="portal-occupancy-fill" style={{ width: `${occupancy}%` }} />
+            </div>
+            <div className="portal-occupancy-label">
+              <span>{available} available</span>
+              <span>{occupancy}% occupied</span>
+            </div>
+          </div>
         </div>
         <div className="portal-actions"><button className="portal-button" disabled={saving || loading}>{saving ? "Saving..." : "Update availability"}</button></div>
       </form>
     </section>
+    <div className="portal-section-divider" aria-hidden="true"><span className="portal-section-divider-leaf" /></div>
+    <nav className="portal-quick-actions" aria-label="Quick actions">
+      <Link className="portal-quick-action" href={ROUTES.hospital.bookings}>
+        <span className="portal-quick-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" /></svg></span>
+        View booking requests
+      </Link>
+      <Link className="portal-quick-action" href={ROUTES.hospital.services}>
+        <span className="portal-quick-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" /></svg></span>
+        Update services
+      </Link>
+      <Link className="portal-quick-action" href={ROUTES.hospital.availability}>
+        <span className="portal-quick-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg></span>
+        Set blocked dates
+      </Link>
+    </nav>
   </PortalShell>;
 }

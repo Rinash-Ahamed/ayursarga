@@ -135,6 +135,7 @@ export function HospitalBookings() {
   return <PortalShell role="hospital" title="Bookings">
     <PortalLoadGuard loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/hospital" loadingMessage="Loading booking requests…" />
     <section className="portal-card portal-booking-filters" aria-label="Booking search and filters">
+      <span className="portal-filter-eyebrow">Filters</span>
       <div className="portal-filter-field">
         <label htmlFor="hospital-booking-search">Search bookings</label>
         <input id="hospital-booking-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Patient name, email, or phone" autoComplete="off" />
@@ -157,8 +158,9 @@ export function HospitalBookings() {
       : undefined} />
     <PortalToast message={actionMessage} />
     <PortalToast message={actionError} tone="error" />
+    {visible.length > 0 && <div className="portal-result-count">Showing <strong>{visible.length}</strong> booking{visible.length !== 1 ? "s" : ""}{hasMore ? " · more available" : ""}</div>}
     <div className="portal-list">
-      {visible.map((item) => <article className="portal-card" key={item.id}>
+      {visible.map((item) => <article className="portal-card" key={item.id} data-accent={item.status}>
         <div className="portal-row-heading"><h3>{item.servicePrice > 0 ? formatCurrency(item.servicePrice) : "Package request"}</h3><span className="portal-status" data-status={item.status}>{formatStatus(item.status)}</span></div>
         <p><strong>{item.consumerName || "Patient"}</strong> · {item.consumerPhone || "Phone not recorded"} · {item.consumerEmail || "Email not recorded"}</p>
         <p>Address: {item.consumerAddress || "Not provided"}</p>
