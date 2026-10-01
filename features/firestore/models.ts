@@ -41,7 +41,7 @@ export type CentreGuidelineId =
   | "reportConcerns"
   | "emergencySituations";
 
-export type CentreGuidelineOverrides = Partial<Record<CentreGuidelineId, string>>;
+type CentreGuidelineOverrides = Partial<Record<CentreGuidelineId, string>>;
 
 export type HospitalDocument = AuditedDocument & {
   name: string;

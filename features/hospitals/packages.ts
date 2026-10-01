@@ -1,5 +1,5 @@
 export const PACKAGE_DURATIONS = [7, 10, 14, 21, 28, 35] as const;
-export type PackageDurationDays = (typeof PACKAGE_DURATIONS)[number];
+type PackageDurationDays = (typeof PACKAGE_DURATIONS)[number];
 
 export const PACKAGE_PROCEDURE_GROUPS = [
   {
@@ -50,13 +50,13 @@ export const PACKAGE_PROCEDURE_GROUPS = [
   },
 ] as const;
 
-export type PackageProcedureId = (typeof PACKAGE_PROCEDURE_GROUPS)[number]["options"][number][0];
-export type PackageProcedures = Partial<Record<PackageProcedureId, number>>;
+type PackageProcedureId = (typeof PACKAGE_PROCEDURE_GROUPS)[number]["options"][number][0];
+type PackageProcedures = Partial<Record<PackageProcedureId, number>>;
 
-export const PACKAGE_PROCEDURES = PACKAGE_PROCEDURE_GROUPS.flatMap<readonly [PackageProcedureId, string]>(
+const PACKAGE_PROCEDURES = PACKAGE_PROCEDURE_GROUPS.flatMap<readonly [PackageProcedureId, string]>(
   (group) => group.options as readonly (readonly [PackageProcedureId, string])[],
 );
-export const PACKAGE_PROCEDURE_LABELS = new Map<string, string>(PACKAGE_PROCEDURES.map(([id, label]) => [id, label] as const));
+const PACKAGE_PROCEDURE_LABELS = new Map<string, string>(PACKAGE_PROCEDURES.map(([id, label]) => [id, label] as const));
 export const DAYLESS_PACKAGE_PROCEDURE_IDS = new Set<string>([
   "anjanam",
   "dhoomapanam",
@@ -65,7 +65,7 @@ export const DAYLESS_PACKAGE_PROCEDURE_IDS = new Set<string>([
   "abdominalBinding",
 ]);
 
-export type PackageLike = {
+type PackageLike = {
   name?: string;
   packageDurationDays?: number;
   procedures?: Record<string, number>;
@@ -74,7 +74,7 @@ export type PackageLike = {
   otherProcedureDays?: number | null;
 };
 
-export function isPackageDuration(value: unknown): value is PackageDurationDays {
+function isPackageDuration(value: unknown): value is PackageDurationDays {
   return typeof value === "number" && PACKAGE_DURATIONS.includes(value as PackageDurationDays);
 }
 

@@ -2,7 +2,7 @@ import type { CentreGuidelineId, HospitalDocument } from "@/features/firestore/m
 import { toTrimmedString } from "@/utils/text";
 import { hospitalFacilitiesFormValue } from "@/features/hospitals/facilities";
 
-export const DEFAULT_CENTRE_GUIDELINES = [
+const DEFAULT_CENTRE_GUIDELINES = [
   {
     id: "visitors",
     title: "Visitors",

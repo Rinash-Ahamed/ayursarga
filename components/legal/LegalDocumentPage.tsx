@@ -8,7 +8,7 @@ export const LEGAL_SLUGS = [
   "patient-service-disclaimer-consent",
 ] as const;
 
-export type LegalSlug = (typeof LEGAL_SLUGS)[number];
+type LegalSlug = (typeof LEGAL_SLUGS)[number];
 
 type LegalBlock = {
   text: string;

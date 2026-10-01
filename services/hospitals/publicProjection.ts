@@ -39,30 +39,32 @@ function projectedBlockedDateRanges(value: unknown) {
     : [];
 }
 
-export function publicHospitalProjection(id: string, data: FirebaseFirestore.DocumentData) {
+function projectFields(
+  id: string,
+  data: FirebaseFirestore.DocumentData,
+  fields: readonly string[],
+) {
   const projected: Record<string, unknown> = { id };
-  PUBLIC_HOSPITAL_FIELDS.forEach((field) => {
+  fields.forEach((field) => {
     if (field in data) projected[field] = data[field];
   });
+  return projected;
+}
+
+export function publicHospitalProjection(id: string, data: FirebaseFirestore.DocumentData) {
+  const projected = projectFields(id, data, PUBLIC_HOSPITAL_FIELDS);
   projected.blockedDateRanges = projectedBlockedDateRanges(data.blockedDateRanges);
   return projected;
 }
 
 export function publicHospitalListProjection(id: string, data: FirebaseFirestore.DocumentData) {
-  const projected: Record<string, unknown> = { id };
-  PUBLIC_HOSPITAL_LIST_FIELDS.forEach((field) => {
-    if (field in data) projected[field] = data[field];
-  });
+  const projected = projectFields(id, data, PUBLIC_HOSPITAL_LIST_FIELDS);
   projected.blockedDateRanges = projectedBlockedDateRanges(data.blockedDateRanges);
   return projected;
 }
 
 export function publicServiceProjection(id: string, data: FirebaseFirestore.DocumentData) {
-  const projected: Record<string, unknown> = { id };
-  PUBLIC_SERVICE_FIELDS.forEach((field) => {
-    if (field in data) projected[field] = data[field];
-  });
-  return projected;
+  return projectFields(id, data, PUBLIC_SERVICE_FIELDS);
 }
 
 export function publicPageSize(value: string | null, fallback = 12) {

@@ -7,7 +7,7 @@ import { firestoreTimestamp, readDocument } from "@/services/firestore/firestore
 import { createAuditedDocument, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
 import type { PortalRole } from "@/features/auth/contracts";
 
-export type HospitalCapacityInput = {
+type HospitalCapacityInput = {
   totalRooms: number;
   occupiedRooms: number;
 };
