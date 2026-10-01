@@ -1,10 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
-import type { AvailabilityDocument, HospitalDocument } from "@/features/firestore/models";
+import { useCallback, useState, type FormEvent } from "react";
+import type { AvailabilityDocument } from "@/features/firestore/models";
 import { formatAvailabilityRange } from "@/features/hospitals/availability";
-import { emptyQueryPage, type DocumentRecord, type QueryPageOptions } from "@/services/firestore/firestoreService";
-import { getHospital } from "@/services/hospitals/hospitalService";
+import { emptyQueryPage, type QueryPageOptions } from "@/services/firestore/firestoreService";
 import { listHospitalAvailabilityRequests, requestAvailabilityBlock } from "@/services/hospitals/availabilityService";
 import { useAuth } from "@/hooks/useAuth";
 import { useCursorPagination } from "@/hooks/useCursorPagination";
@@ -18,20 +17,10 @@ import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 export function HospitalAvailability() {
   const { userProfile } = useAuth();
   const hospitalId = userProfile?.hospitalId;
-  const [hospital, setHospital] = useState<DocumentRecord<HospitalDocument> | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useRepeatableMessage();
   const [actionError, setActionError] = useRepeatableMessage();
   const today = new Date().toISOString().slice(0, 10);
-
-  useEffect(() => {
-    if (!hospitalId) return;
-    let active = true;
-    void getHospital(hospitalId).then((record) => { if (active) setHospital(record); }).catch(() => {
-      if (active) setActionError("We could not load the hospital details. Refresh and try again.");
-    });
-    return () => { active = false; };
-  }, [hospitalId, setActionError]);
 
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) => hospitalId
     ? listHospitalAvailabilityRequests(hospitalId, { pageSize: 20, cursor })
@@ -43,14 +32,12 @@ export function HospitalAvailability() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!hospitalId || !hospital) return;
+    if (!hospitalId) return;
     const form = event.currentTarget;
     const data = new FormData(form);
     setBusy(true); setMessage(null); setActionError(null);
     try {
       await requestAvailabilityBlock({
-        hospitalId,
-        hospitalName: hospital.name,
         startDate: String(data.get("startDate") ?? ""),
         endDate: String(data.get("endDate") ?? ""),
         reason: String(data.get("reason") ?? ""),
@@ -71,7 +58,7 @@ export function HospitalAvailability() {
       <label>Start date *<input name="startDate" type="date" min={today} required /></label>
       <label>End date *<input name="endDate" type="date" min={today} required /></label>
       <label className="full">Reason *<textarea name="reason" minLength={3} maxLength={500} required placeholder="For example: rooms fully occupied or centre maintenance" /></label>
-      <div className="portal-actions full"><button className="portal-button" disabled={busy || !hospital}>{busy ? "Sending..." : "Send request"}</button></div>
+      <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Sending..." : "Send request"}</button></div>
     </form>
     <PortalToast message={message} />
     <PortalToast message={actionError} tone="error" />

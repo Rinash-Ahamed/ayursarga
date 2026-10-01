@@ -280,7 +280,16 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     <PortalToast message={message} />
     {hospital && <>
       <article className="portal-card">
-        <div className="portal-row-heading"><h2>{hospital.name}</h2><span className="portal-status" data-status={hospital.status}>{formatStatus(hospital.status)}</span></div>
+        <div className="portal-hospital-summary">
+          <div>
+            <div className="portal-row-heading"><h2>{hospital.name}</h2><span className="portal-status" data-status={hospital.status}>{formatStatus(hospital.status)}</span></div>
+            <div className="portal-hospital-summary-meta">
+              <span className="portal-hospital-summary-tag">{hospital.city}{hospital.district ? `, ${hospital.district}` : ""}, {hospital.state}</span>
+              <span className="portal-hospital-summary-tag">Commission {hospital.commissionPercentage}%</span>
+              <span className="portal-hospital-summary-tag">{formatStatus(contractStatus)}</span>
+            </div>
+          </div>
+        </div>
         {editing ? <form className="portal-form portal-edit-form" onSubmit={saveHospitalDetails} noValidate>
           <HospitalFormFields defaultValues={hospital} errors={fieldErrors} />
           <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save details"}</button><button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditing(false); setFieldErrors({}); setError(null); }}>Cancel</button></div>
@@ -313,6 +322,27 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
 
       <article className="portal-card portal-contract-card">
         <div className="portal-row-heading"><h2>Contract and approval</h2><span className="portal-status" data-status={contractStatus}>{formatStatus(contractStatus)}</span></div>
+        <div className="portal-contract-stepper">
+          <div className="portal-contract-step">
+            <span className="portal-contract-step-dot" data-done="true">1</span>
+            <span data-done="true">Created</span>
+          </div>
+          <div className="portal-contract-step-line" data-done={contractStatus !== "not_generated" ? "true" : undefined} />
+          <div className="portal-contract-step">
+            <span className="portal-contract-step-dot" data-done={generatedAt ? "true" : undefined} data-active={!generatedAt ? "true" : undefined}>2</span>
+            <span data-done={generatedAt ? "true" : undefined} data-active={!generatedAt ? "true" : undefined}>Contract generated</span>
+          </div>
+          <div className="portal-contract-step-line" data-done={signedAt && signedAt2 ? "true" : undefined} />
+          <div className="portal-contract-step">
+            <span className="portal-contract-step-dot" data-done={signedAt && signedAt2 ? "true" : undefined} data-active={generatedAt && !signedAt ? "true" : undefined}>3</span>
+            <span data-done={signedAt && signedAt2 ? "true" : undefined} data-active={generatedAt && !signedAt ? "true" : undefined}>Contracts signed</span>
+          </div>
+          <div className="portal-contract-step-line" data-done={activatedAt ? "true" : undefined} />
+          <div className="portal-contract-step">
+            <span className="portal-contract-step-dot" data-done={activatedAt ? "true" : undefined} data-active={contractsReady && !activatedAt ? "true" : undefined}>4</span>
+            <span data-done={activatedAt ? "true" : undefined} data-active={contractsReady && !activatedAt ? "true" : undefined}>Activated</span>
+          </div>
+        </div>
         <div className="portal-date-grid">
           <div><span>Created date</span><strong>{formatDate(hospital.createdAt)}</strong></div>
           <div><span>Contract generated</span><strong>{formatDate(generatedAt)}</strong></div>

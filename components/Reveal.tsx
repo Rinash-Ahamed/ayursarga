@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, Variants } from "framer-motion";
+import { motion } from "framer-motion";
 import { FormEventHandler, ReactNode } from "react";
 
 const motionTags = {
@@ -14,74 +14,6 @@ const motionTags = {
 };
 
 type MotionTagName = keyof typeof motionTags;
-
-const lineVariants: Variants = {
-  hidden: { y: "115%" },
-  visible: (i: number) => ({
-    y: "0%",
-    transition: { duration: 1, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] },
-  }),
-};
-
-export function RevealLines({
-  lines,
-  as = "h2",
-  className = "",
-}: {
-  lines: ReactNode[];
-  as?: MotionTagName;
-  className?: string;
-}) {
-  const Tag = motionTags[as];
-  return (
-    <Tag className={className}>
-      {lines.map((line, i) => (
-        <span key={i} style={{ display: "block", overflow: "hidden" }}>
-          <motion.span
-            style={{ display: "inline-block" }}
-            custom={i}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.35 }}
-            variants={lineVariants}
-          >
-            {line}
-          </motion.span>
-        </span>
-      ))}
-    </Tag>
-  );
-}
-
-const wordVariants: Variants = {
-  hidden: { y: "100%" },
-  visible: (i: number) => ({
-    y: "0%",
-    transition: { duration: 0.7, delay: i * 0.03, ease: [0.22, 1, 0.36, 1] },
-  }),
-};
-
-export function RevealWords({ text, className = "" }: { text: string; className?: string }) {
-  const words = text.split(" ");
-  return (
-    <p className={className}>
-      {words.map((w, i) => (
-        <span key={i} style={{ display: "inline-block", overflow: "hidden", marginRight: "0.28em" }}>
-          <motion.span
-            style={{ display: "inline-block" }}
-            custom={i}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.35 }}
-            variants={wordVariants}
-          >
-            {w}
-          </motion.span>
-        </span>
-      ))}
-    </p>
-  );
-}
 
 export function FadeUp({
   children,

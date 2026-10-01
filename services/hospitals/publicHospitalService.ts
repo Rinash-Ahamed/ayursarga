@@ -70,10 +70,3 @@ export async function listPublicHospitalServices(hospitalId: string, options: Pu
     hasMore: Boolean(body.hasMore),
   };
 }
-
-export async function getPublicHospitalService(hospitalId: string, serviceId: string) {
-  const body = await publicRequest<{ service?: DocumentRecord<ServiceDocument> }>(
-    `/api/public/hospitals/${encodeURIComponent(hospitalId)}/services/${encodeURIComponent(serviceId)}`,
-  );
-  return body.service ?? null;
-}

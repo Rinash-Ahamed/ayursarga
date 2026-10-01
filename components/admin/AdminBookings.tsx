@@ -122,7 +122,8 @@ export function AdminBookings() {
     <PortalFeedback error={items.length > 0 ? error : null} empty={!error && !isLoading && items.length === 0
       ? (hasFilters ? "No bookings match these filters. Adjust or clear the filters and try again." : "No bookings yet. New appointment requests will appear here.")
       : undefined} />
-    <div className="portal-list">{items.map((item) => <article className="portal-row" key={item.id}>
+    {items.length > 0 && <div className="portal-result-count">Showing <strong>{items.length}</strong> booking{items.length !== 1 ? "s" : ""}{hasMore ? " · more available" : ""}</div>}
+    <div className="portal-list">{items.map((item) => <article className="portal-row" key={item.id} data-accent={item.status}>
       <div><h3>{item.consumerName || "Consumer"}{item.servicePrice > 0 ? ` · ${formatCurrency(item.servicePrice)}` : ""}</h3><p>{item.consumerPhone || "No contact number"}{item.estimatedCommission > 0 ? ` · Estimated commission ${formatCurrency(item.estimatedCommission)}` : ""} · Hospital {selectedHospital?.id === item.hospitalId ? selectedHospital.name : item.hospitalId}</p><p>Preferred: {formatBookingCarePreference(item)}</p>{item.status === "confirmed" || item.status === "completed" ? <p>Treatment: {formatStatus(getTreatmentStatus(item))}</p> : null}</div>
       <span className="portal-status" data-status={item.status}>{formatStatus(item.status)}</span>
     </article>)}</div>

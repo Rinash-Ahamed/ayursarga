@@ -8,7 +8,7 @@ const GOLD = "0.72 0.53 0.18";
 const INK = "0.16 0.15 0.12";
 const MUTED = "0.38 0.39 0.34";
 
-export function hospitalContractReference(hospitalId: string, date = new Date()) {
+function hospitalContractReference(hospitalId: string, date = new Date()) {
   const day = date.toISOString().slice(0, 10).replaceAll("-", "");
   return `AYU-${day}-${hospitalId.slice(0, 8).toUpperCase()}`;
 }

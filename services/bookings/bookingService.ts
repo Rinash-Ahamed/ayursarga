@@ -61,7 +61,7 @@ function listBookings(filters: QueryPageOptions["filters"], options: Pick<QueryP
 
 export const listConsumerBookings = (consumerId: string, options?: Pick<QueryPageOptions, "pageSize" | "cursor">) =>
   listBookings([{ field: "consumerId", operator: "==", value: consumerId }], options);
-export type HospitalBookingFilters = {
+type HospitalBookingFilters = {
   status?: BookingStatus;
   createdFrom?: Date;
   createdBefore?: Date;
@@ -81,7 +81,7 @@ export function listHospitalBookings(
   return listBookings(filters, options);
 }
 
-export type AdminBookingFilters = {
+type AdminBookingFilters = {
   hospitalId?: string;
   status?: BookingStatus;
   createdFrom?: Date;

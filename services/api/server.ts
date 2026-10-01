@@ -2,9 +2,19 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 
-export type ApiDependencyCheck = {
+type ApiDependencyCheck = {
   name: string;
   ready: boolean;
+};
+
+export type ApiHealthReport = {
+  status: "ok" | "degraded";
+  route: string;
+  dependencies: Array<{
+    name: string;
+    status: "ready" | "unavailable";
+  }>;
+  checkedAt: string;
 };
 
 type ApiCachePolicy = "no-store" | "public-short";
@@ -37,9 +47,9 @@ export function apiJson(
   });
 }
 
-export function apiHealth(route: string, checks: ApiDependencyCheck[]) {
+export function createApiHealthReport(route: string, checks: ApiDependencyCheck[]): ApiHealthReport {
   const ready = checks.every((check) => check.ready);
-  return apiJson({
+  return {
     status: ready ? "ok" : "degraded",
     route,
     dependencies: checks.map((check) => ({
@@ -47,7 +57,12 @@ export function apiHealth(route: string, checks: ApiDependencyCheck[]) {
       status: check.ready ? "ready" : "unavailable",
     })),
     checkedAt: new Date().toISOString(),
-  }, ready ? 200 : 503);
+  };
+}
+
+export function apiHealth(route: string, checks: ApiDependencyCheck[]) {
+  const report = createApiHealthReport(route, checks);
+  return apiJson({ ...report }, report.status === "ok" ? 200 : 503);
 }
 
 export function logApiError(route: string, error: unknown, context: ApiLogContext = {}) {

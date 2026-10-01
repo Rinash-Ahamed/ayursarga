@@ -17,6 +17,7 @@ export default function PublicOpening() {
     }
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const compactOrTouchDevice = window.matchMedia("(max-width: 1099px), (hover: none), (pointer: coarse)").matches;
     if (!hasOpened) {
       try {
         window.sessionStorage.setItem(OPENING_SESSION_KEY, "true");
@@ -24,7 +25,7 @@ export default function PublicOpening() {
         // A blocked storage API should not prevent the page from opening.
       }
     }
-    if (hasOpened || reducedMotion) {
+    if (hasOpened || reducedMotion || compactOrTouchDevice) {
       document.documentElement.dataset.ayursargaOpening = "seen";
       const hideTimer = window.setTimeout(() => setPhase("hidden"), 0);
       return () => window.clearTimeout(hideTimer);

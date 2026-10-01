@@ -8,8 +8,6 @@ import { COLLECTIONS } from "@/constants/firestore";
 import { validateAvailabilityRange } from "@/features/hospitals/availability";
 
 export function requestAvailabilityBlock(input: {
-  hospitalId: string;
-  hospitalName: string;
   startDate: string;
   endDate: string;
   reason: string;

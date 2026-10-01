@@ -4,7 +4,7 @@ import type { ServiceDocument } from "@/features/firestore/models";
 import type { DocumentData } from "firebase/firestore";
 import { COLLECTIONS } from "@/constants/firestore";
 import {
-  firestoreTimestamp, readDocument, runFilteredQuery,
+  firestoreTimestamp, runFilteredQuery,
   type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
 import { createAuditedDocument, getArchiveMetadata, getAuditActorId, replaceAuditedDocument, updateAuditedDocument } from "@/services/firestore/auditService";
@@ -13,8 +13,6 @@ type ServiceInput = Pick<ServiceDocument,
   "hospitalId" | "name" | "description" | "price" | "packageDurationDays" | "procedures" |
   "otherProcedures" | "otherProcedureName" | "otherProcedureDays" | "status"
 >;
-
-export const getService = (id: string) => readDocument<ServiceDocument>(COLLECTIONS.services, id);
 
 export function listHospitalServices(
   hospitalId: string,

@@ -3,7 +3,7 @@ import type { HospitalDocument } from "@/features/firestore/models";
 export const INCLUDED_BYSTANDERS = 1;
 export const MAX_ADDITIONAL_BYSTANDERS = 3;
 
-export type HospitalBystanderPolicy = {
+type HospitalBystanderPolicy = {
   additionalBystandersAllowed: boolean;
   maxAdditionalBystanders: number;
   additionalBystanderCharge: number;
