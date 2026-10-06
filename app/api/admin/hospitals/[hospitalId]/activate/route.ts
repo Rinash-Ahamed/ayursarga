@@ -42,10 +42,8 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
     }
     if (hospital.contractStatus !== "signed"
       || !hospital.contractSignedAt
-      || !hospital.contractSignedAt2
-      || !validContractUrl(hospital.contractUrl)
-      || !validContractUrl(hospital.contractUrl2)) {
-      return apiJson({ error: "Confirm both signed contracts, URLs, and signing dates before activation." }, 409);
+      || !validContractUrl(hospital.contractUrl)) {
+      return apiJson({ error: "Confirm the signed contract, URL, and signing date before activation." }, 409);
     }
 
     const auditReference = firestore.collection("auditLogs").doc();

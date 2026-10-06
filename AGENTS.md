@@ -115,9 +115,9 @@ implementation work unless the project owner explicitly changes a decision.
   hospital phone are optional; required creation fields are hospital name,
   official email, owner WhatsApp number, primary hospital phone, city/locality,
   district, state, complete address, and commission percentage.
-- Activation requires contract generation, signed-contract confirmation, and a
-  valid URL and signing date for each of the two required contracts. Preserve
-  created, both signed, and activated dates and audit each transition.
+- Activation requires contract generation, signed-contract confirmation, and
+  one valid signed-contract URL and signing date. Preserve created, signed, and
+  activated dates and audit each transition.
 - Consumer booking creation runs through the authenticated server endpoint and
   snapshots service price and commission values for
   historical consistency. It also snapshots the Consumer's name, Google email,

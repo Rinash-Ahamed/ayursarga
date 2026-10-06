@@ -80,6 +80,7 @@ export type HospitalDocument = AuditedDocument & {
   contractSignedAt: Timestamp | null;
   contractSignedBy: string | null;
   contractUrl: string | null;
+  /** Legacy second-contract fields retained only for reading older hospital records. */
   contractSignedAt2?: Timestamp | null;
   contractSignedBy2?: string | null;
   contractUrl2?: string | null;

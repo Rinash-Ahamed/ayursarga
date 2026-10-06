@@ -440,32 +440,18 @@ service cloud.firestore {
           && request.resource.data.contractUrl.size() > 8
           && request.resource.data.contractUrl.size() <= 500
           && request.resource.data.contractUrl.matches('https://.+')
-          && request.resource.data.contractSignedAt2
-            == (resource.data.get('contractSignedAt2', null) == null ? request.time : resource.data.contractSignedAt2)
-          && request.resource.data.contractSignedBy2
-            == (resource.data.get('contractSignedBy2', null) == null ? request.auth.uid : resource.data.contractSignedBy2)
-          && request.resource.data.contractUrl2 is string
-          && request.resource.data.contractUrl2.size() > 8
-          && request.resource.data.contractUrl2.size() <= 500
-          && request.resource.data.contractUrl2.matches('https://.+')
           && changed.hasOnly([
             'contractStatus', 'contractSignedAt', 'contractSignedBy', 'contractUrl',
-            'contractSignedAt2', 'contractSignedBy2', 'contractUrl2',
             'updatedAt', 'updatedBy', 'lastAuditId'
           ]))
         || (action == 'hospital_activated'
           && resource.data.status in ['pending', 'inactive']
           && resource.data.contractStatus == 'signed'
           && resource.data.contractSignedAt != null
-          && resource.data.get('contractSignedAt2', null) != null
           && resource.data.contractUrl is string
           && resource.data.contractUrl.size() > 8
           && resource.data.contractUrl.size() <= 500
           && resource.data.contractUrl.matches('https://.+')
-          && resource.data.contractUrl2 is string
-          && resource.data.contractUrl2.size() > 8
-          && resource.data.contractUrl2.size() <= 500
-          && resource.data.contractUrl2.matches('https://.+')
           && request.resource.data.status == 'active'
           && request.resource.data.isPublic == true
           && request.resource.data.contractStatus == 'signed'
@@ -596,9 +582,6 @@ service cloud.firestore {
         && request.resource.data.contractSignedAt == null
         && request.resource.data.contractSignedBy == null
         && request.resource.data.contractUrl == null
-        && request.resource.data.contractSignedAt2 == null
-        && request.resource.data.contractSignedBy2 == null
-        && request.resource.data.contractUrl2 == null
         && request.resource.data.activatedAt == null
         && request.resource.data.activatedBy == null
         && request.resource.data.createdAt == request.time

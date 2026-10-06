@@ -56,7 +56,6 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   const [error, setError] = useRepeatableMessage();
   const [message, setMessage] = useRepeatableMessage();
   const [contractUrl, setContractUrl] = useState("");
-  const [contractUrl2, setContractUrl2] = useState("");
   const [editing, setEditing] = useState(false);
   const [editingMedia, setEditingMedia] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<HospitalValidationErrors>({});
@@ -69,7 +68,6 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     setLoading(true);
     setHospital(null);
     setContractUrl("");
-    setContractUrl2("");
     const record = await getHospital(hospitalId);
     if (record?.status === "archived") {
       setHospital(null);
@@ -79,7 +77,6 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     }
     setHospital(record);
     setContractUrl(record?.contractUrl ?? "");
-    setContractUrl2(record?.contractUrl2 ?? "");
     setAssessmentRating(record?.ayursargaRating ?? null);
     setLoading(false);
     if (!record) setError("We could not find this hospital. Return to the hospital list and choose another record.");
@@ -116,7 +113,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   async function confirmPendingAction() {
     if (!hospital || !pendingAction) return;
     if (pendingAction === "archive") await runAction((record) => archiveHospital(record.id), "The hospital has been removed from the normal list. Its details and history are still safely stored.");
-    if (pendingAction === "sign") await runAction((record) => confirmHospitalContractSigning(record.id, record, contractUrl, contractUrl2), "Both signed contracts have been confirmed. The hospital can now be activated.");
+    if (pendingAction === "sign") await runAction((record) => confirmHospitalContractSigning(record.id, record, contractUrl), "The signed contract has been confirmed. The hospital can now be activated.");
     if (pendingAction === "activate") await runAction(async (record) => {
       await activateHospital(record.id, record);
       await sendHospitalLoginSetup(record.id);
@@ -257,17 +254,14 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   const signedAt = hospital && contractStatus === "signed" && isOnOrAfter(hospital.contractSignedAt, hospital.createdAt)
     ? hospital.contractSignedAt
     : null;
-  const signedAt2 = hospital && contractStatus === "signed" && isOnOrAfter(hospital.contractSignedAt2, hospital.createdAt)
-    ? hospital.contractSignedAt2
-    : null;
-  const contractsReady = Boolean(signedAt && signedAt2 && hospital?.contractUrl && hospital?.contractUrl2);
-  const activatedAt = hospital && hospital.status === "active" && signedAt && signedAt2 && isOnOrAfter(hospital.activatedAt, signedAt2)
+  const contractReady = Boolean(signedAt && hospital?.contractUrl);
+  const activatedAt = hospital && hospital.status === "active" && signedAt && isOnOrAfter(hospital.activatedAt, signedAt)
     ? hospital.activatedAt
     : null;
   const actionDialog = pendingAction === "archive"
     ? { title: "Remove this hospital?", message: "It will be hidden from normal application views. Its protected history will remain stored.", confirmLabel: "Remove hospital", tone: "danger" as const }
     : pendingAction === "sign"
-      ? { title: "Confirm both signed contracts?", message: "Confirm that both signed contract documents and their links have been received and checked.", confirmLabel: "Confirm contracts", tone: "default" as const }
+      ? { title: "Confirm the signed contract?", message: "Confirm that the signed contract document and its link have been received and checked.", confirmLabel: "Confirm contract", tone: "default" as const }
       : pendingAction === "activate"
         ? { title: hospital?.status === "inactive" ? "Reactivate this hospital?" : "Activate this hospital?", message: "The hospital will become visible to consumers and receive a secure login setup email.", confirmLabel: hospital?.status === "inactive" ? "Reactivate hospital" : "Activate hospital", tone: "default" as const }
         : pendingAction === "setup"
@@ -332,44 +326,41 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
             <span className="portal-contract-step-dot" data-done={generatedAt ? "true" : undefined} data-active={!generatedAt ? "true" : undefined}>2</span>
             <span data-done={generatedAt ? "true" : undefined} data-active={!generatedAt ? "true" : undefined}>Contract generated</span>
           </div>
-          <div className="portal-contract-step-line" data-done={signedAt && signedAt2 ? "true" : undefined} />
+          <div className="portal-contract-step-line" data-done={signedAt ? "true" : undefined} />
           <div className="portal-contract-step">
-            <span className="portal-contract-step-dot" data-done={signedAt && signedAt2 ? "true" : undefined} data-active={generatedAt && !signedAt ? "true" : undefined}>3</span>
-            <span data-done={signedAt && signedAt2 ? "true" : undefined} data-active={generatedAt && !signedAt ? "true" : undefined}>Contracts signed</span>
+            <span className="portal-contract-step-dot" data-done={signedAt ? "true" : undefined} data-active={generatedAt && !signedAt ? "true" : undefined}>3</span>
+            <span data-done={signedAt ? "true" : undefined} data-active={generatedAt && !signedAt ? "true" : undefined}>Contract signed</span>
           </div>
           <div className="portal-contract-step-line" data-done={activatedAt ? "true" : undefined} />
           <div className="portal-contract-step">
-            <span className="portal-contract-step-dot" data-done={activatedAt ? "true" : undefined} data-active={contractsReady && !activatedAt ? "true" : undefined}>4</span>
-            <span data-done={activatedAt ? "true" : undefined} data-active={contractsReady && !activatedAt ? "true" : undefined}>Activated</span>
+            <span className="portal-contract-step-dot" data-done={activatedAt ? "true" : undefined} data-active={contractReady && !activatedAt ? "true" : undefined}>4</span>
+            <span data-done={activatedAt ? "true" : undefined} data-active={contractReady && !activatedAt ? "true" : undefined}>Activated</span>
           </div>
         </div>
         <div className="portal-date-grid">
           <div><span>Created date</span><strong>{formatDate(hospital.createdAt)}</strong></div>
           <div><span>Contract generated</span><strong>{formatDate(generatedAt)}</strong></div>
-          <div><span>Contract 1 signed date</span><strong>{formatDate(signedAt)}</strong></div>
-          <div><span>Contract 2 signed date</span><strong>{formatDate(signedAt2)}</strong></div>
+          <div><span>Contract signed date</span><strong>{formatDate(signedAt)}</strong></div>
           <div><span>Active date</span><strong>{formatDate(activatedAt)}</strong></div>
         </div>
-        {hospital.contractUrl && <p>Signed contract 1: <a className="portal-inline-link" href={hospital.contractUrl} target="_blank" rel="noreferrer">View contract</a></p>}
-        {hospital.contractUrl2 && <p>Signed contract 2: <a className="portal-inline-link" href={hospital.contractUrl2} target="_blank" rel="noreferrer">View contract</a></p>}
-        {hospital.status === "pending" && contractStatus !== "not_generated" && !contractsReady && <div className="portal-form portal-edit-form">
-          <label className="portal-contract-url">Signed contract 1 URL *<input type="url" value={contractUrl} onChange={(event) => setContractUrl(event.target.value)} placeholder="https://" required /></label>
-          <label className="portal-contract-url">Signed contract 2 URL *<input type="url" value={contractUrl2} onChange={(event) => setContractUrl2(event.target.value)} placeholder="https://" required /></label>
+        {hospital.contractUrl && <p>Signed contract: <a className="portal-inline-link" href={hospital.contractUrl} target="_blank" rel="noreferrer">View contract</a></p>}
+        {hospital.status === "pending" && contractStatus !== "not_generated" && !contractReady && <div className="portal-form portal-edit-form">
+          <label className="portal-contract-url">Signed contract URL *<input type="url" value={contractUrl} onChange={(event) => setContractUrl(event.target.value)} placeholder="https://" required /></label>
         </div>}
         <div className="portal-actions">
           {hospital.status === "pending" && <button className="portal-button secondary" type="button" disabled={busy} onClick={generateContract}>{contractStatus === "not_generated" ? "Download Contract PDF" : "Download Contract PDF Again"}</button>}
-          {hospital.status === "pending" && contractStatus !== "not_generated" && !contractsReady && <button className="portal-button secondary" type="button" disabled={busy} onClick={() => {
-            if (!contractUrl.trim() || !contractUrl2.trim()) {
-              setError("Add both signed contract URLs before confirming the contracts.");
+          {hospital.status === "pending" && contractStatus !== "not_generated" && !contractReady && <button className="portal-button secondary" type="button" disabled={busy} onClick={() => {
+            if (!contractUrl.trim()) {
+              setError("Add the signed contract URL before confirming the contract.");
               return;
             }
             setPendingAction("sign");
-          }}>Confirm signed contracts</button>}
-          {(hospital.status === "pending" || hospital.status === "inactive") && contractStatus === "signed" && contractsReady && <button className="portal-button" type="button" disabled={busy} onClick={() => setPendingAction("activate")}>{hospital.status === "inactive" ? "Reactivate hospital" : "Activate hospital"}</button>}
+          }}>Confirm signed contract</button>}
+          {(hospital.status === "pending" || hospital.status === "inactive") && contractStatus === "signed" && contractReady && <button className="portal-button" type="button" disabled={busy} onClick={() => setPendingAction("activate")}>{hospital.status === "inactive" ? "Reactivate hospital" : "Activate hospital"}</button>}
           {hospital.status === "active" && <button className="portal-button" type="button" disabled={busy} onClick={() => setPendingAction("setup")}>Send login setup / reset</button>}
           {hospital.status === "active" && <button className="portal-button secondary" type="button" disabled={busy} onClick={() => setPendingAction("deactivate")}>Deactivate hospital</button>}
         </div>
-        <p>Generate the contract first. Add and confirm both signed contract links after the hospital returns them. Activation becomes available only after both contracts and signing dates are recorded.</p>
+        <p>Generate the contract first. Add and confirm the signed contract link after the hospital returns it. Activation becomes available after the contract and signing date are recorded.</p>
       </article>
 
       <AdminHospitalPackages hospitalId={hospital.id} />

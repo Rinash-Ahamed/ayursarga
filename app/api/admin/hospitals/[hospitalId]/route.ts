@@ -97,21 +97,17 @@ export async function PATCH(request: Request, context: { params: Promise<{ hospi
       };
     } else if (body.action === "contract_signed") {
       const contractUrl = String(body.data?.contractUrl ?? "").trim();
-      const contractUrl2 = String(body.data?.contractUrl2 ?? "").trim();
       if (hospital.status !== "pending" || !["generated", "signed"].includes(String(hospital.contractStatus))) {
         return apiJson({ error: "Download the contract before confirming that it has been signed." }, 409);
       }
-      if (!validContractUrl(contractUrl) || !validContractUrl(contractUrl2)) {
-        return apiJson({ error: "Add valid HTTPS links for both signed contracts." }, 400);
+      if (!validContractUrl(contractUrl)) {
+        return apiJson({ error: "Add a valid HTTPS link for the signed contract." }, 400);
       }
       changes = {
         contractStatus: "signed",
         contractSignedAt: hospital.contractSignedAt ?? now,
         contractSignedBy: hospital.contractSignedBy ?? adminUid,
         contractUrl,
-        contractSignedAt2: hospital.contractSignedAt2 ?? now,
-        contractSignedBy2: hospital.contractSignedBy2 ?? adminUid,
-        contractUrl2,
       };
     } else if (body.action === "deactivate") {
       if (hospital.status !== "active") return apiJson({ error: "Only an Active hospital can be deactivated." }, 409);

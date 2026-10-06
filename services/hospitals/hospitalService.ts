@@ -79,18 +79,17 @@ function validatedContractUrl(value: string, label: string) {
   return contractUrl;
 }
 
-export function confirmHospitalContractSigning(id: string, previous: DocumentData, contractUrlInput: string, contractUrl2Input: string) {
+export function confirmHospitalContractSigning(id: string, previous: DocumentData, contractUrlInput: string) {
   if (!(["generated", "signed"] as string[]).includes(previous.contractStatus)) {
     throw new Error("Download the contract PDF before confirming that the contract has been signed.");
   }
-  const contractUrl = validatedContractUrl(contractUrlInput, "Contract 1 URL");
-  const contractUrl2 = validatedContractUrl(contractUrl2Input, "Contract 2 URL");
-  return adminHospitalAction(id, "contract_signed", { contractUrl, contractUrl2 });
+  const contractUrl = validatedContractUrl(contractUrlInput, "Contract URL");
+  return adminHospitalAction(id, "contract_signed", { contractUrl });
 }
 
 export function activateHospital(id: string, previous: DocumentData) {
-  if (previous.contractStatus !== "signed" || !previous.contractSignedAt || !previous.contractSignedAt2 || !previous.contractUrl || !previous.contractUrl2) {
-    throw new Error("Confirm both signed contracts before activating the hospital.");
+  if (previous.contractStatus !== "signed" || !previous.contractSignedAt || !previous.contractUrl) {
+    throw new Error("Confirm the signed contract before activating the hospital.");
   }
   return authorizedApiRequest<{ ok: true }>(`/api/admin/hospitals/${encodeURIComponent(id)}/activate`, {
     method: "POST",

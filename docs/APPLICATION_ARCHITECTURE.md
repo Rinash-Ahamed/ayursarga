@@ -93,9 +93,9 @@ hospital profile form, and service boundary.
 The Admin hospital-details route records contract generation, signed-contract
 confirmation, and activation as distinct audited actions. Activation is
 available only after the contract state is `signed` and Admin supplies and
-confirms both signed-contract URLs. The document retains separate signing dates
-for Contract 1 and Contract 2; activation writes `activatedAt` and makes the
-hospital public atomically. `createdAt`, both contract signing dates, and
+confirms the signed-contract URL. The document retains one signing date;
+activation writes `activatedAt` and makes the
+hospital public atomically. `createdAt`, the contract signing date, and
 `activatedAt` are displayed in the details view. The current contract HTML is a
 clearly marked development template and is isolated in
 `features/hospitals/contractTemplate.ts` for replacement with approved text.

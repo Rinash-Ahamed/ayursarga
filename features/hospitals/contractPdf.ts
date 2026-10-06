@@ -134,7 +134,7 @@ export function buildHospitalContractPdf(hospital: DocumentRecord<HospitalDocume
   secondPage.push(textLine("Agreement terms continued", 50, 145, 16, "F2", FOREST));
   let secondTop = 185;
   secondTop = clause(secondPage, 4, "Commercial terms", `The current platform commission is ${commission} unless replaced by a later written agreement signed by both parties.`, secondTop);
-  secondTop = clause(secondPage, 5, "Activation", "The hospital profile remains pending and private until both required contracts are confirmed as signed and an Ayursarga administrator activates the profile.", secondTop);
+  secondTop = clause(secondPage, 5, "Activation", "The hospital profile remains pending and private until the required contract is confirmed as signed and an Ayursarga administrator activates the profile.", secondTop);
   const note = wrappedText("This is a temporary development template and must be replaced with the approved legal contract before production use.", 50, secondTop + 8, 495, 9.5, "F3", MUTED, 14);
   secondPage.push(...note.commands);
 

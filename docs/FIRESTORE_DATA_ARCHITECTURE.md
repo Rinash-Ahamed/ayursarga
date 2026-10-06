@@ -79,9 +79,9 @@ previous values, changed values, server timestamp, and available device data.
 
 Hospital approval also records `contract_generated`, `contract_signed`, and
 `hospital_activated` actions. Hospital documents retain `contractStatus`,
-generation fields, two signed-contract URLs with their respective signing actor
+generation fields, one signed-contract URL with its signing actor
 and timestamp fields, and activation actor and timestamp fields. Rules require
-a Pending hospital and both confirmed signed contracts before allowing the
+a Pending hospital and a confirmed signed contract before allowing the
 Active/Public transition.
 
 Audit logs are readable only by active Admins and cannot be updated or deleted

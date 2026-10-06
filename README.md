@@ -123,7 +123,7 @@ The preservation and audit design is documented in
   description for their assigned hospital.
 - Only Admin controls hospital images, centre location, commission,
   approval/status, public visibility, contract generation/signing details, the
-  two signed-contract URLs, activation, and archive actions.
+  signed-contract URL, activation, and archive actions.
 - The Hospital Profile must not expose hospital image, centre location,
   commission, contract, audit, activation, visibility, or other
   Admin-management controls.
