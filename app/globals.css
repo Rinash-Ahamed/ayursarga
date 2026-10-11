@@ -1537,6 +1537,93 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .footer-column a,.footer-pending-link{ color:rgba(249,245,234,.8); }
 .footer-bottom{ color:rgba(249,245,234,.68); }
 
+/* Public botanical glass: depth without weakening Ayursarga contrast. */
+.dark-section{
+  position:relative;
+  isolation:isolate;
+  background:
+    radial-gradient(circle at 10% 4%,rgba(184,135,47,.17),transparent 29%),
+    radial-gradient(circle at 90% 82%,rgba(255,255,255,.075),transparent 34%),
+    linear-gradient(145deg,#102f21 0%,#1b4631 54%,#28533b 100%);
+}
+.dark-section::before{
+  content:"";
+  position:absolute;
+  z-index:0;
+  inset:0;
+  pointer-events:none;
+  background:
+    linear-gradient(118deg,rgba(255,255,255,.045),transparent 30%),
+    linear-gradient(300deg,rgba(184,135,47,.065),transparent 34%);
+}
+.dark-section>.section-inner{ position:relative; z-index:1; }
+.match-section{
+  background:
+    radial-gradient(circle at 82% 12%,rgba(184,135,47,.18),transparent 30%),
+    radial-gradient(circle at 12% 88%,rgba(255,255,255,.07),transparent 32%),
+    linear-gradient(145deg,#102c1f 0%,#1a4430 56%,#264e39 100%);
+}
+.hero-value-slider{
+  border-color:rgba(255,255,255,.42);
+  background:linear-gradient(135deg,rgba(12,45,30,.6),rgba(31,61,43,.38));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 16px 40px rgba(0,0,0,.18);
+}
+.quiz-card{
+  border-color:rgba(232,198,109,.4);
+  background:linear-gradient(145deg,rgba(18,62,42,.78),rgba(10,39,27,.72));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),0 30px 72px rgba(5,28,18,.27);
+}
+.choice-grid button,.postnatal-inclusions li,.consultation-options>article,.consultation-options>button,.consultation-provider-card{
+  border-color:rgba(255,255,255,.25);
+  background:linear-gradient(145deg,rgba(255,255,255,.115),rgba(255,255,255,.055));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+}
+.trust-media{
+  border-color:rgba(232,198,109,.36);
+  background:linear-gradient(145deg,rgba(255,255,255,.1),rgba(255,255,255,.035));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 24px 58px rgba(5,28,18,.24);
+}
+.trust-signals{
+  border-color:rgba(232,198,109,.32);
+  background:linear-gradient(135deg,rgba(5,38,27,.58),rgba(31,76,52,.4));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 14px 36px rgba(5,28,18,.16);
+}
+.benefit-list{ display:grid; gap:10px; border-top:0; }
+.benefit-list article{
+  border:1px solid rgba(255,255,255,.13);
+  border-radius:16px;
+  background:linear-gradient(135deg,rgba(255,255,255,.075),rgba(255,255,255,.025));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.055);
+}
+.benefit-list article.is-active{
+  border-color:rgba(232,198,109,.37);
+  background:linear-gradient(90deg,rgba(201,166,107,.18),rgba(255,255,255,.045));
+}
+.centers-directory-page .public-search-heading,.contact-intro-panel{
+  border-color:rgba(232,198,109,.4);
+  background:
+    radial-gradient(circle at 88% 8%,rgba(232,198,109,.2),transparent 31%),
+    linear-gradient(138deg,rgba(15,54,37,.96),rgba(31,76,52,.91));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 24px 64px rgba(31,61,43,.15);
+}
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  @media(min-width:901px) and (hover:hover) and (pointer:fine){
+    .hero-value-slider,.quiz-card,.trust-signals,.centers-directory-page .public-search-heading,.contact-intro-panel{
+      -webkit-backdrop-filter:blur(10px) saturate(112%);
+      backdrop-filter:blur(10px) saturate(112%);
+    }
+  }
+}
+@media(max-width:900px),(hover:none),(pointer:coarse){
+  .hero-value-slider,.quiz-card,.trust-signals,.centers-directory-page .public-search-heading,.contact-intro-panel{
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
+  }
+  .hero-value-slider{ background:linear-gradient(135deg,rgba(12,45,30,.82),rgba(31,61,43,.72)); }
+  .quiz-card{ background:linear-gradient(145deg,rgba(18,62,42,.96),rgba(10,39,27,.94)); }
+  .trust-signals{ background:linear-gradient(135deg,rgba(5,38,27,.9),rgba(31,76,52,.84)); }
+}
+
 /* Public centre discovery refinement */
 .centers-directory-page .public-center-search{
   background:radial-gradient(circle at 8% 12%,rgba(184,135,47,.065),transparent 24%),#fff;
