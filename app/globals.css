@@ -1538,6 +1538,10 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .footer-bottom{ color:rgba(249,245,234,.68); }
 
 /* Public botanical glass: depth without weakening Ayursarga contrast. */
+#site-nav.scrolled,.mobile-bottom-nav,.public-centre-detail-nav{
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+}
 .dark-section{
   position:relative;
   isolation:isolate;
@@ -1567,6 +1571,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   border-color:rgba(255,255,255,.42);
   background:linear-gradient(135deg,rgba(12,45,30,.6),rgba(31,61,43,.38));
   box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 16px 40px rgba(0,0,0,.18);
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
 }
 .quiz-card{
   border-color:rgba(232,198,109,.4);
@@ -1606,19 +1612,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     linear-gradient(138deg,rgba(15,54,37,.96),rgba(31,76,52,.91));
   box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 24px 64px rgba(31,61,43,.15);
 }
-@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
-  @media(min-width:901px) and (hover:hover) and (pointer:fine){
-    .hero-value-slider,.quiz-card,.trust-signals,.centers-directory-page .public-search-heading,.contact-intro-panel{
-      -webkit-backdrop-filter:blur(10px) saturate(112%);
-      backdrop-filter:blur(10px) saturate(112%);
-    }
-  }
+.quiz-card,.trust-signals,.centers-directory-page .public-search-heading,.contact-intro-panel{
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
 }
 @media(max-width:900px),(hover:none),(pointer:coarse){
-  .hero-value-slider,.quiz-card,.trust-signals,.centers-directory-page .public-search-heading,.contact-intro-panel{
-    -webkit-backdrop-filter:none;
-    backdrop-filter:none;
-  }
   .hero-value-slider{ background:linear-gradient(135deg,rgba(12,45,30,.82),rgba(31,61,43,.72)); }
   .quiz-card{ background:linear-gradient(145deg,rgba(18,62,42,.96),rgba(10,39,27,.94)); }
   .trust-signals{ background:linear-gradient(135deg,rgba(5,38,27,.9),rgba(31,76,52,.84)); }
