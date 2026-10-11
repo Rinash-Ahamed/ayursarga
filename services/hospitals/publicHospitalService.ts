@@ -48,6 +48,14 @@ export function listPublicHospitals(options: PublicPageOptions = {}) {
   return hospitalPage(publicPageUrl("/api/public/hospitals", options));
 }
 
+export function searchPublicHospitals(search: string, options: PublicPageOptions = {}) {
+  const params = new URLSearchParams({
+    pageSize: String(options.pageSize ?? 8),
+    q: search.trim().slice(0, 80),
+  });
+  return hospitalPage(`/api/public/hospitals?${params.toString()}`);
+}
+
 export function listPublicHospitalsByServiceName(serviceName: string, options: PublicPageOptions = {}) {
   return hospitalPage(publicPageUrl("/api/public/hospitals", options, serviceName.trim().slice(0, 100)));
 }

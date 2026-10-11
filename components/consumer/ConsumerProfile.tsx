@@ -7,6 +7,7 @@ import { PortalToast } from "@/components/portal/PortalToast";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import { getSafeRoleRedirect } from "@/features/auth/roles";
 import { validateConsumerContact } from "@/features/consumers/profileValidation";
+import { PhoneInput } from "@/components/forms/PhoneInput";
 import { hasCurrentConsumerPrivacyConsent } from "@/features/consumers/privacyConsent";
 import { useAuth } from "@/hooks/useAuth";
 import { updateUserProfile } from "@/services/users/userService";
@@ -55,7 +56,7 @@ export function ConsumerProfile({ requestedPath }: { requestedPath?: string }) {
     <form className="portal-card portal-form" onSubmit={submit} noValidate>
       <p className="portal-form-note full">Google shares your name, email, and profile photo only. Add a phone number so your chosen centre can contact you after a request. Address is optional.</p>
       <label>Name *<input name="name" defaultValue={userProfile?.name} required minLength={2} maxLength={120} aria-invalid={Boolean(fieldErrors.name)} />{fieldErrors.name && <span className="portal-field-error">{fieldErrors.name}</span>}</label>
-      <label>Phone *<input name="phone" type="tel" autoComplete="tel" defaultValue={userProfile?.phone ?? ""} required minLength={7} maxLength={25} aria-invalid={Boolean(fieldErrors.phone)} />{fieldErrors.phone && <span className="portal-field-error">{fieldErrors.phone}</span>}</label>
+      <label>Phone *<PhoneInput name="phone" autoComplete="tel" defaultValue={userProfile?.phone ?? ""} required aria-invalid={Boolean(fieldErrors.phone)} />{fieldErrors.phone && <span className="portal-field-error">{fieldErrors.phone}</span>}</label>
       <label className="full">Address<textarea name="address" autoComplete="street-address" defaultValue={userProfile?.address ?? ""} maxLength={300} aria-invalid={Boolean(fieldErrors.address)} />{fieldErrors.address && <span className="portal-field-error">{fieldErrors.address}</span>}</label>
       <label className="full">Google account email<input value={userProfile?.email ?? ""} disabled /></label>
       {needsPrivacyConsent ? <fieldset className="portal-consent full">

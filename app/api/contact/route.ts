@@ -4,6 +4,7 @@ import { isContactEmailReady, sendContactEmail } from "@/services/contact/contac
 import { isValidEmail, toTrimmedString } from "@/utils/text";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
+import { isValidPhoneNumber } from "@/utils/phone";
 
 export const runtime = "nodejs";
 
@@ -18,8 +19,6 @@ const CONTACT_INTERESTS = new Set([
   "Baby care and lactation support",
   "I need personal guidance",
 ]);
-const CONTACT_PHONE = /^[+()\d\s-]{7,25}$/;
-
 export function GET() {
   return apiHealth("/api/contact", [{ name: "email", ready: isContactEmailReady() }]);
 }
@@ -39,7 +38,7 @@ export async function POST(request: Request) {
       message: toTrimmedString(body.message, 3000),
       guidanceProfile: toTrimmedString(body.guidanceProfile, 1200),
     };
-    if (!data.name || !CONTACT_PHONE.test(data.phone) || !CONTACT_INTERESTS.has(data.interest) || !isValidEmail(data.email)) {
+    if (!data.name || !isValidPhoneNumber(data.phone) || !CONTACT_INTERESTS.has(data.interest) || !isValidEmail(data.email)) {
       return apiJson({ error: "Please complete all required fields." }, 400);
     }
 

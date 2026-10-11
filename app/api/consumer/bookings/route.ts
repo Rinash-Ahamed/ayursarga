@@ -6,6 +6,7 @@ import { AdminAuthorizationError, requireActiveUser } from "@/services/firebase/
 import { apiJson, logApiError } from "@/services/api/server";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
+import { isValidPhoneNumber } from "@/utils/phone";
 
 export const runtime = "nodejs";
 
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
     if (profile.privacyConsentVersion !== CONSUMER_PRIVACY_NOTICE_VERSION
       || profile.customerTermsVersion !== CUSTOMER_TERMS_VERSION
       || !profile.privacyConsentAt || !profile.customerTermsAcceptedAt
-      || typeof profile.phone !== "string" || profile.phone.trim().length < 7) {
+      || typeof profile.phone !== "string" || !isValidPhoneNumber(profile.phone.trim())) {
       return apiJson({ error: "Complete your contact details and consent before requesting an appointment." }, 409);
     }
     if (body.bookingTermsAccepted !== true) return apiJson({ error: "Read and accept the applicable terms and policies before sending your request." }, 400);

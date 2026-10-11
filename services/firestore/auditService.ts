@@ -5,6 +5,7 @@ import {
   doc,
   getDoc,
   serverTimestamp,
+  Timestamp,
   writeBatch,
   type DocumentData,
 } from "firebase/firestore";
@@ -134,7 +135,10 @@ type AuditLogScope =
   | { actorId?: never; module: string; recordId: string }
   | { actorId?: never; module?: never; recordId?: never };
 
-type AuditLogQuery = Pick<QueryPageOptions, "pageSize" | "cursor"> & AuditLogScope;
+type AuditLogQuery = Pick<QueryPageOptions, "pageSize" | "cursor"> & AuditLogScope & {
+  timestampFrom?: Date;
+  timestampBefore?: Date;
+};
 
 export function listAuditLogs(options: AuditLogQuery = {}) {
   const filters: QueryFilter[] = [];
@@ -146,6 +150,8 @@ export function listAuditLogs(options: AuditLogQuery = {}) {
       { field: "recordId", operator: "==", value: options.recordId },
     );
   }
+  if (options.timestampFrom) filters.push({ field: "timestamp", operator: ">=", value: Timestamp.fromDate(options.timestampFrom) });
+  if (options.timestampBefore) filters.push({ field: "timestamp", operator: "<", value: Timestamp.fromDate(options.timestampBefore) });
   return runFilteredQuery<AuditLogDocument>({
     collectionPath: COLLECTIONS.auditLogs,
     filters,

@@ -13,6 +13,7 @@ import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import { getHospitalImageUrls } from "@/features/hospitals/images";
 import { addCentreSearchContext, type CentreSearchContext } from "@/features/hospitals/searchContext";
 import { isHospitalUnavailable } from "@/features/hospitals/availability";
+import { PublicCentreComparison } from "@/components/PublicCentreComparison";
 
 type PublicHospitalSearchProps = {
   initialService?: string;
@@ -196,6 +197,12 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
             ) : "No centers match your search. Try another centre name or location."}
           </div>
         )}
+
+        <PublicCentreComparison detailQuery={(() => {
+          const params = addCentreSearchContext(new URLSearchParams(), { ...initialContext, startDate, endDate: "" });
+          if (initialService) params.set("service", initialService);
+          return params.toString();
+        })()} />
 
         <div className="public-center-grid">
           {visibleHospitals.map((hospital, hospitalIndex) => {

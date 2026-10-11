@@ -50,6 +50,7 @@ export type HospitalDocument = AuditedDocument & {
   phone: string;
   hospitalPhone1?: string;
   hospitalPhone2?: string | null;
+  registeredAddress?: string;
   address: string;
   city: string;
   district?: string;
@@ -74,6 +75,16 @@ export type HospitalDocument = AuditedDocument & {
   status: UserStatus;
   isPublic: boolean;
   commissionPercentage: number;
+  ayursargaPinCode?: string;
+  ayursargaGstin?: string;
+  legalEntityType?: string;
+  registrationNumber?: string;
+  panNumber?: string;
+  gstin?: string;
+  contractEffectiveDate?: string;
+  contractExpiryDate?: string;
+  emergencyContact?: string;
+  emergencyReferralHospital?: string;
   contractStatus: "not_generated" | "generated" | "signed";
   contractGeneratedAt: Timestamp | null;
   contractGeneratedBy: string | null;

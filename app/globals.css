@@ -460,6 +460,67 @@ main>.dark-section{
 .public-center-toggle span{ font-size:16px; line-height:1; transition:transform .2s ease; }
 .public-center-toggle:hover span{ transform:translateX(3px); }
 .public-center-card:hover .public-center-toggle,.public-center-card:focus-within .public-center-toggle{ background:var(--gold); border-color:var(--gold); color:var(--forest); }
+.public-comparison-workspace{ width:min(100%,1040px); margin:0 auto 24px; padding:24px; border:1px solid rgba(31,61,43,.25); border-top:3px solid var(--gold); border-radius:20px; background:linear-gradient(135deg,rgba(31,61,43,.045),#fff 48%); box-shadow:0 14px 36px rgba(31,61,43,.1); }
+.public-comparison-intro>span{ color:var(--clay-dark); font-size:9px; font-weight:850; letter-spacing:.1em; text-transform:uppercase; }
+.public-comparison-intro h2{ margin-top:5px; color:var(--forest); font-family:var(--font-display); font-size:clamp(27px,3vw,38px); font-weight:550; line-height:1.12; }
+.public-comparison-intro p{ max-width:680px; margin-top:7px; color:var(--sage); font-size:10px; line-height:1.6; }
+.public-comparison-toolbar{ margin-top:20px; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:14px; }
+.public-comparison-searches{ min-width:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.public-comparison-picker{ position:relative; min-width:0; min-height:76px; padding:10px 12px; border:1px solid rgba(31,61,43,.24); border-radius:13px; background:#fff; }
+.public-comparison-picker>label{ display:grid; gap:6px; }
+.public-comparison-picker>label>span,.public-comparison-picker>span{ display:block; color:var(--forest); font-size:9px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
+.public-comparison-picker>label>div{ display:flex; align-items:center; gap:8px; }
+.public-comparison-picker>label svg{ width:17px; height:17px; flex:0 0 17px; fill:none; stroke:var(--gold); stroke-width:1.8; stroke-linecap:round; }
+.public-comparison-picker input{ min-width:0; width:100%; padding:3px 0; border:0; outline:0; background:transparent; color:var(--ink); font:inherit; font-size:11px; }
+.public-comparison-picker input::placeholder{ color:var(--sage); opacity:.78; }
+.public-comparison-picker:focus-within{ border-color:var(--forest); box-shadow:0 0 0 3px rgba(31,61,43,.08); }
+.public-comparison-picker.is-selected{ display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:7px 12px; background:rgba(31,61,43,.045); }
+.public-comparison-picker.is-selected>span{ grid-column:1/-1; }
+.public-comparison-picker.is-selected>div{ min-width:0; display:grid; gap:3px; }
+.public-comparison-picker.is-selected strong,.public-comparison-picker.is-selected small{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.public-comparison-picker.is-selected strong{ color:var(--forest); font-size:11px; }
+.public-comparison-picker.is-selected small{ color:var(--sage); font-size:9px; }
+.public-comparison-picker.is-selected>button{ padding:6px 9px; border:1px solid rgba(31,61,43,.25); border-radius:100px; background:#fff; color:var(--forest); font:inherit; font-size:8px; font-weight:800; text-transform:uppercase; cursor:pointer; }
+.public-comparison-picker-status{ position:absolute; top:calc(100% + 5px); left:4px; z-index:11; color:var(--sage); font-size:8px; }
+.public-comparison-picker-status.error{ color:var(--rust); }
+.public-comparison-picker-options{ position:absolute; z-index:10; top:calc(100% + 7px); right:0; left:0; max-height:260px; overflow-y:auto; border:1px solid rgba(31,61,43,.25); border-radius:12px; background:#fff; box-shadow:0 16px 36px rgba(31,61,43,.16); }
+.public-comparison-picker-options button{ width:100%; padding:11px 13px; display:grid; gap:3px; border:0; border-bottom:1px solid rgba(31,61,43,.11); background:#fff; color:var(--forest); font:inherit; text-align:left; cursor:pointer; }
+.public-comparison-picker-options button:last-of-type{ border-bottom:0; }
+.public-comparison-picker-options button:hover,.public-comparison-picker-options button:focus-visible{ background:rgba(31,61,43,.055); }
+.public-comparison-picker-options strong{ font-size:10px; }
+.public-comparison-picker-options span{ color:var(--sage); font-size:8px; }
+.public-comparison-picker-options>p{ padding:15px; color:var(--sage); font-size:9px; text-align:center; }
+.public-comparison-actions{ display:flex; align-items:center; gap:8px; }
+.public-comparison-clear,.public-comparison-start{ min-height:40px; padding:9px 14px; border-radius:100px; font:inherit; font-size:9px; font-weight:800; letter-spacing:.055em; text-transform:uppercase; cursor:pointer; transition:background-color .18s ease,border-color .18s ease,color .18s ease; }
+.public-comparison-clear{ border:1px solid rgba(31,61,43,.28); background:#fff; color:var(--forest); }
+.public-comparison-clear:hover,.public-comparison-clear:focus-visible{ border-color:var(--forest); background:rgba(31,61,43,.055); }
+.public-comparison-start{ border:1px solid var(--forest); background:var(--forest); color:#fff; }
+.public-comparison-start:hover:not(:disabled),.public-comparison-start:focus-visible:not(:disabled){ border-color:var(--gold); background:var(--gold); color:var(--forest); }
+.public-comparison-start:disabled{ opacity:.46; cursor:not-allowed; }
+.public-comparison-results{ width:100%; margin:24px 0 0; padding:22px; scroll-margin-top:110px; border:1px solid rgba(31,61,43,.24); border-radius:16px; background:#fff; box-shadow:0 12px 30px rgba(31,61,43,.08); }
+.public-comparison-results:focus{ outline:none; }
+.public-comparison-results-heading{ display:flex; align-items:flex-start; justify-content:space-between; gap:20px; }
+.public-comparison-results-heading span{ color:var(--clay-dark); font-size:9px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; }
+.public-comparison-results-heading h2{ margin-top:5px; color:var(--forest); font-family:var(--font-display); font-size:clamp(28px,3vw,38px); font-weight:550; line-height:1.1; }
+.public-comparison-results-heading>button{ width:38px; height:38px; flex:0 0 38px; display:grid; place-items:center; border:1px solid rgba(31,61,43,.22); border-radius:50%; background:#fff; color:var(--forest); font:inherit; font-size:21px; cursor:pointer; }
+.public-comparison-duration{ margin-top:22px; }
+.public-comparison-duration>h3{ padding:10px 13px; border-radius:10px 10px 0 0; background:var(--forest); color:#fff; font-size:12px; font-weight:800; }
+.public-comparison-columns{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); border:1px solid rgba(31,61,43,.18); border-top:0; border-radius:0 0 14px 14px; overflow:hidden; }
+.public-comparison-package{ min-width:0; padding:18px; }
+.public-comparison-package+.public-comparison-package{ border-left:1px solid rgba(31,61,43,.18); }
+.public-comparison-package h4{ color:var(--forest); font-size:15px; line-height:1.35; }
+.public-comparison-package>span{ display:block; margin-top:5px; color:var(--sage); font-size:9px; }
+.public-comparison-price{ display:block; margin-top:8px; color:var(--forest); font-size:20px; line-height:1.2; }
+.public-comparison-package>p{ margin-top:9px; color:var(--sage); font-size:10px; line-height:1.6; }
+.public-comparison-package ul{ margin-top:14px; display:grid; gap:7px; list-style:none; }
+.public-comparison-package li{ min-width:0; padding:8px 10px; display:flex; align-items:center; justify-content:space-between; gap:10px; border:1px solid rgba(31,61,43,.13); border-radius:9px; background:rgba(31,61,43,.035); color:var(--forest); font-size:9px; line-height:1.4; }
+.public-comparison-package li strong{ flex:0 0 auto; color:var(--clay-dark); font-size:8px; }
+.public-comparison-package>a{ width:max-content; margin-top:15px; padding-bottom:2px; display:block; border-bottom:1px solid rgba(31,61,43,.42); color:var(--forest); font-size:9px; font-weight:800; text-transform:uppercase; }
+.public-comparison-empty,.public-comparison-error{ margin-top:20px; padding:20px; border-radius:13px; text-align:center; }
+.public-comparison-empty{ border:1px solid rgba(31,61,43,.16); background:rgba(31,61,43,.04); }
+.public-comparison-empty strong{ color:var(--forest); font-size:13px; }
+.public-comparison-empty p{ margin-top:6px; color:var(--sage); font-size:10px; }
+.public-comparison-error{ border:1px solid rgba(138,75,47,.3); background:rgba(138,75,47,.07); color:var(--rust); font-size:11px; }
 .public-load-more:focus-visible{ outline:3px solid rgba(184,135,47,.28); outline-offset:3px; }
 .public-load-more{ justify-self:center; min-height:42px; padding:10px 18px; border:1px solid rgba(31,61,43,.34); border-radius:100px; background:#fff; color:var(--forest); font:inherit; font-size:9px; font-weight:750; letter-spacing:.08em; text-transform:uppercase; }
 .public-load-more.centers{ display:block; margin:28px auto 0; }
@@ -586,6 +647,15 @@ main>.dark-section{
   .public-center-card{ grid-template-columns:1fr; }
   .public-center-card-image{ width:calc(100% - 28px); min-height:0; aspect-ratio:16/10; margin:14px 14px 0; }
   .public-center-card-body{ padding:24px; }
+  .public-comparison-workspace{ padding:19px 15px; }
+  .public-comparison-toolbar{ grid-template-columns:1fr; gap:13px; }
+  .public-comparison-searches{ grid-template-columns:1fr; }
+  .public-comparison-actions{ width:100%; }
+  .public-comparison-clear{ flex:0 0 auto; }
+  .public-comparison-start{ flex:1; }
+  .public-comparison-results{ padding:19px 15px; scroll-margin-top:90px; }
+  .public-comparison-columns{ grid-template-columns:1fr; }
+  .public-comparison-package+.public-comparison-package{ border-top:1px solid rgba(31,61,43,.18); border-left:0; }
   .public-centre-detail-page{ padding-top:110px; }
   .public-centre-detail-nav{ top:70px; justify-content:flex-start; gap:26px; overflow-x:auto; }
   .public-centre-detail-header{ align-items:flex-start; flex-direction:column; }

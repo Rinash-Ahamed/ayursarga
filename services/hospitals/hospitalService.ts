@@ -13,10 +13,12 @@ import { getAuditActorId, updateAuditedDocument } from "@/services/firestore/aud
 import { authorizedApiRequest } from "@/services/api/client";
 
 type HospitalAdminUpdate = Partial<HospitalFields & Pick<HospitalDocument,
-  "status" | "isPublic" | "ayursargaRating" | "ayursargaReviewNote" | "imageUrls" | "locationUrl"
+  "status" | "isPublic" | "ayursargaRating" | "ayursargaReviewNote" | "imageUrls" | "locationUrl" |
+  "ayursargaPinCode" | "ayursargaGstin" | "legalEntityType" | "registrationNumber" | "panNumber" | "gstin" |
+  "contractEffectiveDate" | "contractExpiryDate" | "emergencyContact" | "emergencyReferralHospital"
 >>;
 type HospitalProfileInput = Pick<HospitalDocument,
-  "name" | "description" | "email" | "phone" | "hospitalPhone1" | "hospitalPhone2" | "address" | "city" | "district" | "state" |
+  "name" | "description" | "email" | "phone" | "hospitalPhone1" | "hospitalPhone2" | "registeredAddress" | "address" | "city" | "district" | "state" |
   "centreGuidelines" | "additionalCentreRules" | "facilities" | "legalPolicies" |
   "additionalBystandersAllowed" | "maxAdditionalBystanders" | "additionalBystanderCharge"
 >;
@@ -87,8 +89,8 @@ export function confirmHospitalContractSigning(id: string, previous: DocumentDat
   return adminHospitalAction(id, "contract_signed", { contractUrl });
 }
 
-export function activateHospital(id: string, previous: DocumentData) {
-  if (previous.contractStatus !== "signed" || !previous.contractSignedAt || !previous.contractUrl) {
+export function activateHospital(id: string, previous?: DocumentData) {
+  if (previous && (previous.contractStatus !== "signed" || !previous.contractSignedAt || !previous.contractUrl)) {
     throw new Error("Confirm the signed contract before activating the hospital.");
   }
   return authorizedApiRequest<{ ok: true }>(`/api/admin/hospitals/${encodeURIComponent(id)}/activate`, {

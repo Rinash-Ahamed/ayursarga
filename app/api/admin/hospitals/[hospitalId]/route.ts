@@ -6,13 +6,16 @@ import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
 import { apiHealth, apiJson } from "@/services/api/server";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
+import { validateHospitalContractDetails } from "@/features/hospitals/contractDetails";
 
 export const runtime = "nodejs";
 
 const EDITABLE_FIELDS = new Set([
   "name", "description", "email", "phone", "hospitalPhone1", "hospitalPhone2",
-  "address", "city", "district", "state", "imageUrls", "locationUrl",
+  "registeredAddress", "address", "city", "district", "state", "imageUrls", "locationUrl",
   "commissionPercentage", "ayursargaRating", "ayursargaReviewNote",
+  "ayursargaPinCode", "ayursargaGstin", "legalEntityType", "registrationNumber", "panNumber", "gstin",
+  "contractEffectiveDate", "contractExpiryDate", "emergencyContact", "emergencyReferralHospital",
 ]);
 
 type HospitalAdminAction = "update" | "contract_generated" | "contract_signed" | "deactivate" | "archive";
@@ -59,7 +62,12 @@ export async function PATCH(request: Request, context: { params: Promise<{ hospi
       changes = Object.fromEntries(Object.entries(input).filter(([key]) => EDITABLE_FIELDS.has(key)));
       if (!Object.keys(changes).length) return apiJson({ error: "No hospital changes were provided." }, 400);
 
+      const contractFields = [
+        "ayursargaPinCode", "ayursargaGstin", "legalEntityType", "registrationNumber", "panNumber", "gstin",
+        "contractEffectiveDate", "contractExpiryDate", "emergencyContact", "emergencyReferralHospital",
+      ];
       const assessmentOnly = Object.keys(changes).every((key) => key === "ayursargaRating" || key === "ayursargaReviewNote");
+      const contractOnly = Object.keys(changes).every((key) => contractFields.includes(key));
       if (assessmentOnly) {
         if (hospital.status !== "active") return apiJson({ error: "Public assessments can be updated only for an Active hospital." }, 409);
         const rating = changes.ayursargaRating;
@@ -70,6 +78,12 @@ export async function PATCH(request: Request, context: { params: Promise<{ hospi
         if (note !== null && (typeof note !== "string" || note.length > 400)) {
           return apiJson({ error: "The assessment note must be 400 characters or fewer." }, 400);
         }
+      } else if (contractOnly) {
+        const contractValidation = validateHospitalContractDetails({ ...hospital, ...changes });
+        if (!contractValidation.isValid) {
+          return apiJson({ error: Object.values(contractValidation.errors)[0] ?? "Contract particulars are invalid." }, 400);
+        }
+        Object.assign(changes, contractValidation.data);
       } else {
         const merged = { ...hospital, ...changes };
         const profileValidation = validateHospitalFields(merged);
@@ -86,6 +100,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ hospi
           const location = validateHospitalLocationUrl(changes.locationUrl);
           if (location.error) return apiJson({ error: location.error }, 400);
           changes.locationUrl = location.locationUrl;
+        }
+        if (contractFields.some((field) => Object.hasOwn(changes, field))) {
+          const contractValidation = validateHospitalContractDetails(merged);
+          if (!contractValidation.isValid) {
+            return apiJson({ error: Object.values(contractValidation.errors)[0] ?? "Contract particulars are invalid." }, 400);
+          }
+          Object.assign(changes, contractValidation.data);
         }
       }
     } else if (body.action === "contract_generated") {

@@ -13,16 +13,10 @@ import { getHospitalCapacity, saveHospitalCapacity } from "@/services/hospitals/
 import { COLLECTIONS } from "@/constants/firestore";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import { countUpcomingAvailabilityBlocks } from "@/features/hospitals/availability";
+import { useLocalGreeting } from "@/hooks/useLocalGreeting";
 
 type DashboardCounts = { services: number; bookings: number; requested: number; treatments: number; availabilityBlocks: number };
 const EMPTY_COUNTS: DashboardCounts = { services: 0, bookings: 0, requested: 0, treatments: 0, availabilityBlocks: 0 };
-
-function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
 
 export function HospitalDashboard() {
   const { userProfile } = useAuth();
@@ -35,6 +29,7 @@ export function HospitalDashboard() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useRepeatableMessage();
   const [message, setMessage] = useRepeatableMessage();
+  const greeting = useLocalGreeting();
 
   useEffect(() => {
     if (!hospitalId) return;
@@ -103,7 +98,7 @@ export function HospitalDashboard() {
     <PortalToast message={message} />
     <div className="portal-welcome">
       <span className="portal-welcome-eyebrow">Your Centre</span>
-      <h2>{getGreeting()}.</h2>
+      <h2>{greeting}.</h2>
       <p>Your centre overview at a glance. Update room availability or review booking requests below.</p>
     </div>
     <div className="portal-grid" aria-busy={loading}>

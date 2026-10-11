@@ -12,13 +12,7 @@ import { formatMonthYear, getCalendarMonthRange } from "@/utils/date";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
-
-function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
+import { useLocalGreeting } from "@/hooks/useLocalGreeting";
 
 type DashboardStats = {
   activeHospitals: number | null;
@@ -45,6 +39,7 @@ export function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const greeting = useLocalGreeting();
   const monthLabel = formatMonthYear();
 
   useEffect(() => {
@@ -93,7 +88,7 @@ export function AdminDashboard() {
     {error && <div className="portal-dashboard-feedback"><PortalFeedback error={error} /></div>}
     <div className="portal-welcome">
       <span className="portal-welcome-eyebrow">Ayursarga Platform</span>
-      <h2>{getGreeting()}{userProfile ? `, ${userProfile.name.split(" ")[0]}` : ""}.</h2>
+      <h2>{greeting}{userProfile ? `, ${userProfile.name.split(" ")[0]}` : ""}.</h2>
       <p>Here is your platform overview for {monthLabel}.</p>
     </div>
     {stats.pendingAvailability !== null && stats.pendingAvailability > 0 && <div className="portal-result-count"><strong>{stats.pendingAvailability}</strong> pending availability request{stats.pendingAvailability !== 1 ? "s" : ""} require attention</div>}

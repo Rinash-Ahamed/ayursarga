@@ -1,4 +1,5 @@
 import { isValidEmail, toTrimmedString } from "@/utils/text";
+import { isValidPhoneNumber } from "@/utils/phone";
 
 export type ConsultantFields = {
   name: string;
@@ -15,8 +16,6 @@ export type ConsultantFields = {
 export type ConsultantField = keyof ConsultantFields;
 export type ConsultantValidationErrors = Partial<Record<ConsultantField, string>>;
 
-const PHONE_PATTERN = /^[+()\d\s-]{7,25}$/;
-
 export function validateConsultantFields(input: Record<string, unknown>) {
   const data: ConsultantFields = {
     name: toTrimmedString(input.name, 120),
@@ -32,14 +31,14 @@ export function validateConsultantFields(input: Record<string, unknown>) {
   const errors: ConsultantValidationErrors = {};
   if (data.name.length < 2) errors.name = "Enter the consultant's name.";
   if (!isValidEmail(data.email)) errors.email = "Enter a valid email address.";
-  if (!PHONE_PATTERN.test(data.contactNo)) errors.contactNo = "Enter a valid contact number.";
-  if (!PHONE_PATTERN.test(data.whatsappNo)) errors.whatsappNo = "Enter a valid WhatsApp number.";
+  if (!isValidPhoneNumber(data.contactNo)) errors.contactNo = "Enter a 10-digit contact number.";
+  if (!isValidPhoneNumber(data.whatsappNo)) errors.whatsappNo = "Enter a 10-digit WhatsApp number.";
   if (data.qualification.length < 2) errors.qualification = "Enter the consultant's qualification.";
   if (!Number.isFinite(data.yearsExperience) || data.yearsExperience < 0 || data.yearsExperience > 80 || !Number.isInteger(data.yearsExperience * 2)) {
     errors.yearsExperience = "Experience must be between 0 and 80 years in 0.5-year steps.";
   }
-  if (data.emergencyContactNo && !PHONE_PATTERN.test(data.emergencyContactNo)) {
-    errors.emergencyContactNo = "Enter a valid emergency contact number.";
+  if (data.emergencyContactNo && !isValidPhoneNumber(data.emergencyContactNo)) {
+    errors.emergencyContactNo = "Enter a 10-digit emergency contact number.";
   }
   return { data, errors, isValid: Object.keys(errors).length === 0 };
 }

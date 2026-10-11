@@ -53,6 +53,7 @@ export function HospitalProfile() {
         phone: validation.data.phone,
         hospitalPhone1: validation.data.hospitalPhone1,
         hospitalPhone2: validation.data.hospitalPhone2,
+        registeredAddress: validation.data.registeredAddress,
         address: validation.data.address,
         city: validation.data.city,
         district: validation.data.district,

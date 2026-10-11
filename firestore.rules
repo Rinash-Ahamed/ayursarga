@@ -57,12 +57,14 @@ service cloud.firestore {
     function hasExactHospitalFields() {
       return request.resource.data.keys().hasOnly([
         'name', 'description', 'email', 'phone', 'hospitalPhone1', 'hospitalPhone2',
-        'address', 'city', 'district', 'state',
+        'registeredAddress', 'address', 'city', 'district', 'state',
         'imageUrl', 'imageUrls', 'ayursargaRating', 'ayursargaReviewNote',
         'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies', 'locationUrl',
         'additionalBystandersAllowed', 'maxAdditionalBystanders', 'additionalBystanderCharge',
         'blockedDateRanges',
         'status', 'isPublic', 'commissionPercentage',
+        'ayursargaPinCode', 'ayursargaGstin', 'legalEntityType', 'registrationNumber', 'panNumber', 'gstin',
+        'contractEffectiveDate', 'contractExpiryDate', 'emergencyContact', 'emergencyReferralHospital',
         'contractStatus', 'contractGeneratedAt', 'contractGeneratedBy',
         'contractSignedAt', 'contractSignedBy', 'contractUrl',
         'contractSignedAt2', 'contractSignedBy2', 'contractUrl2', 'activatedAt', 'activatedBy',
@@ -130,6 +132,9 @@ service cloud.firestore {
           && request.resource.data.hospitalPhone2.size() >= 7
           && request.resource.data.hospitalPhone2.size() <= 25
         ))
+        && request.resource.data.get('registeredAddress', request.resource.data.address) is string
+        && request.resource.data.get('registeredAddress', request.resource.data.address).size() >= 10
+        && request.resource.data.get('registeredAddress', request.resource.data.address).size() <= 300
         && request.resource.data.address is string
         && request.resource.data.address.size() >= 10
         && request.resource.data.address.size() <= 300
@@ -400,7 +405,7 @@ service cloud.firestore {
       return (action == 'update'
           && changed.hasOnly([
             'name', 'description', 'email', 'phone', 'hospitalPhone1', 'hospitalPhone2',
-            'address', 'city', 'district', 'state',
+            'registeredAddress', 'address', 'city', 'district', 'state',
             'imageUrl', 'imageUrls', 'ayursargaRating', 'ayursargaReviewNote',
             'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies', 'locationUrl',
             'additionalBystandersAllowed', 'maxAdditionalBystanders', 'additionalBystanderCharge',
@@ -603,7 +608,7 @@ service cloud.firestore {
           && hasValidHospitalProfileFields()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name', 'description', 'email', 'phone', 'hospitalPhone1', 'hospitalPhone2',
-            'address', 'city', 'district', 'state',
+            'registeredAddress', 'address', 'city', 'district', 'state',
             'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies',
             'additionalBystandersAllowed', 'maxAdditionalBystanders', 'additionalBystanderCharge',
             'updatedAt', 'updatedBy', 'lastAuditId'

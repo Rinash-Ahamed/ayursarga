@@ -1,6 +1,5 @@
 import { toTrimmedString } from "@/utils/text";
-
-const PHONE_PATTERN = /^[+()\d\s-]{7,25}$/;
+import { isValidPhoneNumber } from "@/utils/phone";
 
 export function validateConsumerContact(
   input: { name: unknown; phone: unknown; address: unknown; privacyConsent?: unknown },
@@ -12,7 +11,7 @@ export function validateConsumerContact(
   const privacyConsentAccepted = input.privacyConsent === true || input.privacyConsent === "on";
   const errors: Partial<Record<"name" | "phone" | "address" | "privacyConsent", string>> = {};
   if (name.length < 2) errors.name = "Enter your full name.";
-  if (!PHONE_PATTERN.test(phone)) errors.phone = "Enter a valid contact number using 7 to 25 digits or common phone symbols.";
+  if (!isValidPhoneNumber(phone)) errors.phone = "Enter a valid 10-digit contact number.";
   if (requirePrivacyConsent && !privacyConsentAccepted) errors.privacyConsent = "Read and accept the Customer Terms & Conditions and Privacy Policy before continuing.";
   return {
     data: { name, phone, address: address || null, privacyConsentAccepted },

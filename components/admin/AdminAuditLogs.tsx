@@ -18,7 +18,7 @@ import { formatStatus } from "@/utils/text";
 import { toDate } from "@/utils/date";
 
 type AuditCursor = QueryPageOptions["cursor"];
-type DateRange = "" | "today" | "7days" | "30days";
+type DateRange = "" | "today" | "7days" | "30days" | "custom";
 type AuditRow = DocumentRecord<AuditLogDocument> & {
   actorName: string;
   activityLabel: string;
@@ -50,6 +50,20 @@ const RECORD_LABELS: Record<string, string> = {
 function formatDate(value: unknown) {
   const date = toDate(value);
   return date ? new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(date) : "Unknown time";
+}
+
+function localDate(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const date = new Date(year, month - 1, day);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function nextLocalDay(value: string) {
+  const date = localDate(value);
+  if (!date) return null;
+  date.setDate(date.getDate() + 1);
+  return date;
 }
 
 function areaLabel(module: string) {
@@ -128,16 +142,27 @@ export function AdminAuditLogs() {
   const [area, setArea] = useState("");
   const [activity, setActivity] = useState("");
   const [dateRange, setDateRange] = useState<DateRange>("");
+  const [customDateFrom, setCustomDateFrom] = useState("");
+  const [customDateTo, setCustomDateTo] = useState("");
   const [reloadVersion, setReloadVersion] = useState(0);
   const requestVersion = useRef(0);
   const cursor = pageCursors[pageIndex] ?? null;
+  const dateBounds = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (dateRange === "today") return { from: startOfToday, before: new Date(startOfToday.getFullYear(), startOfToday.getMonth(), startOfToday.getDate() + 1) };
+    if (dateRange === "7days") return { from: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1_000), before: undefined };
+    if (dateRange === "30days") return { from: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1_000), before: undefined };
+    if (dateRange === "custom") return { from: localDate(customDateFrom) ?? undefined, before: nextLocalDay(customDateTo) ?? undefined };
+    return { from: undefined, before: undefined };
+  }, [customDateFrom, customDateTo, dateRange]);
 
   useEffect(() => {
     const version = ++requestVersion.current;
     const timeout = window.setTimeout(() => {
       setIsLoading(true);
       setLoadError(null);
-      void listAuditLogs({ pageSize: 20, cursor }).then(async (page) => {
+      void listAuditLogs({ pageSize: 20, cursor, timestampFrom: dateBounds.from, timestampBefore: dateBounds.before }).then(async (page) => {
         const names = await getUserDisplayNames(page.documents.map((item) => item.actorId)).catch(() => new Map<string, string>());
         if (version !== requestVersion.current) return;
         setItems(page.documents);
@@ -161,7 +186,7 @@ export function AdminAuditLogs() {
       window.clearTimeout(timeout);
       requestVersion.current += 1;
     };
-  }, [cursor, pageIndex, reloadVersion, setActionError]);
+  }, [cursor, dateBounds, pageIndex, reloadVersion, setActionError]);
 
   const rows = useMemo<AuditRow[]>(() => items.map((item) => ({
     ...item,
@@ -174,16 +199,6 @@ export function AdminAuditLogs() {
 
   const filteredRows = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const earliest = dateRange === "today"
-      ? startOfToday
-      : dateRange === "7days"
-        ? new Date(now.getTime() - 7 * 24 * 60 * 60 * 1_000)
-        : dateRange === "30days"
-          ? new Date(now.getTime() - 30 * 24 * 60 * 60 * 1_000)
-          : null;
-
     return rows.filter((item) => {
       const timestamp = toDate(item.timestamp);
       const matchesQuery = !query || [item.activityLabel, item.areaLabel, item.recordLabel, item.actorName, readableRole(item.actorRole)]
@@ -191,9 +206,10 @@ export function AdminAuditLogs() {
       return matchesQuery
         && (!area || item.module === area)
         && (!activity || item.action === activity)
-        && (!earliest || Boolean(timestamp && timestamp >= earliest));
+        && (!dateBounds.from || Boolean(timestamp && timestamp >= dateBounds.from))
+        && (!dateBounds.before || Boolean(timestamp && timestamp < dateBounds.before));
     });
-  }, [activity, area, dateRange, rows, search]);
+  }, [activity, area, dateBounds, rows, search]);
 
   const hasFilters = Boolean(search.trim() || area || activity || dateRange);
 
@@ -202,6 +218,29 @@ export function AdminAuditLogs() {
     setArea("");
     setActivity("");
     setDateRange("");
+    setCustomDateFrom("");
+    setCustomDateTo("");
+    setPageIndex(0);
+    setPageCursors([null]);
+  }
+
+  function changeDateRange(value: DateRange) {
+    setDateRange(value);
+    setPageIndex(0);
+    setPageCursors([null]);
+  }
+
+  function changeCustomDateFrom(value: string) {
+    setCustomDateFrom(value);
+    if (customDateTo && value > customDateTo) setCustomDateTo("");
+    setPageIndex(0);
+    setPageCursors([null]);
+  }
+
+  function changeCustomDateTo(value: string) {
+    setCustomDateTo(value);
+    setPageIndex(0);
+    setPageCursors([null]);
   }
 
   function nextPage() {
@@ -252,9 +291,13 @@ export function AdminAuditLogs() {
       <label className="portal-filter-field portal-audit-search"><span>Search this page</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Hospital, person or activity" /></label>
       <label className="portal-filter-field"><span>Area</span><select value={area} onChange={(event) => setArea(event.target.value)}><option value="">All areas</option><option value="hospitals">Hospitals</option><option value="availability">Availability</option><option value="services">Services</option><option value="bookings">Bookings</option><option value="users">Users</option><option value="consultants">Our Consultants</option></select></label>
       <label className="portal-filter-field"><span>Activity</span><select value={activity} onChange={(event) => setActivity(event.target.value)}><option value="">All activities</option>{Object.entries(ACTION_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-      <label className="portal-filter-field"><span>When</span><select value={dateRange} onChange={(event) => setDateRange(event.target.value as DateRange)}><option value="">Any date</option><option value="today">Today</option><option value="7days">Last 7 days</option><option value="30days">Last 30 days</option></select></label>
+      <label className="portal-filter-field"><span>When</span><select value={dateRange} onChange={(event) => changeDateRange(event.target.value as DateRange)}><option value="">Any date</option><option value="today">Today</option><option value="7days">Last 7 days</option><option value="30days">Last 30 days</option><option value="custom">Custom date range</option></select></label>
       <div className="portal-filter-actions"><button className="portal-button secondary" type="button" disabled={!hasFilters} onClick={clearFilters}>Clear filters</button></div>
-      <p className="portal-audit-filter-note">Filters apply to the 20 activities on this page. Use Previous or Next to review another page.</p>
+      {dateRange === "custom" && <div className="portal-audit-custom-dates">
+        <label className="portal-filter-field"><span>From date</span><input type="date" value={customDateFrom} max={customDateTo || undefined} onChange={(event) => changeCustomDateFrom(event.target.value)} /></label>
+        <label className="portal-filter-field"><span>To date</span><input type="date" value={customDateTo} min={customDateFrom || undefined} onChange={(event) => changeCustomDateTo(event.target.value)} /></label>
+      </div>}
+      <p className="portal-audit-filter-note">Date filters search the full audit history. Search, area and activity filters apply to the 20 activities on this page.</p>
     </div>
     <PortalToast message={actionError ?? message} tone={actionError ? "error" : "success"} />
     <PortalFeedback empty={!loadError && !isLoading && items.length === 0 ? "No audit records are available." : undefined} />

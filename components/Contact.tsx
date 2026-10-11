@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { FadeUp } from "./Reveal";
 import MagneticButton from "./MagneticButton";
 import { clearGuidanceProfile, formatGuidanceProfile, loadGuidanceProfile, type GuidanceProfile } from "@/lib/guidanceProfile";
+import { PhoneInput } from "@/components/forms/PhoneInput";
 
 type FormStatus = "idle" | "sending" | "sent" | "error";
 
@@ -78,7 +79,7 @@ export default function Contact({ guidanceProfile = null, initialInterest = "" }
         <h2>{isPartnership ? "Introduce your centre." : "How can we help?"}</h2>
         <p className="contact-form-intro">Complete the details below and the Ayursarga team will respond to your request.</p>
         {status === "sent" ? <FadeUp className="form-success"><span>&#10003;</span><h3>{isPartnership ? "Your partnership enquiry is on its way." : "Thank you. Your journey has begun."}</h3><p>{isPartnership ? "Our team will review your hospital details and contact you about approval and onboarding. Appointment requests begin after activation." : "Your request has been delivered to info@ayursarga.com."}</p></FadeUp> : <form className="contact-form" onSubmit={submit}>
-          <div className="form-row"><input name="name" aria-label="Your name" type="text" placeholder="Your name" required /><input name="phone" aria-label="Phone number" type="tel" placeholder="Phone number" required /></div>
+          <div className="form-row"><input name="name" aria-label="Your name" type="text" placeholder="Your name" required /><PhoneInput name="phone" aria-label="Phone number" autoComplete="tel" placeholder="10-digit phone number" required /></div>
           <input name="email" aria-label="Email address" type="email" placeholder="Email address" required />
           {displayedGuidanceProfile && <div className="captured-match" role="status">
             <span>Your guidance preferences</span>

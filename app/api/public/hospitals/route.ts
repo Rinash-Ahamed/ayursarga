@@ -15,6 +15,7 @@ export async function GET(request: Request) {
     const pageSize = publicPageSize(url.searchParams.get("pageSize"));
     const cursor = validPublicDocumentId(url.searchParams.get("cursor"));
     const serviceName = (url.searchParams.get("service") ?? "").trim().slice(0, 100);
+    const searchText = (url.searchParams.get("q") ?? "").trim().replace(/\s+/g, " ").slice(0, 80);
     const firestore = getFirebaseAdminFirestore();
 
     if (serviceName) {
@@ -44,6 +45,26 @@ export async function GET(request: Request) {
         cursor: page.at(-1)?.id ?? null,
         hasMore: serviceSnapshot.size > pageSize,
       }, 200, { cache: "public-short" });
+    }
+
+    if (searchText) {
+      const titleCase = searchText.replace(/(^|\s)\S/g, (character) => character.toUpperCase());
+      const searchPrefixes = [...new Set([searchText, titleCase, searchText.toUpperCase()])];
+      const snapshots = await Promise.all(searchPrefixes.map((prefix) => firestore.collection("hospitals")
+        .where("isPublic", "==", true)
+        .where("status", "==", "active")
+        .orderBy("name", "asc")
+        .startAt(prefix)
+        .endAt(`${prefix}\uf8ff`)
+        .limit(pageSize)
+        .get()));
+      const matches = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>();
+      snapshots.forEach((snapshot) => snapshot.docs.forEach((document) => matches.set(document.id, document)));
+      const documents = [...matches.values()]
+        .sort((left, right) => String(left.data().name ?? "").localeCompare(String(right.data().name ?? "")))
+        .slice(0, pageSize)
+        .map((document) => publicHospitalListProjection(document.id, document.data()));
+      return apiJson({ documents, cursor: null, hasMore: false }, 200, { cache: "public-short" });
     }
 
     let hospitalQuery: FirebaseFirestore.Query = firestore.collection("hospitals")

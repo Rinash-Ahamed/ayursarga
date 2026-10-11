@@ -8,17 +8,12 @@ import { RequireRole } from "@/components/auth/RequireRole";
 import { ROUTES } from "@/config/routes";
 import { countDocuments } from "@/services/firestore/firestoreService";
 import { COLLECTIONS } from "@/constants/firestore";
-
-function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
+import { useLocalGreeting } from "@/hooks/useLocalGreeting";
 
 function ConsumerHome() {
   const { firebaseUser, userProfile } = useAuth();
   const [bookingCount, setBookingCount] = useState<number | null>(null);
+  const greeting = useLocalGreeting();
 
   useEffect(() => {
     if (!firebaseUser) return;
@@ -43,7 +38,7 @@ function ConsumerHome() {
     <div className="portal-consumer-home">
       <div className="portal-consumer-home-hero">
         <span className="portal-welcome-eyebrow">My Ayursarga</span>
-        <h1>{getGreeting()}{firstName ? `, ${firstName}` : ""}</h1>
+        <h1>{greeting}{firstName ? `, ${firstName}` : ""}</h1>
         <p>Your personal wellness hub. Browse Ayurveda healing centres, manage your appointment requests, and follow your care journey.</p>
         {bookingCount !== null && bookingCount > 0 && <div className="portal-consumer-home-stat">
           <strong>{bookingCount}</strong>
