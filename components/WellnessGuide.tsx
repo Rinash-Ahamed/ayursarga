@@ -87,6 +87,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
   const guidePanelRef = useRef<HTMLDivElement>(null);
   const pathGridRef = useRef<HTMLDivElement>(null);
   const pendingScrollTarget = useRef<"guide" | "grid" | null>(null);
+  const scrollFrameRef = useRef(0);
   const [selectedPath, setSelectedPath] = useState<WellnessPath | null>(null);
   const [step, setStep] = useState<GuideStep>(0);
   const [preferences, setPreferences] = useState<string[]>([]);
@@ -116,31 +117,31 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
     || Boolean(consultationType && preferredAppointmentDate && preferredTimeSlot);
   const earliestAppointmentDate = new Date().toISOString().slice(0, 10);
 
-  useEffect(() => {
-    if (!pendingScrollTarget.current) return;
-    let secondFrame = 0;
-    const firstFrame = window.requestAnimationFrame(() => {
-      secondFrame = window.requestAnimationFrame(() => {
-        const target = pendingScrollTarget.current === "guide" ? guidePanelRef.current : pathGridRef.current;
-        pendingScrollTarget.current = null;
-        if (!target) return;
-        const request = new CustomEvent("ayursarga:scroll-to", {
-          cancelable: true,
-          detail: { target, offset: 16 },
-        });
-        const handled = !window.dispatchEvent(request);
-        if (handled) return;
-        const navigationHeight = document.getElementById("site-nav")?.getBoundingClientRect().height ?? 0;
-        const top = window.scrollY + target.getBoundingClientRect().top - navigationHeight - 16;
-        window.scrollTo({ top: Math.max(0, top), behavior: reduceMotion ? "auto" : "smooth" });
-      });
-    });
+  useEffect(() => () => {
+    if (scrollFrameRef.current) window.cancelAnimationFrame(scrollFrameRef.current);
+  }, []);
 
-    return () => {
-      window.cancelAnimationFrame(firstFrame);
-      window.cancelAnimationFrame(secondFrame);
-    };
-  }, [selectedPath, reduceMotion]);
+  function scrollToSettledContent() {
+    const requestedTarget = pendingScrollTarget.current;
+    if (!requestedTarget) return;
+    if (scrollFrameRef.current) window.cancelAnimationFrame(scrollFrameRef.current);
+
+    scrollFrameRef.current = window.requestAnimationFrame(() => {
+      scrollFrameRef.current = 0;
+      const target = requestedTarget === "guide" ? guidePanelRef.current : pathGridRef.current;
+      if (!target) return;
+      pendingScrollTarget.current = null;
+      const request = new CustomEvent("ayursarga:scroll-to", {
+        cancelable: true,
+        detail: { target, offset: 16 },
+      });
+      const handled = !window.dispatchEvent(request);
+      if (handled) return;
+      const navigationHeight = document.getElementById("site-nav")?.getBoundingClientRect().height ?? 0;
+      const top = window.scrollY + target.getBoundingClientRect().top - navigationHeight - 16;
+      window.scrollTo({ top: Math.max(0, top), behavior: reduceMotion ? "auto" : "smooth" });
+    });
+  }
 
   function resetAnswers() {
     setStep(0);
@@ -209,7 +210,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
         <p>Tell us what you&rsquo;re looking for, and we&rsquo;ll help you find the right care.</p>
       </div>
 
-      <AnimatePresence initial={false} mode="popLayout">
+      <AnimatePresence initial={false} mode="popLayout" onExitComplete={scrollToSettledContent}>
         {selectedPath && <motion.div
           ref={guidePanelRef}
           id="wellness-guidance"

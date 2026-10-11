@@ -72,18 +72,6 @@ html[data-ayursarga-opening="seen"] .public-opening{ display:none; }
 /* ==========================================================================
    Ambient layers
    ========================================================================== */
-#particle-canvas-wrap{
-  position:fixed; inset:0; width:100%; height:100dvh; z-index:5; pointer-events:none;
-  transform:translateZ(0); contain:strict;
-}
-#particle-canvas-wrap,
-#particle-canvas-wrap *,
-#particle-canvas-wrap canvas{
-  pointer-events:none !important;
-  touch-action:none !important;
-  user-select:none !important;
-}
-#particle-canvas-wrap canvas{ transform:translateZ(0); }
 .scroll-logo{
   position:fixed; left:24px; top:calc(50% - 27px); z-index:50;
   width:54px; height:54px; display:grid; place-items:center; pointer-events:none; will-change:transform;
@@ -119,7 +107,6 @@ html[data-ayursarga-opening="seen"] .public-opening{ display:none; }
 }
 #site-nav.scrolled{
   background: rgba(255,255,255,.96);
-  backdrop-filter: blur(14px);
   padding:calc(14px + env(safe-area-inset-top)) 0 14px;
   box-shadow: 0 1px 0 rgba(58,61,46,.14),0 8px 24px rgba(58,61,46,.05);
 }
@@ -165,7 +152,7 @@ html[data-ayursarga-opening="seen"] .public-opening{ display:none; }
 .nav-profile-trigger{ width:46px; height:46px; padding:1px; display:grid; place-items:center; overflow:hidden; border:2px solid rgba(184,135,47,.72); border-radius:50%; background:transparent; box-shadow:0 7px 22px rgba(31,61,43,.14); cursor:pointer; }
 .nav-profile-avatar-image{ width:40px; height:40px; border-radius:50%; object-fit:cover; }
 #site-nav:not(.scrolled) .nav-profile-trigger{ border-color:rgba(255,255,255,.82); }
-.nav-profile-menu{ position:absolute; top:calc(100% + 12px); right:0; width:min(290px,calc(100vw - 28px)); max-height:calc(100dvh - 92px); overflow:auto; padding:16px; display:grid; gap:13px; border:1px solid rgba(31,61,43,.22); border-radius:18px; background:rgba(255,255,255,.98); box-shadow:0 20px 48px rgba(31,61,43,.18); backdrop-filter:blur(16px); }
+.nav-profile-menu{ position:absolute; top:calc(100% + 12px); right:0; width:min(290px,calc(100vw - 28px)); max-height:calc(100dvh - 92px); overflow:auto; padding:16px; display:grid; gap:13px; border:1px solid rgba(31,61,43,.22); border-radius:18px; background:#fff; box-shadow:0 20px 48px rgba(31,61,43,.18); }
 .nav-profile-details{ min-width:0; padding:1px 1px 12px; display:grid; gap:4px; border-bottom:1px solid rgba(31,61,43,.14); text-align:left; }
 .nav-profile-name{ overflow:hidden; color:var(--forest); font-size:13px; font-weight:750; line-height:1.35; text-overflow:ellipsis; white-space:nowrap; }
 .nav-profile-email{ overflow:hidden; color:var(--sage); font-size:10px; line-height:1.4; text-overflow:ellipsis; white-space:nowrap; }
@@ -204,7 +191,7 @@ html[data-ayursarga-opening="seen"] .public-opening{ display:none; }
     padding:7px max(8px,env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));
     display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); align-items:end;
     border-top:1px solid rgba(31,61,43,.14); background:rgba(255,255,255,.97);
-    box-shadow:0 -12px 34px rgba(31,61,43,.12); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+    box-shadow:0 -12px 34px rgba(31,61,43,.12);
   }
   .mobile-bottom-nav>a,.mobile-bottom-account>button{
     min-width:0; min-height:50px; padding:4px 2px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:4px;
@@ -325,7 +312,7 @@ html[data-ayursarga-opening="seen"] .public-opening{ display:none; }
 .hero-support-actions .btn-secondary{ min-height:46px; padding:13px 24px; font-size:11.5px; }
 #hero .btn-primary{ background:var(--gold); color:var(--forest); box-shadow:0 14px 38px rgba(0,0,0,.24); }
 #hero .btn-primary:hover{ background:var(--cream); color:var(--forest); }
-#hero .btn-secondary{ border-color:rgba(255,255,255,.64); background:rgba(255,255,255,.12); color:var(--cream); backdrop-filter:blur(12px); }
+#hero .btn-secondary{ border-color:rgba(255,255,255,.64); background:rgba(18,39,27,.7); color:var(--cream); }
 #hero .btn-secondary:hover{ border-color:var(--cream); background:var(--cream); color:var(--forest); }
 #hero .btn-text{ color:rgba(255,255,255,.86); border-bottom-color:rgba(255,255,255,.48); }
 #hero .btn-text:hover{ color:var(--cream); }
@@ -436,7 +423,7 @@ main>.dark-section{
 .public-center-image-arrows button:hover,.public-center-image-arrows button:focus-visible{ border-color:#fff; background:var(--forest); }
 .public-center-image-arrows button:focus-visible{ outline:3px solid rgba(255,255,255,.58); outline-offset:2px; }
 .public-center-image-arrows svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
-.public-center-image-nav{ position:absolute; z-index:3; right:14px; bottom:14px; left:14px; display:flex; align-items:center; gap:6px; width:max-content; max-width:calc(100% - 28px); padding:7px 10px; border-radius:100px; background:rgba(18,23,20,.72); backdrop-filter:blur(8px); }
+.public-center-image-nav{ position:absolute; z-index:3; right:14px; bottom:14px; left:14px; display:flex; align-items:center; gap:6px; width:max-content; max-width:calc(100% - 28px); padding:7px 10px; border-radius:100px; background:rgba(18,23,20,.9); }
 .public-center-image-nav button{ width:7px; height:7px; padding:0; border:1px solid rgba(255,255,255,.8); border-radius:50%; background:transparent; cursor:pointer; pointer-events:auto; }
 .public-center-image-nav button.active{ background:#fff; }
 .public-center-image-nav span{ margin-left:3px; color:#fff; font-size:9px; font-weight:700; letter-spacing:.05em; }
@@ -530,7 +517,7 @@ main>.dark-section{
 .public-centre-detail-inner{ max-width:1180px; }
 .public-centre-back{ display:inline-flex; color:var(--forest); font-size:11px; font-weight:750; }
 .public-centre-back:hover{ color:var(--clay-dark); }
-.public-centre-detail-nav{ position:sticky; top:82px; z-index:8; margin:22px 0 30px; padding:0 12px; display:flex; justify-content:space-between; gap:12px; overflow-x:auto; border:1px solid rgba(31,61,43,.17); border-radius:12px; background:rgba(255,255,255,.97); box-shadow:0 7px 20px rgba(31,61,43,.055); backdrop-filter:blur(12px); scrollbar-width:none; }
+.public-centre-detail-nav{ position:sticky; top:82px; z-index:8; margin:22px 0 30px; padding:0 12px; display:flex; justify-content:space-between; gap:12px; overflow-x:auto; border:1px solid rgba(31,61,43,.17); border-radius:12px; background:rgba(255,255,255,.97); box-shadow:0 7px 20px rgba(31,61,43,.055); scrollbar-width:none; }
 .public-centre-detail-nav::-webkit-scrollbar{ display:none; }
 .public-centre-detail-nav a{ position:relative; margin:5px 0; padding:10px 12px; border-radius:8px; color:var(--sage); font-size:10px; font-weight:700; white-space:nowrap; transition:background-color .2s ease,color .2s ease; }
 .public-centre-detail-nav a:hover,.public-centre-detail-nav a:focus-visible{ background:rgba(31,61,43,.06); color:var(--forest); }
@@ -1081,7 +1068,7 @@ button{ cursor:pointer; }
 .hero-value-slider{
   position:relative; min-height:78px; padding:16px 72px 16px 20px;
   border:1px solid rgba(255,255,255,.24); border-left:3px solid var(--gold); border-radius:15px;
-  background:rgba(18,39,27,.46); box-shadow:0 12px 34px rgba(0,0,0,.14); backdrop-filter:blur(8px);
+  background:rgba(18,39,27,.46); box-shadow:0 12px 34px rgba(0,0,0,.14);
 }
 .hero-value-copy{ min-height:45px; display:flex; align-items:center; }
 .hero-value-slide strong{ display:block; margin-bottom:5px; color:var(--gold); font-size:10px; font-weight:800; letter-spacing:.17em; text-transform:uppercase; }
@@ -1386,39 +1373,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   outline:2px solid var(--clay-dark); outline-offset:3px;
 }
 
-/* Real botanical SVG drift */
-.neem-drift{ position:absolute; inset:0; overflow:hidden; }
-.drifting-neem{
-  position:absolute; left:var(--left); top:-180px; width:var(--size); height:auto;
-  opacity:.2;
-  transform-origin:50% 20%; will-change:transform;
-  animation:neemFall var(--duration) linear var(--delay) infinite;
-}
-.drifting-neem:nth-child(even){ animation-name:neemFallReverse; opacity:.15; }
-@media (hover:none),(pointer:coarse){
-  .drifting-neem:nth-child(n+4){ display:none; }
-}
-@keyframes neemFall{
-  0%{ transform:translate3d(-12px,-180px,0) rotate(var(--rotate)); }
-  45%{ transform:translate3d(34px,45vh,0) rotate(75deg); }
-  100%{ transform:translate3d(-18px,calc(100vh + 200px),0) rotate(190deg); }
-}
-@keyframes neemFallReverse{
-  0%{ transform:translate3d(14px,-180px,0) rotate(var(--rotate)); }
-  48%{ transform:translate3d(-32px,48vh,0) rotate(-68deg); }
-  100%{ transform:translate3d(20px,calc(100vh + 200px),0) rotate(-175deg); }
-}
-.burst-neem{
-  position:fixed; width:20px; height:auto; z-index:9997; opacity:0;
-  transform:translate(-50%,-50%);
-  animation:leafRelease 1.35s var(--ease-out) var(--burst-delay) forwards;
-}
-@keyframes leafRelease{
-  0%{ opacity:0; transform:translate(-50%,-50%) scale(.35) rotate(0deg); }
-  12%{ opacity:.7; }
-  100%{ opacity:0; transform:translate(calc(-50% + var(--tx)),calc(-50% + var(--ty))) scale(1) rotate(var(--burst-rotate)); }
-}
-
 /* Human editorial moments */
 .treatment-film{
   position:relative; height:clamp(480px,62vw,720px); margin-top:clamp(36px,4vw,48px); border-radius:28px;
@@ -1500,7 +1454,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   .treatment-film{ height:580px; border-radius:20px; }
   .treatment-film-shade{ background:linear-gradient(0deg,rgba(30,31,23,.78),rgba(30,31,23,.08) 75%); }
   .treatment-film-copy{ right:24px; bottom:92px; }
-  .drifting-neem:nth-child(n+7){ display:none; }
 }
 @media(max-width:380px){
   .mobile-bottom-nav{ padding-left:max(4px,env(safe-area-inset-left)); padding-right:max(4px,env(safe-area-inset-right)); }
@@ -1538,10 +1491,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .footer-bottom{ color:rgba(249,245,234,.68); }
 
 /* Public botanical glass: depth without weakening Ayursarga contrast. */
-#site-nav.scrolled,.mobile-bottom-nav,.public-centre-detail-nav{
-  -webkit-backdrop-filter:none;
-  backdrop-filter:none;
-}
 .dark-section{
   position:relative;
   isolation:isolate;
@@ -1571,8 +1520,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   border-color:rgba(255,255,255,.42);
   background:linear-gradient(135deg,rgba(12,45,30,.6),rgba(31,61,43,.38));
   box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 16px 40px rgba(0,0,0,.18);
-  -webkit-backdrop-filter:none;
-  backdrop-filter:none;
 }
 .quiz-card{
   border-color:rgba(232,198,109,.4);
@@ -1611,10 +1558,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     radial-gradient(circle at 88% 8%,rgba(232,198,109,.2),transparent 31%),
     linear-gradient(138deg,rgba(15,54,37,.96),rgba(31,76,52,.91));
   box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 24px 64px rgba(31,61,43,.15);
-}
-.quiz-card,.trust-signals,.centers-directory-page .public-search-heading,.contact-intro-panel{
-  -webkit-backdrop-filter:none;
-  backdrop-filter:none;
 }
 @media(max-width:900px),(hover:none),(pointer:coarse){
   .hero-value-slider{ background:linear-gradient(135deg,rgba(12,45,30,.82),rgba(31,61,43,.72)); }

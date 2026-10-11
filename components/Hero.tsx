@@ -80,8 +80,6 @@ export default function Hero() {
     const video = videoRef.current;
     if (!video || !canLoadVideo) return;
 
-    let scrollFrame = 0;
-    let resumeTimer: number | undefined;
     const playWhenAppropriate = () => {
       if (shouldReduceMotion || !isHeroVisible || document.hidden) {
         video.pause();
@@ -89,25 +87,11 @@ export default function Hero() {
       }
       void video.play().catch(() => undefined);
     };
-    const handleScroll = () => {
-      if (!scrollFrame) {
-        scrollFrame = window.requestAnimationFrame(() => {
-          scrollFrame = 0;
-          video.pause();
-        });
-      }
-      if (resumeTimer !== undefined) window.clearTimeout(resumeTimer);
-      resumeTimer = window.setTimeout(playWhenAppropriate, 180);
-    };
 
     playWhenAppropriate();
-    window.addEventListener("scroll", handleScroll, { passive: true });
     document.addEventListener("visibilitychange", playWhenAppropriate);
     return () => {
-      window.removeEventListener("scroll", handleScroll);
       document.removeEventListener("visibilitychange", playWhenAppropriate);
-      if (scrollFrame) window.cancelAnimationFrame(scrollFrame);
-      if (resumeTimer !== undefined) window.clearTimeout(resumeTimer);
       video.pause();
     };
   }, [canLoadVideo, isHeroVisible, shouldReduceMotion]);
