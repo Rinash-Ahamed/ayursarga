@@ -1,17 +1,17 @@
 import type { HospitalDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
+import { AYURSARGA_GSTIN, AYURSARGA_REGISTERED_OFFICE_PIN } from "@/features/hospitals/ayursargaCompanyDetails";
 
 const CONTRACT_BODY = `
-      <h1>Partner Centre Agreement</h1>
       <h2>1 Parties and term</h2>
       <table class="party-details"><tbody>
         <tr><th>Ayursarga</th><th>Partner Centre</th></tr>
-        <tr><td><strong>Legal identity</strong><br />AYURSARGA PVT LTD, trading as Ayursarga<br />CIN U86900KL2026PTC106500</td><td><strong>Legal identity</strong><br />{{PARTNER_NAME}}, operating as {{PARTNER_NAME}}<br />{{PARTNER_ENTITY_TYPE}} · Registration {{PARTNER_REGISTRATION}}</td></tr>
+        <tr><td><strong>Legal Entity</strong><br />AYURSARGA PVT LTD, as Ayursarga<br />CIN U86900KL2026PTC106500</td><td><strong>Legal Entity</strong><br />{{PARTNER_NAME}}, as {{PARTNER_NAME}}<br />{{PARTNER_ENTITY_TYPE}} · Registration {{PARTNER_REGISTRATION}}</td></tr>
         <tr><td><strong>Registered office</strong><br />5/1957 KUZHALMANNAM ROAD, KODUVAYUR, PALAKKAD, KERALA, {{AYURSARGA_PIN_CODE}}, INDIA</td><td><strong>Registered address</strong><br />{{PARTNER_REGISTERED_ADDRESS}}</td></tr>
         <tr><td><strong>Tax information</strong><br />PAN ABGCA7749G<br />GSTIN {{AYURSARGA_GSTIN}}</td><td><strong>Service address</strong><br />{{PARTNER_SERVICE_ADDRESS}}<div class="party-subdetail"><strong>Tax information</strong><br />PAN {{PARTNER_PAN}}<br />GSTIN {{PARTNER_GSTIN}}</div></td></tr>
       </tbody></table>
-      <p class="term-summary">Effective date {{EFFECTIVE_DATE}}; initial expiry date {{EXPIRY_DATE}}. Renewal requires written agreement. The relationship is non-exclusive; neither party may bind the other except for the collection authority below. No partnership, employment or joint venture is created. Each party bears its own onboarding costs unless agreed otherwise; no booking, revenue or outcome guarantee is given.</p>
-      <p>Legal notice emails: Ayursarga: partner@ayursarga.com; Partner {{PARTNER_EMAIL}}.<br />Operational contacts and phones: Ayursarga +91 97455 66687; Partner {{PARTNER_PHONES}}.<br />Partner emergency contact/phone {{PARTNER_EMERGENCY_CONTACT}}; Emergency referral hospital and transfer arrangements {{EMERGENCY_REFERRAL}}.</p>
+      <p class="term-summary">Effective date {{EFFECTIVE_DATE}}; Expiry date {{EXPIRY_DATE}}. Renewal requires written agreement. The relationship is non-exclusive; neither party may bind the other except for the collection authority below. No partnership, employment or joint venture is created. Each party bears its own onboarding costs unless agreed otherwise; no booking, revenue or outcome guarantee is given.</p>
+      <p>Legal notice emails: Ayursarga: support@ayursarga.com; Partner {{PARTNER_EMAIL}}.<br />Operational contacts and phones: Ayursarga +91 97455 66687; Partner {{PARTNER_PHONES}}.<br />Partner emergency contact/phone {{PARTNER_EMERGENCY_CONTACT}}; Emergency transfer arrangement and nearby hospital {{EMERGENCY_REFERRAL}}.</p>
       <h2>2 Agreed commercial terms</h2>
       <table><tbody>
         <tr><th>Item</th><th>Agreed term</th></tr>
@@ -109,8 +109,8 @@ function displayContractDate(value: string | undefined) {
 export function buildHospitalContractHtml(hospital: DocumentRecord<HospitalDocument>) {
   const commission = `${Number(hospital.commissionPercentage).toFixed(2)}%`;
   const populatedBody = CONTRACT_BODY
-    .replaceAll("{{AYURSARGA_PIN_CODE}}", escapeHtml(hospital.ayursargaPinCode))
-    .replaceAll("{{AYURSARGA_GSTIN}}", escapeHtml(hospital.ayursargaGstin))
+    .replaceAll("{{AYURSARGA_PIN_CODE}}", escapeHtml(AYURSARGA_REGISTERED_OFFICE_PIN))
+    .replaceAll("{{AYURSARGA_GSTIN}}", escapeHtml(AYURSARGA_GSTIN))
     .replaceAll("{{PARTNER_NAME}}", escapeHtml(hospital.name))
     .replaceAll("{{PARTNER_REGISTERED_ADDRESS}}", escapeHtml(partnerAddress(hospital, hospital.registeredAddress)))
     .replaceAll("{{PARTNER_SERVICE_ADDRESS}}", escapeHtml(partnerAddress(hospital, hospital.address)))

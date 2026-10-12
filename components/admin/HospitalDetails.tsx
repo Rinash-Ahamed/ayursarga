@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import type { HospitalDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import {
@@ -62,6 +62,23 @@ function indiaDateInputValue() {
   }).formatToParts(new Date());
   const part = (type: "year" | "month" | "day") => parts.find((item) => item.type === type)?.value ?? "";
   return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+function addYearsToDateInput(value: string, years: number) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return "";
+  const targetYear = Number(match[1]) + years;
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const lastDayOfTargetMonth = new Date(Date.UTC(targetYear, month, 0)).getUTCDate();
+  return `${targetYear}-${String(month).padStart(2, "0")}-${String(Math.min(day, lastDayOfTargetMonth)).padStart(2, "0")}`;
+}
+
+function updateContractExpiry(event: ChangeEvent<HTMLInputElement>) {
+  const expiryInput = event.currentTarget.form?.elements.namedItem("contractExpiryDate");
+  if (!(expiryInput instanceof HTMLInputElement)) return;
+  expiryInput.value = addYearsToDateInput(event.currentTarget.value, 3);
+  expiryInput.min = event.currentTarget.value;
 }
 
 function ContractFieldError({ field, errors }: { field: HospitalContractDetailField; errors: HospitalContractDetailErrors }) {
@@ -331,6 +348,8 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   }
 
   const contractStatus = hospital?.contractStatus ?? "not_generated";
+  const defaultContractEffectiveDate = hospital?.contractEffectiveDate ?? indiaDateInputValue();
+  const defaultContractExpiryDate = hospital?.contractExpiryDate ?? addYearsToDateInput(defaultContractEffectiveDate, 3);
   const contractParticularsComplete = Boolean(
     hospital && validateHospitalContractDetails({ ...hospital }).isValid,
   );
@@ -374,7 +393,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         </form> : <>
           <p>{hospital.description || "No description provided."}</p>
           <div className="portal-card-meta">
-            <span>{hospital.email}</span><span>Owner WhatsApp: {hospital.phone}</span><span>Hospital Phone 1: {hospital.hospitalPhone1 || "Not added"}</span>{hospital.hospitalPhone2 && <span>Hospital Phone 2: {hospital.hospitalPhone2}</span>}<span>{hospital.city}{hospital.district ? `, ${hospital.district}` : ""}, {hospital.state}</span><span>Commission {hospital.commissionPercentage}%</span>
+            <span>{hospital.email}</span><span>Owner WhatsApp: {hospital.phone}</span><span>Hospital Phone 1: {hospital.hospitalPhone1 || "Not added"}</span>{hospital.hospitalPhone2 && <span>Hospital Phone 2: {hospital.hospitalPhone2}</span>}
           </div>
           <p><strong>Registered address:</strong> {hospital.registeredAddress || hospital.address}</p>
           <p><strong>Service address:</strong> {hospital.address}</p>
@@ -430,16 +449,14 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         </div>
         {hospital.status === "pending" && <form className="portal-form portal-contract-particulars" onSubmit={saveContractDetails} noValidate>
           <div className="full portal-row-heading"><div><h3>Contract particulars</h3><p>Complete these legal and operational details before previewing the agreement.</p></div></div>
-          <label>Ayursarga registered-office PIN *<input name="ayursargaPinCode" inputMode="numeric" pattern="[0-9]{6}" defaultValue={hospital.ayursargaPinCode ?? ""} minLength={6} maxLength={6} required aria-invalid={Boolean(contractFieldErrors.ayursargaPinCode)} /><ContractFieldError field="ayursargaPinCode" errors={contractFieldErrors} /></label>
-          <label>Ayursarga GSTIN / Not applicable *<input name="ayursargaGstin" defaultValue={hospital.ayursargaGstin ?? ""} maxLength={20} required autoCapitalize="characters" placeholder="GSTIN or NOT APPLICABLE" aria-invalid={Boolean(contractFieldErrors.ayursargaGstin)} /><ContractFieldError field="ayursargaGstin" errors={contractFieldErrors} /></label>
           <label>Legal entity type *<input name="legalEntityType" defaultValue={hospital.legalEntityType ?? ""} maxLength={100} required aria-invalid={Boolean(contractFieldErrors.legalEntityType)} /><ContractFieldError field="legalEntityType" errors={contractFieldErrors} /></label>
           <label>Registration number *<input name="registrationNumber" defaultValue={hospital.registrationNumber ?? ""} maxLength={100} required aria-invalid={Boolean(contractFieldErrors.registrationNumber)} /><ContractFieldError field="registrationNumber" errors={contractFieldErrors} /></label>
           <label>PAN *<input name="panNumber" defaultValue={hospital.panNumber ?? ""} minLength={10} maxLength={10} required autoCapitalize="characters" aria-invalid={Boolean(contractFieldErrors.panNumber)} /><ContractFieldError field="panNumber" errors={contractFieldErrors} /></label>
           <label>GSTIN / Not applicable *<input name="gstin" defaultValue={hospital.gstin ?? ""} maxLength={20} required autoCapitalize="characters" placeholder="GSTIN or NOT APPLICABLE" aria-invalid={Boolean(contractFieldErrors.gstin)} /><ContractFieldError field="gstin" errors={contractFieldErrors} /></label>
-          <label>Effective date *<input name="contractEffectiveDate" type="date" defaultValue={hospital.contractEffectiveDate ?? indiaDateInputValue()} required aria-invalid={Boolean(contractFieldErrors.contractEffectiveDate)} /><ContractFieldError field="contractEffectiveDate" errors={contractFieldErrors} /></label>
-          <label>Initial expiry date *<input name="contractExpiryDate" type="date" defaultValue={hospital.contractExpiryDate ?? ""} required aria-invalid={Boolean(contractFieldErrors.contractExpiryDate)} /><ContractFieldError field="contractExpiryDate" errors={contractFieldErrors} /></label>
+          <label>Effective date *<input name="contractEffectiveDate" type="date" defaultValue={defaultContractEffectiveDate} onChange={updateContractExpiry} required aria-invalid={Boolean(contractFieldErrors.contractEffectiveDate)} /><ContractFieldError field="contractEffectiveDate" errors={contractFieldErrors} /></label>
+          <label>Expiry date *<input name="contractExpiryDate" type="date" defaultValue={defaultContractExpiryDate} min={defaultContractEffectiveDate} required aria-invalid={Boolean(contractFieldErrors.contractExpiryDate)} /><ContractFieldError field="contractExpiryDate" errors={contractFieldErrors} /></label>
           <label>Partner emergency contact *<input name="emergencyContact" defaultValue={hospital.emergencyContact ?? ""} maxLength={160} required aria-invalid={Boolean(contractFieldErrors.emergencyContact)} /><ContractFieldError field="emergencyContact" errors={contractFieldErrors} /></label>
-          <label>Emergency referral hospital / arrangement *<input name="emergencyReferralHospital" defaultValue={hospital.emergencyReferralHospital ?? ""} maxLength={200} required aria-invalid={Boolean(contractFieldErrors.emergencyReferralHospital)} /><ContractFieldError field="emergencyReferralHospital" errors={contractFieldErrors} /></label>
+          <label>Emergency transfer (nearby hospital transfer in case of an emergency) *<input name="emergencyReferralHospital" defaultValue={hospital.emergencyReferralHospital ?? ""} maxLength={200} required aria-invalid={Boolean(contractFieldErrors.emergencyReferralHospital)} /><ContractFieldError field="emergencyReferralHospital" errors={contractFieldErrors} /></label>
           <div className="portal-actions full"><button className="portal-button secondary" disabled={busy}>{busy ? "Saving..." : "Save contract particulars"}</button></div>
         </form>}
         {hospital.contractUrl && <p>Signed contract: <a className="portal-inline-link" href={hospital.contractUrl} target="_blank" rel="noreferrer">View contract</a></p>}
