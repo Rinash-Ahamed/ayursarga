@@ -245,7 +245,7 @@ export function buildHospitalContractPdf(hospital: DocumentRecord<HospitalDocume
   const currentDate = `${part("year")}-${part("month")}-${part("day")}`;
   return {
     blob: createPdf(pages),
-    filename: `ayursarga-partner-contract-${safeName}-${currentDate}.pdf`,
+    filename: `aspc-${safeName}-${currentDate}.pdf`,
     html,
   };
 }
