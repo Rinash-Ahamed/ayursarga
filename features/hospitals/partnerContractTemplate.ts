@@ -6,7 +6,7 @@ const CONTRACT_BODY = `
       <h2>1 Parties and term</h2>
       <table class="party-details"><tbody>
         <tr><th>Ayursarga</th><th>Partner Centre</th></tr>
-        <tr><td><strong>Legal Entity</strong><br />AYURSARGA PVT LTD, as Ayursarga<br />CIN U86900KL2026PTC106500</td><td><strong>Legal Entity</strong><br />{{PARTNER_NAME}}, as {{PARTNER_NAME}}<br />{{PARTNER_ENTITY_TYPE}} · Registration {{PARTNER_REGISTRATION}}</td></tr>
+        <tr><td><strong>Legal Entity</strong><br />AYURSARGA PVT LTD, as Ayursarga<br />CIN U86900KL2026PTC106500</td><td><strong>Legal Entity</strong><br />{{PARTNER_NAME}}, as {{PARTNER_NAME}}<br />{{PARTNER_ENTITY_TYPE}} · Registration {{PARTNER_REGISTRATION}}<br />CIN {{PARTNER_CIN}}</td></tr>
         <tr><td><strong>Registered office</strong><br />5/1957 KUZHALMANNAM ROAD, KODUVAYUR, PALAKKAD, KERALA, {{AYURSARGA_PIN_CODE}}, INDIA</td><td><strong>Registered address</strong><br />{{PARTNER_REGISTERED_ADDRESS}}</td></tr>
         <tr><td><strong>Tax information</strong><br />PAN ABGCA7749G<br />GSTIN {{AYURSARGA_GSTIN}}</td><td><strong>Service address</strong><br />{{PARTNER_SERVICE_ADDRESS}}<div class="party-subdetail"><strong>Tax information</strong><br />PAN {{PARTNER_PAN}}<br />GSTIN {{PARTNER_GSTIN}}</div></td></tr>
       </tbody></table>
@@ -118,6 +118,7 @@ export function buildHospitalContractHtml(hospital: DocumentRecord<HospitalDocum
     .replaceAll("{{PARTNER_PHONES}}", escapeHtml(partnerPhones(hospital)))
     .replaceAll("{{PARTNER_ENTITY_TYPE}}", escapeHtml(hospital.legalEntityType))
     .replaceAll("{{PARTNER_REGISTRATION}}", escapeHtml(hospital.registrationNumber))
+    .replaceAll("{{PARTNER_CIN}}", escapeHtml(hospital.cinNumber))
     .replaceAll("{{PARTNER_PAN}}", escapeHtml(hospital.panNumber))
     .replaceAll("{{PARTNER_GSTIN}}", escapeHtml(hospital.gstin))
     .replaceAll("{{EFFECTIVE_DATE}}", escapeHtml(displayContractDate(hospital.contractEffectiveDate)))

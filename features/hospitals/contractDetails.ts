@@ -3,6 +3,7 @@ import { toTrimmedString } from "@/utils/text";
 export type HospitalContractDetails = {
   legalEntityType: string;
   registrationNumber: string;
+  cinNumber: string;
   panNumber: string;
   gstin: string;
   contractEffectiveDate: string;
@@ -15,6 +16,7 @@ export type HospitalContractDetailField = keyof HospitalContractDetails;
 export type HospitalContractDetailErrors = Partial<Record<HospitalContractDetailField, string>>;
 
 const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+const CIN_PATTERN = /^[LU][0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$/;
 const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -22,6 +24,7 @@ export function validateHospitalContractDetails(input: Record<string, unknown>) 
   const data: HospitalContractDetails = {
     legalEntityType: toTrimmedString(input.legalEntityType, 100),
     registrationNumber: toTrimmedString(input.registrationNumber, 100),
+    cinNumber: toTrimmedString(input.cinNumber, 21).toUpperCase(),
     panNumber: toTrimmedString(input.panNumber, 10).toUpperCase(),
     gstin: toTrimmedString(input.gstin, 20).toUpperCase(),
     contractEffectiveDate: toTrimmedString(input.contractEffectiveDate, 10),
@@ -33,6 +36,7 @@ export function validateHospitalContractDetails(input: Record<string, unknown>) 
 
   if (data.legalEntityType.length < 2) errors.legalEntityType = "Enter the partner's legal entity type.";
   if (data.registrationNumber.length < 2) errors.registrationNumber = "Enter the partner's registration number.";
+  if (data.cinNumber !== "NOT APPLICABLE" && !CIN_PATTERN.test(data.cinNumber)) errors.cinNumber = "Enter a valid 21-character CIN or NOT APPLICABLE.";
   if (!PAN_PATTERN.test(data.panNumber)) errors.panNumber = "Enter a valid 10-character PAN.";
   if (data.gstin !== "NOT APPLICABLE" && !GSTIN_PATTERN.test(data.gstin)) errors.gstin = "Enter a valid GSTIN or NOT APPLICABLE.";
   if (!DATE_PATTERN.test(data.contractEffectiveDate)) errors.contractEffectiveDate = "Select the agreement effective date.";

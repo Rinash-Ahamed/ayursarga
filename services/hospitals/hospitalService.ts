@@ -14,7 +14,7 @@ import { authorizedApiRequest } from "@/services/api/client";
 
 type HospitalAdminUpdate = Partial<HospitalFields & Pick<HospitalDocument,
   "status" | "isPublic" | "ayursargaRating" | "ayursargaReviewNote" | "imageUrls" | "locationUrl" |
-  "legalEntityType" | "registrationNumber" | "panNumber" | "gstin" |
+  "legalEntityType" | "registrationNumber" | "cinNumber" | "panNumber" | "gstin" |
   "contractEffectiveDate" | "contractExpiryDate" | "emergencyContact" | "emergencyReferralHospital"
 >>;
 type HospitalProfileInput = Pick<HospitalDocument,

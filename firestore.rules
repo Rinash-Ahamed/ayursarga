@@ -63,7 +63,7 @@ service cloud.firestore {
         'additionalBystandersAllowed', 'maxAdditionalBystanders', 'additionalBystanderCharge',
         'blockedDateRanges',
         'status', 'isPublic', 'commissionPercentage',
-        'ayursargaPinCode', 'ayursargaGstin', 'legalEntityType', 'registrationNumber', 'panNumber', 'gstin',
+        'ayursargaPinCode', 'ayursargaGstin', 'legalEntityType', 'registrationNumber', 'cinNumber', 'panNumber', 'gstin',
         'contractEffectiveDate', 'contractExpiryDate', 'emergencyContact', 'emergencyReferralHospital',
         'contractStatus', 'contractGeneratedAt', 'contractGeneratedBy',
         'contractSignedAt', 'contractSignedBy', 'contractUrl',

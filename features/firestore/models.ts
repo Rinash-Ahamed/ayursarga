@@ -79,6 +79,7 @@ export type HospitalDocument = AuditedDocument & {
   ayursargaGstin?: string;
   legalEntityType?: string;
   registrationNumber?: string;
+  cinNumber?: string;
   panNumber?: string;
   gstin?: string;
   contractEffectiveDate?: string;
