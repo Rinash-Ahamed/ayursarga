@@ -26,23 +26,32 @@ export function PortalDialog({
   onCancel: () => void;
 }) {
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLElement>(null);
+  const busyRef = useRef(busy);
+  const onCancelRef = useRef(onCancel);
+
+  useEffect(() => {
+    busyRef.current = busy;
+    onCancelRef.current = onCancel;
+  }, [busy, onCancel]);
 
   useEffect(() => {
     if (!open) return;
-    cancelRef.current?.focus();
+    const firstField = dialogRef.current?.querySelector<HTMLElement>("input:not(:disabled), textarea:not(:disabled), select:not(:disabled)");
+    (firstField ?? cancelRef.current)?.focus();
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !busy) onCancel();
+      if (event.key === "Escape" && !busyRef.current) onCancelRef.current();
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [busy, onCancel, open]);
+  }, [open]);
 
   if (!open) return null;
 
   return <div className="portal-dialog-backdrop" role="presentation" onMouseDown={(event) => {
     if (event.target === event.currentTarget && !busy) onCancel();
   }}>
-    <section className="portal-dialog" role="dialog" aria-modal="true" aria-labelledby="portal-dialog-title">
+    <section ref={dialogRef} className="portal-dialog" role="dialog" aria-modal="true" aria-labelledby="portal-dialog-title">
       <span className="portal-dialog-leaf" aria-hidden="true" />
       <span className="portal-eyebrow">Please confirm</span>
       <h2 id="portal-dialog-title">{title}</h2>
