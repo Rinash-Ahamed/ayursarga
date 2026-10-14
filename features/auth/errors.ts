@@ -8,6 +8,7 @@ type AuthErrorCode =
   | "network"
   | "database-permission"
   | "profile-not-found"
+  | "profile-recovery"
   | "profile-invalid"
   | "role-mismatch"
   | "account-inactive"
@@ -27,6 +28,7 @@ const MESSAGES: Record<AuthErrorCode, string> = {
   network: "Unable to connect. Check your connection and try again.",
   "database-permission": "Your account is authenticated but its database access is not configured.",
   "profile-not-found": "Your account profile could not be found.",
+  "profile-recovery": "Your Admin profile could not be restored. Check the server Firebase Admin configuration and try again.",
   "profile-invalid": "Your account profile is incomplete.",
   "role-mismatch": "This account does not have access to this portal.",
   "account-inactive": "This account is currently inactive. Please contact support.",

@@ -84,9 +84,8 @@ function ConsultationIcon({ name }: { name: ConsultationIconName }) {
 }
 
 export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (profile: GuidanceProfile | null) => void }) {
-  const guidePanelRef = useRef<HTMLDivElement>(null);
-  const pathGridRef = useRef<HTMLDivElement>(null);
-  const pendingScrollTarget = useRef<"guide" | "grid" | null>(null);
+  const headingRef = useRef<HTMLDivElement>(null);
+  const pendingHeaderScroll = useRef(false);
   const scrollFrameRef = useRef(0);
   const [selectedPath, setSelectedPath] = useState<WellnessPath | null>(null);
   const [step, setStep] = useState<GuideStep>(0);
@@ -122,18 +121,17 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
   }, []);
 
   function scrollToSettledContent() {
-    const requestedTarget = pendingScrollTarget.current;
-    if (!requestedTarget) return;
+    if (!pendingHeaderScroll.current) return;
     if (scrollFrameRef.current) window.cancelAnimationFrame(scrollFrameRef.current);
 
     scrollFrameRef.current = window.requestAnimationFrame(() => {
       scrollFrameRef.current = 0;
-      const target = requestedTarget === "guide" ? guidePanelRef.current : pathGridRef.current;
+      const target = headingRef.current;
       if (!target) return;
-      pendingScrollTarget.current = null;
+      pendingHeaderScroll.current = false;
       const request = new CustomEvent("ayursarga:scroll-to", {
         cancelable: true,
-        detail: { target, offset: 16 },
+        detail: { target, offset: 12 },
       });
       const handled = !window.dispatchEvent(request);
       if (handled) return;
@@ -161,7 +159,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
 
   function selectPath(path: WellnessPath) {
     if (selectedPath?.id === path.id) return;
-    pendingScrollTarget.current = "guide";
+    pendingHeaderScroll.current = true;
     setSelectedPath(path);
     resetAnswers();
   }
@@ -197,14 +195,14 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
   }
 
   function restart() {
-    pendingScrollTarget.current = "grid";
+    pendingHeaderScroll.current = true;
     setSelectedPath(null);
     resetAnswers();
   }
 
   return <section id="wellness" className="section dark-section match-section wellness-guide-section">
     <div className="section-inner wellness-guide-inner">
-      <div className="wellness-guide-heading">
+      <div ref={headingRef} className="wellness-guide-heading">
         <p className="eyebrow light">Wellness paths</p>
         <h2 className="section-title light static-section-title"><span>Choose a wellness path</span><span>that feels right.</span></h2>
         <p>Tell us what you&rsquo;re looking for, and we&rsquo;ll help you find the right care.</p>
@@ -212,7 +210,6 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
 
       <AnimatePresence initial={false} mode="popLayout" onExitComplete={scrollToSettledContent}>
         {selectedPath && <motion.div
-          ref={guidePanelRef}
           id="wellness-guidance"
           className="quiz-card wellness-guide-panel"
           role="region"
@@ -372,7 +369,6 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
           </AnimatePresence>
         </motion.div>}
         {(!selectedPath || step === 2) && <motion.div
-          ref={pathGridRef}
           className="path-grid wellness-path-grid"
           aria-label="Choose a wellness path"
           initial={reduceMotion ? false : { opacity: 0 }}

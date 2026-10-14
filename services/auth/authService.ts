@@ -8,6 +8,7 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
+  type User,
   updatePassword,
 } from "firebase/auth";
 import type {
@@ -26,6 +27,16 @@ import {
   getUserProfile,
 } from "@/services/users/userService";
 
+async function restoreMissingAdminProfile(user: User) {
+  const response = await fetch("/api/auth/bootstrap-admin", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${await user.getIdToken()}` },
+    cache: "no-store",
+  });
+  if (!response.ok) throw new AuthenticationError("profile-recovery");
+  clearUserProfileCache(user.uid);
+}
+
 async function login(credentials: LoginCredentials, expectedRole?: PortalRole) {
   try {
     const credential = await signInWithEmailAndPassword(
@@ -34,7 +45,15 @@ async function login(credentials: LoginCredentials, expectedRole?: PortalRole) {
       credentials.password,
     );
     try {
-      const profile = await loadAuthorizedProfile(credential.user);
+      let profile;
+      try {
+        profile = await loadAuthorizedProfile(credential.user);
+      } catch (error) {
+        const profileError = toAuthenticationError(error);
+        if (expectedRole !== "admin" || profileError.code !== "profile-not-found") throw error;
+        await restoreMissingAdminProfile(credential.user);
+        profile = await loadAuthorizedProfile(credential.user);
+      }
       return expectedRole ? verifyProfileRole(profile, expectedRole) : profile;
     } catch (error) {
       await signOut(getClientAuth());

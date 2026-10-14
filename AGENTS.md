@@ -41,6 +41,11 @@ implementation work unless the project owner explicitly changes a decision.
   link. Never introduce a shared default password or store passwords in
   Firestore. Admin may resend the setup/reset link; Hospital users may change
   their password only after re-authentication.
+- The verified server-only Admin bootstrap endpoint may recreate a missing
+  `users/{uid}` profile only for the password-authenticated
+  `info@ayursarga.com` Firebase account. Keep it email-locked, idempotent,
+  audited, and unable to overwrite an existing conflicting profile. Never
+  restore browser-side Admin creation or broaden this exception to other users.
 - Protect every portal page with its matching `RequireRole`. Unauthorized users
   must be redirected to their correct portal; unauthenticated users go to the
   relevant login page.

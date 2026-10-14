@@ -66,9 +66,13 @@ matching protected Firestore profile, and prints a one-time Firebase
 password-setup link. Passwords belong exclusively to Firebase Authentication
 and must never be stored in Firestore, even as application-managed hashes.
 
-Provision the initial Admin with the same controlled script. The application
-does not create an Admin profile from an email address during login. No password
-or password hash is written to Firestore.
+The approved `info@ayursarga.com` Firebase Authentication account has one
+server-side recovery exception. If its `users/{uid}` profile is missing after a
+database reset, `/api/auth/bootstrap-admin` verifies its password-provider ID
+token and recreates the active Admin profile together with an audit record. The
+endpoint never accepts another email, never overwrites an existing conflicting
+profile, and never exposes Admin-profile creation through Firestore client
+rules. No password or password hash is written to Firestore.
 
 The server reads the project ID from `NEXT_PUBLIC_FIREBASE_PROJECT_ID` and its
 credential from `FIREBASE_ADMIN_CLIENT_EMAIL` and

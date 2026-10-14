@@ -94,6 +94,10 @@ The preservation and audit design is documented in
 - Consumer, Hospital, and Admin routes and navigation remain separate. Every
   protected page uses the appropriate role guard; Firestore rules remain the
   data-access authority.
+- The approved `info@ayursarga.com` password account may recover a missing
+  Admin Firestore profile through the verified server-only bootstrap endpoint.
+  The recovery is email-locked, idempotent, audited, and cannot overwrite an
+  existing conflicting profile.
 - Admin controls and management details, including commission management,
   contract workflow, signing/activation controls, audit data, and platform
   settings, must not be rendered in Consumer or Hospital interfaces.

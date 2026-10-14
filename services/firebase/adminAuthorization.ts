@@ -17,13 +17,23 @@ function bearerToken(request: Request) {
   return authorization.startsWith("Bearer ") ? authorization.slice(7).trim() : "";
 }
 
-export async function requireActiveUser(request: Request, allowedRoles?: readonly PortalRole[]) {
+export async function requireVerifiedFirebaseUser(request: Request) {
   const token = bearerToken(request);
   if (!token) throw new AdminAuthorizationError("Authentication is required.", 401);
   try {
     const auth = getFirebaseAdminAuth();
     const firestore = getFirebaseAdminFirestore();
     const decoded = await auth.verifyIdToken(token, true);
+    return { uid: decoded.uid, decoded: decoded as DecodedIdToken, auth, firestore };
+  } catch (error) {
+    if (error instanceof AdminAuthorizationError) throw error;
+    throw new AdminAuthorizationError("Your session is invalid or has expired.", 401);
+  }
+}
+
+export async function requireActiveUser(request: Request, allowedRoles?: readonly PortalRole[]) {
+  try {
+    const { uid, decoded, auth, firestore } = await requireVerifiedFirebaseUser(request);
     const profileSnapshot = await firestore.collection("users").doc(decoded.uid).get();
     const profile = profileSnapshot.data();
     if (!profileSnapshot.exists || profile?.status !== "active") {
@@ -36,7 +46,7 @@ export async function requireActiveUser(request: Request, allowedRoles?: readonl
     if (!allowedRoles?.includes(role) && allowedRoles?.length) {
       throw new AdminAuthorizationError("You do not have permission to complete this action.", 403);
     }
-    return { uid: decoded.uid, role, profile, decoded: decoded as DecodedIdToken, auth, firestore };
+    return { uid, role, profile, decoded, auth, firestore };
   } catch (error) {
     if (error instanceof AdminAuthorizationError) throw error;
     throw new AdminAuthorizationError("Your session is invalid or has expired.", 401);

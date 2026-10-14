@@ -70,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const profile = await authService.login(credentials, expectedRole);
       setSnapshot((current) => ({ ...current, profile }));
       setStatus("authenticated");
+      setError(null);
       router.replace(getSafeRoleRedirect(requestedPath, profile.role));
       return profile;
     }), [router, run]);
