@@ -21,11 +21,10 @@ import { isValidPassword } from "@/features/auth/password";
 import { verifyProfileRole } from "@/features/auth/roles";
 import { getClientAuth } from "@/services/auth/client";
 import { loadAuthorizedProfile, subscribeToAuthProfile, toAuthUser } from "@/services/auth/session";
-import {
-  clearUserProfileCache,
-  createGoogleConsumerProfile,
-  getUserProfile,
-} from "@/services/users/userService";
+
+async function loadUserProfileService() {
+  return import("@/services/users/userService");
+}
 
 async function restoreMissingAdminProfile(user: User) {
   const response = await fetch("/api/auth/bootstrap-admin", {
@@ -34,6 +33,7 @@ async function restoreMissingAdminProfile(user: User) {
     cache: "no-store",
   });
   if (!response.ok) throw new AuthenticationError("profile-recovery");
+  const { clearUserProfileCache } = await loadUserProfileService();
   clearUserProfileCache(user.uid);
 }
 
@@ -69,6 +69,7 @@ async function loginConsumerWithGoogle() {
   const previousUser = auth.currentUser;
   try {
     const credential = await signInWithPopup(auth, new GoogleAuthProvider());
+    const { createGoogleConsumerProfile, getUserProfile } = await loadUserProfileService();
     let profile;
     try {
       profile = await getUserProfile(credential.user.uid, credential.user.email ?? "", true);
@@ -94,6 +95,7 @@ export const authService: AuthAdapter = {
     try {
       const uid = getClientAuth().currentUser?.uid;
       await signOut(getClientAuth());
+      const { clearUserProfileCache } = await loadUserProfileService();
       clearUserProfileCache(uid);
     } catch (error) {
       throw toAuthenticationError(error);
@@ -141,6 +143,7 @@ export const authService: AuthAdapter = {
     const user = getClientAuth().currentUser;
     if (!user) return null;
     try {
+      const { getUserProfile } = await loadUserProfileService();
       return await getUserProfile(user.uid, user.email ?? "", force);
     } catch (error) {
       throw toAuthenticationError(error);

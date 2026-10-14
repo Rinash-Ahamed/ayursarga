@@ -11,6 +11,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test",
+    "test:e2e:responsive": "playwright test tests/e2e/responsive.spec.ts",
     "firebase:emulators": "firebase emulators:start --project demo-ayursarga --only auth,firestore,hosting",
     "firebase:emulators:auth": "firebase emulators:start --project demo-ayursarga --only auth",
     "firebase:provision-user": "node scripts/provision-portal-user.mjs",
@@ -27,6 +29,7 @@
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "@types/node": "^24.13.3",
     "@types/nodemailer": "^8.0.1",
     "@types/react": "^19.2.17",

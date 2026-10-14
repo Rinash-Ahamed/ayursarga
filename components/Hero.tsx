@@ -83,7 +83,7 @@ export default function Hero() {
       <video
         ref={videoRef}
         className={`hero-background-video${videoReady ? " ready" : ""}`}
-        muted loop playsInline preload="auto" poster="/hero-video-poster.webp" aria-hidden="true" tabIndex={-1}
+        muted loop playsInline preload="metadata" poster="/hero-video-poster.webp" aria-hidden="true" tabIndex={-1}
         onPlaying={() => setVideoReady(true)}
       >
         {canLoadVideo && <source src="/hero-video.mp4" type="video/mp4" />}

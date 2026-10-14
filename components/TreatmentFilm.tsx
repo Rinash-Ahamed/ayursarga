@@ -28,21 +28,27 @@ export default function TreatmentFilm() {
     const container = containerRef.current;
     if (!container) return;
 
-    const prepareMedia = () => {
+    const prepareLeadMedia = () => {
       if (mediaPrepared.current) return;
       mediaPrepared.current = true;
-      [firstVideoRef.current, secondVideoRef.current].forEach((video) => {
-        if (!video) return;
-        video.preload = "auto";
-        video.load();
-      });
+      const video = firstVideoRef.current;
+      if (!video) return;
+      video.preload = "auto";
+      video.load();
+    };
+
+    const prepareFollowingMedia = () => {
+      const video = secondVideoRef.current;
+      if (!video || video.preload === "auto") return;
+      video.preload = "auto";
+      video.load();
     };
 
     const preloadObserver = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting) return;
-      prepareMedia();
+      prepareLeadMedia();
       preloadObserver.disconnect();
-    }, { threshold: 0, rootMargin: "900px 0px" });
+    }, { threshold: 0, rootMargin: "320px 0px" });
 
     const playbackObserver = new IntersectionObserver(([entry]) => {
       inView.current = entry.isIntersecting;
@@ -50,7 +56,8 @@ export default function TreatmentFilm() {
       const inactiveVideo = activeSlotRef.current === 0 ? secondVideoRef.current : firstVideoRef.current;
       if (!activeVideo) return;
       if (entry.isIntersecting) {
-        prepareMedia();
+        prepareLeadMedia();
+        prepareFollowingMedia();
         void activeVideo.play().catch(() => undefined);
       } else {
         activeVideo.pause();
