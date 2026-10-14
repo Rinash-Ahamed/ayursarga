@@ -11,10 +11,10 @@ import { validateHospitalContractDetails } from "@/features/hospitals/contractDe
 export const runtime = "nodejs";
 
 const EDITABLE_FIELDS = new Set([
-  "name", "description", "email", "phone", "hospitalPhone1", "hospitalPhone2",
+  "legalName", "name", "description", "email", "phone", "hospitalPhone1", "hospitalPhone2",
   "registeredAddress", "address", "city", "district", "state", "imageUrls", "locationUrl",
   "commissionPercentage", "ayursargaRating", "ayursargaReviewNote",
-  "legalEntityType", "registrationNumber", "cinNumber", "panNumber", "gstin",
+  "registrationNumber", "cinNumber", "panNumber", "gstin",
   "contractEffectiveDate", "contractExpiryDate", "emergencyContact", "emergencyReferralHospital",
 ]);
 
@@ -63,7 +63,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ hospi
       if (!Object.keys(changes).length) return apiJson({ error: "No hospital changes were provided." }, 400);
 
       const contractFields = [
-        "legalEntityType", "registrationNumber", "cinNumber", "panNumber", "gstin",
+        "registrationNumber", "cinNumber", "panNumber", "gstin",
         "contractEffectiveDate", "contractExpiryDate", "emergencyContact", "emergencyReferralHospital",
       ];
       const assessmentOnly = Object.keys(changes).every((key) => key === "ayursargaRating" || key === "ayursargaReviewNote");

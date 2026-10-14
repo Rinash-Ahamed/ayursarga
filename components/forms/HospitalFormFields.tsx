@@ -7,7 +7,7 @@ import type { HospitalField, HospitalValidationErrors } from "@/features/hospita
 import { PhoneInput } from "@/components/forms/PhoneInput";
 
 type HospitalFormDefaults = Partial<Pick<HospitalDocument,
-  "name" | "email" | "phone" | "hospitalPhone1" | "hospitalPhone2" | "city" | "district" | "state" | "registeredAddress" | "address" | "description" | "commissionPercentage"
+  "legalName" | "name" | "email" | "phone" | "hospitalPhone1" | "hospitalPhone2" | "city" | "district" | "state" | "registeredAddress" | "address" | "description" | "commissionPercentage"
 >>;
 
 function FieldError({ field, errors }: { field: HospitalField; errors: HospitalValidationErrors }) {
@@ -18,11 +18,20 @@ export function HospitalFormFields({
   defaultValues = {},
   errors,
   includeCommission = false,
+  includeLegalName = false,
 }: {
   defaultValues?: HospitalFormDefaults;
   errors: HospitalValidationErrors;
   includeCommission?: boolean;
+  includeLegalName?: boolean;
 }) {
+  const initialCentreName = defaultValues.name ?? "";
+  const initialLegalName = defaultValues.legalName ?? initialCentreName;
+  const [legalName, setLegalName] = useState(initialLegalName);
+  const [centreName, setCentreName] = useState(initialCentreName);
+  const [sameName, setSameName] = useState(Boolean(
+    initialCentreName && initialLegalName === initialCentreName,
+  ));
   const initialServiceAddress = defaultValues.address ?? "";
   const initialRegisteredAddress = defaultValues.registeredAddress ?? initialServiceAddress;
   const [registeredAddress, setRegisteredAddress] = useState(initialRegisteredAddress);
@@ -32,7 +41,31 @@ export function HospitalFormFields({
   ));
 
   return <>
-    <label>Hospital name *<input name="name" defaultValue={defaultValues.name} required minLength={2} maxLength={120} aria-invalid={Boolean(errors.name)} /><FieldError field="name" errors={errors} /></label>
+    {includeLegalName && <label>Legal name *<input name="legalName" value={legalName} onChange={(event) => {
+        const value = event.target.value;
+        setLegalName(value);
+        if (sameName) setCentreName(value);
+      }} required minLength={2} maxLength={160} aria-invalid={Boolean(errors.legalName)} /><FieldError field="legalName" errors={errors} /></label>}
+    <label>Centre name *
+      {includeLegalName && sameName && <input type="hidden" name="name" value={centreName} />}
+      <input
+        name={includeLegalName && sameName ? undefined : "name"}
+        value={includeLegalName ? centreName : undefined}
+        defaultValue={includeLegalName ? undefined : defaultValues.name}
+        onChange={includeLegalName ? (event) => setCentreName(event.target.value) : undefined}
+        disabled={includeLegalName && sameName}
+        required minLength={2} maxLength={120} aria-invalid={Boolean(errors.name)}
+      />
+      <FieldError field="name" errors={errors} />
+    </label>
+    {includeLegalName && <label className="portal-inline-check full">
+      <input type="checkbox" checked={sameName} onChange={(event) => {
+        const checked = event.target.checked;
+        setSameName(checked);
+        if (checked) setCentreName(legalName);
+      }} />
+      Centre name is the same as legal name
+    </label>}
     <label>Official email *<input name="email" type="email" defaultValue={defaultValues.email} required maxLength={160} aria-invalid={Boolean(errors.email)} /><FieldError field="email" errors={errors} /></label>
     <label>Owner WhatsApp No. *<PhoneInput name="phone" defaultValue={defaultValues.phone} required autoComplete="tel" aria-invalid={Boolean(errors.phone)} /><FieldError field="phone" errors={errors} /></label>
     <label>Hospital Phone 1 *<PhoneInput name="hospitalPhone1" defaultValue={defaultValues.hospitalPhone1} required autoComplete="tel" aria-invalid={Boolean(errors.hospitalPhone1)} /><FieldError field="hospitalPhone1" errors={errors} /></label>

@@ -53,7 +53,7 @@ html[data-ayursarga-opening="seen"] .public-opening{ display:none; }
 .public-opening[data-phase="leaving"]{ opacity:0; visibility:hidden; pointer-events:none; }
 .public-opening-mark{ display:grid; justify-items:center; gap:9px; color:var(--forest); animation:public-opening-arrive .36s var(--ease-out) both; }
 .public-opening-mark img{ width:72px; height:72px; object-fit:cover; border-radius:50%; }
-.public-opening-mark span{ font-family:var(--font-display); font-size:18px; font-weight:600; letter-spacing:.06em; }
+.public-opening-mark span{ font-family:var(--font-display); font-size:18px; font-weight:600; letter-spacing:0; word-spacing:0; }
 @keyframes public-opening-arrive{
   from{ opacity:0; transform:translate3d(0,7px,0) scale(.97); }
   to{ opacity:1; transform:translate3d(0,0,0) scale(1); }
@@ -116,7 +116,7 @@ html[data-ayursarga-opening="seen"] .public-opening{ display:none; }
 }
 .nav-mark{ display:flex; align-items:center; gap:10px; }
 .nav-mark img{ width:56px; height:56px; object-fit:contain; object-position:center; border-radius:0; }
-.nav-mark span{ font-family:var(--font-display); font-size:17px; letter-spacing:.02em; color:var(--forest); transition:color .35s var(--ease-out); }
+.nav-mark span{ font-family:var(--font-display); font-size:17px; letter-spacing:0; word-spacing:0; color:var(--forest); transition:color .35s var(--ease-out); }
 .nav-links{ display:flex; gap:34px; }
 .nav-links a{ font-size:13.5px; font-weight:650; letter-spacing:.03em; color:var(--sage); position:relative; transition:color .25s ease; }
 .nav-links .nav-search-link{ display:inline-flex; align-items:center; gap:7px; }
@@ -1021,7 +1021,7 @@ main>.dark-section{
   0%,100%{ opacity:.25; transform:scale(.88); }
   50%{ opacity:.75; transform:scale(1.08); }
 }
-.footer-wordmark{ display:inline-flex; overflow:hidden; font-family:var(--font-display); color:var(--cream); font-size:25px; }
+.footer-wordmark{ display:inline-flex; overflow:hidden; font-family:var(--font-display); color:var(--cream); font-size:25px; letter-spacing:0; word-spacing:0; }
 .footer-wordmark-letter{ display:inline-block; }
 .footer-contact{ display:grid; gap:7px; margin-top:24px; color:rgba(249,245,234,.58); font-size:11px; }
 .footer-contact a{ width:max-content; display:inline-flex; align-items:center; gap:8px; color:var(--gold); font-weight:700; }
@@ -1802,6 +1802,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   color: #173e2b;
   font-size: 1.2rem;
   font-weight: 700;
+  letter-spacing: 0;
+  word-spacing: 0;
   text-decoration: none;
 }
 

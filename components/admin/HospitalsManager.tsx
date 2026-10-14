@@ -74,7 +74,7 @@ export function HospitalsManager() {
 
     {showCreateForm && <form id="add-hospital-form" className="portal-card portal-form" onSubmit={submit} noValidate style={{ marginBottom: 26 }}>
       <p className="full portal-form-note">Complete every field marked with * before creating the hospital.</p>
-      <HospitalFormFields errors={fieldErrors} includeCommission />
+      <HospitalFormFields errors={fieldErrors} includeCommission includeLegalName />
       <div className="portal-actions full">
         <button className="portal-button" disabled={busy}>{busy ? "Creating..." : "Create hospital"}</button>
         <button className="portal-button secondary" type="button" disabled={busy} onClick={(event) => {

@@ -44,6 +44,7 @@ export type CentreGuidelineId =
 type CentreGuidelineOverrides = Partial<Record<CentreGuidelineId, string>>;
 
 export type HospitalDocument = AuditedDocument & {
+  legalName?: string;
   name: string;
   description: string;
   email: string;
@@ -77,7 +78,6 @@ export type HospitalDocument = AuditedDocument & {
   commissionPercentage: number;
   ayursargaPinCode?: string;
   ayursargaGstin?: string;
-  legalEntityType?: string;
   registrationNumber?: string;
   cinNumber?: string;
   panNumber?: string;

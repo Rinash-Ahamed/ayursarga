@@ -4,6 +4,7 @@ import { isDistrictInIndiaState } from "@/constants/indiaDistricts";
 import { isValidPhoneNumber } from "@/utils/phone";
 
 export type HospitalFields = {
+  legalName: string;
   name: string;
   email: string;
   phone: string;
@@ -35,6 +36,7 @@ function optionalWebUrl(value: unknown) {
 
 export function validateHospitalFields(input: Record<string, unknown>) {
   const name = toTrimmedString(input.name, 120);
+  const legalName = toTrimmedString(input.legalName ?? input.name, 160);
   const email = toTrimmedString(input.email, 160).toLowerCase();
   const phone = toTrimmedString(input.phone, 25);
   const hospitalPhone1 = toTrimmedString(input.hospitalPhone1, 25);
@@ -56,7 +58,8 @@ export function validateHospitalFields(input: Record<string, unknown>) {
     : commissionPercentage;
   const errors: HospitalValidationErrors = {};
 
-  if (name.length < 2) errors.name = "Enter a hospital name of at least 2 characters.";
+  if (legalName.length < 2) errors.legalName = "Enter a legal name of at least 2 characters.";
+  if (name.length < 2) errors.name = "Enter a centre name of at least 2 characters.";
   if (!isValidEmail(email)) errors.email = "Enter a valid official email address.";
   if (!isValidPhoneNumber(phone)) errors.phone = "Enter a 10-digit owner WhatsApp number.";
   if (!isValidPhoneNumber(hospitalPhone1)) errors.hospitalPhone1 = "Enter a 10-digit primary hospital phone number.";
@@ -72,13 +75,14 @@ export function validateHospitalFields(input: Record<string, unknown>) {
   if (rawImageUrl && !imageUrl) errors.imageUrl = "Enter a complete image URL beginning with http:// or https://.";
 
   const data: HospitalFields = {
-    name, email, phone, hospitalPhone1, hospitalPhone2, registeredAddress, address, city, district, state, description, imageUrl, commissionPercentage: normalizedCommission,
+    legalName, name, email, phone, hospitalPhone1, hospitalPhone2, registeredAddress, address, city, district, state, description, imageUrl, commissionPercentage: normalizedCommission,
   };
   return { data, errors, isValid: Object.keys(errors).length === 0 };
 }
 
 export function hospitalFormValues(form: FormData): Record<string, unknown> {
   return {
+    legalName: form.get("legalName"),
     name: form.get("name"),
     email: form.get("email"),
     phone: form.get("phone"),

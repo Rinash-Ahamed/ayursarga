@@ -106,6 +106,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   const [assessmentRating, setAssessmentRating] = useState<number | null>(null);
   const [contractPreview, setContractPreview] = useState<ContractPreview | null>(null);
   const [contractFieldErrors, setContractFieldErrors] = useState<HospitalContractDetailErrors>({});
+  const [editingContractParticulars, setEditingContractParticulars] = useState(true);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -121,6 +122,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     setHospital(record);
     setContractUrl(record?.contractUrl ?? "");
     setAssessmentRating(record?.ayursargaRating ?? null);
+    setEditingContractParticulars(record ? !validateHospitalContractDetails({ ...record }).isValid : true);
     setLoading(false);
     if (!record) setError("We could not find this hospital. Return to the hospital list and choose another record.");
     return record;
@@ -260,6 +262,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     setBusy(true);
     try {
       await updateHospital(hospital.id, {
+        legalName: validation.data.legalName,
         name: validation.data.name,
         email: validation.data.email,
         phone: validation.data.phone,
@@ -388,13 +391,14 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
           </div>
         </div>
         {editing ? <form className="portal-form portal-edit-form" onSubmit={saveHospitalDetails} noValidate>
-          <HospitalFormFields defaultValues={hospital} errors={fieldErrors} />
+          <HospitalFormFields defaultValues={hospital} errors={fieldErrors} includeLegalName />
           <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save details"}</button><button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditing(false); setFieldErrors({}); setError(null); }}>Cancel</button></div>
         </form> : <>
           <p>{hospital.description || "No description provided."}</p>
           <div className="portal-card-meta">
             <span>{hospital.email}</span><span>Owner WhatsApp: {hospital.phone}</span><span>Hospital Phone 1: {hospital.hospitalPhone1 || "Not added"}</span>{hospital.hospitalPhone2 && <span>Hospital Phone 2: {hospital.hospitalPhone2}</span>}
           </div>
+          <p><strong>Legal name:</strong> {hospital.legalName || hospital.name}</p>
           <p><strong>Registered address:</strong> {hospital.registeredAddress || hospital.address}</p>
           <p><strong>Service address:</strong> {hospital.address}</p>
           {hospital.status !== "archived" && <div className="portal-actions">
@@ -421,21 +425,18 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
       <article className="portal-card portal-contract-card">
         <div className="portal-row-heading"><h2>Contract and approval</h2><span className="portal-status" data-status={contractStatus}>{formatStatus(contractStatus)}</span></div>
         <div className="portal-contract-stepper">
-          <div className="portal-contract-step">
+          <div className="portal-contract-step" data-line-done={contractStatus !== "not_generated" ? "true" : undefined}>
             <span className="portal-contract-step-dot" data-done="true">1</span>
             <span data-done="true">Created</span>
           </div>
-          <div className="portal-contract-step-line" data-done={contractStatus !== "not_generated" ? "true" : undefined} />
-          <div className="portal-contract-step">
+          <div className="portal-contract-step" data-line-done={signedAt ? "true" : undefined}>
             <span className="portal-contract-step-dot" data-done={generatedAt ? "true" : undefined} data-active={!generatedAt ? "true" : undefined}>2</span>
             <span data-done={generatedAt ? "true" : undefined} data-active={!generatedAt ? "true" : undefined}>Contract generated</span>
           </div>
-          <div className="portal-contract-step-line" data-done={signedAt ? "true" : undefined} />
-          <div className="portal-contract-step">
+          <div className="portal-contract-step" data-line-done={activatedAt ? "true" : undefined}>
             <span className="portal-contract-step-dot" data-done={signedAt ? "true" : undefined} data-active={generatedAt && !signedAt ? "true" : undefined}>3</span>
             <span data-done={signedAt ? "true" : undefined} data-active={generatedAt && !signedAt ? "true" : undefined}>Contract signed</span>
           </div>
-          <div className="portal-contract-step-line" data-done={activatedAt ? "true" : undefined} />
           <div className="portal-contract-step">
             <span className="portal-contract-step-dot" data-done={activatedAt ? "true" : undefined} data-active={contractReady && !activatedAt ? "true" : undefined}>4</span>
             <span data-done={activatedAt ? "true" : undefined} data-active={contractReady && !activatedAt ? "true" : undefined}>Activated</span>
@@ -448,17 +449,19 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
           <div><span>Active date</span><strong>{formatDate(activatedAt)}</strong></div>
         </div>
         {hospital.status === "pending" && <form className="portal-form portal-contract-particulars" onSubmit={saveContractDetails} noValidate>
-          <div className="full portal-row-heading"><div><h3>Contract particulars</h3><p>Complete these legal and operational details before previewing the agreement.</p></div></div>
-          <label>Legal entity type *<input name="legalEntityType" defaultValue={hospital.legalEntityType ?? ""} maxLength={100} required aria-invalid={Boolean(contractFieldErrors.legalEntityType)} /><ContractFieldError field="legalEntityType" errors={contractFieldErrors} /></label>
-          <label>Registration number *<input name="registrationNumber" defaultValue={hospital.registrationNumber ?? ""} maxLength={100} required aria-invalid={Boolean(contractFieldErrors.registrationNumber)} /><ContractFieldError field="registrationNumber" errors={contractFieldErrors} /></label>
-          <label>CIN / Not applicable *<input name="cinNumber" defaultValue={hospital.cinNumber ?? ""} maxLength={21} required autoCapitalize="characters" placeholder="CIN or NOT APPLICABLE" aria-invalid={Boolean(contractFieldErrors.cinNumber)} /><ContractFieldError field="cinNumber" errors={contractFieldErrors} /></label>
-          <label>PAN *<input name="panNumber" defaultValue={hospital.panNumber ?? ""} minLength={10} maxLength={10} required autoCapitalize="characters" aria-invalid={Boolean(contractFieldErrors.panNumber)} /><ContractFieldError field="panNumber" errors={contractFieldErrors} /></label>
-          <label>GSTIN / Not applicable *<input name="gstin" defaultValue={hospital.gstin ?? ""} maxLength={20} required autoCapitalize="characters" placeholder="GSTIN or NOT APPLICABLE" aria-invalid={Boolean(contractFieldErrors.gstin)} /><ContractFieldError field="gstin" errors={contractFieldErrors} /></label>
-          <label>Effective date *<input name="contractEffectiveDate" type="date" defaultValue={defaultContractEffectiveDate} onChange={updateContractExpiry} required aria-invalid={Boolean(contractFieldErrors.contractEffectiveDate)} /><ContractFieldError field="contractEffectiveDate" errors={contractFieldErrors} /></label>
-          <label>Expiry date *<input name="contractExpiryDate" type="date" defaultValue={defaultContractExpiryDate} min={defaultContractEffectiveDate} required aria-invalid={Boolean(contractFieldErrors.contractExpiryDate)} /><ContractFieldError field="contractExpiryDate" errors={contractFieldErrors} /></label>
-          <label>Partner emergency contact *<input name="emergencyContact" defaultValue={hospital.emergencyContact ?? ""} maxLength={160} required aria-invalid={Boolean(contractFieldErrors.emergencyContact)} /><ContractFieldError field="emergencyContact" errors={contractFieldErrors} /></label>
-          <label>Emergency transfer (nearby hospital transfer in case of an emergency) *<input name="emergencyReferralHospital" defaultValue={hospital.emergencyReferralHospital ?? ""} maxLength={200} required aria-invalid={Boolean(contractFieldErrors.emergencyReferralHospital)} /><ContractFieldError field="emergencyReferralHospital" errors={contractFieldErrors} /></label>
-          <div className="portal-actions full"><button className="portal-button secondary" disabled={busy}>{busy ? "Saving..." : "Save contract particulars"}</button></div>
+          <div className="full portal-row-heading">
+            <div><h3>Contract particulars</h3><p>{editingContractParticulars ? "Complete these legal and operational details before previewing the agreement." : "Saved particulars are locked. Select Edit particulars to make changes."}</p></div>
+            {!editingContractParticulars && <button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditingContractParticulars(true); setContractFieldErrors({}); setError(null); setMessage(null); }}>Edit particulars</button>}
+          </div>
+          <label>Registration number *<input name="registrationNumber" defaultValue={hospital.registrationNumber ?? ""} maxLength={100} required disabled={!editingContractParticulars} aria-invalid={Boolean(contractFieldErrors.registrationNumber)} /><ContractFieldError field="registrationNumber" errors={contractFieldErrors} /></label>
+          <label>CIN / Not applicable *<input name="cinNumber" defaultValue={hospital.cinNumber ?? ""} maxLength={21} required disabled={!editingContractParticulars} autoCapitalize="characters" placeholder="CIN or NOT APPLICABLE" aria-invalid={Boolean(contractFieldErrors.cinNumber)} /><ContractFieldError field="cinNumber" errors={contractFieldErrors} /></label>
+          <label>PAN *<input name="panNumber" defaultValue={hospital.panNumber ?? ""} minLength={10} maxLength={10} required disabled={!editingContractParticulars} autoCapitalize="characters" aria-invalid={Boolean(contractFieldErrors.panNumber)} /><ContractFieldError field="panNumber" errors={contractFieldErrors} /></label>
+          <label>GSTIN / Not applicable *<input name="gstin" defaultValue={hospital.gstin ?? ""} maxLength={20} required disabled={!editingContractParticulars} autoCapitalize="characters" placeholder="GSTIN or NOT APPLICABLE" aria-invalid={Boolean(contractFieldErrors.gstin)} /><ContractFieldError field="gstin" errors={contractFieldErrors} /></label>
+          <label>Effective date *<input name="contractEffectiveDate" type="date" defaultValue={defaultContractEffectiveDate} onChange={updateContractExpiry} required disabled={!editingContractParticulars} aria-invalid={Boolean(contractFieldErrors.contractEffectiveDate)} /><ContractFieldError field="contractEffectiveDate" errors={contractFieldErrors} /></label>
+          <label>Expiry date *<input name="contractExpiryDate" type="date" defaultValue={defaultContractExpiryDate} min={defaultContractEffectiveDate} required disabled={!editingContractParticulars} aria-invalid={Boolean(contractFieldErrors.contractExpiryDate)} /><ContractFieldError field="contractExpiryDate" errors={contractFieldErrors} /></label>
+          <label>Partner emergency contact *<input name="emergencyContact" defaultValue={hospital.emergencyContact ?? ""} maxLength={160} required disabled={!editingContractParticulars} aria-invalid={Boolean(contractFieldErrors.emergencyContact)} /><ContractFieldError field="emergencyContact" errors={contractFieldErrors} /></label>
+          <label>Emergency transfer (nearby hospital transfer in case of an emergency) *<input name="emergencyReferralHospital" defaultValue={hospital.emergencyReferralHospital ?? ""} maxLength={200} required disabled={!editingContractParticulars} aria-invalid={Boolean(contractFieldErrors.emergencyReferralHospital)} /><ContractFieldError field="emergencyReferralHospital" errors={contractFieldErrors} /></label>
+          {editingContractParticulars && <div className="portal-actions full"><button className="portal-button secondary" disabled={busy}>{busy ? "Saving..." : "Save contract particulars"}</button></div>}
         </form>}
         {hospital.contractUrl && <p>Signed contract: <a className="portal-inline-link" href={hospital.contractUrl} target="_blank" rel="noreferrer">View contract</a></p>}
         <div className="portal-actions">

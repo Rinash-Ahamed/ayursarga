@@ -1,7 +1,6 @@
 import { toTrimmedString } from "@/utils/text";
 
 export type HospitalContractDetails = {
-  legalEntityType: string;
   registrationNumber: string;
   cinNumber: string;
   panNumber: string;
@@ -22,7 +21,6 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export function validateHospitalContractDetails(input: Record<string, unknown>) {
   const data: HospitalContractDetails = {
-    legalEntityType: toTrimmedString(input.legalEntityType, 100),
     registrationNumber: toTrimmedString(input.registrationNumber, 100),
     cinNumber: toTrimmedString(input.cinNumber, 21).toUpperCase(),
     panNumber: toTrimmedString(input.panNumber, 10).toUpperCase(),
@@ -34,7 +32,6 @@ export function validateHospitalContractDetails(input: Record<string, unknown>) 
   };
   const errors: HospitalContractDetailErrors = {};
 
-  if (data.legalEntityType.length < 2) errors.legalEntityType = "Enter the partner's legal entity type.";
   if (data.registrationNumber.length < 2) errors.registrationNumber = "Enter the partner's registration number.";
   if (data.cinNumber !== "NOT APPLICABLE" && !CIN_PATTERN.test(data.cinNumber)) errors.cinNumber = "Enter a valid 21-character CIN or NOT APPLICABLE.";
   if (!PAN_PATTERN.test(data.panNumber)) errors.panNumber = "Enter a valid 10-character PAN.";
