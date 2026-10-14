@@ -3,7 +3,7 @@ import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Ayursarga - Find Ayurvedic Hospitals and Request Appointments",
+  title: "Ayursarga - Find Ayurvedic Hospitals and Book Appointments",
   description: "Discover active Ayurvedic hospitals in Kerala, compare their services and request appointments through Ayursarga.",
   icons: {
     icon: [{ url: "/icon.png", type: "image/png", sizes: "1024x1024" }],

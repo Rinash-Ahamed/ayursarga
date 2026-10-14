@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import MagneticButton from "./MagneticButton";
-import { useBrowserIdle } from "@/hooks/useBrowserIdle";
 import { ROUTES } from "@/config/routes";
 
 const CORE_VALUES = [
@@ -21,10 +20,8 @@ export default function Hero() {
   const [isHeroVisible, setIsHeroVisible] = useState(true);
   const [videoReady, setVideoReady] = useState(false);
   const [videoEligible, setVideoEligible] = useState(false);
-  const [pageSettled, setPageSettled] = useState(false);
   const shouldReduceMotion = useReducedMotion();
-  const browserIdle = useBrowserIdle(1_800);
-  const canLoadVideo = browserIdle && pageSettled && videoEligible && !shouldReduceMotion;
+  const canLoadVideo = videoEligible && !shouldReduceMotion;
 
   useEffect(() => {
     const desktopQuery = window.matchMedia("(min-width: 1100px) and (hover: hover) and (pointer: fine)");
@@ -40,21 +37,6 @@ export default function Hero() {
     updateEligibility();
     desktopQuery.addEventListener("change", updateEligibility);
     return () => desktopQuery.removeEventListener("change", updateEligibility);
-  }, []);
-
-  useEffect(() => {
-    let settleTimer: number | undefined;
-    const settle = () => {
-      settleTimer = window.setTimeout(() => setPageSettled(true), 1_200);
-    };
-
-    if (document.readyState === "complete") settle();
-    else window.addEventListener("load", settle, { once: true });
-
-    return () => {
-      window.removeEventListener("load", settle);
-      if (settleTimer !== undefined) window.clearTimeout(settleTimer);
-    };
   }, []);
 
   useEffect(() => {
@@ -101,10 +83,10 @@ export default function Hero() {
       <video
         ref={videoRef}
         className={`hero-background-video${videoReady ? " ready" : ""}`}
-        muted loop playsInline preload="none" poster="/hero-video-poster.webp" aria-hidden="true" tabIndex={-1}
+        muted loop playsInline preload="auto" poster="/hero-video-poster.webp" aria-hidden="true" tabIndex={-1}
         onPlaying={() => setVideoReady(true)}
       >
-        {canLoadVideo && <source src="/hero%20image%20video.mp4" type="video/mp4" />}
+        {canLoadVideo && <source src="/hero-video.mp4" type="video/mp4" />}
       </video>
       <div className="hero-content">
         <p className="eyebrow hero-enter-eyebrow">Ayurvedic care, guided with trust</p>
