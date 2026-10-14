@@ -60,7 +60,7 @@ test("home hero and responsive content grids remain contained", async ({ page },
   expect(heroBounds!.x + heroBounds!.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
   await expect(hero.locator("h1")).toBeVisible();
 
-  if (testInfo.project.name === "mobile-360") {
+  if (testInfo.project.name.startsWith("mobile-")) {
     const columns = await page.locator(".wellness-path-grid").evaluate((element) =>
       getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length,
     );

@@ -1,5 +1,6 @@
 "use client";
 
+import Image, { type ImageLoaderProps } from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import MagneticButton from "./MagneticButton";
@@ -12,6 +13,10 @@ const CORE_VALUES = [
   { title: "Excellence", description: "Quality care, every day." },
   { title: "Growth", description: "Growing together, creating impact." },
 ] as const;
+
+function heroPosterLoader({ src, width, quality }: ImageLoaderProps) {
+  return `/_next/image?url=${encodeURIComponent(src)}&w=${width}&q=${quality ?? 82}`;
+}
 
 export default function Hero() {
   const heroRef = useRef<HTMLElement>(null);
@@ -80,10 +85,20 @@ export default function Hero() {
 
   return (
     <section id="hero" ref={heroRef}>
+      <Image
+        className="hero-background-poster"
+        src="/hero-video-poster.webp"
+        loader={heroPosterLoader}
+        alt=""
+        fill
+        priority
+        quality={82}
+        sizes="100vw"
+      />
       <video
         ref={videoRef}
         className={`hero-background-video${videoReady ? " ready" : ""}`}
-        muted loop playsInline preload="metadata" poster="/hero-video-poster.webp" aria-hidden="true" tabIndex={-1}
+        muted loop playsInline preload="metadata" aria-hidden="true" tabIndex={-1}
         onPlaying={() => setVideoReady(true)}
       >
         {canLoadVideo && <source src="/hero-video.mp4" type="video/mp4" />}

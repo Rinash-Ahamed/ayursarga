@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { HospitalDocument, ServiceDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import { listPublicHospitalServices, searchPublicHospitals } from "@/services/hospitals/publicHospitalService";
@@ -39,6 +39,7 @@ function SearchCentreField({ label, selected, excludedId, onSelect, onRemove }: 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestVersion = useRef(0);
+  const optionsId = useId();
 
   useEffect(() => {
     const term = query.trim();
@@ -88,6 +89,7 @@ function SearchCentreField({ label, selected, excludedId, onSelect, onRemove }: 
           autoComplete="off"
           role="combobox"
           aria-expanded={showOptions}
+          aria-controls={optionsId}
           aria-autocomplete="list"
           onChange={(event) => {
             const value = event.target.value;
@@ -110,7 +112,7 @@ function SearchCentreField({ label, selected, excludedId, onSelect, onRemove }: 
     </label>
     {isLoading && <small className="public-comparison-picker-status">Searching centers...</small>}
     {error && <small className="public-comparison-picker-status error" role="alert">{error}</small>}
-    {showOptions && <div className="public-comparison-picker-options" role="listbox" aria-label={`${label} search results`}>
+    {showOptions && <div id={optionsId} className="public-comparison-picker-options" role="listbox" aria-label={`${label} search results`}>
       {options.length > 0 ? options.map((hospital) => <button key={hospital.id} type="button" role="option" aria-selected="false" onClick={() => {
         setQuery("");
         setOptions([]);
