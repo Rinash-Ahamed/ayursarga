@@ -3,11 +3,8 @@
 import type { ServiceDocument } from "@/features/firestore/models";
 import type { DocumentData } from "firebase/firestore";
 import { COLLECTIONS } from "@/constants/firestore";
-import {
-  firestoreTimestamp, runFilteredQuery,
-  type QueryPageOptions,
-} from "@/services/firestore/firestoreService";
-import { createAuditedDocument, getArchiveMetadata, getAuditActorId, replaceAuditedDocument, updateAuditedDocument } from "@/services/firestore/auditService";
+import { runFilteredQuery, type QueryPageOptions } from "@/services/firestore/firestoreService";
+import { authorizedApiRequest } from "@/services/api/client";
 
 type ServiceInput = Pick<ServiceDocument,
   "hospitalId" | "name" | "description" | "price" | "packageDurationDays" | "procedures" |
@@ -34,43 +31,33 @@ export function listHospitalServices(
 }
 
 export const createService = (input: ServiceInput) => {
-  const actorId = getAuditActorId();
-  return createAuditedDocument(COLLECTIONS.services, {
-    ...input, createdAt: firestoreTimestamp.server(), createdBy: actorId,
-    updatedAt: firestoreTimestamp.server(), updatedBy: actorId,
-    archivedAt: null, archivedBy: null,
-  }, { action: "create", actorRole: "hospital" });
+  const { hospitalId: _hospitalId, ...packageInput } = input;
+  void _hospitalId;
+  return authorizedApiRequest<{ ok: true; serviceId: string }>("/api/hospital/services", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(packageInput),
+    signedOutMessage: "Your Hospital session has expired. Sign in again to add a package.",
+    failureMessage: "We could not add the package. Please try again.",
+  });
 };
 
-export function updateService(id: string, input: Partial<Omit<ServiceInput, "hospitalId">>, previousValues?: DocumentData) {
-  const actorId = getAuditActorId();
-  if (input.packageDurationDays !== undefined && previousValues) {
-    return replaceAuditedDocument(COLLECTIONS.services, id, {
-      hospitalId: previousValues.hospitalId,
-      name: input.name,
-      description: input.description ?? "",
-      price: input.price,
-      packageDurationDays: input.packageDurationDays,
-      procedures: input.procedures ?? {},
-      otherProcedures: input.otherProcedures ?? [],
-      otherProcedureName: input.otherProcedureName ?? null,
-      otherProcedureDays: input.otherProcedureDays ?? null,
-      status: input.status ?? previousValues.status,
-      createdAt: previousValues.createdAt,
-      createdBy: previousValues.createdBy,
-      updatedAt: firestoreTimestamp.server(),
-      updatedBy: actorId,
-      archivedAt: previousValues.archivedAt ?? null,
-      archivedBy: previousValues.archivedBy ?? null,
-    }, { action: "update", actorRole: "hospital" }, previousValues);
-  }
-  return updateAuditedDocument(COLLECTIONS.services, id, {
-    ...input, updatedAt: firestoreTimestamp.server(), updatedBy: actorId,
-  }, { action: input.status ? "status_change" : "update", actorRole: "hospital" }, previousValues);
+export function updateService(id: string, input: Partial<Omit<ServiceInput, "hospitalId">>, _previousValues?: DocumentData) {
+  const statusOnly = input.status !== undefined && input.packageDurationDays === undefined;
+  return authorizedApiRequest<{ ok: true }>(`/api/hospital/services/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: statusOnly ? "status" : "update", data: input }),
+    signedOutMessage: "Your Hospital session has expired. Sign in again to update the package.",
+    failureMessage: "We could not update the package. Please try again.",
+  });
 }
 
-export const archiveService = (id: string, previousValues?: DocumentData) =>
-  updateAuditedDocument(COLLECTIONS.services, id, {
-    status: "archived",
-    ...getArchiveMetadata(),
-  }, { action: "archive", actorRole: "hospital" }, previousValues);
+export const archiveService = (id: string, _previousValues?: DocumentData) =>
+  authorizedApiRequest<{ ok: true }>(`/api/hospital/services/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "archive" }),
+    signedOutMessage: "Your Hospital session has expired. Sign in again to archive the package.",
+    failureMessage: "We could not archive the package. Please try again.",
+  });

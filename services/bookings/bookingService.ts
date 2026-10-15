@@ -109,16 +109,23 @@ export type HospitalBookingUpdate = {
   confirmedDate?: Date | null; confirmedTime?: string | null; hospitalNotes?: string | null;
 };
 
-export function updateHospitalBooking(id: string, input: HospitalBookingUpdate, previousValues?: DocumentData) {
-  const data: Record<string, unknown> = {
-    status: input.status, hospitalNotes: input.hospitalNotes?.trim() || null,
-    updatedAt: firestoreTimestamp.server(),
-  };
-  if (input.confirmedDate !== undefined) data.confirmedDate = input.confirmedDate ? Timestamp.fromDate(input.confirmedDate) : null;
-  if (input.confirmedTime !== undefined) data.confirmedTime = input.confirmedTime;
-  if (input.status === "confirmed") data.confirmedAt = firestoreTimestamp.server();
-  data.updatedBy = getAuditActorId();
-  return updateAuditedDocument(COLLECTIONS.bookings, id, data, { action: "status_change", actorRole: "hospital" }, previousValues);
+export function updateHospitalBooking(id: string, input: HospitalBookingUpdate, _previousValues?: DocumentData) {
+  const localDate = input.confirmedDate
+    ? `${input.confirmedDate.getFullYear()}-${String(input.confirmedDate.getMonth() + 1).padStart(2, "0")}-${String(input.confirmedDate.getDate()).padStart(2, "0")}`
+    : null;
+  return authorizedApiRequest<{ ok: true }>(`/api/hospital/bookings/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "booking",
+      status: input.status,
+      confirmedDate: localDate,
+      confirmedTime: input.confirmedTime ?? null,
+      hospitalNotes: input.hospitalNotes?.trim() || null,
+    }),
+    signedOutMessage: "Your Hospital session has expired. Sign in again to update the booking.",
+    failureMessage: "We could not update the booking. Please try again.",
+  });
 }
 
 const NEXT_TREATMENT_STATUS: Record<TreatmentStatus, readonly TreatmentStatus[]> = {
@@ -140,22 +147,11 @@ export function updateTreatmentProgress(
   if (!NEXT_TREATMENT_STATUS[currentStatus].includes(treatmentStatus)) {
     throw new Error("This treatment status change is not available.");
   }
-  const changes: Record<string, unknown> = {
-    treatmentStatus,
-    updatedAt: firestoreTimestamp.server(),
-    updatedBy: getAuditActorId(),
-  };
-  if (treatmentStatus === "started") changes.treatmentStartedAt = firestoreTimestamp.server();
-  if (treatmentStatus === "completed") {
-    changes.status = "completed";
-    changes.completedAt = firestoreTimestamp.server();
-    changes.treatmentCompletedAt = firestoreTimestamp.server();
-  }
-  return updateAuditedDocument(
-    COLLECTIONS.bookings,
-    id,
-    changes,
-    { action: "status_change", actorRole: "hospital" },
-    previousValues,
-  );
+  return authorizedApiRequest<{ ok: true }>(`/api/hospital/bookings/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "treatment", treatmentStatus }),
+    signedOutMessage: "Your Hospital session has expired. Sign in again to update treatment progress.",
+    failureMessage: "We could not update treatment progress. Please try again.",
+  });
 }

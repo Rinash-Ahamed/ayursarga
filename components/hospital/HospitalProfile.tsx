@@ -68,8 +68,8 @@ export function HospitalProfile() {
       await updateHospitalProfile(id, profile, hospital);
       setHospital((current) => current ? { ...current, ...profile } : current);
       setMessage("The hospital profile has been updated.");
-    } catch {
-      setError("We could not save the hospital profile. Check the details and try again.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "We could not save the hospital profile. Check the details and try again.");
     } finally {
       setBusy(false);
     }

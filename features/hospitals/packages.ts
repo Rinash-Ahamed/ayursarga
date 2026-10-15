@@ -78,6 +78,62 @@ function isPackageDuration(value: unknown): value is PackageDurationDays {
   return typeof value === "number" && PACKAGE_DURATIONS.includes(value as PackageDurationDays);
 }
 
+export function validatePackagePayload(input: Record<string, unknown>) {
+  const packageDurationDays = Number(input.packageDurationDays);
+  if (!isPackageDuration(packageDurationDays)) throw new Error("Choose a valid package duration.");
+  const price = Number(input.price);
+  if (!Number.isFinite(price) || price <= 0) throw new Error("Enter a valid package amount.");
+  const description = typeof input.description === "string" ? input.description.trim() : "";
+  if (description.length > 2_000) throw new Error("Package notes must be 2,000 characters or fewer.");
+
+  if (!input.procedures || typeof input.procedures !== "object" || Array.isArray(input.procedures)) {
+    throw new Error("Select or add at least one procedure for this package.");
+  }
+  const rawProcedures = input.procedures as Record<string, unknown>;
+  const validProcedureIds = new Set(PACKAGE_PROCEDURES.map(([id]) => id));
+  if (Object.keys(rawProcedures).some((id) => !validProcedureIds.has(id as PackageProcedureId))) {
+    throw new Error("This package contains an unsupported procedure.");
+  }
+  const procedures: Record<string, number> = {};
+  Object.entries(rawProcedures).forEach(([id, rawDays]) => {
+    const days = Number(rawDays);
+    if (!Number.isInteger(days) || days < 1) throw new Error("Enter a valid number of days for every procedure.");
+    procedures[id] = DAYLESS_PACKAGE_PROCEDURE_IDS.has(id) ? 1 : days;
+  });
+
+  if (!Array.isArray(input.otherProcedures) || input.otherProcedures.length > 5) {
+    throw new Error("Add no more than five custom procedures.");
+  }
+  const otherProcedures: Array<{ name: string; days: number }> = [];
+  for (const value of input.otherProcedures) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("A custom procedure is invalid.");
+    const entry = value as Record<string, unknown>;
+    const name = typeof entry.name === "string" ? entry.name.trim() : "";
+    const days = Number(entry.days);
+    if (name.length < 2 || name.length > 100) throw new Error("Enter each custom procedure name between 2 and 100 characters.");
+    if (!Number.isInteger(days) || days < 1) throw new Error(`Enter a valid number of days for ${name}.`);
+    if (PACKAGE_PROCEDURES.some(([, label]) => label.toLocaleLowerCase() === name.toLocaleLowerCase())) {
+      throw new Error(`${name} is already available in the procedure list. Select it there instead.`);
+    }
+    if (otherProcedures.some((procedure) => procedure.name.toLocaleLowerCase() === name.toLocaleLowerCase())) {
+      throw new Error(`${name} has been added more than once to this package.`);
+    }
+    otherProcedures.push({ name, days });
+  }
+  if (!Object.keys(procedures).length && !otherProcedures.length) throw new Error("Select or add at least one procedure for this package.");
+
+  return {
+    name: `${packageDurationDays}-day package`,
+    description,
+    price: Math.round(price * 100) / 100,
+    packageDurationDays,
+    procedures,
+    otherProcedures,
+    otherProcedureName: null,
+    otherProcedureDays: null,
+  };
+}
+
 export function packageTitle(service: PackageLike) {
   return isPackageDuration(service.packageDurationDays)
     ? `${service.packageDurationDays}-day package`

@@ -4,6 +4,7 @@ import { apiHealth, apiJson, logApiError } from "@/services/api/server";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
+import { requestAuditDevice } from "@/services/api/audit";
 
 export const runtime = "nodejs";
 
@@ -28,14 +29,6 @@ function indiaDateKey(date: Date) {
 
 function dateLabel(date: Date) {
   return date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" });
-}
-
-function device(request: Request) {
-  return {
-    userAgent: request.headers.get("user-agent")?.slice(0, 500) || null,
-    platform: null,
-    ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
-  };
 }
 
 export async function POST(request: Request) {
@@ -99,7 +92,7 @@ export async function POST(request: Request) {
     batch.set(auditReference, {
       action: "create", module: "availability", recordId: availabilityReference.id,
       actorId: uid, actorRole: "hospital", previousValues: null, updatedValues: availabilityData,
-      timestamp: now, source: "server", device: device(request),
+      timestamp: now, source: "server", device: requestAuditDevice(request),
     });
     adminIds.forEach((recipientId) => {
       const notification = firestore.collection("notifications").doc();

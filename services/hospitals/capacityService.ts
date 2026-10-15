@@ -6,6 +6,7 @@ import { COLLECTIONS } from "@/constants/firestore";
 import { firestoreTimestamp, readDocument } from "@/services/firestore/firestoreService";
 import { createAuditedDocument, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
 import type { PortalRole } from "@/features/auth/contracts";
+import { authorizedApiRequest } from "@/services/api/client";
 
 type HospitalCapacityInput = {
   totalRooms: number;
@@ -34,6 +35,15 @@ export function saveHospitalCapacity(
   actorRole: Extract<PortalRole, "admin" | "hospital"> = "hospital",
 ) {
   validateCapacity(input);
+  if (actorRole === "hospital") {
+    return authorizedApiRequest<{ ok: true }>("/api/hospital/capacity", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+      signedOutMessage: "Your Hospital session has expired. Sign in again to update room availability.",
+      failureMessage: "We could not update room availability. Please try again.",
+    });
+  }
   const actorId = getAuditActorId();
   if (!previous) {
     return createAuditedDocument(COLLECTIONS.hospitalCapacity, {

@@ -195,8 +195,8 @@ export function ServicesManager() {
       await updateService(item.id, { status }, item);
       patchItem(item.id, { status });
       setActionMessage(`The package is now ${status}.`);
-    } catch {
-      setActionError("We could not change this package's status. Refresh the page and try again.");
+    } catch (caught) {
+      setActionError(caught instanceof Error ? caught.message : "We could not change this package's status. Refresh the page and try again.");
     } finally {
       setBusyId(null);
     }
@@ -218,8 +218,8 @@ export function ServicesManager() {
       if (editingId === item.id) setEditingId(null);
       setActionMessage("The package has been deleted from normal views and safely archived.");
       setServiceToRemove(null);
-    } catch {
-      setActionError("We could not delete this package. Refresh the page and try again.");
+    } catch (caught) {
+      setActionError(caught instanceof Error ? caught.message : "We could not delete this package. Refresh the page and try again.");
     } finally {
       setBusyId(null);
     }

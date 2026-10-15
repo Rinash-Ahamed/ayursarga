@@ -104,8 +104,8 @@ export function HospitalBookings() {
       await updateHospitalBooking(item.id, update, item);
       await reload();
       setActionMessage("The booking has been updated.");
-    } catch {
-      setActionError("We could not update this booking. Review the details and try again.");
+    } catch (caught) {
+      setActionError(caught instanceof Error ? caught.message : "We could not update this booking. Review the details and try again.");
     } finally {
       setBusy(null);
     }
