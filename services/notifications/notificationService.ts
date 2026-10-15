@@ -34,7 +34,7 @@ export function subscribeToNotifications(
   }, (error) => onError(error));
 }
 
-export function markNotificationRead(notificationId: string, _recipientId: string) {
+export function markNotificationRead(notificationId: string) {
   return authorizedApiRequest<{ ok: true }>("/api/notifications/read", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -44,7 +44,7 @@ export function markNotificationRead(notificationId: string, _recipientId: strin
   });
 }
 
-export async function markAllNotificationsRead(notifications: DocumentRecord<NotificationDocument>[], _recipientId: string) {
+export async function markAllNotificationsRead(notifications: DocumentRecord<NotificationDocument>[]) {
   const unread = notifications.filter((item) => !item.readAt);
   if (!unread.length) return;
   await authorizedApiRequest<{ ok: true }>("/api/notifications/read", {

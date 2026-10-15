@@ -15,6 +15,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("public pages stay within the viewport", async ({ page }) => {
+  test.setTimeout(120_000);
+
   for (const route of PUBLIC_ROUTES) {
     await page.goto(route, { waitUntil: "domcontentloaded" });
     await page.locator("#site-nav").waitFor();

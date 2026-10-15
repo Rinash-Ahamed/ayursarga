@@ -8,7 +8,7 @@ import { getPublicHospital, listPublicHospitalServices, type PublicPageCursor } 
 import { getHospitalImageUrls } from "@/features/hospitals/images";
 import { resolveCentreGuidelines } from "@/features/hospitals/guidelines";
 import { groupHospitalFacilities } from "@/features/hospitals/facilities";
-import { packageProcedureEntries, packageTitle } from "@/features/hospitals/packages";
+import { packageProcedureEntries, packageTitle, sortPackagesByDuration } from "@/features/hospitals/packages";
 import { getHospitalMapEmbedUrl } from "@/features/hospitals/location";
 import { FacilityIcon } from "@/components/icons/FacilityIcon";
 import { addCentreSearchContext, type CentreSearchContext } from "@/features/hospitals/searchContext";
@@ -68,6 +68,7 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
   const [activeSection, setActiveSection] = useState<(typeof CENTRE_DETAIL_SECTIONS)[number][0]>("overview");
   const loader = useCallback((cursor: PublicPageCursor | null) => listPublicHospitalServices(hospitalId, { pageSize: 12, cursor }), [hospitalId]);
   const { items: services, error: serviceError, isLoading: servicesLoading, hasMore, loadMore } = usePaginatedList<ServiceDocument, PublicPageCursor>(loader, "We could not load this centre's packages. Please try again.");
+  const orderedServices = useMemo(() => sortPackagesByDuration(services), [services]);
 
   useEffect(() => {
     let active = true;
@@ -168,7 +169,7 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
             {serviceError && <div className="public-centre-inline-error" role="alert">{serviceError}</div>}
             {servicesLoading && services.length === 0 && <p role="status">Loading available packages...</p>}
             {!servicesLoading && !serviceError && services.length === 0 && <p>No active packages are listed for this centre yet.</p>}
-            <div className="public-centre-services">{services.map((service) => {
+            <div className="public-centre-services">{orderedServices.map((service) => {
               const bookingParams = addCentreSearchContext(new URLSearchParams({ hospitalId: hospital.id, serviceId: service.id }), searchContext);
               const procedures = packageProcedureEntries(service);
               const expanded = expandedPackages.has(service.id);

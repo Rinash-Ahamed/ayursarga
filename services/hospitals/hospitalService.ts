@@ -101,7 +101,7 @@ export function activateHospital(id: string, previous?: DocumentData) {
 
 export const deactivateHospital = (id: string) => adminHospitalAction(id, "deactivate");
 
-export const updateHospitalProfile = (id: string, input: Partial<HospitalProfileInput>, _previousValues?: DocumentData) => {
+export const updateHospitalProfile = (id: string, input: Partial<HospitalProfileInput>) => {
   if (!id) throw new Error("Your hospital account is not connected correctly.");
   return authorizedApiRequest<{ ok: true }>("/api/hospital/profile", {
     method: "PATCH",

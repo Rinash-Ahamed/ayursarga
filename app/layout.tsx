@@ -22,5 +22,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   </head><body>
     <Script id="ayursarga-opening-session" strategy="beforeInteractive">{`try{if(sessionStorage.getItem("ayursarga-public-opening-seen")==="true")document.documentElement.dataset.ayursargaOpening="seen"}catch{}`}</Script>
     {children}
+    <div id="portal-toast-viewport" className="portal-toast-viewport" aria-label="Notifications" />
   </body></html>;
 }

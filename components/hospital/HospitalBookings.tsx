@@ -101,7 +101,7 @@ export function HospitalBookings() {
     setBusy(item.id); setActionError(null); setActionMessage(null);
     setPendingBookingAction(null);
     try {
-      await updateHospitalBooking(item.id, update, item);
+      await updateHospitalBooking(item.id, update);
       await reload();
       setActionMessage("The booking has been updated.");
     } catch (caught) {

@@ -11,6 +11,7 @@ import {
   packageProcedureEntries,
   packageTitle,
   readPackageForm,
+  sortPackagesByDuration,
 } from "@/features/hospitals/packages";
 import { formatStatus } from "@/utils/text";
 import { useAuth } from "@/hooks/useAuth";
@@ -149,6 +150,7 @@ export function ServicesManager() {
     "We could not load your packages. Refresh the page and try again.",
   );
   const usedInCreate = useMemo(() => usedProcedures(items), [items]);
+  const orderedItems = useMemo(() => sortPackagesByDuration(items), [items]);
 
   function beginAction(id: string) {
     setBusyId(id);
@@ -181,7 +183,7 @@ export function ServicesManager() {
     beginAction(item.id);
     try {
       const changes = readPackageForm(form);
-      await updateService(item.id, changes, item);
+      await updateService(item.id, changes);
       patchItem(item.id, changes);
       setEditingId(null);
       setActionMessage("The package has been updated.");
@@ -197,7 +199,7 @@ export function ServicesManager() {
     const status = item.status === "active" ? "inactive" : "active";
     beginAction(item.id);
     try {
-      await updateService(item.id, { status }, item);
+      await updateService(item.id, { status });
       patchItem(item.id, { status });
       setActionMessage(`The package is now ${status}.`);
     } catch (caught) {
@@ -218,7 +220,7 @@ export function ServicesManager() {
   async function removeService(item: DocumentRecord<ServiceDocument>) {
     beginAction(item.id);
     try {
-      await archiveService(item.id, item);
+      await archiveService(item.id);
       removeItem(item.id);
       if (editingId === item.id) setEditingId(null);
       setActionMessage("The package has been deleted from normal views and safely archived.");
@@ -243,7 +245,7 @@ export function ServicesManager() {
     <PortalToast message={actionMessage} />
     <PortalToast message={actionError} tone="error" />
     <div className="portal-list">
-      {items.map((item) => editingId === item.id
+      {orderedItems.map((item) => editingId === item.id
         ? <article className="portal-card portal-service-edit" key={item.id}>
           <div className="portal-row-heading"><h2>{packageTitle(item)}</h2><span className="portal-status portal-service-status" data-status={item.status}>{formatStatus(item.status)}</span></div>
           <form className="portal-form" onSubmit={(event) => void saveService(event, item)} noValidate>
@@ -252,8 +254,8 @@ export function ServicesManager() {
           </form>
         </article>
         : <article className="portal-row portal-service-row" key={item.id}>
-          <div><h3>{packageTitle(item)}</h3><p>{packageProcedureEntries(item).length} procedures included</p>{typeof item.price === "number" && <p>₹{item.price.toLocaleString("en-IN")}</p>}{item.description && <p>{item.description}</p>}<ul className="portal-package-summary">{packageProcedureEntries(item).slice(0, 4).map((procedure) => <li key={procedure.id}>{procedure.label} {procedure.days !== null && <span>{procedure.days} days</span>}</li>)}</ul></div>
-          <div className="portal-service-controls"><span className="portal-status portal-service-status" data-status={item.status}>{formatStatus(item.status)}</span><div className="portal-actions"><button className="portal-button secondary" type="button" disabled={busyId !== null} onClick={() => { setEditingId(item.id); setActionError(null); setActionMessage(null); }}>Edit package</button><button className="portal-button secondary" type="button" disabled={busyId !== null} onClick={() => void toggleStatus(item)}>{item.status === "active" ? "Deactivate" : "Activate"}</button><button className="portal-button danger" type="button" disabled={busyId !== null} onClick={() => setServiceToRemove(item)}>Delete</button></div></div>
+          <div className="portal-service-content"><div className="portal-row-heading portal-service-heading"><h3>{packageTitle(item)}</h3><span className="portal-status portal-service-status" data-status={item.status}>{formatStatus(item.status)}</span></div><p>{packageProcedureEntries(item).length} procedures included</p>{typeof item.price === "number" && <p>₹{item.price.toLocaleString("en-IN")}</p>}{item.description && <p>{item.description}</p>}<ul className="portal-package-summary">{packageProcedureEntries(item).slice(0, 4).map((procedure) => <li key={procedure.id}>{procedure.label} {procedure.days !== null && <span>{procedure.days} days</span>}</li>)}</ul></div>
+          <div className="portal-service-controls"><div className="portal-actions"><button className="portal-button secondary" type="button" disabled={busyId !== null} onClick={() => { setEditingId(item.id); setActionError(null); setActionMessage(null); }}>Edit package</button><button className="portal-button secondary" type="button" disabled={busyId !== null} onClick={() => void toggleStatus(item)}>{item.status === "active" ? "Deactivate" : "Activate"}</button><button className="portal-button danger" type="button" disabled={busyId !== null} onClick={() => setServiceToRemove(item)}>Delete</button></div></div>
         </article>)}
     </div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />

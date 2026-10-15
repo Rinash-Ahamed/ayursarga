@@ -140,6 +140,14 @@ export function packageTitle(service: PackageLike) {
     : service.name || "Care package";
 }
 
+export function sortPackagesByDuration<T extends PackageLike>(packages: readonly T[]) {
+  return [...packages].sort((left, right) => {
+    const durationDifference = (left.packageDurationDays ?? Number.MAX_SAFE_INTEGER)
+      - (right.packageDurationDays ?? Number.MAX_SAFE_INTEGER);
+    return durationDifference || packageTitle(left).localeCompare(packageTitle(right));
+  });
+}
+
 export function packageProcedureEntries(service: PackageLike): { id: string; label: string; days: number | null }[] {
   const procedures = service.procedures ?? {};
   const entries: { id: string; label: string; days: number | null }[] = PACKAGE_PROCEDURES.flatMap(([id, label]) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
 type PortalToastTone = "success" | "error" | "info";
@@ -10,19 +10,6 @@ export function PortalToast({ message, tone = "success" }: {
   tone?: PortalToastTone;
 }) {
   const toastRef = useRef<HTMLDivElement>(null);
-  const [viewport, setViewport] = useState<HTMLElement | null>(null);
-
-  useEffect(() => {
-    let target = document.getElementById("portal-toast-viewport");
-    if (!target) {
-      target = document.createElement("div");
-      target.id = "portal-toast-viewport";
-      target.setAttribute("aria-label", "Notifications");
-      document.body.appendChild(target);
-    }
-    target.classList.add("portal-toast-viewport");
-    setViewport(target);
-  }, []);
 
   // Restart the lifetime whenever the parent reports an action, even when the
   // resulting message text is identical to the previous notification.
@@ -34,6 +21,7 @@ export function PortalToast({ message, tone = "success" }: {
     toast.style.removeProperty("animation");
   });
 
+  const viewport = typeof document === "undefined" ? null : document.getElementById("portal-toast-viewport");
   if (!message || !viewport) return null;
   return createPortal(<div
     ref={toastRef}

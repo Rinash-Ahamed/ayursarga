@@ -68,7 +68,7 @@ export function HospitalProfile() {
         legalPolicies: guidelines.legalPolicies,
         ...bystanderPolicy.data,
       };
-      await updateHospitalProfile(id, profile, hospital);
+      await updateHospitalProfile(id, profile);
       setHospital((current) => current ? { ...current, ...profile } : current);
       setMessage("The hospital profile has been updated.");
     } catch (caught) {

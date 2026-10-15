@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import type { ServiceDocument } from "@/features/firestore/models";
 import type { QueryPageOptions } from "@/services/firestore/firestoreService";
 import { listHospitalServices } from "@/services/hospitals/serviceService";
@@ -8,7 +8,7 @@ import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalPagination } from "@/components/portal/PortalPagination";
 import { formatStatus } from "@/utils/text";
-import { packageProcedureEntries, packageTitle } from "@/features/hospitals/packages";
+import { packageProcedureEntries, packageTitle, sortPackagesByDuration } from "@/features/hospitals/packages";
 import { formatCurrency } from "@/utils/currency";
 
 export function AdminHospitalPackages({ hospitalId }: { hospitalId: string }) {
@@ -20,6 +20,7 @@ export function AdminHospitalPackages({ hospitalId }: { hospitalId: string }) {
     loader,
     "We could not load this hospital's packages. Refresh the page and try again.",
   );
+  const orderedItems = useMemo(() => sortPackagesByDuration(items), [items]);
 
   return <section className="portal-detail-section" aria-labelledby="hospital-packages-title">
     <div className="portal-row-heading">
@@ -35,7 +36,7 @@ export function AdminHospitalPackages({ hospitalId }: { hospitalId: string }) {
         : undefined}
     />
     <div className="portal-list">
-      {items.map((service) => <article className="portal-row" key={service.id}>
+      {orderedItems.map((service) => <article className="portal-row" key={service.id}>
         <div>
           <h3>{packageTitle(service)}</h3>
           <p>{service.description || "No description provided."}</p>

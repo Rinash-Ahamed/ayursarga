@@ -64,7 +64,7 @@ export function PortalNotifications({ recipientId }: { recipientId: string }) {
     {open && <section className="portal-notification-panel" aria-label="Recent notifications">
       <div className="portal-notification-heading">
         <strong>Notifications</strong>
-        {unread.length > 0 && <button type="button" onClick={() => void markAllNotificationsRead(items, recipientId)
+        {unread.length > 0 && <button type="button" onClick={() => void markAllNotificationsRead(items)
           .catch(() => setError("We could not mark the notifications as read."))}>Mark all read</button>}
       </div>
       {loading && <p className="portal-notification-state">Loading notifications...</p>}
@@ -78,7 +78,7 @@ export function PortalNotifications({ recipientId }: { recipientId: string }) {
           key={item.id}
           onClick={() => {
             setOpen(false);
-            if (!item.readAt) void markNotificationRead(item.id, recipientId)
+            if (!item.readAt) void markNotificationRead(item.id)
               .catch(() => setError("We could not mark this notification as read."));
           }}
         >

@@ -1,7 +1,6 @@
 "use client";
 
 import type { ServiceDocument } from "@/features/firestore/models";
-import type { DocumentData } from "firebase/firestore";
 import { COLLECTIONS } from "@/constants/firestore";
 import { runFilteredQuery, type QueryPageOptions } from "@/services/firestore/firestoreService";
 import { authorizedApiRequest } from "@/services/api/client";
@@ -42,7 +41,7 @@ export const createService = (input: ServiceInput) => {
   });
 };
 
-export function updateService(id: string, input: Partial<Omit<ServiceInput, "hospitalId">>, _previousValues?: DocumentData) {
+export function updateService(id: string, input: Partial<Omit<ServiceInput, "hospitalId">>) {
   const statusOnly = input.status !== undefined && input.packageDurationDays === undefined;
   return authorizedApiRequest<{ ok: true }>(`/api/hospital/services/${encodeURIComponent(id)}`, {
     method: "PATCH",
@@ -53,7 +52,7 @@ export function updateService(id: string, input: Partial<Omit<ServiceInput, "hos
   });
 }
 
-export const archiveService = (id: string, _previousValues?: DocumentData) =>
+export const archiveService = (id: string) =>
   authorizedApiRequest<{ ok: true }>(`/api/hospital/services/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },

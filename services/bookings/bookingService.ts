@@ -109,7 +109,7 @@ export type HospitalBookingUpdate = {
   confirmedDate?: Date | null; confirmedTime?: string | null; hospitalNotes?: string | null;
 };
 
-export function updateHospitalBooking(id: string, input: HospitalBookingUpdate, _previousValues?: DocumentData) {
+export function updateHospitalBooking(id: string, input: HospitalBookingUpdate) {
   const localDate = input.confirmedDate
     ? `${input.confirmedDate.getFullYear()}-${String(input.confirmedDate.getMonth() + 1).padStart(2, "0")}-${String(input.confirmedDate.getDate()).padStart(2, "0")}`
     : null;
