@@ -36,6 +36,7 @@ import { CentreGuidelines } from "@/components/hospital/CentreGuidelines";
 import { AdminHospitalCapacity } from "@/components/admin/HospitalCapacity";
 import { ContractPreviewDialog } from "@/components/admin/ContractPreviewDialog";
 import { validateHospitalContractDetails, type HospitalContractDetailErrors, type HospitalContractDetailField } from "@/features/hospitals/contractDetails";
+import { focusFirstInvalidField } from "@/utils/formFocus";
 
 function formatDate(value: unknown) {
   const date = toDate(value);
@@ -204,12 +205,14 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   async function saveContractDetails(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!hospital || busy) return;
-    const validation = validateHospitalContractDetails(Object.fromEntries(new FormData(event.currentTarget).entries()));
+    const form = event.currentTarget;
+    const validation = validateHospitalContractDetails(Object.fromEntries(new FormData(form).entries()));
     setContractFieldErrors(validation.errors);
     setError(null);
     setMessage(null);
     if (!validation.isValid) {
       setError("Check the highlighted contract particulars before saving.");
+      focusFirstInvalidField(form);
       return;
     }
     setBusy(true);
@@ -245,7 +248,8 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   async function saveHospitalDetails(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!hospital || busy) return;
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const validation = validateHospitalFields({
       ...hospitalFormValues(form),
       imageUrl: hospital.imageUrl,
@@ -256,6 +260,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     setMessage(null);
     if (!validation.isValid) {
       setError("Please check the highlighted fields, then save the details again.");
+      focusFirstInvalidField(formElement);
       return;
     }
 
@@ -289,7 +294,8 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   async function saveHospitalMedia(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!hospital || busy) return;
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const images = validateHospitalImageUrls(form.getAll("hospitalImageUrl"));
     const location = validateHospitalLocationUrl(form.get("hospitalLocationUrl"));
     setImageError(images.error);
@@ -298,6 +304,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     setMessage(null);
     if (images.error || location.error) {
       setError(images.error ?? location.error ?? "Check the hospital images and map details, then try again.");
+      focusFirstInvalidField(formElement);
       return;
     }
 

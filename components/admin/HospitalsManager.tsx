@@ -15,6 +15,7 @@ import { HospitalFormFields } from "@/components/forms/HospitalFormFields";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
+import { focusFirstInvalidField } from "@/utils/formFocus";
 
 export function HospitalsManager() {
   const [actionError, setActionError] = useRepeatableMessage();
@@ -37,6 +38,7 @@ export function HospitalsManager() {
     setActionMessage(null);
     if (!validation.isValid) {
       setActionError("Please check the highlighted fields, then try creating the hospital again.");
+      focusFirstInvalidField(form);
       return;
     }
 

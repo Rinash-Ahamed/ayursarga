@@ -1,6 +1,7 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 type PortalToastTone = "success" | "error" | "info";
 
@@ -9,6 +10,19 @@ export function PortalToast({ message, tone = "success" }: {
   tone?: PortalToastTone;
 }) {
   const toastRef = useRef<HTMLDivElement>(null);
+  const [viewport, setViewport] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    let target = document.getElementById("portal-toast-viewport");
+    if (!target) {
+      target = document.createElement("div");
+      target.id = "portal-toast-viewport";
+      target.setAttribute("aria-label", "Notifications");
+      document.body.appendChild(target);
+    }
+    target.classList.add("portal-toast-viewport");
+    setViewport(target);
+  }, []);
 
   // Restart the lifetime whenever the parent reports an action, even when the
   // resulting message text is identical to the previous notification.
@@ -20,8 +34,8 @@ export function PortalToast({ message, tone = "success" }: {
     toast.style.removeProperty("animation");
   });
 
-  if (!message) return null;
-  return <div
+  if (!message || !viewport) return null;
+  return createPortal(<div
     ref={toastRef}
     key={`${tone}:${message}`}
     className="portal-toast"
@@ -31,5 +45,5 @@ export function PortalToast({ message, tone = "success" }: {
   >
     <span className="portal-toast-mark" aria-hidden="true">{tone === "error" ? <svg viewBox="0 0 16 16"><path d="M8 3v6"/><circle cx="8" cy="12" r=".5" fill="currentColor" stroke="none"/></svg> : <svg viewBox="0 0 16 16"><path d="m3 8.5 3.5 3.5 6.5-8"/></svg>}</span>
     <p>{message}</p>
-  </div>;
+  </div>, viewport);
 }

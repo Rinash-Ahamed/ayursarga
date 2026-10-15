@@ -23,6 +23,7 @@ import { PortalPagination } from "@/components/portal/PortalPagination";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 import { PortalDialog } from "@/components/portal/PortalDialog";
+import { focusFirstInvalidField } from "@/utils/formFocus";
 
 type UsedProcedureMap = Map<string, string[]>;
 
@@ -158,15 +159,17 @@ export function ServicesManager() {
   async function addService(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!hospitalId) return;
+    const form = event.currentTarget;
     beginAction("create");
     try {
-      await createService({ hospitalId, ...readPackageForm(event.currentTarget), status: "active" });
+      await createService({ hospitalId, ...readPackageForm(form), status: "active" });
       setHasPackageAmount(false);
       setCreateFormKey((current) => current + 1);
       await reload();
       setActionMessage("The package has been added.");
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : "We could not add the package. Check the details and try again.");
+      focusFirstInvalidField(form);
     } finally {
       setBusyId(null);
     }
@@ -174,15 +177,17 @@ export function ServicesManager() {
 
   async function saveService(event: FormEvent<HTMLFormElement>, item: DocumentRecord<ServiceDocument>) {
     event.preventDefault();
+    const form = event.currentTarget;
     beginAction(item.id);
     try {
-      const changes = readPackageForm(event.currentTarget);
+      const changes = readPackageForm(form);
       await updateService(item.id, changes, item);
       patchItem(item.id, changes);
       setEditingId(null);
       setActionMessage("The package has been updated.");
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : "We could not save the package. Check the details and try again.");
+      focusFirstInvalidField(form);
     } finally {
       setBusyId(null);
     }

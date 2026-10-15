@@ -14,6 +14,7 @@ import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 import { ConsultantFormFields } from "@/components/forms/ConsultantFormFields";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { formatStatus } from "@/utils/text";
+import { focusFirstInvalidField } from "@/utils/formFocus";
 
 export function ConsultantsManager() {
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -42,6 +43,7 @@ export function ConsultantsManager() {
     setMessage(null);
     if (!validation.isValid) {
       setActionError("Please check the highlighted consultant details.");
+      focusFirstInvalidField(form);
       return;
     }
     setBusyId("create");
@@ -61,12 +63,14 @@ export function ConsultantsManager() {
 
   async function edit(event: FormEvent<HTMLFormElement>, consultant: ConsultantDocument & { id: string }) {
     event.preventDefault();
-    const validation = validateConsultantFields(consultantFormValues(new FormData(event.currentTarget)));
+    const form = event.currentTarget;
+    const validation = validateConsultantFields(consultantFormValues(new FormData(form)));
     setFieldErrors(validation.errors);
     setActionError(null);
     setMessage(null);
     if (!validation.isValid) {
       setActionError("Please check the highlighted consultant details.");
+      focusFirstInvalidField(form);
       return;
     }
     setBusyId(consultant.id);

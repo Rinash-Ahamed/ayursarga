@@ -14,6 +14,7 @@ import { CentreGuidelineFields } from "@/components/forms/CentreGuidelineFields"
 import { BystanderPolicyFields } from "@/components/forms/BystanderPolicyFields";
 import { hospitalBystanderFormValues } from "@/features/hospitals/bystanders";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
+import { focusFirstInvalidField } from "@/utils/formFocus";
 
 export function HospitalProfile() {
   const { userProfile } = useAuth();
@@ -31,7 +32,8 @@ export function HospitalProfile() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!id || !hospital) return;
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const values = hospitalFormValues(form);
     const validation = validateHospitalFields({ ...values, commissionPercentage: hospital.commissionPercentage });
     const guidelines = hospitalGuidelineFormValues(form);
@@ -42,6 +44,7 @@ export function HospitalProfile() {
     setError(null);
     if (!validation.isValid || profileError || !bystanderPolicy.data) {
       setError(profileError ?? "Please check the highlighted fields, then save the profile again.");
+      focusFirstInvalidField(formElement);
       return;
     }
 
@@ -82,6 +85,6 @@ export function HospitalProfile() {
     <CentreGuidelineFields hospital={hospital} />
     <PortalToast message={error} tone="error" />
     <PortalToast message={message} />
-    <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save profile"}</button></div>
+    <div className="portal-actions full">{error && <p className="portal-form-error">{error}</p>}<button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save profile"}</button></div>
   </form>}</PortalShell>;
 }

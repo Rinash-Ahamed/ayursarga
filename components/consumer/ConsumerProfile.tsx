@@ -11,6 +11,7 @@ import { PhoneInput } from "@/components/forms/PhoneInput";
 import { hasCurrentConsumerPrivacyConsent } from "@/features/consumers/privacyConsent";
 import { useAuth } from "@/hooks/useAuth";
 import { updateUserProfile } from "@/services/users/userService";
+import { focusFirstInvalidField } from "@/utils/formFocus";
 
 export function ConsumerProfile({ requestedPath }: { requestedPath?: string }) {
   const router = useRouter();
@@ -23,7 +24,8 @@ export function ConsumerProfile({ requestedPath }: { requestedPath?: string }) {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!firebaseUser) return;
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     const validation = validateConsumerContact({
       name: data.get("name"),
       phone: data.get("phone"),
@@ -34,6 +36,7 @@ export function ConsumerProfile({ requestedPath }: { requestedPath?: string }) {
     setError(null);
     if (!validation.isValid) {
       setError("Complete the highlighted contact details before continuing.");
+      focusFirstInvalidField(form);
       return;
     }
     setBusy(true);
@@ -69,7 +72,7 @@ export function ConsumerProfile({ requestedPath }: { requestedPath?: string }) {
         {fieldErrors.privacyConsent && <span className="portal-field-error">{fieldErrors.privacyConsent}</span>}
       </fieldset> : <p className="portal-consent-recorded full">Customer agreement and privacy consent are recorded for this Consumer profile. To withdraw consent, contact <a href="mailto:info@ayursarga.com">info@ayursarga.com</a>.</p>}
       <PortalToast message={error} tone="error" />
-      <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save and continue"}</button></div>
+      <div className="portal-actions full">{error && <p className="portal-form-error">{error}</p>}<button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save and continue"}</button></div>
     </form>
   </PortalShell>;
 }

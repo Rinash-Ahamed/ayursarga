@@ -13,6 +13,9 @@ import { getPublicHospital } from "@/services/hospitals/publicHospitalService";
 import { INCLUDED_BYSTANDERS, resolveHospitalBystanderPolicy } from "@/features/hospitals/bystanders";
 import { formatCurrency } from "@/utils/currency";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
+import { focusFirstInvalidField } from "@/utils/formFocus";
+
+type BookingFieldErrors = Partial<Record<"preferredDate" | "preferredEndDate" | "bookingTerms", string>>;
 
 export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { hospitalId: string; serviceId: string; searchContext: CentreSearchContext }) {
   const { firebaseUser, userProfile } = useAuth();
@@ -24,6 +27,7 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
   const [hospitalLoading, setHospitalLoading] = useState(true);
   const [bystanderCount, setBystanderCount] = useState(INCLUDED_BYSTANDERS);
   const [busy, setBusy] = useState(false); const [error, setError] = useRepeatableMessage();
+  const [fieldErrors, setFieldErrors] = useState<BookingFieldErrors>({});
   const requestId = useRef<string>(globalThis.crypto.randomUUID());
 
   useEffect(() => {
@@ -43,17 +47,29 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
   const additionalBystanderTotal = (bystanderCount - INCLUDED_BYSTANDERS) * bystanderPolicy.additionalBystanderCharge;
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (!firebaseUser || !userProfile?.phone) return;
+    const form = event.currentTarget;
+    setFieldErrors({});
     if (hospitalLoading || !hospital) {
       setError("Wait for the hospital's bystander policy to finish loading, then try again.");
       return;
     }
-    const data = new FormData(event.currentTarget);
+    const data = new FormData(form);
+    if (!preferredDate) {
+      setFieldErrors({ preferredDate: "Choose a preferred start date." });
+      setError("Choose a preferred start date before sending your request.");
+      focusFirstInvalidField(form);
+      return;
+    }
     if (!bookingTermsAccepted) {
+      setFieldErrors({ bookingTerms: "Read and accept the applicable terms and policies." });
       setError("Read and accept the applicable terms and policies before sending your request.");
+      focusFirstInvalidField(form);
       return;
     }
     if (preferredEndDate && preferredEndDate < preferredDate) {
+      setFieldErrors({ preferredEndDate: "Choose an end date on or after the preferred start date." });
       setError("Choose an end date on or after the preferred start date.");
+      focusFirstInvalidField(form);
       return;
     }
     setBusy(true); setError(null);
@@ -70,9 +86,9 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
     finally { setBusy(false); }
   }
   return <PortalShell role="consumer" title="Request an appointment" focused>
-    <form className="portal-card portal-form" onSubmit={submit}>
-      <label>Preferred start date<input name="date" type="date" min={new Date().toISOString().slice(0, 10)} value={preferredDate} onChange={(event) => setPreferredDate(event.target.value)} required /></label>
-      <label>Preferred end date <small>Optional for consultation or single-day care</small><input name="endDate" type="date" min={preferredDate || new Date().toISOString().slice(0, 10)} value={preferredEndDate} onChange={(event) => setPreferredEndDate(event.target.value)} /></label>
+    <form className="portal-card portal-form" onSubmit={submit} noValidate>
+      <label>Preferred start date<input name="date" type="date" min={new Date().toISOString().slice(0, 10)} value={preferredDate} onChange={(event) => { setPreferredDate(event.target.value); setFieldErrors((current) => ({ ...current, preferredDate: undefined })); }} required aria-invalid={Boolean(fieldErrors.preferredDate)} />{fieldErrors.preferredDate && <span className="portal-field-error" role="alert">{fieldErrors.preferredDate}</span>}</label>
+      <label>Preferred end date <small>Optional for consultation or single-day care</small><input name="endDate" type="date" min={preferredDate || new Date().toISOString().slice(0, 10)} value={preferredEndDate} onChange={(event) => { setPreferredEndDate(event.target.value); setFieldErrors((current) => ({ ...current, preferredEndDate: undefined })); }} aria-invalid={Boolean(fieldErrors.preferredEndDate)} />{fieldErrors.preferredEndDate && <span className="portal-field-error" role="alert">{fieldErrors.preferredEndDate}</span>}</label>
       <label>Accompanying bystanders
         {bystanderPolicy.additionalBystandersAllowed
           ? <select name="bystanders" value={bystanderCount} onChange={(event) => setBystanderCount(Number(event.target.value))} disabled={hospitalLoading}>
@@ -92,11 +108,13 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
         <legend>Booking confirmation *</legend>
         <p>By proceeding, you acknowledge the applicable Customer Terms &amp; Conditions, Cancellation &amp; Refund Policy and Patient/Service Disclaimer &amp; Consent.</p>
         <label className="portal-consent-choice">
-          <input name="bookingTerms" type="checkbox" required checked={bookingTermsAccepted} onChange={(event) => setBookingTermsAccepted(event.target.checked)} />
+          <input name="bookingTerms" type="checkbox" required checked={bookingTermsAccepted} aria-invalid={Boolean(fieldErrors.bookingTerms)} onChange={(event) => { setBookingTermsAccepted(event.target.checked); setFieldErrors((current) => ({ ...current, bookingTerms: undefined })); }} />
           <span>I have read and agree to the applicable terms and policies.</span>
         </label>
+        {fieldErrors.bookingTerms && <span className="portal-field-error" role="alert">{fieldErrors.bookingTerms}</span>}
       </fieldset>
       <PortalToast message={error} tone="error" />
+      {error && <p className="portal-form-error full">{error}</p>}
       <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Sending…" : "Send request"}</button></div>
     </form>
   </PortalShell>;

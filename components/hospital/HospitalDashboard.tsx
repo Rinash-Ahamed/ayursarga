@@ -14,6 +14,7 @@ import { COLLECTIONS } from "@/constants/firestore";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import { countUpcomingAvailabilityBlocks } from "@/features/hospitals/availability";
 import { useLocalGreeting } from "@/hooks/useLocalGreeting";
+import { focusFirstInvalidField } from "@/utils/formFocus";
 
 type DashboardCounts = { services: number; bookings: number; requested: number; treatments: number; availabilityBlocks: number };
 const EMPTY_COUNTS: DashboardCounts = { services: 0, bookings: 0, requested: 0, treatments: 0, availabilityBlocks: 0 };
@@ -70,6 +71,7 @@ export function HospitalDashboard() {
   async function saveCapacity(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!hospitalId) return;
+    const form = event.currentTarget;
     setSaving(true); setError(null); setMessage(null);
     try {
       const normalizedTotal = totalRooms.trim() || "0";
@@ -83,6 +85,7 @@ export function HospitalDashboard() {
       setMessage("Treatment room availability has been updated.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "We could not update room availability. Try again.");
+      focusFirstInvalidField(form);
     } finally {
       setSaving(false);
     }
