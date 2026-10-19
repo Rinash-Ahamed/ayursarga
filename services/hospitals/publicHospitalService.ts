@@ -10,8 +10,8 @@ type SerializedRange = { startDate: string; endDate: string };
 type SerializedHospital = Omit<DocumentRecord<HospitalDocument>, "blockedDateRanges"> & { blockedDateRanges?: SerializedRange[] };
 type ApiPage<T> = { documents?: T[]; cursor?: string | null; hasMore?: boolean; error?: string };
 
-async function publicRequest<T>(url: string) {
-  const response = await fetch(url);
+async function publicRequest<T>(url: string, signal?: AbortSignal) {
+  const response = await fetch(url, { signal });
   const body = await response.json().catch(() => ({})) as T & { error?: string };
   if (!response.ok) throw new Error(body.error || "The requested information is temporarily unavailable.");
   return body;
@@ -67,11 +67,11 @@ export async function getPublicHospital(hospitalId: string) {
   return body.hospital ? restoreHospital(body.hospital) : null;
 }
 
-export async function listPublicHospitalServices(hospitalId: string, options: PublicPageOptions = {}): Promise<QueryPage<ServiceDocument, PublicPageCursor>> {
+export async function listPublicHospitalServices(hospitalId: string, options: PublicPageOptions & { signal?: AbortSignal } = {}): Promise<QueryPage<ServiceDocument, PublicPageCursor>> {
   const body = await publicRequest<ApiPage<DocumentRecord<ServiceDocument>>>(publicPageUrl(
     `/api/public/hospitals/${encodeURIComponent(hospitalId)}/services`,
     options,
-  ));
+  ), options.signal);
   return {
     documents: body.documents ?? [],
     cursor: body.cursor ?? null,

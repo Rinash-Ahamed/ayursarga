@@ -10,8 +10,8 @@ import { useAuth } from "@/hooks/useAuth";
 
 export function HospitalChangePasswordForm() {
   const { changePassword, isLoading, error, clearError } = useAuth();
-  const [message, setMessage] = useRepeatableMessage();
-  const [localError, setLocalError] = useRepeatableMessage();
+  const [message, setMessage, messageNotification] = useRepeatableMessage();
+  const [localError, setLocalError, localErrorNotification] = useRepeatableMessage();
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -50,8 +50,8 @@ export function HospitalChangePasswordForm() {
       <div className="full"><PasswordField label="Current password" name="currentPassword" autoComplete="current-password" required /></div>
       <div><PasswordField label="New password" name="newPassword" autoComplete="new-password" showRequirements required /></div>
       <div><PasswordField label="Confirm new password" name="confirmation" autoComplete="new-password" required /></div>
-      <PortalToast message={localError || error?.message} tone="error" />
-      <PortalToast message={message} />
+      <PortalToast message={localError || error?.message} notification={localError ? localErrorNotification : undefined} source={localError ? undefined : error} tone="error" />
+      <PortalToast message={message} notification={messageNotification} />
       <div className="portal-actions full"><button className="portal-button" disabled={isLoading}>{isLoading ? "Changing..." : "Change password"}</button></div>
     </form>
   </PortalShell>;

@@ -28,8 +28,8 @@ export function HospitalDashboard() {
   const [occupiedRooms, setOccupiedRooms] = useState("0");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useRepeatableMessage();
-  const [message, setMessage] = useRepeatableMessage();
+  const [error, setError, errorNotification] = useRepeatableMessage();
+  const [message, setMessage, messageNotification] = useRepeatableMessage();
   const greeting = useLocalGreeting();
 
   useEffect(() => {
@@ -70,7 +70,7 @@ export function HospitalDashboard() {
 
   async function saveCapacity(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!hospitalId) return;
+    if (!hospitalId || saving) return;
     const form = event.currentTarget;
     setSaving(true); setError(null); setMessage(null);
     try {
@@ -79,9 +79,8 @@ export function HospitalDashboard() {
       setTotalRooms(normalizedTotal);
       setOccupiedRooms(normalizedOccupied);
       const input = { totalRooms: Number(normalizedTotal), occupiedRooms: Number(normalizedOccupied) };
-      await saveHospitalCapacity(hospitalId, input, capacity);
-      const saved = await getHospitalCapacity(hospitalId);
-      setCapacity(saved);
+      const changes = await saveHospitalCapacity(hospitalId, input, capacity);
+      setCapacity((current) => ({ ...current, ...changes, id: hospitalId }) as DocumentRecord<HospitalCapacityDocument>);
       setMessage("Treatment room availability has been updated.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "We could not update room availability. Try again.");
@@ -97,8 +96,8 @@ export function HospitalDashboard() {
   const occupancy = total > 0 ? Math.min(100, Math.round(occupied / total * 100)) : 0;
 
   return <PortalShell role="hospital" title="Dashboard">
-    <PortalToast message={error} tone="error" />
-    <PortalToast message={message} />
+    <PortalToast message={error} notification={errorNotification} tone="error" />
+    <PortalToast message={message} notification={messageNotification} />
     <div className="portal-welcome">
       <span className="portal-welcome-eyebrow">Your Centre</span>
       <h2>{greeting}.</h2>

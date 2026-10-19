@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useRef, useState, type FormEvent, type MouseEvent } from "react";
+import { useCallback, useMemo, useState, type FormEvent, type MouseEvent } from "react";
 import type { HospitalDocument } from "@/features/firestore/models";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import {
@@ -10,7 +10,8 @@ import {
   type PublicPageCursor,
 } from "@/services/hospitals/publicHospitalService";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
-import { getHospitalImageUrls } from "@/features/hospitals/images";
+import { getHospitalImageUrls, hospitalImageSrcSet } from "@/features/hospitals/images";
+import { useHospitalImageGallery } from "@/hooks/useHospitalImageGallery";
 import { addCentreSearchContext, type CentreSearchContext } from "@/features/hospitals/searchContext";
 import { isHospitalUnavailable } from "@/features/hospitals/availability";
 import { PublicCentreComparison } from "@/components/PublicCentreComparison";
@@ -22,65 +23,33 @@ type PublicHospitalSearchProps = {
 };
 
 function PublicHospitalImages({ hospital, priority = false }: { hospital: DocumentRecord<HospitalDocument>; priority?: boolean }) {
-  const [activeImage, setActiveImage] = useState(0);
-  const [slideDirection, setSlideDirection] = useState<"previous" | "next">("next");
-  const [failedImages, setFailedImages] = useState<string[]>([]);
-  const [loadedImageUrl, setLoadedImageUrl] = useState<string | null>(null);
-  const navigationRequest = useRef(0);
-  const images = getHospitalImageUrls(hospital).filter((url) => !failedImages.includes(url));
-  const displayedIndex = Math.min(activeImage, Math.max(images.length - 1, 0));
-  const imageUrl = images[displayedIndex];
-
-  function showImage(index: number, direction: "previous" | "next") {
-    const targetUrl = images[index];
-    if (!targetUrl || index === displayedIndex) return;
-    const requestId = ++navigationRequest.current;
-    const preload = new window.Image();
-    preload.src = targetUrl;
-
-    const reveal = () => {
-      if (requestId !== navigationRequest.current) return;
-      setSlideDirection(direction);
-      setLoadedImageUrl(null);
-      setActiveImage(index);
-    };
-    const reject = () => {
-      if (requestId !== navigationRequest.current) return;
-      setFailedImages((current) => current.includes(targetUrl) ? current : [...current, targetUrl]);
-      setActiveImage(0);
-    };
-
-    if (preload.complete) {
-      if (preload.naturalWidth > 0) reveal();
-      else reject();
-      return;
-    }
-    preload.onload = reveal;
-    preload.onerror = reject;
-  }
+  const sizes = "(max-width: 760px) calc(100vw - 72px), (max-width: 1100px) 34vw, 360px";
+  const { images, displayedIndex, imageUrl, direction, loadedImageUrl, markLoaded, failImage, showImage } = useHospitalImageGallery(getHospitalImageUrls(hospital), sizes);
 
   if (!imageUrl) return <div className="public-center-card-image placeholder" aria-hidden="true">
     <span>Ayursarga</span>
   </div>;
 
   return <div className="public-center-card-image">
-    {/* Hospital images use Admin-approved external HTTPS or Google Drive sources. */}
+    {/* Uploaded photos provide responsive sources; existing external links remain supported. */}
     {/* eslint-disable-next-line @next/next/no-img-element */}
     <img
       key={imageUrl}
+      ref={(image) => { if (image?.complete && image.naturalWidth > 0) markLoaded(imageUrl); }}
       className={loadedImageUrl === imageUrl ? "is-loaded" : ""}
       src={imageUrl}
+      srcSet={hospitalImageSrcSet(imageUrl)}
+      sizes={sizes}
+      width={1200}
+      height={900}
       alt={`${hospital.name} Ayurvedic center`}
-      data-direction={slideDirection}
+      data-direction={direction}
       loading={priority ? "eager" : "lazy"}
       fetchPriority={priority ? "high" : "auto"}
       decoding="async"
       referrerPolicy="no-referrer"
-      onLoad={() => setLoadedImageUrl(imageUrl)}
-      onError={() => {
-        setFailedImages((current) => [...current, imageUrl]);
-        setActiveImage(0);
-      }}
+      onLoad={() => markLoaded(imageUrl)}
+      onError={() => failImage(imageUrl)}
     />
     {images.length > 1 && <div className="public-center-image-arrows">
       <button

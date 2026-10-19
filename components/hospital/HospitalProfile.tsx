@@ -15,23 +15,29 @@ import { BystanderPolicyFields } from "@/components/forms/BystanderPolicyFields"
 import { hospitalBystanderFormValues } from "@/features/hospitals/bystanders";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import { focusFirstInvalidField } from "@/utils/formFocus";
+import { HospitalImageManager } from "@/components/hospital/HospitalImageManager";
+import { getHospitalImageUrls } from "@/features/hospitals/images";
 
 export function HospitalProfile() {
   const { userProfile } = useAuth();
   const id = userProfile?.hospitalId;
   const [hospital, setHospital] = useState<DocumentRecord<HospitalDocument> | null>(null);
-  const [message, setMessage] = useRepeatableMessage();
-  const [error, setError] = useRepeatableMessage();
+  const [message, setMessage, messageNotification] = useRepeatableMessage();
+  const [error, setError, errorNotification] = useRepeatableMessage();
   const [fieldErrors, setFieldErrors] = useState<HospitalValidationErrors>({});
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (id) void getHospital(id).then(setHospital).catch(() => setError("We could not load the hospital profile. Refresh the page and try again."));
+    let active = true;
+    if (id) void getHospital(id).then((record) => { if (active) setHospital(record); }).catch(() => {
+      if (active) setError("We could not load the hospital profile. Refresh the page and try again.");
+    });
+    return () => { active = false; };
   }, [id, setError]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!id || !hospital) return;
+    if (!id || !hospital || busy) return;
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
     const values = hospitalFormValues(form);
@@ -83,8 +89,11 @@ export function HospitalProfile() {
     <HospitalFormFields defaultValues={hospital} errors={fieldErrors} />
     <BystanderPolicyFields hospital={hospital} />
     <CentreGuidelineFields hospital={hospital} />
-    <PortalToast message={error} tone="error" />
-    <PortalToast message={message} />
+    <PortalToast message={error} notification={errorNotification} tone="error" />
+    <PortalToast message={message} notification={messageNotification} />
     <div className="portal-actions full">{error && <p className="portal-form-error">{error}</p>}<button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save profile"}</button></div>
-  </form>}</PortalShell>;
+  </form>}{hospital && <section className="portal-card portal-hospital-media-card">
+    <h2>Centre images</h2>
+    <HospitalImageManager hospitalId={hospital.id} hospitalName={hospital.name} imageUrls={getHospitalImageUrls(hospital)} disabled={busy} onChange={(imageUrls) => setHospital((current) => current ? { ...current, imageUrls, imageUrl: null } : current)} />
+  </section>}</PortalShell>;
 }

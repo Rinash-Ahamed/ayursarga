@@ -39,9 +39,9 @@ type PendingTreatmentAction = {
 export function HospitalBookings() {
   const { userProfile } = useAuth();
   const hospitalId = userProfile?.hospitalId;
-  const [actionError, setActionError] = useRepeatableMessage();
+  const [actionError, setActionError, actionErrorNotification] = useRepeatableMessage();
   const [busy, setBusy] = useState<string | null>(null);
-  const [actionMessage, setActionMessage] = useRepeatableMessage();
+  const [actionMessage, setActionMessage, actionMessageNotification] = useRepeatableMessage();
   const [pendingBookingAction, setPendingBookingAction] = useState<PendingBookingAction | null>(null);
   const [pendingTreatmentAction, setPendingTreatmentAction] = useState<PendingTreatmentAction | null>(null);
   const [search, setSearch] = useState("");
@@ -60,7 +60,7 @@ export function HospitalBookings() {
       createdBefore: monthRange?.end,
     }, { pageSize: 20, cursor })
     : Promise.resolve(emptyQueryPage<BookingDocument>()), [hospitalId, monthRange, status]);
-  const { items, error: loadError, isLoading, hasMore, reload, loadMore } = usePaginatedList<BookingDocument>(
+  const { errorNotification: loadErrorNotification, items, error: loadError, isLoading, hasMore, loadMore, patchItem, removeItem } = usePaginatedList<BookingDocument>(
     loader,
     "We could not load the bookings. Refresh the page and try again.",
   );
@@ -86,7 +86,7 @@ export function HospitalBookings() {
   }
 
   async function submitBookingAction() {
-    if (!pendingBookingAction) return;
+    if (!pendingBookingAction || busy) return;
     const { item, nextStatus, date, time, notes } = pendingBookingAction;
     const update: HospitalBookingUpdate = { status: nextStatus, hospitalNotes: notes.trim() || null };
     if (nextStatus === "confirmed" || nextStatus === "reschedule_requested") {
@@ -101,8 +101,9 @@ export function HospitalBookings() {
     setBusy(item.id); setActionError(null); setActionMessage(null);
     setPendingBookingAction(null);
     try {
-      await updateHospitalBooking(item.id, update);
-      await reload();
+      const changes = await updateHospitalBooking(item.id, update);
+      if (status && changes.status !== status) removeItem(item.id);
+      else patchItem(item.id, changes);
       setActionMessage("The booking has been updated.");
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : "We could not update this booking. Review the details and try again.");
@@ -112,10 +113,12 @@ export function HospitalBookings() {
   }
 
   async function applyTreatmentUpdate(item: DocumentRecord<BookingDocument>, treatmentStatus: Exclude<TreatmentStatus, "not_started">) {
+    if (busy) return;
     setBusy(item.id); setActionError(null); setActionMessage(null);
     try {
-      await updateTreatmentProgress(item.id, treatmentStatus, item);
-      await reload();
+      const changes = await updateTreatmentProgress(item.id, treatmentStatus, item);
+      if (status && changes.status && changes.status !== status) removeItem(item.id);
+      else patchItem(item.id, changes);
       setActionMessage(`Treatment marked as ${formatStatus(treatmentStatus)}.`);
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : "We could not update the treatment status. Try again.");
@@ -133,7 +136,7 @@ export function HospitalBookings() {
   }
 
   return <PortalShell role="hospital" title="Bookings">
-    <PortalLoadGuard loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/hospital" loadingMessage="Loading booking requests…" />
+    <PortalLoadGuard notification={loadErrorNotification} loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/hospital" loadingMessage="Loading booking requests…" />
     <section className="portal-card portal-booking-filters" aria-label="Booking search and filters">
       <span className="portal-filter-eyebrow">Filters</span>
       <div className="portal-filter-field">
@@ -153,11 +156,11 @@ export function HospitalBookings() {
       </div>
       <div className="portal-filter-actions"><button type="button" className="portal-button secondary" disabled={!hasFilters} onClick={clearFilters}>Clear filters</button></div>
     </section>
-    <PortalFeedback error={items.length > 0 ? loadError : null} empty={!loadError && !isLoading && visible.length === 0
+    <PortalFeedback notification={loadErrorNotification} error={items.length > 0 ? loadError : null} empty={!loadError && !isLoading && visible.length === 0
       ? (hasFilters ? "No bookings match this search or filter. Adjust the selections and try again." : "No booking requests yet. New patient requests will appear here.")
       : undefined} />
-    <PortalToast message={actionMessage} />
-    <PortalToast message={actionError} tone="error" />
+    <PortalToast message={actionMessage} notification={actionMessageNotification} />
+    <PortalToast message={actionError} notification={actionErrorNotification} tone="error" />
     {visible.length > 0 && <div className="portal-result-count">Showing <strong>{visible.length}</strong> booking{visible.length !== 1 ? "s" : ""}{hasMore ? " · more available" : ""}</div>}
     <div className="portal-list">
       {visible.map((item) => <article className="portal-card" key={item.id} data-accent={item.status}>

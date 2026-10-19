@@ -3,7 +3,7 @@
 import type { ServiceDocument } from "@/features/firestore/models";
 import { COLLECTIONS } from "@/constants/firestore";
 import { runFilteredQuery, type QueryPageOptions } from "@/services/firestore/firestoreService";
-import { authorizedApiRequest } from "@/services/api/client";
+import { authorizedApiRequest, authorizedMutationRequest } from "@/services/api/client";
 
 type ServiceInput = Pick<ServiceDocument,
   "hospitalId" | "name" | "description" | "price" | "packageDurationDays" | "procedures" |
@@ -43,7 +43,7 @@ export const createService = (input: ServiceInput) => {
 
 export function updateService(id: string, input: Partial<Omit<ServiceInput, "hospitalId">>) {
   const statusOnly = input.status !== undefined && input.packageDurationDays === undefined;
-  return authorizedApiRequest<{ ok: true }>(`/api/hospital/services/${encodeURIComponent(id)}`, {
+  return authorizedMutationRequest<ServiceDocument>(`/api/hospital/services/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: statusOnly ? "status" : "update", data: input }),

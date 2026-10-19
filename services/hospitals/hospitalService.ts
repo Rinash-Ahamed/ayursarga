@@ -9,7 +9,7 @@ import {
   readDocument, runFilteredQuery,
   type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
-import { authorizedApiRequest } from "@/services/api/client";
+import { authorizedApiRequest, authorizedMutationRequest } from "@/services/api/client";
 
 type HospitalAdminUpdate = Partial<HospitalFields & Pick<HospitalDocument,
   "status" | "isPublic" | "ayursargaRating" | "ayursargaReviewNote" | "imageUrls" | "locationUrl" |
@@ -53,7 +53,7 @@ export function createHospital(input: HospitalFields) {
 }
 
 function adminHospitalAction(id: string, action: "update" | "contract_generated" | "contract_signed" | "deactivate" | "archive", data?: Record<string, unknown>) {
-  return authorizedApiRequest<{ ok: true }>(`/api/admin/hospitals/${encodeURIComponent(id)}`, {
+  return authorizedMutationRequest<HospitalDocument>(`/api/admin/hospitals/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action, data }),

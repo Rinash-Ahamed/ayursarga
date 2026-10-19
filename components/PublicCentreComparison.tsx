@@ -6,6 +6,7 @@ import type { HospitalDocument, ServiceDocument } from "@/features/firestore/mod
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import { listPublicHospitalServices, searchPublicHospitals } from "@/services/hospitals/publicHospitalService";
 import { packageProcedureEntries } from "@/features/hospitals/packages";
+import { getHospitalImageUrls, hospitalImageSrcSet } from "@/features/hospitals/images";
 
 type ComparisonCentre = {
   hospital: DocumentRecord<HospitalDocument>;
@@ -16,6 +17,23 @@ type ComparisonResult = {
   centre: ComparisonCentre;
   packages: Map<number, DocumentRecord<ServiceDocument>>;
 };
+
+type SelectedCentre = ComparisonCentre & {
+  packages: ComparisonResult["packages"] | null;
+  error: string | null;
+};
+
+function ComparisonImage({ hospital }: { hospital: DocumentRecord<HospitalDocument> }) {
+  const url = getHospitalImageUrls(hospital)[0];
+  const [failed, setFailed] = useState(false);
+  return <div className="public-comparison-image">
+    {url && !failed
+      // Uploaded and legacy external gallery images share responsive display helpers.
+      // eslint-disable-next-line @next/next/no-img-element
+      ? <img src={url} srcSet={hospitalImageSrcSet(url)} sizes="(max-width: 700px) 90vw, 460px" width={1200} height={900} alt={`${hospital.name} Ayurvedic center`} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)} />
+      : <span>Center image not available</span>}
+  </div>;
+}
 
 function packageMap(services: DocumentRecord<ServiceDocument>[]) {
   const packages = new Map<number, DocumentRecord<ServiceDocument>>();
@@ -130,6 +148,7 @@ function PackageColumn({ result, duration }: { result: ComparisonResult; duratio
   if (!carePackage) return null;
   const procedures = packageProcedureEntries(carePackage);
   return <article className="public-comparison-package">
+    <ComparisonImage key={getHospitalImageUrls(result.centre.hospital)[0] ?? "no-image"} hospital={result.centre.hospital} />
     <h4>{result.centre.hospital.name}</h4>
     {typeof carePackage.price === "number" && <strong className="public-comparison-price">₹{carePackage.price.toLocaleString("en-IN")}</strong>}
     <span>{procedures.length} {procedures.length === 1 ? "procedure" : "procedures"} included</span>
@@ -145,95 +164,141 @@ function PackageColumn({ result, duration }: { result: ComparisonResult; duratio
 }
 
 export function PublicCentreComparison({ detailQuery }: { detailQuery: string }) {
-  const [selected, setSelected] = useState<[ComparisonCentre | null, ComparisonCentre | null]>([null, null]);
+  const [selected, setSelected] = useState<[SelectedCentre | null, SelectedCentre | null]>([null, null]);
   const [results, setResults] = useState<ComparisonResult[] | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [duration, setDuration] = useState("");
   const comparisonRef = useRef<HTMLDivElement>(null);
+  const requestVersions = useRef<[number, number]>([0, 0]);
+  const requests = useRef<[AbortController | null, AbortController | null]>([null, null]);
+  const scrollFrame = useRef<number | null>(null);
+
+  useEffect(() => {
+    const versions = requestVersions.current;
+    const controllers = requests.current;
+    return () => {
+      versions[0]++;
+      versions[1]++;
+      controllers.forEach((controller) => controller?.abort());
+      if (scrollFrame.current !== null) window.cancelAnimationFrame(scrollFrame.current);
+    };
+  }, []);
+
+  function resetComparison() {
+    if (scrollFrame.current !== null) window.cancelAnimationFrame(scrollFrame.current);
+    setResults(null);
+    setDuration("");
+  }
+
+  async function loadPackages(index: 0 | 1, hospitalId: string) {
+    const version = ++requestVersions.current[index];
+    requests.current[index]?.abort();
+    const controller = new AbortController();
+    requests.current[index] = controller;
+    try {
+      const page = await listPublicHospitalServices(hospitalId, { pageSize: 24, signal: controller.signal });
+      if (requestVersions.current[index] !== version) return;
+      setSelected((current) => {
+        const next: typeof current = [...current];
+        const centre = current[index];
+        if (centre?.hospital.id === hospitalId) next[index] = { ...centre, packages: packageMap(page.documents), error: null };
+        return next;
+      });
+    } catch {
+      if (requestVersions.current[index] !== version) return;
+      setSelected((current) => {
+        const next: typeof current = [...current];
+        const centre = current[index];
+        if (centre?.hospital.id === hospitalId) next[index] = { ...centre, error: "We could not load this center's packages." };
+        return next;
+      });
+    }
+  }
 
   function selectCentre(index: 0 | 1, hospital: DocumentRecord<HospitalDocument>) {
     const suffix = detailQuery ? `?${detailQuery}` : "";
     setSelected((current) => {
-      const next: [ComparisonCentre | null, ComparisonCentre | null] = [...current];
-      next[index] = { hospital, detailHref: `/centers/${encodeURIComponent(hospital.id)}${suffix}` };
+      const next: typeof current = [...current];
+      next[index] = { hospital, detailHref: `/centers/${encodeURIComponent(hospital.id)}${suffix}`, packages: null, error: null };
       return next;
     });
-    setResults(null);
-    setError(null);
+    resetComparison();
+    void loadPackages(index, hospital.id);
   }
 
   function removeCentre(index: 0 | 1) {
+    requestVersions.current[index]++;
+    requests.current[index]?.abort();
     setSelected((current) => {
-      const next: [ComparisonCentre | null, ComparisonCentre | null] = [...current];
+      const next: typeof current = [...current];
       next[index] = null;
       return next;
     });
-    setResults(null);
-    setError(null);
+    resetComparison();
   }
 
-  async function compareCenters() {
-    const centers = selected.filter((item): item is ComparisonCentre => item !== null);
-    if (centers.length !== 2 || isLoading) return;
-    setIsLoading(true);
-    setError(null);
-    setResults(null);
-    try {
-      const servicePages = await Promise.all(centers.map((item) => listPublicHospitalServices(item.hospital.id, { pageSize: 24 })));
-      setResults(centers.map((centre, index) => ({ centre, packages: packageMap(servicePages[index].documents) })));
-      window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+  function compareCenters() {
+    const [first, second] = selected;
+    if (!duration || !first?.packages?.has(Number(duration)) || !second?.packages?.has(Number(duration))) return;
+    setResults([{ centre: first, packages: first.packages }, { centre: second, packages: second.packages }]);
+    scrollFrame.current = window.requestAnimationFrame(() => {
+      scrollFrame.current = window.requestAnimationFrame(() => {
         const comparison = comparisonRef.current;
         if (!comparison) return;
         comparison.focus({ preventScroll: true });
         comparison.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
-      }));
-    } catch {
-      setError("We could not load the package comparison. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+      });
+    });
   }
 
   const selectedCount = selected.filter(Boolean).length;
-  const commonDurations = results?.length === 2
-    ? [...results[0].packages.keys()].filter((duration) => results[1].packages.has(duration)).sort((left, right) => left - right)
+  const isLoading = selected.some((centre) => centre && !centre.packages && !centre.error);
+  const firstPackages = selected[0]?.packages;
+  const secondPackages = selected[1]?.packages;
+  const ready = Boolean(firstPackages && secondPackages);
+  const commonDurations = firstPackages && secondPackages
+    ? [...firstPackages.keys()].filter((days) => secondPackages.has(days)).sort((left, right) => left - right)
     : [];
 
   return <section className="public-comparison-workspace" aria-labelledby="center-comparison-title">
     <div className="public-comparison-intro">
       <span>Compare care options</span>
       <h2 id="center-comparison-title">Compare two Ayurvedic centers</h2>
-      <p>Search and select two centers to compare package durations, prices, and included procedures.</p>
+      <p>Select two centers and a matching package duration to compare prices and included procedures.</p>
     </div>
     <div className="public-comparison-toolbar">
       <div className="public-comparison-searches">
-        <SearchCentreField label="First center" selected={selected[0]} excludedId={selected[1]?.hospital.id} onSelect={(hospital) => selectCentre(0, hospital)} onRemove={() => removeCentre(0)} />
-        <SearchCentreField label="Second center" selected={selected[1]} excludedId={selected[0]?.hospital.id} onSelect={(hospital) => selectCentre(1, hospital)} onRemove={() => removeCentre(1)} />
+        {([0, 1] as const).map((index) => <div className="public-comparison-center-control" key={index}>
+          <SearchCentreField label={index === 0 ? "First center" : "Second center"} selected={selected[index]} excludedId={selected[index === 0 ? 1 : 0]?.hospital.id} onSelect={(hospital) => selectCentre(index, hospital)} onRemove={() => removeCentre(index)} />
+          {selected[index] && !selected[index].packages && !selected[index].error && <p className="public-comparison-package-status" role="status">Loading package choices...</p>}
+          {selected[index]?.error && <p className="public-comparison-package-status error" role="alert">{selected[index].error} <button type="button" onClick={() => { const centre = selected[index]; if (centre) selectCentre(index, centre.hospital); }}>Retry</button></p>}
+        </div>)}
+        <label className="public-comparison-package-select">Package to compare
+          <select value={duration} disabled={!ready || commonDurations.length === 0} onChange={(event) => { setDuration(event.target.value); setResults(null); }}>
+            <option value="">{isLoading ? "Loading packages..." : !ready ? "Select both centers first" : commonDurations.length ? "Select package duration" : "No matching package duration"}</option>
+            {commonDurations.map((days) => <option key={days} value={days}>{days}-day package</option>)}
+          </select>
+        </label>
       </div>
       <div className="public-comparison-actions">
-        {selectedCount > 0 && <button type="button" className="public-comparison-clear" onClick={() => { setSelected([null, null]); setResults(null); setError(null); }}>Clear</button>}
-        <button type="button" className="public-comparison-start" disabled={selectedCount !== 2 || isLoading} onClick={() => void compareCenters()}>
-          {isLoading ? "Comparing..." : "Compare packages"}
+        {selectedCount > 0 && <button type="button" className="public-comparison-clear" onClick={() => { requestVersions.current[0]++; requestVersions.current[1]++; requests.current.forEach((controller) => controller?.abort()); setSelected([null, null]); resetComparison(); }}>Clear</button>}
+        <button type="button" className="public-comparison-start" disabled={!duration || !ready || isLoading} onClick={compareCenters}>
+          Compare package
         </button>
       </div>
     </div>
 
-    {(results || error) && <div className="public-comparison-results" ref={comparisonRef} tabIndex={-1}>
+    {ready && commonDurations.length === 0 && <div className="public-comparison-empty" role="status"><strong>No matching package duration is currently available.</strong><p>Change one center to compare another pair.</p></div>}
+    {results && <div className="public-comparison-results" ref={comparisonRef} tabIndex={-1}>
       <div className="public-comparison-results-heading">
-        <div><span>Side-by-side comparison</span><h2>Matching care packages</h2></div>
-        <button type="button" onClick={() => { setResults(null); setError(null); }} aria-label="Close package comparison">&times;</button>
+        <div><span>Side-by-side comparison</span><h2>{duration}-day care packages</h2></div>
+        <button type="button" onClick={() => setResults(null)} aria-label="Close package comparison">&times;</button>
       </div>
-      {error && <p className="public-comparison-error" role="alert">{error}</p>}
-      {!error && commonDurations.length === 0 && <div className="public-comparison-empty">
-        <strong>No matching package duration is currently available.</strong>
-        <p>Change one center to compare another pair.</p>
-      </div>}
-      {!error && results && commonDurations.map((duration) => <section className="public-comparison-duration" key={duration}>
+      <section className="public-comparison-duration">
         <h3>{duration}-day package</h3>
         <div className="public-comparison-columns">
-          {results.map((result) => <PackageColumn key={result.centre.hospital.id} result={result} duration={duration} />)}
+          {results.map((result) => <PackageColumn key={result.centre.hospital.id} result={result} duration={Number(duration)} />)}
         </div>
-      </section>)}
+      </section>
     </div>}
   </section>;
 }

@@ -132,8 +132,8 @@ function usedProcedures(items: DocumentRecord<ServiceDocument>[], excludingId?: 
 export function ServicesManager() {
   const { userProfile } = useAuth();
   const hospitalId = userProfile?.hospitalId;
-  const [actionError, setActionError] = useRepeatableMessage();
-  const [actionMessage, setActionMessage] = useRepeatableMessage();
+  const [actionError, setActionError, actionErrorNotification] = useRepeatableMessage();
+  const [actionMessage, setActionMessage, actionMessageNotification] = useRepeatableMessage();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [serviceToRemove, setServiceToRemove] = useState<DocumentRecord<ServiceDocument> | null>(null);
@@ -145,7 +145,7 @@ export function ServicesManager() {
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) => hospitalId
     ? listHospitalServices(hospitalId, { pageSize: 20, cursor }, deferredSearch)
     : Promise.resolve(emptyQueryPage<ServiceDocument>()), [deferredSearch, hospitalId]);
-  const { items, error: loadError, isLoading, hasMore, reload, loadMore, patchItem, removeItem } = usePaginatedList<ServiceDocument>(
+  const { errorNotification: loadErrorNotification, items, error: loadError, isLoading, hasMore, reload, loadMore, patchItem, removeItem } = usePaginatedList<ServiceDocument>(
     loader,
     "We could not load your packages. Refresh the page and try again.",
   );
@@ -160,7 +160,7 @@ export function ServicesManager() {
 
   async function addService(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!hospitalId) return;
+    if (!hospitalId || busyId) return;
     const form = event.currentTarget;
     beginAction("create");
     try {
@@ -179,12 +179,13 @@ export function ServicesManager() {
 
   async function saveService(event: FormEvent<HTMLFormElement>, item: DocumentRecord<ServiceDocument>) {
     event.preventDefault();
+    if (busyId) return;
     const form = event.currentTarget;
     beginAction(item.id);
     try {
       const changes = readPackageForm(form);
-      await updateService(item.id, changes);
-      patchItem(item.id, changes);
+      const saved = await updateService(item.id, changes);
+      patchItem(item.id, saved);
       setEditingId(null);
       setActionMessage("The package has been updated.");
     } catch (caught) {
@@ -196,11 +197,12 @@ export function ServicesManager() {
   }
 
   async function applyStatusChange(item: DocumentRecord<ServiceDocument>) {
+    if (busyId) return;
     const status = item.status === "active" ? "inactive" : "active";
     beginAction(item.id);
     try {
-      await updateService(item.id, { status });
-      patchItem(item.id, { status });
+      const saved = await updateService(item.id, { status });
+      patchItem(item.id, saved);
       setActionMessage(`The package is now ${status}.`);
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : "We could not change this package's status. Refresh the page and try again.");
@@ -218,6 +220,7 @@ export function ServicesManager() {
   }
 
   async function removeService(item: DocumentRecord<ServiceDocument>) {
+    if (busyId) return;
     beginAction(item.id);
     try {
       await archiveService(item.id);
@@ -233,7 +236,7 @@ export function ServicesManager() {
   }
 
   return <PortalShell role="hospital" title="Services">
-    <PortalLoadGuard loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/hospital" loadingMessage="Loading hospital packages..." />
+    <PortalLoadGuard notification={loadErrorNotification} loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/hospital" loadingMessage="Loading hospital packages..." />
     <form className="portal-card portal-form portal-service-form" onSubmit={addService} noValidate key={createFormKey}>
       <PackageFields usedIn={usedInCreate} onAmountValidityChange={setHasPackageAmount} />
       <div className="portal-actions full"><button className="portal-button" disabled={busyId !== null || !hasPackageAmount}>{busyId === "create" ? "Adding..." : "Add package"}</button></div>
@@ -241,9 +244,9 @@ export function ServicesManager() {
     <label className="portal-search">Search packages
       <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by package duration" autoComplete="off" />
     </label>
-    <PortalFeedback error={items.length > 0 ? loadError : null} empty={!loadError && !isLoading && items.length === 0 ? (deferredSearch ? "No packages match this search." : "No packages yet. Complete the form above to add your first package.") : undefined} />
-    <PortalToast message={actionMessage} />
-    <PortalToast message={actionError} tone="error" />
+    <PortalFeedback notification={loadErrorNotification} error={items.length > 0 ? loadError : null} empty={!loadError && !isLoading && items.length === 0 ? (deferredSearch ? "No packages match this search." : "No packages yet. Complete the form above to add your first package.") : undefined} />
+    <PortalToast message={actionMessage} notification={actionMessageNotification} />
+    <PortalToast message={actionError} notification={actionErrorNotification} tone="error" />
     <div className="portal-list">
       {orderedItems.map((item) => editingId === item.id
         ? <article className="portal-card portal-service-edit" key={item.id}>

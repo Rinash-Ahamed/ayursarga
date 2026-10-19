@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import type { DocumentRecord, QueryPage } from "@/services/firestore/firestoreService";
 
 type PageCursor<T> = QueryPage<T>["cursor"];
@@ -14,7 +15,7 @@ export function useCursorPagination<T>(loader: PageLoader<T>, errorMessage: stri
   const [nextCursor, setNextCursor] = useState<PageCursor<T>>(null);
   const [hasMore, setHasMore] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError, errorNotification] = useRepeatableMessage();
   const [reloadVersion, setReloadVersion] = useState(0);
   const requestVersion = useRef(0);
   const cursor = pageCursors[pageIndex] ?? null;
@@ -23,6 +24,7 @@ export function useCursorPagination<T>(loader: PageLoader<T>, errorMessage: stri
     const version = ++requestVersion.current;
     const timeout = window.setTimeout(() => {
       setIsLoading(true);
+      setError(null);
       void loader(cursor).then((page) => {
         if (version !== requestVersion.current) return;
         setItems(page.documents);
@@ -41,7 +43,7 @@ export function useCursorPagination<T>(loader: PageLoader<T>, errorMessage: stri
       window.clearTimeout(timeout);
       requestVersion.current += 1;
     };
-  }, [cursor, errorMessage, loader, reloadVersion]);
+  }, [cursor, errorMessage, loader, reloadVersion, setError]);
 
   const nextPage = useCallback(() => {
     if (isLoading || !hasMore || !nextCursor) return;
@@ -64,6 +66,7 @@ export function useCursorPagination<T>(loader: PageLoader<T>, errorMessage: stri
   return {
     items,
     error,
+    errorNotification,
     isLoading,
     hasMore,
     page: pageIndex + 1,

@@ -17,7 +17,7 @@ const COPY = {
 
 export function LoginForm({ role, requestedPath }: { role: Exclude<PortalRole, "consumer">; requestedPath?: string | null }) {
   const { login, isLoading, error, clearError } = useAuth();
-  const [localError, setLocalError] = useRepeatableMessage();
+  const [localError, setLocalError, localErrorNotification] = useRepeatableMessage();
   const copy = COPY[role];
   const forgotPath = role === "admin" ? ROUTES.admin.forgotPassword : ROUTES.hospital.forgotPassword;
 
@@ -37,7 +37,7 @@ export function LoginForm({ role, requestedPath }: { role: Exclude<PortalRole, "
     <form className="portal-auth-form" onSubmit={submit}>
       <label>Email address<input name="email" type="email" autoComplete="email" required /></label>
       <PasswordField label="Password" name="password" autoComplete="current-password" required />
-      <PortalToast message={localError || error?.message} tone="error" />
+      <PortalToast message={localError || error?.message} notification={localError ? localErrorNotification : undefined} source={localError ? undefined : error} tone="error" />
       <button type="submit" className="portal-login-submit" disabled={isLoading}>
         <span>{isLoading ? "Signing in..." : "Sign in"}</span>
         <span aria-hidden="true">→</span>

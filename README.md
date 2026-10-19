@@ -28,6 +28,33 @@ npm run typecheck
 npm run build
 ```
 
+Focused dialog regression checks: `npm run test:e2e:dialogs`. These render the
+actual shared dialog components and production React in isolated browser
+fixtures with the application CSS. No test routes, login bypasses or cloud writes
+are added. The suite covers Admin/Hospital confirmations at multiple scroll
+positions, touch scrolling, focus, viewport changes, busy states and nested
+contract previews across mobile portrait/landscape, tablet and desktop sizes.
+
+All confirmation dialogs use `PortalDialog`, backed by the shared `ModalLayer`
+and reference-counted `documentScrollLock`. Public login and contract preview
+reuse that layer. It portals directly to `body` so transformed page animation
+containers cannot trap fixed positioning. Keep new modal surfaces on this shared
+path so closing one cannot unlock another modal's background.
+
+Toast regression checks: `npm run test:e2e:toasts`. These use the actual shared
+toast renderer/message hooks, controlled request promises and a browser clock.
+They cover expiry, idle/background renders, page remounts, repeated identical
+actions, authentication errors, stale request failures and retries on mobile,
+desktop and reduced-motion settings, without making cloud requests.
+
+Toast messages retain their strings for inline validation but carry a separate
+notification identity from `useRepeatableMessage`. Pass that identity to
+`PortalToast`/`PortalFeedback`/`PortalLoadGuard`. Shared auth errors use their
+source object and occurrence timestamp. The root `PortalToastViewport` owns
+presentation; the shared notification store consumes each event once and removes
+expired entries with timers. Never restart toast animations on parent renders
+or use the message string alone to identify a new action.
+
 Copy `.env.example` to `.env.local` and add the Firebase Web SDK configuration
 before using application routes. Gmail environment variables are required only
 for the existing public contact form.
@@ -125,12 +152,53 @@ The preservation and audit design is documented in
   required primary hospital phone, optional secondary hospital phone,
   city/locality, Kerala district, state, complete address, and optional
   description for their assigned hospital.
-- Only Admin controls hospital images, centre location, commission,
+- Admin and active Hospital users can upload or remove gallery images. Hospitals
+  can manage only their own centre; Admin can manage any non-archived hospital.
+- Only Admin controls centre location, commission,
   approval/status, public visibility, contract generation/signing details, the
   signed-contract URL, activation, and archive actions.
-- The Hospital Profile must not expose hospital image, centre location,
+- The Hospital Profile must not expose centre location,
   commission, contract, audit, activation, visibility, or other
   Admin-management controls.
+
+### Hospital image uploads (Blaze)
+
+- In Firebase Console for `ayursarga-connect`, open Storage and create a bucket
+  if it does not already exist. Choose its region deliberately.
+- Set `FIREBASE_STORAGE_BUCKET` to its exact name (without `gs://`) in
+  `.env.local` and the Vercel environment, then restart/redeploy the app.
+  Existing buckets can end in `.appspot.com`; new buckets typically end in
+  `.firebasestorage.app`. Do not guess the bucket name.
+- The existing Firebase Admin service account needs object create/read access
+  to that bucket. Deploy the restrictive Storage rules using
+  `npx firebase deploy --only storage --project ayursarga-connect --non-interactive`.
+  App deployment and Storage rule deployment are separate steps.
+- Admin Hospital Details and Hospital Profile share an upload/gallery control.
+  JPG, PNG and WebP inputs up to 15 MB are resized in the browser, then decoded,
+  orientation-corrected, stripped of metadata, and converted on the server to
+  1200 × 900 WebP, with 480 × 360 and 800 × 600 versions for responsive
+  display. New uploaded image URLs end in `-1200.webp`; the shared image helper
+  supplies their sibling versions through native `srcset`/`sizes`. Existing
+  uploaded and external URLs continue to use their original image. The server
+  bounds the upload to 3 MB and decoded input to
+  25 million pixels. Images are uploaded one at a time to stay within hosting
+  request limits. SVG, animated and unsupported images are rejected.
+- The authenticated `/api/hospitals/{hospitalId}/images` route verifies active
+  role and hospital ownership. The 10-image limit is checked transactionally.
+  Successful gallery changes and their audit entries are committed atomically.
+- Files use unique paths under `hospitals/{hospitalId}/images/` and cached,
+  individual public download URLs. Firestore stores only those gallery URLs;
+  existing external image links continue working. Storage SDK writes/listing
+  are denied. Removal unlinks an image and preserves its stored file and audit
+  history. Files left by a failed gallery update are retained rather than deleted.
+- Public card and centre galleries share decoding/navigation logic. The visible
+  image stays in place while the next selection loads and decodes; older rapid
+  clicks cannot override a newer selection. Only the adjacent image is warmed
+  after the current one loads, and this is skipped on supported data-saver or
+  slow-connection settings. Fixed image dimensions reserve layout space. Mobile
+  centre-gallery controls stay inside the main image with larger tap targets.
+- Storage/bandwidth usage is billed under Blaze. Set billing alerts for the
+  project and monitor Storage usage as image traffic grows.
 
 ### Hospital login lifecycle
 

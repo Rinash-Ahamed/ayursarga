@@ -13,7 +13,7 @@ const PUBLIC_HOSPITAL_LIST_FIELDS = [
   "imageUrl", "imageUrls", "ayursargaRating", "ayursargaReviewNote",
 ] as const;
 
-const PUBLIC_SERVICE_FIELDS = [
+export const PUBLIC_SERVICE_FIELDS = [
   "hospitalId", "name", "description", "price", "durationMinutes", "durationUnit",
   "packageDurationDays", "procedures", "otherProcedures", "otherProcedureName",
   "otherProcedureDays", "status",

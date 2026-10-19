@@ -3,16 +3,19 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { PortalToast } from "@/components/portal/PortalToast";
+import type { ToastNotification } from "@/utils/toastNotifications";
 
 export function PortalLoadGuard({
   loading,
   error,
+  notification,
   hasData = false,
   fallbackHref,
   loadingMessage = "Loading this page…",
 }: {
   loading: boolean;
   error?: string | null;
+  notification?: ToastNotification | null;
   hasData?: boolean;
   fallbackHref: string;
   loadingMessage?: string;
@@ -30,7 +33,7 @@ export function PortalLoadGuard({
   }, [fallbackHref, initialError, router]);
 
   if (initialError) return <>
-    <PortalToast message={`${initialError} Returning to the previous page.`} tone="error" />
+    <PortalToast message={`${initialError} Returning to the previous page.`} notification={notification} tone="error" />
     <div className="portal-load-overlay" role="alert">
       <p>Unable to open this page</p>
       <span>Returning to the previous page…</span>

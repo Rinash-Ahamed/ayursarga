@@ -1,4 +1,5 @@
 import { Timestamp } from "firebase-admin/firestore";
+import { mutationJson } from "@/services/api/mutation";
 import { AdminAuthorizationError, requireActiveUser } from "@/services/firebase/adminAuthorization";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
 import { apiHealth, apiJson, logApiError } from "@/services/api/server";
@@ -39,17 +40,18 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
     const { uid, profile, firestore } = await requireActiveUser(request, ["hospital"]);
     const hospitalId = String(profile.hospitalId ?? "").trim();
     if (!hospitalId) return apiJson({ error: "Your hospital account is not connected correctly." }, 403);
-    const hospitalSnapshot = await firestore.collection("hospitals").doc(hospitalId).get();
-    if (!hospitalSnapshot.exists || hospitalSnapshot.data()?.status !== "active") {
-      return apiJson({ error: "Only an active hospital can update bookings." }, 403);
-    }
     const { bookingId } = await context.params;
     if (!bookingId || bookingId.length > 160 || bookingId.includes("/")) return apiJson({ error: "The booking could not be found." }, 404);
     const value = await readJsonBody(request, 6_000);
     if (!value || typeof value !== "object" || Array.isArray(value)) return apiJson({ error: "Booking update details are required." }, 400);
     const body = value as Record<string, unknown>;
     const bookingReference = firestore.collection("bookings").doc(bookingId);
-    const bookingSnapshot = await bookingReference.get();
+    const [hospitalSnapshot, bookingSnapshot] = await firestore.getAll(
+      firestore.collection("hospitals").doc(hospitalId), bookingReference,
+    );
+    if (!hospitalSnapshot.exists || hospitalSnapshot.data()?.status !== "active") {
+      return apiJson({ error: "Only an active hospital can update bookings." }, 403);
+    }
     const booking = bookingSnapshot.data();
     if (!bookingSnapshot.exists || !booking || booking.hospitalId !== hospitalId) return apiJson({ error: "The booking could not be found." }, 404);
 
@@ -95,14 +97,14 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
     const metadata = { updatedAt: now, updatedBy: uid, lastAuditId: auditReference.id };
     const updatedValues = { ...booking, ...changes, ...metadata };
     const batch = firestore.batch();
-    batch.update(bookingReference, { ...changes, ...metadata });
+    batch.update(bookingReference, { ...changes, ...metadata }, { lastUpdateTime: bookingSnapshot.updateTime! });
     batch.set(auditReference, {
       action: "status_change", module: "bookings", recordId: bookingId,
       actorId: uid, actorRole: "hospital", previousValues: booking, updatedValues,
       timestamp: now, source: "server", device: requestAuditDevice(request),
     });
     await batch.commit();
-    return apiJson({ ok: true });
+    return mutationJson({ ...changes, ...metadata });
   } catch (error) {
     if (error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
     if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);

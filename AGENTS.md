@@ -3,6 +3,10 @@
 These instructions apply to the entire repository. Preserve them in future
 implementation work unless the project owner explicitly changes a decision.
 
+For recent implementation history, validation results, and remaining limits,
+read `docs/SESSION_MEMORY.md`. It is a handoff record, not additional authority
+to deploy, rerun maintenance scripts, or modify live data.
+
 ## Product and design preservation
 
 - Preserve the existing public website's pages, content, layout, palette,
@@ -18,6 +22,14 @@ implementation work unless the project owner explicitly changes a decision.
   visual collisions.
 - Read the version from `package.json`; the portal footer receives it through
   `NEXT_PUBLIC_APP_VERSION` in `next.config.mjs`.
+- Confirmation dialogs must use `PortalDialog`; other modal surfaces use the
+  shared body-level `ModalLayer`. Reuse its reference-counted document scroll
+  lock, focus containment and viewport handling. Never render a fixed dialog
+  inside transformed page content or add competing per-screen scroll locks.
+- Toasts use the shared notification lifecycle and root viewport. Pass the event
+  identity returned by `useRepeatableMessage` to toast/feedback components so
+  repeated real actions notify again without replaying old messages. Do not
+  restart toast animations on renders or rely on CSS hiding as dismissal.
 
 ## Authentication and roles
 
@@ -74,8 +86,9 @@ implementation work unless the project owner explicitly changes a decision.
   code bypasses Firestore rules, so any future privileged script must implement
   the same preservation and audit policy explicitly; the audit-clear endpoint
   above is the only approved exception.
-- Do not enable Firebase TTL. Do not introduce Cloud Functions or Storage unless
-  a later phase explicitly authorizes them.
+- Do not enable Firebase TTL or introduce Cloud Functions. Firebase Storage is
+  authorized for hospital gallery images on the Blaze plan. Preserve uploaded
+  files when removing gallery entries; never add automatic file deletion.
 
 ## Role-facing data and controls
 
@@ -87,16 +100,22 @@ implementation work unless the project owner explicitly changes a decision.
   WhatsApp number, required primary hospital phone, optional secondary hospital
   phone, city/locality, district, state, complete address, optional description, the default
   centre-guideline wording, additional centre rules, facilities, and
-  centre-specific legal/policy information. Hospital image links and the
-  validated Google Maps or OpenStreetMap location link are Admin-managed.
+  centre-specific legal/policy information. Active Hospitals may also upload and
+  remove gallery images for their own centre through the authenticated server
+  image endpoint. Admin may manage images for any non-archived hospital. The
+  validated Google Maps or OpenStreetMap location link remains Admin-managed.
   Admin may paste a supported map iframe snippet, but application code must
   extract and store only its validated HTTPS `src` URL. Public centre details
   render that URL in a responsive map frame and retain an external maps link;
   never store or render arbitrary iframe HTML.
   Normalize supported Drive sharing links for display and keep gallery frames
-  at a consistent 4:3 ratio. Firebase Storage and direct uploads remain disabled
-  while the project uses the Spark plan.
-- Admin alone controls hospital images, centre location, commission,
+  at a consistent 4:3 ratio. Image uploads use Firebase Admin Storage through
+  `/api/hospitals/{hospitalId}/images`, server validation/re-encoding, a maximum
+  of 10 gallery entries, and atomic Firestore gallery/audit updates. Direct
+  browser Storage access is denied by `storage.rules`; only individual gallery
+  download-token URLs are public. Configure the server-only
+  `FIREBASE_STORAGE_BUCKET` in local and hosting environments.
+- Admin alone controls centre location, commission,
   Pending/Active state, contract
   workflow, signed-contract URL, visibility, activation, and archive/restore.
 - The Admin Users page keeps Consumer and Hospital accounts in separate

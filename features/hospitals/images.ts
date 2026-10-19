@@ -1,5 +1,22 @@
 export const MAX_HOSPITAL_IMAGES = 10;
 
+/** Responsive versions exist only for images written by our upload endpoint. */
+export function hospitalImageSrcSet(url: string) {
+  try {
+    const parsed = new URL(url);
+    const objectPath = decodeURIComponent(parsed.pathname.split("/o/")[1] ?? "");
+    if (parsed.hostname !== "firebasestorage.googleapis.com"
+      || !/^hospitals\/[^/]+\/images\/[a-f0-9-]{36}-1200\.webp$/.test(objectPath)) return undefined;
+    return [480, 800, 1200].map((width) => {
+      const variant = new URL(parsed);
+      variant.pathname = parsed.pathname.replace(/-1200\.webp$/, `-${width}.webp`);
+      return `${variant.href} ${width}w`;
+    }).join(", ");
+  } catch {
+    return undefined;
+  }
+}
+
 type HospitalImageSource = {
   imageUrl?: string | null;
   imageUrls?: string[];

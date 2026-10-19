@@ -18,15 +18,15 @@ import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import { focusFirstInvalidField } from "@/utils/formFocus";
 
 export function HospitalsManager() {
-  const [actionError, setActionError] = useRepeatableMessage();
-  const [actionMessage, setActionMessage] = useRepeatableMessage();
+  const [actionError, setActionError, actionErrorNotification] = useRepeatableMessage();
+  const [actionMessage, setActionMessage, actionMessageNotification] = useRepeatableMessage();
   const [fieldErrors, setFieldErrors] = useState<HospitalValidationErrors>({});
   const [busy, setBusy] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const deferredSearch = useDeferredValue(searchTerm);
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) => listAllHospitals({ pageSize: 20, cursor }, deferredSearch), [deferredSearch]);
-  const { items, error: loadError, isLoading, hasMore, reload, loadMore } = usePaginatedList<HospitalDocument>(loader, "We could not load the hospital list. Refresh the page and try again.");
+  const { errorNotification: loadErrorNotification, items, error: loadError, isLoading, hasMore, reload, loadMore } = usePaginatedList<HospitalDocument>(loader, "We could not load the hospital list. Refresh the page and try again.");
   const error = actionError ?? loadError;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -58,7 +58,7 @@ export function HospitalsManager() {
   }
 
   return <PortalShell role="admin" title="Hospitals">
-    <PortalLoadGuard loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/admin" loadingMessage="Loading hospitals…" />
+    <PortalLoadGuard notification={loadErrorNotification} loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/admin" loadingMessage="Loading hospitals…" />
     <div className="portal-actions portal-page-actions">
       <button
         className="portal-button"
@@ -92,8 +92,8 @@ export function HospitalsManager() {
       <input type="search" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Search by hospital name" />
     </label>
 
-    <PortalFeedback error={error} empty={!error && !isLoading && items.length === 0 ? "No hospitals yet. Select Add Hospital to create the first one." : undefined} />
-    <PortalToast message={actionMessage} />
+    <PortalFeedback error={error} notification={actionError ? actionErrorNotification : loadErrorNotification} empty={!error && !isLoading && items.length === 0 ? "No hospitals yet. Select Add Hospital to create the first one." : undefined} />
+    <PortalToast message={actionMessage} notification={actionMessageNotification} />
     <div className="portal-list">{items.map((item) => <Link className="portal-card portal-card-link" href={`/admin/hospitals/${encodeURIComponent(item.id)}`} key={item.id}>
       <div className="portal-row-heading"><h3>{item.name}</h3><span className="portal-status" data-status={item.status}>{formatStatus(item.status)}</span></div>
       <p>{item.city}{item.district ? `, ${item.district}` : ""}, {item.state} · Commission {item.commissionPercentage}%</p>

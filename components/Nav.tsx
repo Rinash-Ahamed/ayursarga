@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useAuth } from "@/hooks/useAuth";
 import { ROUTES } from "@/config/routes";
 import ScrollLogo from "@/components/ScrollLogo";
+import { ModalLayer } from "@/components/ModalLayer";
 
 const LINKS = [
   { href: "#discover-hospitals", label: "How It Works" },
@@ -16,6 +17,9 @@ const LINKS = [
 ];
 
 type NavProps = { sectionPrefix?: string; solid?: boolean };
+
+const subscribeToHydration = () => () => {};
+const serverPathname = () => null;
 
 type MobileNavIconName = "home" | "discover" | "search" | "contact" | "account";
 
@@ -39,13 +43,16 @@ function GoogleMark() {
 }
 
 function PublicNav({ sectionPrefix = "", solid = false }: NavProps) {
-  const pathname = usePathname();
+  const routerPathname = usePathname();
+  // A rewrite or route transition can give SSR and the browser different paths.
+  // Keep the server and first hydration snapshot identical, then activate links.
+  const pathname = useSyncExternalStore<string | null>(subscribeToHydration, () => routerPathname, serverPathname);
   const [scrolled, setScrolled] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
   const mobileAccountRef = useRef<HTMLDivElement>(null);
-  const dialogRef = useRef<HTMLDivElement>(null);
+  const loginOptionRef = useRef<HTMLButtonElement>(null);
   const { firebaseUser, userProfile, role, isLoading, error, clearError, loginConsumerWithGoogle, logout } = useAuth();
   const consumerSignedIn = role === "consumer" && Boolean(firebaseUser && userProfile);
   const linkHref = (href: string) => href.startsWith("#") ? `${sectionPrefix}${href}` : href;
@@ -55,7 +62,7 @@ function PublicNav({ sectionPrefix = "", solid = false }: NavProps) {
     const onScroll = () => {
       if (frame) return;
       frame = window.requestAnimationFrame(() => {
-        setScrolled(window.scrollY > 80);
+        if (!document.documentElement.classList.contains("app-modal-open")) setScrolled(window.scrollY > 80);
         frame = 0;
       });
     };
@@ -66,20 +73,6 @@ function PublicNav({ sectionPrefix = "", solid = false }: NavProps) {
       if (frame) window.cancelAnimationFrame(frame);
     };
   }, []);
-
-  useEffect(() => {
-    const locked = loginOpen;
-    document.documentElement.classList.toggle("nav-overlay-open", locked);
-    window.dispatchEvent(new CustomEvent("ayursarga:scroll-lock", { detail: locked }));
-    return () => {
-      document.documentElement.classList.remove("nav-overlay-open");
-      window.dispatchEvent(new CustomEvent("ayursarga:scroll-lock", { detail: false }));
-    };
-  }, [loginOpen]);
-
-  useEffect(() => {
-    if (loginOpen) dialogRef.current?.querySelector<HTMLButtonElement>(".nav-auth-option")?.focus();
-  }, [loginOpen]);
 
   useEffect(() => {
     const handleOutsidePointer = (event: PointerEvent) => {
@@ -179,13 +172,13 @@ function PublicNav({ sectionPrefix = "", solid = false }: NavProps) {
       </div>
     </nav>
 
-    {loginOpen && <div className="nav-auth-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setLoginOpen(false); }}>
-      <div ref={dialogRef} className="nav-auth-dialog" role="dialog" aria-modal="true" aria-labelledby="nav-auth-title">
+    <ModalLayer open={loginOpen} className="nav-auth-backdrop" onClose={() => setLoginOpen(false)} initialFocusRef={loginOptionRef}>
+      <div className="nav-auth-dialog" role="dialog" aria-modal="true" aria-labelledby="nav-auth-title">
         <button type="button" className="nav-auth-close" aria-label="Close login options" onClick={() => setLoginOpen(false)}>×</button>
         <span className="eyebrow">Ayursarga access</span>
         <h2 id="nav-auth-title">How would you like to continue?</h2>
         <div className="nav-auth-options">
-          <button type="button" className="nav-auth-option" onClick={() => void continueWithGoogle()} disabled={isLoading}>
+          <button ref={loginOptionRef} type="button" className="nav-auth-option" onClick={() => void continueWithGoogle()} disabled={isLoading}>
             <span className="nav-auth-option-icon"><GoogleMark /></span>
             <span><strong>I&apos;m looking for care</strong><small>{isLoading ? "Connecting securely..." : "Continue with Google Sign-In"}</small></span>
           </button>
@@ -196,7 +189,7 @@ function PublicNav({ sectionPrefix = "", solid = false }: NavProps) {
         </div>
         {error && <p className="nav-auth-error" role="alert">{error.message}</p>}
       </div>
-    </div>}
+    </ModalLayer>
   </>;
 }
 

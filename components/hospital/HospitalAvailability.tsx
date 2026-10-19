@@ -18,14 +18,14 @@ export function HospitalAvailability() {
   const { userProfile } = useAuth();
   const hospitalId = userProfile?.hospitalId;
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useRepeatableMessage();
-  const [actionError, setActionError] = useRepeatableMessage();
+  const [message, setMessage, messageNotification] = useRepeatableMessage();
+  const [actionError, setActionError, actionErrorNotification] = useRepeatableMessage();
   const today = new Date().toISOString().slice(0, 10);
 
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) => hospitalId
     ? listHospitalAvailabilityRequests(hospitalId, { pageSize: 20, cursor })
     : Promise.resolve(emptyQueryPage<AvailabilityDocument>()), [hospitalId]);
-  const { items, error: loadError, isLoading, hasMore, page, canGoBack, reset, nextPage, previousPage } = useCursorPagination<AvailabilityDocument>(
+  const { errorNotification: loadErrorNotification, items, error: loadError, isLoading, hasMore, page, canGoBack, reset, nextPage, previousPage } = useCursorPagination<AvailabilityDocument>(
     loader,
     "We could not load availability requests. Refresh and try again.",
   );
@@ -60,9 +60,9 @@ export function HospitalAvailability() {
       <label className="full">Reason *<textarea name="reason" minLength={3} maxLength={500} required placeholder="For example: rooms fully occupied or centre maintenance" /></label>
       <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Sending..." : "Send request"}</button></div>
     </form>
-    <PortalToast message={message} />
-    <PortalToast message={actionError} tone="error" />
-    <PortalFeedback error={loadError} empty={!loadError && !isLoading && items.length === 0 ? "No availability requests yet." : undefined} />
+    <PortalToast message={message} notification={messageNotification} />
+    <PortalToast message={actionError} notification={actionErrorNotification} tone="error" />
+    <PortalFeedback notification={loadErrorNotification} error={loadError} empty={!loadError && !isLoading && items.length === 0 ? "No availability requests yet." : undefined} />
     <div className="portal-list portal-availability-list">
       {items.map((item) => <article className="portal-card portal-availability-record" key={item.id}>
         <div className="portal-availability-record-content">

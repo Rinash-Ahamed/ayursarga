@@ -19,11 +19,11 @@ export function UsersList() {
   const [group, setGroup] = useState<UserGroup>("consumer");
   const [consumerToRemove, setConsumerToRemove] = useState<DocumentRecord<UserDocument> | null>(null);
   const [busy, setBusy] = useState(false);
-  const [actionError, setActionError] = useRepeatableMessage();
-  const [message, setMessage] = useRepeatableMessage();
+  const [actionError, setActionError, actionErrorNotification] = useRepeatableMessage();
+  const [message, setMessage, messageNotification] = useRepeatableMessage();
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) =>
     listUsers(group, { pageSize: 20, cursor }), [group]);
-  const { items, error, isLoading, hasMore, loadMore, removeItem } = usePaginatedList<UserDocument>(
+  const { errorNotification: loadErrorNotification, items, error, isLoading, hasMore, loadMore, removeItem } = usePaginatedList<UserDocument>(
     loader,
     `We could not load the ${group} users. Refresh the page and try again.`,
   );
@@ -54,17 +54,17 @@ export function UsersList() {
   }
 
   return <PortalShell role="admin" title="Users">
-    <PortalLoadGuard loading={isLoading} error={error} hasData={items.length > 0} fallbackHref="/admin" loadingMessage={`Loading ${group.toLowerCase()} users...`} />
+    <PortalLoadGuard notification={loadErrorNotification} loading={isLoading} error={error} hasData={items.length > 0} fallbackHref="/admin" loadingMessage={`Loading ${group.toLowerCase()} users...`} />
     <p className="portal-empty portal-users-guidance">Choose a user group below to view its accounts. Admin accounts are managed separately.</p>
     <div className="portal-segmented" role="group" aria-label="User group">
       <button type="button" aria-pressed={group === "consumer"} onClick={() => changeGroup("consumer")}>Consumers</button>
       <button type="button" aria-pressed={group === "hospital"} onClick={() => changeGroup("hospital")}>Hospitals</button>
     </div>
-    <PortalFeedback error={items.length > 0 ? error : null} empty={!error && !isLoading && items.length === 0
+    <PortalFeedback notification={loadErrorNotification} error={items.length > 0 ? error : null} empty={!error && !isLoading && items.length === 0
       ? `No ${groupLabel.toLowerCase()} users yet. New ${groupLabel.toLowerCase()} accounts will appear here.`
       : undefined} />
-    <PortalToast message={message} />
-    <PortalToast message={actionError} tone="error" />
+    <PortalToast message={message} notification={messageNotification} />
+    <PortalToast message={actionError} notification={actionErrorNotification} tone="error" />
     <div className="portal-list">{items.map((item) => <article className="portal-row" key={item.id}>
       <div><h3>{item.name}</h3><p>{item.email}{item.phone ? ` · ${item.phone}` : ""}{item.hospitalId ? ` · Hospital ${item.hospitalId}` : ""}</p>{group === "consumer" && item.address && <p>{item.address}</p>}</div>
       <div className="portal-user-actions">

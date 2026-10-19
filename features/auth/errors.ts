@@ -40,6 +40,7 @@ const MESSAGES: Record<AuthErrorCode, string> = {
 };
 
 export class AuthenticationError extends Error {
+  readonly occurredAt = Date.now();
   constructor(public readonly code: AuthErrorCode, options?: { cause?: unknown }) {
     super(MESSAGES[code], options);
     this.name = "AuthenticationError";

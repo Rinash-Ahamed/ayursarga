@@ -26,7 +26,7 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
   const [hospital, setHospital] = useState<DocumentRecord<HospitalDocument> | null>(null);
   const [hospitalLoading, setHospitalLoading] = useState(true);
   const [bystanderCount, setBystanderCount] = useState(INCLUDED_BYSTANDERS);
-  const [busy, setBusy] = useState(false); const [error, setError] = useRepeatableMessage();
+  const [busy, setBusy] = useState(false); const [error, setError, errorNotification] = useRepeatableMessage();
   const [fieldErrors, setFieldErrors] = useState<BookingFieldErrors>({});
   const requestId = useRef<string>(globalThis.crypto.randomUUID());
 
@@ -113,7 +113,7 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
         </label>
         {fieldErrors.bookingTerms && <span className="portal-field-error" role="alert">{fieldErrors.bookingTerms}</span>}
       </fieldset>
-      <PortalToast message={error} tone="error" />
+      <PortalToast message={error} notification={errorNotification} tone="error" />
       {error && <p className="portal-form-error full">{error}</p>}
       <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Sending…" : "Send request"}</button></div>
     </form>

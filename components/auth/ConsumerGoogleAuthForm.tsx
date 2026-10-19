@@ -9,7 +9,7 @@ export function ConsumerGoogleAuthForm({ requestedPath }: {
   requestedPath?: string | null;
 }) {
   const { loginConsumerWithGoogle, isLoading, error, clearError } = useAuth();
-  const [localError, setLocalError] = useRepeatableMessage();
+  const [localError, setLocalError, localErrorNotification] = useRepeatableMessage();
 
   async function continueWithGoogle() {
     clearError();
@@ -26,7 +26,7 @@ export function ConsumerGoogleAuthForm({ requestedPath }: {
     description="Sign in securely to request an appointment or view your bookings."
   >
     <div className="portal-auth-form">
-      <PortalToast message={localError || error?.message} tone="error" />
+      <PortalToast message={localError || error?.message} notification={localError ? localErrorNotification : undefined} source={localError ? undefined : error} tone="error" />
       <button type="button" onClick={() => void continueWithGoogle()} disabled={isLoading}>
         <svg className="portal-google-icon" viewBox="0 0 24 24" aria-hidden="true">
           <path fill="#4285F4" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.4a4.6 4.6 0 0 1-2 3v2.6h3.3c1.9-1.8 2.9-4.4 2.9-7.5Z" />

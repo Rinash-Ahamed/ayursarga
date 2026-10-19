@@ -27,10 +27,10 @@ import { hospitalFormValues, validateHospitalFields, type HospitalValidationErro
 import { HospitalFormFields } from "@/components/forms/HospitalFormFields";
 import { sendHospitalLoginSetup } from "@/services/auth/hospitalAccountService";
 import { AdminHospitalPackages } from "@/components/admin/HospitalPackages";
-import { HospitalImageFields } from "@/components/forms/HospitalImageFields";
 import { HospitalLocationField } from "@/components/forms/HospitalLocationField";
 import { HospitalImageGallery } from "@/components/hospital/HospitalImageGallery";
-import { getHospitalImageUrls, validateHospitalImageUrls } from "@/features/hospitals/images";
+import { HospitalImageManager } from "@/components/hospital/HospitalImageManager";
+import { getHospitalImageUrls } from "@/features/hospitals/images";
 import { validateHospitalLocationUrl } from "@/features/hospitals/location";
 import { CentreGuidelines } from "@/components/hospital/CentreGuidelines";
 import { AdminHospitalCapacity } from "@/components/admin/HospitalCapacity";
@@ -86,6 +86,12 @@ function ContractFieldError({ field, errors }: { field: HospitalContractDetailFi
   return errors[field] ? <span className="portal-field-error" role="alert">{errors[field]}</span> : null;
 }
 
+function ContractStepMarker({ step, done, active = false }: { step: number; done: boolean; active?: boolean }) {
+  return <span className="portal-contract-step-dot" data-done={done ? "true" : undefined} data-active={!done && active ? "true" : undefined} role="img" aria-label={`Step ${step}${done ? " completed" : ""}`}>
+    {done ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg> : step}
+  </span>;
+}
+
 type PendingHospitalAction = "archive" | "activate" | "setup" | "deactivate";
 type ContractPreview = ReturnType<typeof buildHospitalContractPdf>;
 
@@ -94,14 +100,13 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   const [hospital, setHospital] = useState<DocumentRecord<HospitalDocument> | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useRepeatableMessage();
-  const [message, setMessage] = useRepeatableMessage();
+  const [error, setError, errorNotification] = useRepeatableMessage();
+  const [message, setMessage, messageNotification] = useRepeatableMessage();
   const [contractUrl, setContractUrl] = useState("");
   const [contractUrlError, setContractUrlError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [editingMedia, setEditingMedia] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<HospitalValidationErrors>({});
-  const [imageError, setImageError] = useState<string | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingHospitalAction | null>(null);
   const [assessmentRating, setAssessmentRating] = useState<number | null>(null);
@@ -109,10 +114,12 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   const [contractFieldErrors, setContractFieldErrors] = useState<HospitalContractDetailErrors>({});
   const [editingContractParticulars, setEditingContractParticulars] = useState(true);
 
-  const reload = useCallback(async () => {
-    setLoading(true);
-    setHospital(null);
-    setContractUrl("");
+  const reload = useCallback(async (background = false) => {
+    if (!background) {
+      setLoading(true);
+      setHospital(null);
+      setContractUrl("");
+    }
     const record = await getHospital(hospitalId);
     if (record?.status === "archived") {
       setHospital(null);
@@ -139,18 +146,21 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     return () => window.clearTimeout(timeout);
   }, [reload, setError]);
 
-  async function runAction(action: (record: DocumentRecord<HospitalDocument>) => Promise<unknown>, success: string) {
+  async function runAction(action: (record: DocumentRecord<HospitalDocument>) => Promise<Partial<HospitalDocument> | void>, success: string, refresh = true) {
     if (!hospital || busy) return false;
     setBusy(true);
     setError(null);
     setMessage(null);
     try {
-      await action(hospital);
-      await reload();
+      const changes = await action(hospital);
+      if (changes) {
+        if (changes.status === "archived") router.replace("/admin/hospitals");
+        else setHospital((current) => current ? { ...current, ...changes } : current);
+      } else if (refresh) await reload(true);
       setMessage(success);
       return true;
     } catch (caught) {
-      await reload().catch(() => setLoading(false));
+      if (refresh) await reload(true).catch(() => setLoading(false));
       setError(caught instanceof Error ? caught.message : "We could not complete that step. Please try again.");
       return false;
     } finally {
@@ -180,7 +190,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     }, `The hospital is active. A secure password setup link was sent to ${hospital.email}.`);
     if (pendingAction === "setup") await runAction(async (record) => {
       await sendHospitalLoginSetup(record.id);
-    }, `A secure password setup/reset link was sent to ${hospital.email}.`);
+    }, `A secure password setup/reset link was sent to ${hospital.email}.`, false);
     if (pendingAction === "deactivate") await runAction((record) => deactivateHospital(record.id), "The hospital is now inactive and hidden from consumers.");
     setPendingAction(null);
   }
@@ -217,8 +227,9 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     }
     setBusy(true);
     try {
-      await updateHospital(hospital.id, validation.data);
-      await reload();
+      const changes = await updateHospital(hospital.id, validation.data);
+      setHospital((current) => current ? { ...current, ...changes } : current);
+      setEditingContractParticulars(false);
       setContractFieldErrors({});
       setMessage("The contract particulars have been saved.");
     } catch (caught) {
@@ -232,7 +243,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     if (!hospital || !contractPreview || busy) return;
     const preview = contractPreview;
     const downloaded = await runAction(async (record) => {
-      await recordHospitalContractGeneration(record.id);
+      const changes = await recordHospitalContractGeneration(record.id);
       const url = URL.createObjectURL(preview.blob);
       const link = document.createElement("a");
       link.href = url;
@@ -241,6 +252,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
       link.click();
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+      return changes;
     }, "The contract PDF has been downloaded.");
     if (downloaded) setContractPreview(null);
   }
@@ -266,7 +278,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
 
     setBusy(true);
     try {
-      await updateHospital(hospital.id, {
+      const changes = await updateHospital(hospital.id, {
         legalName: validation.data.legalName,
         name: validation.data.name,
         email: validation.data.email,
@@ -280,7 +292,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         state: validation.data.state,
         description: validation.data.description,
       });
-      await reload();
+      setHospital((current) => current ? { ...current, ...changes } : current);
       setEditing(false);
       setFieldErrors({});
       setMessage("The hospital details have been updated.");
@@ -296,28 +308,25 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     if (!hospital || busy) return;
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
-    const images = validateHospitalImageUrls(form.getAll("hospitalImageUrl"));
     const location = validateHospitalLocationUrl(form.get("hospitalLocationUrl"));
-    setImageError(images.error);
     setLocationError(location.error);
     setError(null);
     setMessage(null);
-    if (images.error || location.error) {
-      setError(images.error ?? location.error ?? "Check the hospital images and map details, then try again.");
+    if (location.error) {
+      setError(location.error);
       focusFirstInvalidField(formElement);
       return;
     }
 
     setBusy(true);
     try {
-      await updateHospital(hospital.id, { imageUrls: images.imageUrls, locationUrl: location.locationUrl });
-      await reload();
+      const changes = await updateHospital(hospital.id, { locationUrl: location.locationUrl });
+      setHospital((current) => current ? { ...current, ...changes } : current);
       setEditingMedia(false);
-      setImageError(null);
       setLocationError(null);
-      setMessage("The hospital images and map have been updated.");
+      setMessage("The hospital map has been updated.");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "We could not save the hospital images and map. Please try again.");
+      setError(caught instanceof Error ? caught.message : "We could not save the hospital map. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -344,11 +353,11 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     setError(null);
     setMessage(null);
     try {
-      await updateHospital(hospital.id, {
+      const changes = await updateHospital(hospital.id, {
         ayursargaRating: rating === null ? null : Math.round(rating * 10) / 10,
         ayursargaReviewNote: reviewNote || null,
       });
-      await reload();
+      setHospital((current) => current ? { ...current, ...changes } : current);
       setMessage("The public Ayursarga assessment has been updated.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "We could not save the public assessment. Please try again.");
@@ -381,10 +390,10 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
           ? { title: "Send login setup link?", message: `A secure password setup/reset link will be sent to ${hospital?.email ?? "this hospital"}.`, confirmLabel: "Send setup link", tone: "default" as const }
           : { title: "Deactivate this hospital?", message: "The hospital will be hidden from consumers while its operational history remains stored.", confirmLabel: "Deactivate hospital", tone: "default" as const };
   return <PortalShell role="admin" title="Hospital Details">
-    <PortalLoadGuard loading={loading} error={error} hasData={Boolean(hospital)} fallbackHref="/admin/hospitals" loadingMessage="Loading hospital details…" />
+    <PortalLoadGuard notification={errorNotification} loading={loading} error={error} hasData={Boolean(hospital)} fallbackHref="/admin/hospitals" loadingMessage="Loading hospital details…" />
     <div className="portal-actions portal-page-actions"><Link className="portal-button secondary" href="/admin/hospitals">Back to hospitals</Link></div>
-    <PortalFeedback error={error} empty={!error && !loading && !hospital ? "Return to Hospitals and choose a hospital to continue." : undefined} />
-    <PortalToast message={message} />
+    <PortalFeedback error={error} notification={errorNotification} empty={!error && !loading && !hospital ? "Return to Hospitals and choose a hospital to continue." : undefined} />
+    <PortalToast message={message} notification={messageNotification} />
     {hospital && <>
       <article className="portal-card">
         <div className="portal-hospital-summary">
@@ -418,14 +427,15 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
       <article className="portal-card portal-hospital-media-card">
         <div className="portal-row-heading"><h2>Hospital images and map</h2><span className="portal-status" data-status={hospital.locationUrl || getHospitalImageUrls(hospital).length ? "active" : "pending"}>{hospital.locationUrl || getHospitalImageUrls(hospital).length ? "Added" : "Not added"}</span></div>
         {editingMedia ? <form className="portal-form portal-edit-form" onSubmit={saveHospitalMedia} noValidate>
-          <HospitalImageFields defaultValues={getHospitalImageUrls(hospital)} error={imageError} />
           <HospitalLocationField defaultValue={hospital.locationUrl} error={locationError} />
-          <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save images and map"}</button><button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditingMedia(false); setImageError(null); setLocationError(null); setError(null); }}>Cancel</button></div>
+          <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save map"}</button><button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditingMedia(false); setLocationError(null); setError(null); }}>Cancel</button></div>
         </form> : <>
-          <HospitalImageGallery imageUrls={getHospitalImageUrls(hospital)} hospitalName={hospital.name} />
-          <div className="portal-card-meta"><span>{getHospitalImageUrls(hospital).length} of 10 images added</span><span>{hospital.locationUrl ? "Map location added" : "Map location not added"}</span></div>
+          {hospital.status === "archived"
+            ? <HospitalImageGallery imageUrls={getHospitalImageUrls(hospital)} hospitalName={hospital.name} />
+            : <HospitalImageManager hospitalId={hospital.id} hospitalName={hospital.name} imageUrls={getHospitalImageUrls(hospital)} disabled={busy} onChange={(imageUrls) => setHospital((current) => current ? { ...current, imageUrls, imageUrl: null } : current)} />}
+          <div className="portal-card-meta"><span>{hospital.locationUrl ? "Map location added" : "Map location not added"}</span></div>
           {hospital.locationUrl && <p><a className="portal-inline-link" href={hospital.locationUrl} target="_blank" rel="noreferrer">View centre map</a></p>}
-          {hospital.status !== "archived" && <div className="portal-actions"><button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditingMedia(true); setError(null); setMessage(null); }}>Manage images and map</button></div>}
+          {hospital.status !== "archived" && <div className="portal-actions"><button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditingMedia(true); setError(null); setMessage(null); }}>Edit map</button></div>}
         </>}
       </article>
 
@@ -433,19 +443,19 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         <div className="portal-row-heading"><h2>Contract and approval</h2><span className="portal-status" data-status={contractStatus}>{formatStatus(contractStatus)}</span></div>
         <div className="portal-contract-stepper">
           <div className="portal-contract-step" data-line-done={contractStatus !== "not_generated" ? "true" : undefined}>
-            <span className="portal-contract-step-dot" data-done="true">1</span>
+            <ContractStepMarker step={1} done />
             <span data-done="true">Created</span>
           </div>
           <div className="portal-contract-step" data-line-done={signedAt ? "true" : undefined}>
-            <span className="portal-contract-step-dot" data-done={generatedAt ? "true" : undefined} data-active={!generatedAt ? "true" : undefined}>2</span>
+            <ContractStepMarker step={2} done={Boolean(generatedAt)} active={!generatedAt} />
             <span data-done={generatedAt ? "true" : undefined} data-active={!generatedAt ? "true" : undefined}>Contract generated</span>
           </div>
           <div className="portal-contract-step" data-line-done={activatedAt ? "true" : undefined}>
-            <span className="portal-contract-step-dot" data-done={signedAt ? "true" : undefined} data-active={generatedAt && !signedAt ? "true" : undefined}>3</span>
+            <ContractStepMarker step={3} done={Boolean(signedAt)} active={Boolean(generatedAt && !signedAt)} />
             <span data-done={signedAt ? "true" : undefined} data-active={generatedAt && !signedAt ? "true" : undefined}>Contract signed</span>
           </div>
           <div className="portal-contract-step">
-            <span className="portal-contract-step-dot" data-done={activatedAt ? "true" : undefined} data-active={contractReady && !activatedAt ? "true" : undefined}>4</span>
+            <ContractStepMarker step={4} done={Boolean(activatedAt)} active={Boolean(contractReady && !activatedAt)} />
             <span data-done={activatedAt ? "true" : undefined} data-active={contractReady && !activatedAt ? "true" : undefined}>Activated</span>
           </div>
         </div>
@@ -533,7 +543,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
       </article>}
     </>}
     <PortalDialog open={Boolean(pendingAction)} title={actionDialog.title} message={actionDialog.message} tone={actionDialog.tone} confirmLabel={actionDialog.confirmLabel} busy={busy} onCancel={() => { setContractUrlError(null); setPendingAction(null); }} onConfirm={() => void confirmPendingAction()}>
-      {pendingAction === "activate" && hospital?.status === "pending" && !contractReady && <label className="portal-dialog-contract-url">Signed contract URL *<input type="url" value={contractUrl} onChange={(event) => { setContractUrl(event.target.value); setContractUrlError(null); }} placeholder="https://" required autoFocus aria-invalid={Boolean(contractUrlError)} />{contractUrlError && <span className="portal-field-error" role="alert">{contractUrlError}</span>}</label>}
+      {pendingAction === "activate" && hospital?.status === "pending" && !contractReady && <label className="portal-dialog-contract-url">Signed contract URL *<input type="url" value={contractUrl} onChange={(event) => { setContractUrl(event.target.value); setContractUrlError(null); }} placeholder="https://" required aria-invalid={Boolean(contractUrlError)} />{contractUrlError && <span className="portal-field-error" role="alert">{contractUrlError}</span>}</label>}
     </PortalDialog>
   </PortalShell>;
 }

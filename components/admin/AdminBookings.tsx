@@ -66,7 +66,7 @@ export function AdminBookings() {
       createdFrom: monthRange?.start,
       createdBefore: monthRange?.end,
     }, { pageSize: 20, cursor }), [monthRange, selectedHospital, status]);
-  const { items, error, isLoading, hasMore, loadMore } = usePaginatedList<BookingDocument>(
+  const { errorNotification: loadErrorNotification, items, error, isLoading, hasMore, loadMore } = usePaginatedList<BookingDocument>(
     loader,
     "We could not load the bookings. Refresh the page and try again.",
   );
@@ -82,7 +82,7 @@ export function AdminBookings() {
   }
 
   return <PortalShell role="admin" title="Bookings">
-    <PortalLoadGuard loading={isLoading} error={error} hasData={items.length > 0} fallbackHref="/admin" loadingMessage="Loading bookings…" />
+    <PortalLoadGuard notification={loadErrorNotification} loading={isLoading} error={error} hasData={items.length > 0} fallbackHref="/admin" loadingMessage="Loading bookings…" />
     <section className="portal-card portal-booking-filters" aria-label="Booking filters">
       <div className="portal-filter-field portal-hospital-filter">
         <label htmlFor="booking-hospital-search">Hospital</label>
@@ -119,7 +119,7 @@ export function AdminBookings() {
         <button type="button" className="portal-button secondary" disabled={!hasFilters} onClick={clearFilters}>Clear filters</button>
       </div>
     </section>
-    <PortalFeedback error={items.length > 0 ? error : null} empty={!error && !isLoading && items.length === 0
+    <PortalFeedback notification={loadErrorNotification} error={items.length > 0 ? error : null} empty={!error && !isLoading && items.length === 0
       ? (hasFilters ? "No bookings match these filters. Adjust or clear the filters and try again." : "No bookings yet. New appointment requests will appear here.")
       : undefined} />
     {items.length > 0 && <div className="portal-result-count">Showing <strong>{items.length}</strong> booking{items.length !== 1 ? "s" : ""}{hasMore ? " · more available" : ""}</div>}

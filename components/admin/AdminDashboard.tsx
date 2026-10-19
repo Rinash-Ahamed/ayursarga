@@ -13,6 +13,7 @@ import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 import { useLocalGreeting } from "@/hooks/useLocalGreeting";
+import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 
 type DashboardStats = {
   activeHospitals: number | null;
@@ -38,11 +39,12 @@ export function AdminDashboard() {
   const { userProfile } = useAuth();
   const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError, errorNotification] = useRepeatableMessage();
   const greeting = useLocalGreeting();
   const monthLabel = formatMonthYear();
 
   useEffect(() => {
+    let active = true;
     const { start, end } = getCalendarMonthRange();
     const createdThisMonth = [
       { field: "createdAt", operator: ">=" as const, value: Timestamp.fromDate(start) },
@@ -62,6 +64,7 @@ export function AdminDashboard() {
       sumDocuments(COLLECTIONS.bookings, "estimatedCommission", completedThisMonth),
       countDocuments(COLLECTIONS.availability, [{ field: "status", operator: "==", value: "pending" }]),
     ]).then((results) => {
+      if (!active) return;
       const resultValue = (result: PromiseSettledResult<number>) =>
         result.status === "fulfilled" ? result.value : null;
       setStats({
@@ -76,22 +79,22 @@ export function AdminDashboard() {
       setError(results.some((result) => result.status === "rejected")
         ? "Some dashboard totals are temporarily unavailable. The available figures are shown below."
         : null);
-    }).finally(() => setIsLoading(false));
-  }, []);
+    }).finally(() => { if (active) setIsLoading(false); });
+    return () => { active = false; };
+  }, [setError]);
 
   const value = (number: number | null) => isLoading || number === null ? "…" : number.toLocaleString("en-IN");
 
   const hasDashboardData = Object.values(stats).some((number) => number !== null);
 
   return <PortalShell role="admin" title="Dashboard">
-    <PortalLoadGuard loading={isLoading} error={error} hasData={hasDashboardData} fallbackHref="/" loadingMessage="Loading dashboard totals…" />
-    {error && <div className="portal-dashboard-feedback"><PortalFeedback error={error} /></div>}
+    <PortalLoadGuard notification={errorNotification} loading={isLoading} error={error} hasData={hasDashboardData} fallbackHref="/" loadingMessage="Loading dashboard totals…" />
+    {error && <div className="portal-dashboard-feedback"><PortalFeedback error={error} notification={errorNotification} /></div>}
     <div className="portal-welcome">
       <span className="portal-welcome-eyebrow">Ayursarga Platform</span>
       <h2>{greeting}{userProfile ? `, ${userProfile.name.split(" ")[0]}` : ""}.</h2>
       <p>Here is your platform overview for {monthLabel}.</p>
     </div>
-    {stats.pendingAvailability !== null && stats.pendingAvailability > 0 && <div className="portal-result-count"><strong>{stats.pendingAvailability}</strong> pending availability request{stats.pendingAvailability !== 1 ? "s" : ""} require attention</div>}
     <div className="portal-grid">
       <article className="portal-card portal-stat portal-stat-hero portal-stat-hospitals">
         <span>Hospitals</span>

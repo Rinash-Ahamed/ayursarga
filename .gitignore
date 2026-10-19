@@ -1,15 +1,63 @@
-node_modules
-.next
-.agent
-.idea/
-out
-.DS_Store
-*.log
+# Dependencies and generated application output
+node_modules/
+/.next/
+/out/
+/build/
+/dist/
 *.tsbuildinfo
-.firebase/
+
+# Environment files and private credentials (keep the setup template)
+.env*
+!.env.example
+/.secrets/
+/secrets/
+/.aws/
+serviceAccount*.json
+*service-account*.json
+*firebase-adminsdk*.json
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local deployment/emulator state and database exports
+/.firebase/
+/.vercel/
+/.netlify/
+/firebase-export-*/
+/firebase-emulator-data/
+/firestore-export/
 firebase-debug.log*
 firestore-debug.log*
 ui-debug.log*
-.env*
-!.env.example
-test-results
+
+# Test artifacts and generated performance/coverage reports
+/test-results/
+/playwright-report/
+/blob-report/
+/.playwright/
+/coverage/
+/.nyc_output/
+/.lighthouseci/
+/lighthouse-report*.html
+/lighthouse-report*.json
+
+# Local editor/agent state; shared .agents/skills remain version-controlled
+/.agent/
+/.codex/
+/.idea/
+/.vscode/
+
+# Logs, scratch files and operating-system metadata
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+/tmp/
+/temp/
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini

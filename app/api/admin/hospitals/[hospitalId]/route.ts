@@ -1,4 +1,5 @@
-import { FieldValue } from "firebase-admin/firestore";
+import { Timestamp } from "firebase-admin/firestore";
+import { mutationJson } from "@/services/api/mutation";
 import { validateHospitalImageUrls } from "@/features/hospitals/images";
 import { validateHospitalLocationUrl } from "@/features/hospitals/location";
 import { validateHospitalFields } from "@/features/hospitals/validation";
@@ -50,7 +51,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ hospi
     const hospital = hospitalSnapshot.data();
     if (!hospitalSnapshot.exists || !hospital) return apiJson({ error: "The hospital could not be found." }, 404);
 
-    const now = FieldValue.serverTimestamp();
+    const now = Timestamp.now();
     let auditAction: HospitalAdminAction | "status_change" = body.action;
     let changes: Record<string, unknown>;
 
@@ -147,7 +148,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ hospi
       lastAuditId: auditReference.id,
     };
     const batch = firestore.batch();
-    batch.update(hospitalReference, auditedChanges);
+    batch.update(hospitalReference, auditedChanges, { lastUpdateTime: hospitalSnapshot.updateTime! });
     batch.set(auditReference, {
       action: auditAction,
       module: "hospitals",
@@ -210,7 +211,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ hospi
       });
     }
 
-    return apiJson({ ok: true });
+    return mutationJson(auditedChanges);
   } catch (error) {
     if (error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
     if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);

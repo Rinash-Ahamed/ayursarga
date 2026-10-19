@@ -2,19 +2,18 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import type { HospitalCapacityDocument } from "@/features/firestore/models";
-import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import { getHospitalCapacity, saveHospitalCapacity } from "@/services/hospitals/capacityService";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 
 export function AdminHospitalCapacity({ hospitalId }: { hospitalId: string }) {
-  const [capacity, setCapacity] = useState<DocumentRecord<HospitalCapacityDocument> | null>(null);
+  const [capacity, setCapacity] = useState<Pick<HospitalCapacityDocument, "totalRooms" | "occupiedRooms"> | null>(null);
   const [totalRooms, setTotalRooms] = useState("0");
   const [occupiedRooms, setOccupiedRooms] = useState("0");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useRepeatableMessage();
-  const [message, setMessage] = useRepeatableMessage();
+  const [error, setError, errorNotification] = useRepeatableMessage();
+  const [message, setMessage, messageNotification] = useRepeatableMessage();
 
   useEffect(() => {
     let active = true;
@@ -46,7 +45,7 @@ export function AdminHospitalCapacity({ hospitalId }: { hospitalId: string }) {
         totalRooms: Number(normalizedTotal),
         occupiedRooms: Number(normalizedOccupied),
       }, capacity, "admin");
-      const saved = await getHospitalCapacity(hospitalId);
+      const saved = { totalRooms: Number(normalizedTotal), occupiedRooms: Number(normalizedOccupied) };
       setCapacity(saved);
       setTotalRooms(String(saved?.totalRooms ?? normalizedTotal));
       setOccupiedRooms(String(saved?.occupiedRooms ?? normalizedOccupied));
@@ -64,8 +63,8 @@ export function AdminHospitalCapacity({ hospitalId }: { hospitalId: string }) {
   const occupancy = total > 0 ? Math.min(100, Math.round(occupied / total * 100)) : 0;
 
   return <section className="portal-card portal-capacity-card" aria-labelledby="admin-room-availability-title" aria-busy={loading}>
-    <PortalToast message={error} tone="error" />
-    <PortalToast message={message} />
+    <PortalToast message={error} notification={errorNotification} tone="error" />
+    <PortalToast message={message} notification={messageNotification} />
     <div className="portal-row-heading">
       <h2 id="admin-room-availability-title">Room availability</h2>
       <span className="portal-status" data-status={available > 0 ? "active" : "pending"}>{loading ? "Loading..." : `${available} available`}</span>

@@ -132,10 +132,10 @@ export function AdminAuditLogs() {
   const [nextCursor, setNextCursor] = useState<AuditCursor>(null);
   const [hasMore, setHasMore] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadError, setLoadError, loadErrorNotification] = useRepeatableMessage();
   const [busy, setBusy] = useState(false);
-  const [actionError, setActionError] = useRepeatableMessage();
-  const [message, setMessage] = useRepeatableMessage();
+  const [actionError, setActionError, actionErrorNotification] = useRepeatableMessage();
+  const [message, setMessage, messageNotification] = useRepeatableMessage();
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [search, setSearch] = useState("");
@@ -186,7 +186,7 @@ export function AdminAuditLogs() {
       window.clearTimeout(timeout);
       requestVersion.current += 1;
     };
-  }, [cursor, dateBounds, pageIndex, reloadVersion, setActionError]);
+  }, [cursor, dateBounds, pageIndex, reloadVersion, setActionError, setLoadError]);
 
   const rows = useMemo<AuditRow[]>(() => items.map((item) => ({
     ...item,
@@ -282,7 +282,7 @@ export function AdminAuditLogs() {
   }
 
   return <PortalShell role="admin" title="Audit Logs">
-    <PortalLoadGuard loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/admin" loadingMessage="Loading recent activity…" />
+    <PortalLoadGuard notification={loadErrorNotification} loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/admin" loadingMessage="Loading recent activity…" />
     <div className="portal-audit-heading">
       <div><h2>Platform activity</h2><p>Review who changed what and when. The newest 20 activities are shown on each page.</p></div>
       <button className="portal-button danger" type="button" disabled={busy || isLoading || items.length === 0} onClick={() => setClearDialogOpen(true)}>{busy ? "Clearing…" : "Clear all audits"}</button>
@@ -299,7 +299,7 @@ export function AdminAuditLogs() {
       </div>}
       <p className="portal-audit-filter-note">Date filters search the full audit history. Search, area and activity filters apply to the 20 activities on this page.</p>
     </div>
-    <PortalToast message={actionError ?? message} tone={actionError ? "error" : "success"} />
+    <PortalToast message={actionError ?? message} notification={actionError ? actionErrorNotification : messageNotification} tone={actionError ? "error" : "success"} />
     <PortalFeedback empty={!loadError && !isLoading && items.length === 0 ? "No audit records are available." : undefined} />
     {!isLoading && rows.length > 0 && filteredRows.length === 0 && <PortalFeedback empty="No activity on this page matches the selected filters." />}
     {filteredRows.length > 0 && <div className="portal-table-wrap">

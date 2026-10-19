@@ -1,6 +1,6 @@
 {
   "name": "ayursarga",
-  "version": "3.1.0",
+  "version": "4.1.0",
   "private": true,
   "engines": {
     "node": "24.x"
@@ -13,6 +13,8 @@
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",
     "test:e2e:responsive": "playwright test tests/e2e/responsive.spec.ts",
+    "test:e2e:dialogs": "playwright test --config=playwright.dialogs.config.ts",
+    "test:e2e:toasts": "playwright test --config=playwright.toasts.config.ts",
     "firebase:emulators": "firebase emulators:start --project demo-ayursarga --only auth,firestore,hosting",
     "firebase:emulators:auth": "firebase emulators:start --project demo-ayursarga --only auth",
     "firebase:provision-user": "node scripts/provision-portal-user.mjs",
@@ -26,7 +28,8 @@
     "next": "^16.2.11",
     "nodemailer": "^9.0.3",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "sharp": "0.34.5"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.0",

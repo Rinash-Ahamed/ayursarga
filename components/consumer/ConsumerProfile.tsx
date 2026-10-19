@@ -16,7 +16,7 @@ import { focusFirstInvalidField } from "@/utils/formFocus";
 export function ConsumerProfile({ requestedPath }: { requestedPath?: string }) {
   const router = useRouter();
   const { firebaseUser, userProfile, refreshUserProfile } = useAuth();
-  const [error, setError] = useRepeatableMessage();
+  const [error, setError, errorNotification] = useRepeatableMessage();
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<"name" | "phone" | "address" | "privacyConsent", string>>>({});
   const [busy, setBusy] = useState(false);
   const needsPrivacyConsent = !hasCurrentConsumerPrivacyConsent(userProfile);
@@ -71,7 +71,7 @@ export function ConsumerProfile({ requestedPath }: { requestedPath?: string }) {
         </label>
         {fieldErrors.privacyConsent && <span className="portal-field-error">{fieldErrors.privacyConsent}</span>}
       </fieldset> : <p className="portal-consent-recorded full">Customer agreement and privacy consent are recorded for this Consumer profile. To withdraw consent, contact <a href="mailto:info@ayursarga.com">info@ayursarga.com</a>.</p>}
-      <PortalToast message={error} tone="error" />
+      <PortalToast message={error} notification={errorNotification} tone="error" />
       <div className="portal-actions full">{error && <p className="portal-form-error">{error}</p>}<button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save and continue"}</button></div>
     </form>
   </PortalShell>;

@@ -5,7 +5,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { HospitalDocument, ServiceDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import { getPublicHospital, listPublicHospitalServices, type PublicPageCursor } from "@/services/hospitals/publicHospitalService";
-import { getHospitalImageUrls } from "@/features/hospitals/images";
+import { getHospitalImageUrls, hospitalImageSrcSet } from "@/features/hospitals/images";
+import { useHospitalImageGallery } from "@/hooks/useHospitalImageGallery";
 import { resolveCentreGuidelines } from "@/features/hospitals/guidelines";
 import { groupHospitalFacilities } from "@/features/hospitals/facilities";
 import { packageProcedureEntries, packageTitle, sortPackagesByDuration } from "@/features/hospitals/packages";
@@ -34,29 +35,26 @@ function formatCareDates(context: CentreSearchContext) {
 }
 
 function CentreGallery({ hospital }: { hospital: DocumentRecord<HospitalDocument> }) {
-  const originalImages = getHospitalImageUrls(hospital);
-  const [failedImages, setFailedImages] = useState<string[]>([]);
-  const images = originalImages.filter((image) => !failedImages.includes(image));
-  const [activeImage, setActiveImage] = useState(0);
-  const selectedImage = images[Math.min(activeImage, Math.max(images.length - 1, 0))];
+  const sizes = "(max-width: 760px) calc(100vw - 44px), (max-width: 1200px) 64vw, 840px";
+  const { images, imageUrl: selectedImage, displayedIndex, markLoaded, failImage, showImage } = useHospitalImageGallery(getHospitalImageUrls(hospital), sizes);
 
   if (!selectedImage) return <div className="public-centre-gallery-empty"><span>Ayursarga</span><p>Centre images will appear here when available.</p></div>;
 
   const visibleThumbnails = images.filter((image) => image !== selectedImage).slice(0, 3);
   return <div className="public-centre-gallery" aria-label={`${hospital.name} image gallery`}>
     <div className="public-centre-gallery-main">
-      {/* Approved external HTTPS and Google Drive images are rendered without proxying or extra reads. */}
+      {/* The current image stays visible until the selected replacement is decoded. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img key={selectedImage} src={selectedImage} alt={`${hospital.name} centre`} referrerPolicy="no-referrer" onError={() => setFailedImages((current) => [...current, selectedImage])} />
+      <img key={selectedImage} ref={(image) => { if (image?.complete && image.naturalWidth > 0) markLoaded(selectedImage); }} src={selectedImage} srcSet={hospitalImageSrcSet(selectedImage)} sizes={sizes} width={1200} height={900} alt={`${hospital.name} centre`} loading="eager" fetchPriority="high" decoding="async" referrerPolicy="no-referrer" onLoad={() => markLoaded(selectedImage)} onError={() => failImage(selectedImage)} />
+      {images.length > 1 && <div className="public-centre-gallery-dots">{images.map((image, index) => <button type="button" className={index === displayedIndex ? "active" : ""} onClick={() => void showImage(index)} aria-label={`Show image ${index + 1}`} aria-pressed={index === displayedIndex} key={image} />)}</div>}
     </div>
     {visibleThumbnails.length > 0 && <div className="public-centre-gallery-thumbs">
-      {visibleThumbnails.map((image, index) => <button type="button" key={image} onClick={() => setActiveImage(images.indexOf(image))} aria-label={`Show centre image ${images.indexOf(image) + 1}`}>
+      {visibleThumbnails.map((image, index) => <button type="button" key={image} onClick={() => void showImage(images.indexOf(image))} aria-label={`Show centre image ${images.indexOf(image) + 1}`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={image} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setFailedImages((current) => [...current, image])} />
+        <img src={image} srcSet={hospitalImageSrcSet(image)} sizes="(max-width: 760px) 30vw, 280px" width={1200} height={900} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => failImage(image)} />
         {index === 2 && images.length > 4 && <span>+{images.length - 4} images</span>}
       </button>)}
     </div>}
-    {images.length > 1 && <div className="public-centre-gallery-dots">{images.map((image, index) => <button type="button" className={index === activeImage ? "active" : ""} onClick={() => setActiveImage(index)} aria-label={`Show image ${index + 1}`} aria-pressed={index === activeImage} key={image} />)}</div>}
   </div>;
 }
 

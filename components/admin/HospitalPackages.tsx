@@ -16,7 +16,7 @@ export function AdminHospitalPackages({ hospitalId }: { hospitalId: string }) {
     (cursor: QueryPageOptions["cursor"]) => listHospitalServices(hospitalId, { pageSize: 20, cursor }),
     [hospitalId],
   );
-  const { items, error, isLoading, hasMore, loadMore } = usePaginatedList<ServiceDocument>(
+  const { errorNotification: loadErrorNotification, items, error, isLoading, hasMore, loadMore } = usePaginatedList<ServiceDocument>(
     loader,
     "We could not load this hospital's packages. Refresh the page and try again.",
   );
@@ -30,6 +30,7 @@ export function AdminHospitalPackages({ hospitalId }: { hospitalId: string }) {
       {!isLoading && <span className="portal-status">{items.length}{hasMore ? "+" : ""} listed</span>}
     </div>
     <PortalFeedback
+      notification={loadErrorNotification}
       error={error}
       empty={!error && !isLoading && items.length === 0
         ? "This hospital has not added any packages or services yet."

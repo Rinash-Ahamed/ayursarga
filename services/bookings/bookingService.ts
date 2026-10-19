@@ -9,7 +9,7 @@ import {
   type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
 import { getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
-import { authorizedApiRequest } from "@/services/api/client";
+import { authorizedApiRequest, authorizedMutationRequest } from "@/services/api/client";
 
 type BookingRequestInput = {
   consumerId: string; hospitalId: string; serviceId: string; preferredDate: Date;
@@ -113,7 +113,7 @@ export function updateHospitalBooking(id: string, input: HospitalBookingUpdate) 
   const localDate = input.confirmedDate
     ? `${input.confirmedDate.getFullYear()}-${String(input.confirmedDate.getMonth() + 1).padStart(2, "0")}-${String(input.confirmedDate.getDate()).padStart(2, "0")}`
     : null;
-  return authorizedApiRequest<{ ok: true }>(`/api/hospital/bookings/${encodeURIComponent(id)}`, {
+  return authorizedMutationRequest<BookingDocument>(`/api/hospital/bookings/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -147,7 +147,7 @@ export function updateTreatmentProgress(
   if (!NEXT_TREATMENT_STATUS[currentStatus].includes(treatmentStatus)) {
     throw new Error("This treatment status change is not available.");
   }
-  return authorizedApiRequest<{ ok: true }>(`/api/hospital/bookings/${encodeURIComponent(id)}`, {
+  return authorizedMutationRequest<BookingDocument>(`/api/hospital/bookings/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "treatment", treatmentStatus }),

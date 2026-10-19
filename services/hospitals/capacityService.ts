@@ -1,12 +1,11 @@
 "use client";
 
 import type { HospitalCapacityDocument } from "@/features/firestore/models";
-import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import { COLLECTIONS } from "@/constants/firestore";
 import { firestoreTimestamp, readDocument } from "@/services/firestore/firestoreService";
 import { createAuditedDocument, getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
 import type { PortalRole } from "@/features/auth/contracts";
-import { authorizedApiRequest } from "@/services/api/client";
+import { authorizedMutationRequest } from "@/services/api/client";
 
 type HospitalCapacityInput = {
   totalRooms: number;
@@ -28,15 +27,15 @@ function validateCapacity(input: HospitalCapacityInput) {
 export const getHospitalCapacity = (hospitalId: string) =>
   readDocument<HospitalCapacityDocument>(COLLECTIONS.hospitalCapacity, hospitalId);
 
-export function saveHospitalCapacity(
+export async function saveHospitalCapacity(
   hospitalId: string,
   input: HospitalCapacityInput,
-  previous?: DocumentRecord<HospitalCapacityDocument> | null,
+  previous?: Pick<HospitalCapacityDocument, "totalRooms" | "occupiedRooms"> | null,
   actorRole: Extract<PortalRole, "admin" | "hospital"> = "hospital",
 ) {
   validateCapacity(input);
   if (actorRole === "hospital") {
-    return authorizedApiRequest<{ ok: true }>("/api/hospital/capacity", {
+    return authorizedMutationRequest<HospitalCapacityDocument>("/api/hospital/capacity", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
@@ -46,7 +45,7 @@ export function saveHospitalCapacity(
   }
   const actorId = getAuditActorId();
   if (!previous) {
-    return createAuditedDocument(COLLECTIONS.hospitalCapacity, {
+    await createAuditedDocument(COLLECTIONS.hospitalCapacity, {
       hospitalId,
       ...input,
       status: "active",
@@ -57,10 +56,12 @@ export function saveHospitalCapacity(
       archivedAt: null,
       archivedBy: null,
     }, { action: "create", actorRole }, hospitalId);
+    return input;
   }
-  return updateAuditedDocument(COLLECTIONS.hospitalCapacity, hospitalId, {
+  await updateAuditedDocument(COLLECTIONS.hospitalCapacity, hospitalId, {
     ...input,
     updatedAt: firestoreTimestamp.server(),
     updatedBy: actorId,
   }, { action: "update", actorRole }, previous);
+  return input;
 }

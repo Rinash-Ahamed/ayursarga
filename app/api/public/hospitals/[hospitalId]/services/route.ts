@@ -1,6 +1,6 @@
 import { apiJson, logApiError } from "@/services/api/server";
 import { getFirebaseAdminFirestore } from "@/services/firebase/admin";
-import { publicPageSize, publicServiceProjection, validPublicDocumentId } from "@/services/hospitals/publicProjection";
+import { PUBLIC_SERVICE_FIELDS, publicPageSize, publicServiceProjection, validPublicDocumentId } from "@/services/hospitals/publicProjection";
 import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
 
 export const runtime = "nodejs";
@@ -17,10 +17,6 @@ export async function GET(request: Request, context: { params: Promise<{ hospita
     const pageSize = publicPageSize(url.searchParams.get("pageSize"));
     const cursor = validPublicDocumentId(url.searchParams.get("cursor"));
     const firestore = getFirebaseAdminFirestore();
-    const hospital = await firestore.collection("hospitals").doc(hospitalId).get();
-    if (!hospital.exists || hospital.data()?.status !== "active" || hospital.data()?.isPublic !== true) {
-      return apiJson({ error: "The Ayurvedic centre could not be found." }, 404);
-    }
     let query: FirebaseFirestore.Query = firestore.collection("services")
       .where("hospitalId", "==", hospitalId)
       .where("status", "==", "active")
@@ -34,7 +30,15 @@ export async function GET(request: Request, context: { params: Promise<{ hospita
         query = query.startAfter(cursorSnapshot);
       }
     }
-    const snapshot = await query.get();
+    // Independent reads share one wait; never return packages until visibility
+    // is verified. Select only the established public package projection.
+    const [hospital, snapshot] = await Promise.all([
+      firestore.collection("hospitals").doc(hospitalId).get(),
+      query.select(...PUBLIC_SERVICE_FIELDS).get(),
+    ]);
+    if (!hospital.exists || hospital.data()?.status !== "active" || hospital.data()?.isPublic !== true) {
+      return apiJson({ error: "The Ayurvedic centre could not be found." }, 404);
+    }
     const page = snapshot.docs.slice(0, pageSize);
     return apiJson({
       documents: page.map((document) => publicServiceProjection(document.id, document.data())),

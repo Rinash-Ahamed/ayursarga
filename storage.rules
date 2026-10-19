@@ -1,0 +1,10 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // All writes use authenticated server routes with role, ownership and image
+    // validation. Public gallery URLs carry an individual download token.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

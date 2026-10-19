@@ -21,12 +21,12 @@ export function ConsultantsManager() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<ConsultantValidationErrors>({});
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [actionError, setActionError] = useRepeatableMessage();
-  const [message, setMessage] = useRepeatableMessage();
+  const [actionError, setActionError, actionErrorNotification] = useRepeatableMessage();
+  const [message, setMessage, messageNotification] = useRepeatableMessage();
   const [searchTerm, setSearchTerm] = useState("");
   const deferredSearch = useDeferredValue(searchTerm);
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) => listConsultants({ pageSize: 20, cursor }, deferredSearch), [deferredSearch]);
-  const { items, error: loadError, isLoading, hasMore, reload, loadMore } = usePaginatedList<ConsultantDocument>(loader, "We could not load the consultant list. Refresh and try again.");
+  const { errorNotification: loadErrorNotification, items, error: loadError, isLoading, hasMore, reload, loadMore, patchItem } = usePaginatedList<ConsultantDocument>(loader, "We could not load the consultant list. Refresh and try again.");
 
   function resetEditor() {
     setEditingId(null);
@@ -36,6 +36,7 @@ export function ConsultantsManager() {
 
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busyId) return;
     const form = event.currentTarget;
     const validation = validateConsultantFields(consultantFormValues(new FormData(form)));
     setFieldErrors(validation.errors);
@@ -63,6 +64,7 @@ export function ConsultantsManager() {
 
   async function edit(event: FormEvent<HTMLFormElement>, consultant: ConsultantDocument & { id: string }) {
     event.preventDefault();
+    if (busyId) return;
     const form = event.currentTarget;
     const validation = validateConsultantFields(consultantFormValues(new FormData(form)));
     setFieldErrors(validation.errors);
@@ -76,7 +78,8 @@ export function ConsultantsManager() {
     setBusyId(consultant.id);
     try {
       await updateConsultant(consultant.id, validation.data, consultant);
-      await reload();
+      if (deferredSearch.trim()) await reload();
+      else patchItem(consultant.id, validation.data);
       resetEditor();
       setMessage(`${consultant.employeeId} has been updated.`);
     } catch (caught) {
@@ -87,13 +90,14 @@ export function ConsultantsManager() {
   }
 
   async function toggleStatus(consultant: ConsultantDocument & { id: string }) {
+    if (busyId) return;
     const nextStatus = consultant.status === "active" ? "inactive" : "active";
     setBusyId(consultant.id);
     setActionError(null);
     setMessage(null);
     try {
       await setConsultantStatus(consultant.id, nextStatus, consultant);
-      await reload();
+      patchItem(consultant.id, { status: nextStatus });
       setMessage(`${consultant.employeeId} is now ${nextStatus}.`);
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : "We could not change the consultant status. Try again.");
@@ -104,7 +108,7 @@ export function ConsultantsManager() {
 
   const error = actionError ?? loadError;
   return <PortalShell role="admin" title="Our Consultants">
-    <PortalLoadGuard loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/admin" loadingMessage="Loading consultants..." />
+    <PortalLoadGuard notification={loadErrorNotification} loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/admin" loadingMessage="Loading consultants..." />
     <div className="portal-actions portal-page-actions"><button className="portal-button" type="button" aria-expanded={showCreateForm} onClick={() => {
       setShowCreateForm((current) => !current);
       resetEditor();
@@ -121,8 +125,8 @@ export function ConsultantsManager() {
       <input type="search" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Search by name or employee ID" autoComplete="off" />
     </label>
 
-    <PortalFeedback error={error} empty={!error && !isLoading && items.length === 0 ? (deferredSearch.trim() ? "No consultants match your search." : "No consultants have been added yet.") : undefined} />
-    <PortalToast message={message} />
+    <PortalFeedback error={error} notification={actionError ? actionErrorNotification : loadErrorNotification} empty={!error && !isLoading && items.length === 0 ? (deferredSearch.trim() ? "No consultants match your search." : "No consultants have been added yet.") : undefined} />
+    <PortalToast message={message} notification={messageNotification} />
     <div className="portal-list consultant-list">{items.map((consultant) => <article className="portal-card" key={consultant.id}>
       <div className="portal-row-heading"><div><h3>{consultant.name}</h3><strong className="consultant-employee-id">{consultant.employeeId}</strong></div><span className="portal-status" data-status={consultant.status}>{formatStatus(consultant.status)}</span></div>
       {editingId === consultant.id ? <form className="portal-form portal-edit-form" onSubmit={(event) => void edit(event, consultant)} noValidate>

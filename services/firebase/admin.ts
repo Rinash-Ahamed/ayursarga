@@ -3,6 +3,7 @@ import "server-only";
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 
 function getFirebaseAdminApp() {
   const existing = getApps()[0];
@@ -34,4 +35,21 @@ export function getFirebaseAdminAuth() {
 
 export function getFirebaseAdminFirestore() {
   return getFirestore(getFirebaseAdminApp());
+}
+
+export function getFirebaseAdminStorageBucket() {
+  const bucket = process.env.FIREBASE_STORAGE_BUCKET?.trim();
+  if (!bucket || !/^[a-z0-9][a-z0-9._-]+$/.test(bucket)) {
+    throw new Error("Hospital image uploads are unavailable. Set FIREBASE_STORAGE_BUCKET to your Firebase Storage bucket name.");
+  }
+  return getStorage(getFirebaseAdminApp()).bucket(bucket);
+}
+
+export function isFirebaseAdminStorageReady() {
+  try {
+    getFirebaseAdminStorageBucket();
+    return true;
+  } catch {
+    return false;
+  }
 }

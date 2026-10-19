@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useId, useRef, type ReactNode } from "react";
+import { ModalLayer } from "@/components/ModalLayer";
 
 export function PortalDialog({
   open,
@@ -26,41 +27,19 @@ export function PortalDialog({
   onCancel: () => void;
 }) {
   const cancelRef = useRef<HTMLButtonElement>(null);
-  const dialogRef = useRef<HTMLElement>(null);
-  const busyRef = useRef(busy);
-  const onCancelRef = useRef(onCancel);
-
-  useEffect(() => {
-    busyRef.current = busy;
-    onCancelRef.current = onCancel;
-  }, [busy, onCancel]);
-
-  useEffect(() => {
-    if (!open) return;
-    const firstField = dialogRef.current?.querySelector<HTMLElement>("input:not(:disabled), textarea:not(:disabled), select:not(:disabled)");
-    (firstField ?? cancelRef.current)?.focus();
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !busyRef.current) onCancelRef.current();
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open]);
-
-  if (!open) return null;
-
-  return <div className="portal-dialog-backdrop" role="presentation" onMouseDown={(event) => {
-    if (event.target === event.currentTarget && !busy) onCancel();
-  }}>
-    <section ref={dialogRef} className="portal-dialog" role="dialog" aria-modal="true" aria-labelledby="portal-dialog-title">
+  const titleId = useId();
+  const messageId = useId();
+  return <ModalLayer open={open} className="portal-dialog-backdrop" busy={busy} onClose={onCancel} initialFocusRef={children ? undefined : cancelRef}>
+    <section className="portal-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={message ? messageId : undefined}>
       <span className="portal-dialog-leaf" aria-hidden="true" />
       <span className="portal-eyebrow">Please confirm</span>
-      <h2 id="portal-dialog-title">{title}</h2>
-      {message && <p>{message}</p>}
+      <h2 id={titleId}>{title}</h2>
+      {message && <p id={messageId}>{message}</p>}
       {children}
       <div className="portal-actions portal-dialog-actions">
         <button ref={cancelRef} type="button" className="portal-button secondary" disabled={busy} onClick={onCancel}>{cancelLabel}</button>
         <button type="button" className={`portal-button${tone === "danger" ? " danger" : ""}`} disabled={busy} onClick={onConfirm}>{busy ? "Working..." : confirmLabel}</button>
       </div>
     </section>
-  </div>;
+  </ModalLayer>;
 }

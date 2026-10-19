@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import type { DocumentRecord, QueryPage } from "@/services/firestore/firestoreService";
 
 type PageCursor<TCursor> = TCursor | null;
@@ -11,12 +12,13 @@ export function usePaginatedList<T, TCursor = NonNullable<QueryPage<T>["cursor"]
   const [cursor, setCursor] = useState<PageCursor<TCursor>>(null);
   const [hasMore, setHasMore] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError, errorNotification] = useRepeatableMessage();
   const requestVersion = useRef(0);
 
   const load = useCallback(async (nextCursor: PageCursor<TCursor>, replace: boolean) => {
     const version = ++requestVersion.current;
     setIsLoading(true);
+    setError(null);
     try {
       const page = await loader(nextCursor);
       if (version !== requestVersion.current) return;
@@ -32,7 +34,7 @@ export function usePaginatedList<T, TCursor = NonNullable<QueryPage<T>["cursor"]
     } finally {
       if (version === requestVersion.current) setIsLoading(false);
     }
-  }, [errorMessage, loader]);
+  }, [errorMessage, loader, setError]);
 
   const reload = useCallback(() => load(null, true), [load]);
   const loadMore = useCallback(() => {
@@ -54,5 +56,5 @@ export function usePaginatedList<T, TCursor = NonNullable<QueryPage<T>["cursor"]
     };
   }, [reload]);
 
-  return { items, error, isLoading, hasMore, reload, loadMore, patchItem, removeItem };
+  return { items, error, errorNotification, isLoading, hasMore, reload, loadMore, patchItem, removeItem };
 }

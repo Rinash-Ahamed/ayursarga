@@ -1,4 +1,5 @@
 import { Timestamp } from "firebase-admin/firestore";
+import { mutationJson } from "@/services/api/mutation";
 import { AdminAuthorizationError, requireActiveUser } from "@/services/firebase/adminAuthorization";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
 import { apiHealth, apiJson, logApiError } from "@/services/api/server";
@@ -29,12 +30,13 @@ export async function PATCH(request: Request) {
     if (!Number.isInteger(occupiedRooms) || occupiedRooms < 0 || occupiedRooms > totalRooms) {
       return apiJson({ error: "Occupied rooms must be between zero and the total room count." }, 400);
     }
-    const hospitalSnapshot = await firestore.collection("hospitals").doc(hospitalId).get();
+    const capacityReference = firestore.collection("hospitalCapacity").doc(hospitalId);
+    const [hospitalSnapshot, capacitySnapshot] = await firestore.getAll(
+      firestore.collection("hospitals").doc(hospitalId), capacityReference,
+    );
     if (!hospitalSnapshot.exists || hospitalSnapshot.data()?.status !== "active") {
       return apiJson({ error: "Only an active hospital can update room availability." }, 403);
     }
-    const capacityReference = firestore.collection("hospitalCapacity").doc(hospitalId);
-    const capacitySnapshot = await capacityReference.get();
     const previousValues = capacitySnapshot.data() ?? null;
     const auditReference = firestore.collection("auditLogs").doc();
     const now = Timestamp.now();
@@ -47,8 +49,8 @@ export async function PATCH(request: Request) {
           lastAuditId: auditReference.id,
         };
     const batch = firestore.batch();
-    if (previousValues) batch.update(capacityReference, { ...changes, updatedAt: now, updatedBy: uid, lastAuditId: auditReference.id });
-    else batch.set(capacityReference, capacity);
+    if (previousValues) batch.update(capacityReference, { ...changes, updatedAt: now, updatedBy: uid, lastAuditId: auditReference.id }, { lastUpdateTime: capacitySnapshot.updateTime! });
+    else batch.create(capacityReference, capacity);
     batch.set(auditReference, {
       action: previousValues ? "update" : "create",
       module: "hospitalCapacity",
@@ -62,7 +64,7 @@ export async function PATCH(request: Request) {
       device: requestAuditDevice(request),
     });
     await batch.commit();
-    return apiJson({ ok: true });
+    return mutationJson(capacity);
   } catch (error) {
     if (error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
     if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);

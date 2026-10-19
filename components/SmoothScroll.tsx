@@ -27,7 +27,7 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     const handleVisibilityChange = () => {
       if (!lenis) return;
       if (document.hidden) lenis.stop();
-      else if (!document.documentElement.classList.contains("nav-overlay-open")) lenis.start();
+      else if (!document.documentElement.classList.contains("app-modal-open")) lenis.start();
     };
     if (lenis) document.addEventListener("visibilitychange", handleVisibilityChange);
 
@@ -35,12 +35,12 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
       if (!lenis) return;
       const locked = event instanceof CustomEvent
         ? Boolean(event.detail)
-        : document.documentElement.classList.contains("nav-overlay-open");
+        : document.documentElement.classList.contains("app-modal-open");
       if (locked) lenis.stop();
       else if (!document.hidden) lenis.start();
     };
     window.addEventListener("ayursarga:scroll-lock", handleScrollLock);
-    if (document.documentElement.classList.contains("nav-overlay-open")) lenis?.stop();
+    if (document.documentElement.classList.contains("app-modal-open")) lenis?.stop();
 
     const navigationOffset = () => {
       const navigation = document.getElementById("site-nav");

@@ -21,8 +21,8 @@ export function AdminAvailability() {
   const [hospitalResults, setHospitalResults] = useState<DocumentRecord<HospitalDocument>[]>([]);
   const [selectedHospital, setSelectedHospital] = useState<DocumentRecord<HospitalDocument> | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [message, setMessage] = useRepeatableMessage();
-  const [actionError, setActionError] = useRepeatableMessage();
+  const [message, setMessage, messageNotification] = useRepeatableMessage();
+  const [actionError, setActionError, actionErrorNotification] = useRepeatableMessage();
   const today = new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
@@ -35,7 +35,7 @@ export function AdminAvailability() {
   }, [deferredSearch]);
 
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) => listAdminAvailabilityRequests({ pageSize: 20, cursor }), []);
-  const { items, error: loadError, isLoading, hasMore, page, canGoBack, reload, reset, nextPage, previousPage } = useCursorPagination<AvailabilityDocument>(
+  const { errorNotification: loadErrorNotification, items, error: loadError, isLoading, hasMore, page, canGoBack, reload, reset, nextPage, previousPage } = useCursorPagination<AvailabilityDocument>(
     loader,
     "We could not load availability requests. Refresh and try again.",
   );
@@ -92,9 +92,9 @@ export function AdminAvailability() {
       <label className="full">Reason *<textarea name="reason" minLength={3} maxLength={500} required placeholder="Reason provided by the hospital" /></label>
       <div className="portal-actions full"><button className="portal-button" disabled={busy !== null}>{busy === "create" ? "Blocking..." : "Block dates"}</button></div>
     </form>
-    <PortalToast message={message} />
-    <PortalToast message={actionError} tone="error" />
-    <PortalFeedback error={loadError} empty={!loadError && !isLoading && items.length === 0 ? "No availability requests or blocks yet." : undefined} />
+    <PortalToast message={message} notification={messageNotification} />
+    <PortalToast message={actionError} notification={actionErrorNotification} tone="error" />
+    <PortalFeedback notification={loadErrorNotification} error={loadError} empty={!loadError && !isLoading && items.length === 0 ? "No availability requests or blocks yet." : undefined} />
     <div className="portal-list portal-availability-list">
       {items.map((item) => <article className="portal-card portal-availability-record" key={item.id}>
         <div className="portal-availability-record-content">

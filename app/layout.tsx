@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { PortalToastViewport } from "@/components/portal/PortalToast";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -22,6 +23,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   </head><body>
     <Script id="ayursarga-opening-session" strategy="beforeInteractive">{`try{if(sessionStorage.getItem("ayursarga-public-opening-seen")==="true")document.documentElement.dataset.ayursargaOpening="seen"}catch{}`}</Script>
     {children}
-    <div id="portal-toast-viewport" className="portal-toast-viewport" aria-label="Notifications" />
+    <PortalToastViewport />
   </body></html>;
 }

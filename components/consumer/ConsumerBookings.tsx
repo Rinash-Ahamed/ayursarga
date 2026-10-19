@@ -33,13 +33,13 @@ function TreatmentTrail({ status }: { status: string }) {
 
 export function ConsumerBookings() {
   const { firebaseUser } = useAuth();
-  const [actionError, setActionError] = useRepeatableMessage();
+  const [actionError, setActionError, actionErrorNotification] = useRepeatableMessage();
   const [busy, setBusy] = useState<string | null>(null);
-  const [actionMessage, setActionMessage] = useRepeatableMessage();
+  const [actionMessage, setActionMessage, actionMessageNotification] = useRepeatableMessage();
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) => firebaseUser
     ? listConsumerBookings(firebaseUser.uid, { pageSize: 20, cursor })
     : Promise.resolve(emptyQueryPage<BookingDocument>()), [firebaseUser]);
-  const { items, error: loadError, isLoading, hasMore, loadMore, patchItem } = usePaginatedList<BookingDocument>(
+  const { errorNotification: loadErrorNotification, items, error: loadError, isLoading, hasMore, loadMore, patchItem } = usePaginatedList<BookingDocument>(
     loader,
     "We could not load your bookings. Refresh the page and try again.",
   );
@@ -69,10 +69,10 @@ export function ConsumerBookings() {
         <Link className="portal-button secondary" href={ROUTES.public.home}>Back to home</Link>
       </nav>
     </div>
-    <PortalLoadGuard loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/" loadingMessage="Loading your bookings…" />
-    <PortalFeedback error={items.length > 0 ? loadError : null} empty={!error && !isLoading && items.length === 0 ? "You have no bookings yet." : undefined} />
-    <PortalToast message={actionMessage} />
-    <PortalToast message={actionError} tone="error" />
+    <PortalLoadGuard notification={loadErrorNotification} loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/" loadingMessage="Loading your bookings…" />
+    <PortalFeedback notification={loadErrorNotification} error={items.length > 0 ? loadError : null} empty={!error && !isLoading && items.length === 0 ? "You have no bookings yet." : undefined} />
+    <PortalToast message={actionMessage} notification={actionMessageNotification} />
+    <PortalToast message={actionError} notification={actionErrorNotification} tone="error" />
     <div className="portal-list consumer-booking-list">
       {items.map((booking) => <article className="portal-row consumer-booking-row" key={booking.id}>
         <div className="consumer-booking-copy">
