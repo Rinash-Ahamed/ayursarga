@@ -23,7 +23,7 @@ type PublicHospitalSearchProps = {
 };
 
 function PublicHospitalImages({ hospital, priority = false }: { hospital: DocumentRecord<HospitalDocument>; priority?: boolean }) {
-  const sizes = "(max-width: 760px) calc(100vw - 72px), (max-width: 1100px) 34vw, 360px";
+  const sizes = "(max-width: 720px) calc(100vw - 72px), (max-width: 1100px) 32vw, 340px";
   const { images, displayedIndex, imageUrl, direction, loadedImageUrl, markLoaded, failImage, showImage } = useHospitalImageGallery(getHospitalImageUrls(hospital), sizes);
 
   if (!imageUrl) return <div className="public-center-card-image placeholder" aria-hidden="true">
@@ -68,14 +68,16 @@ function PublicHospitalImages({ hospital, priority = false }: { hospital: Docume
       </button>
     </div>}
     {images.length > 1 && <div className="public-center-image-nav" aria-label={`${hospital.name} image gallery`}>
-      {images.map((url, index) => <button
-        type="button"
-        key={url}
-        className={index === displayedIndex ? "active" : ""}
-        aria-label={`Show image ${index + 1} of ${images.length}`}
-        aria-pressed={index === displayedIndex}
-        onClick={() => showImage(index, index < displayedIndex ? "previous" : "next")}
-      />)}
+      <div className="public-center-image-dots" style={{ gridTemplateColumns: `repeat(${Math.min(images.length, 5)}, 24px)` }}>
+        {images.map((url, index) => <button
+          type="button"
+          key={url}
+          className={index === displayedIndex ? "active" : ""}
+          aria-label={`Show image ${index + 1} of ${images.length}`}
+          aria-pressed={index === displayedIndex}
+          onClick={() => showImage(index, index < displayedIndex ? "previous" : "next")}
+        />)}
+      </div>
       <span>{displayedIndex + 1} / {images.length}</span>
     </div>}
   </div>;
@@ -146,12 +148,12 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
           <div className="public-search-field public-search-dates">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v3m12-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z" /></svg>
             <span className="public-date-inputs">
-              <label className="public-date-control" onClick={openDatePicker}><span>Start date / expected delivery date</span><input aria-label="Start date or expected delivery date" type="date" min={today} value={startDate} onChange={(event) => { setStartDate(event.target.value); setDateError(null); }} /></label>
+              <label className="public-date-control" onClick={openDatePicker}><span>Start date / expected delivery date</span><input aria-label="Start date or expected delivery date" aria-invalid={Boolean(dateError)} aria-describedby={dateError ? "centre-date-error" : undefined} type="date" min={today} value={startDate} onChange={(event) => { setStartDate(event.target.value); setDateError(null); }} /></label>
             </span>
           </div>
           <button type="submit" className="public-search-submit"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></svg><span>Search</span></button>
         </form>
-        {dateError && <p className="public-search-date-error" role="alert">{dateError}</p>}
+        {dateError && <p id="centre-date-error" className="public-search-date-error" role="alert">{dateError}</p>}
 
         {isLoading && hospitals.length === 0 && <div className="public-search-status" role="status">Finding approved Ayurvedic centers...</div>}
         {error && <div className="public-search-status error" role="alert">{error}</div>}

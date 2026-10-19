@@ -106,8 +106,8 @@ export function AdminAvailability() {
         <div className="portal-availability-record-side">
           <span className="portal-status" data-status={item.status}>{formatStatus(item.status)}</span>
           <div className="portal-actions">
-            {item.status === "pending" && <><button className="portal-button" type="button" disabled={busy !== null || isLoading} onClick={() => void act(item, "approve")}>Approve and block</button><button className="portal-button secondary" type="button" disabled={busy !== null || isLoading} onClick={() => void act(item, "reject")}>Reject</button></>}
-            {item.status === "blocked" && <button className="portal-button secondary" type="button" disabled={busy !== null || isLoading} onClick={() => void act(item, "cancel")}>Remove block</button>}
+            {item.status === "pending" && <><button className="portal-button" type="button" disabled={busy !== null || isLoading} onClick={() => void act(item, "approve")}>Approve and block</button><button className="portal-button danger" type="button" disabled={busy !== null || isLoading} onClick={() => void act(item, "reject")}>Reject</button></>}
+            {item.status === "blocked" && <button className="portal-button danger" type="button" disabled={busy !== null || isLoading} onClick={() => void act(item, "cancel")}>Remove block</button>}
           </div>
         </div>
       </article>)}

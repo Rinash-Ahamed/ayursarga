@@ -8,6 +8,7 @@ import type { PortalRole } from "@/features/auth/contracts";
 import { ROUTES } from "@/config/routes";
 import { useAuth } from "@/hooks/useAuth";
 import { PortalNotifications } from "@/components/portal/PortalNotifications";
+import { lockDocumentScroll } from "@/utils/documentScrollLock";
 
 type PortalNavigationIcon = "dashboard" | "hospitals" | "consultants" | "users" | "bookings" | "availability" | "audit" | "profile" | "services" | "password";
 type NavigationItem = readonly [label: string, href: string, icon: PortalNavigationIcon, nested?: boolean];
@@ -86,6 +87,33 @@ export function PortalShell({ role, title, children, focused = false }: {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const sidebarCollapsed = useSyncExternalStore(subscribeToSidebarPreference, getSidebarCollapsedSnapshot, () => false);
   const accountRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (role === "consumer") return;
+    let frame = 0;
+    const updateToastPosition = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        const headerBottom = headerRef.current?.getBoundingClientRect().bottom ?? 0;
+        const sidebarBottom = window.innerWidth <= 760 ? document.querySelector(".portal-sidebar")?.getBoundingClientRect().bottom ?? 0 : 0;
+        document.documentElement.style.setProperty("--portal-toast-top", `${Math.max(16, headerBottom + 12, sidebarBottom + 12)}px`);
+      });
+    };
+    const observer = new ResizeObserver(updateToastPosition);
+    if (headerRef.current) observer.observe(headerRef.current);
+    window.addEventListener("scroll", updateToastPosition, { passive: true });
+    window.addEventListener("resize", updateToastPosition);
+    updateToastPosition();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", updateToastPosition);
+      window.removeEventListener("resize", updateToastPosition);
+      if (frame) window.cancelAnimationFrame(frame);
+      document.documentElement.style.removeProperty("--portal-toast-top");
+    };
+  }, [pathname, role]);
 
   function toggleSidebar() {
     const next = !sidebarCollapsed;
@@ -116,13 +144,37 @@ export function PortalShell({ role, title, children, focused = false }: {
   useEffect(() => {
     document.documentElement.classList.toggle("portal-menu-open", mobileMenuOpen);
     if (!mobileMenuOpen) return;
+    const unlock = lockDocumentScroll();
+    const drawer = document.getElementById("portal-mobile-drawer");
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const controls = () => Array.from(drawer?.querySelectorAll<HTMLElement>('a[href],button:not(:disabled)') ?? [])
+      .filter((element) => element.getClientRects().length > 0);
+    controls()[0]?.focus({ preventScroll: true });
+    const desktop = window.matchMedia("(min-width: 761px)");
+    const closeOnDesktop = () => { if (desktop.matches) setMobileMenuOpen(false); };
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMobileMenuOpen(false);
+      if (document.querySelector(".app-modal-layer")) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMobileMenuOpen(false);
+      } else if (event.key === "Tab") {
+        const items = controls();
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (first && last && (!drawer?.contains(document.activeElement) || (event.shiftKey && document.activeElement === first) || (!event.shiftKey && document.activeElement === last))) {
+          event.preventDefault();
+          (event.shiftKey ? last : first).focus({ preventScroll: true });
+        }
+      }
     };
+    desktop.addEventListener("change", closeOnDesktop);
     document.addEventListener("keydown", closeOnEscape);
     return () => {
       document.documentElement.classList.remove("portal-menu-open");
       document.removeEventListener("keydown", closeOnEscape);
+      desktop.removeEventListener("change", closeOnDesktop);
+      unlock();
+      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
     };
   }, [mobileMenuOpen]);
 
@@ -158,7 +210,7 @@ export function PortalShell({ role, title, children, focused = false }: {
           <span /><span /><span />
         </button>
       </div>
-      <div className="portal-sidebar-drawer" id="portal-mobile-drawer">
+      <div className="portal-sidebar-drawer" id="portal-mobile-drawer" role={mobileMenuOpen ? "dialog" : undefined} aria-modal={mobileMenuOpen || undefined} aria-label={mobileMenuOpen ? "Portal menu" : undefined}>
         <div className="portal-mobile-drawer-heading">
           <span>Menu</span>
           <button type="button" aria-label="Close portal menu" onClick={() => setMobileMenuOpen(false)}>×</button>
@@ -181,7 +233,7 @@ export function PortalShell({ role, title, children, focused = false }: {
     </aside>
     {mobileMenuOpen && <button className="portal-mobile-menu-backdrop" type="button" aria-label="Close portal menu" onClick={() => setMobileMenuOpen(false)} />}
     <section className="portal-content">
-      <header className="portal-page-header">
+      <header className="portal-page-header" ref={headerRef}>
         <div className="portal-page-heading">
           <h1>{title}</h1>
         </div>

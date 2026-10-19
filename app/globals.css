@@ -1647,6 +1647,77 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 }
 .public-center-toggle{ box-shadow:0 8px 20px rgba(31,61,43,.18); }
 
+/* Keep directory controls, comparison and results on one shared reading grid. */
+.centers-directory-page .section-inner{ max-width:1120px; padding-inline:max(24px,env(safe-area-inset-left)) max(24px,env(safe-area-inset-right)); }
+.centers-directory-page :is(.public-search-heading,.public-search-filters,.public-comparison-workspace,.public-center-grid,.public-search-status,.public-search-date-error){ width:100%; max-width:1040px; margin-inline:auto; }
+.centers-directory-page .public-search-heading{ padding:clamp(26px,3.5vw,40px); margin-bottom:24px; }
+.centers-directory-page .public-search-heading .section-title{ font-size:clamp(30px,3.7vw,48px); line-height:1.18; margin-bottom:12px; text-wrap:balance; }
+.centers-directory-page .public-search-heading>p{ font-size:14px; line-height:1.7; }
+.centers-directory-page .public-search-filters{ grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) auto; align-items:center; gap:10px; margin-bottom:24px; box-shadow:0 8px 24px rgba(31,61,43,.085); }
+.centers-directory-page .public-search-field{ min-height:76px; gap:10px; }
+.centers-directory-page .public-search-field small,.centers-directory-page .public-date-control>span{ font-size:10px; line-height:1.5; letter-spacing:.035em; }
+.centers-directory-page .public-search-filters input{ min-height:32px; background:transparent; font-size:15px; }
+.centers-directory-page .public-date-control{ padding:0; border:0; background:transparent; }
+.centers-directory-page input[type="date"]{ display:block; max-width:100%; min-width:0; text-align:left; }
+.centers-directory-page input[type="date"]::-webkit-date-and-time-value{ min-height:1.5em; text-align:left; }
+.centers-directory-page .public-search-submit{ grid-column:auto; margin:0 4px; height:48px; }
+.centers-directory-page .public-search-status{ margin-bottom:24px; line-height:1.65; }
+.centers-directory-page .public-comparison-workspace{ padding:24px; box-shadow:0 8px 24px rgba(31,61,43,.065); }
+.centers-directory-page .public-comparison-intro h2{ font-size:clamp(24px,2.7vw,32px); line-height:1.25; }
+.centers-directory-page .public-comparison-intro p{ font-size:13px; line-height:1.65; }
+.centers-directory-page .public-comparison-toolbar{ grid-template-columns:minmax(0,1fr); gap:12px; margin-top:18px; }
+.centers-directory-page .public-comparison-actions{ justify-content:flex-end; flex-wrap:wrap; }
+.centers-directory-page .public-comparison-picker{ min-height:80px; padding:12px 14px; }
+.centers-directory-page .public-comparison-picker input{ min-height:32px; font-size:14px; }
+.centers-directory-page :is(.public-comparison-picker>label>span,.public-comparison-picker>span){ font-size:10px; }
+.centers-directory-page .public-comparison-picker.is-selected strong{ font-size:14px; }
+.centers-directory-page .public-comparison-picker.is-selected small{ font-size:12px; }
+.centers-directory-page :is(.public-comparison-picker.is-selected>button,.public-comparison-clear,.public-comparison-start){ min-height:44px; font-size:10px; }
+.centers-directory-page .public-comparison-picker-options button{ min-height:56px; overflow-wrap:anywhere; }
+.centers-directory-page .public-comparison-picker-options strong{ font-size:13px; }
+.centers-directory-page .public-comparison-picker-options span{ font-size:12px; }
+.centers-directory-page .public-comparison-picker-status{ position:static; display:block; margin-top:7px; font-size:12px; line-height:1.5; }
+.centers-directory-page .public-center-card{ grid-template-columns:minmax(220px,32%) minmax(0,1fr); border-top-width:2px; box-shadow:0 6px 22px rgba(31,61,43,.065); }
+.centers-directory-page .public-center-card-image{ align-self:start; }
+.centers-directory-page .public-center-card-body{ padding:22px 24px; background:#fff; }
+.centers-directory-page .public-center-card-topline{ font-size:10px; line-height:1.55; letter-spacing:.025em; }
+.centers-directory-page .public-center-card-topline>span{ border-radius:10px; overflow-wrap:anywhere; }
+.centers-directory-page .public-center-card h3{ margin-top:12px; font-size:clamp(22px,2.2vw,28px); line-height:1.28; overflow-wrap:anywhere; }
+.centers-directory-page .public-center-card-body>p{ font-size:14px; line-height:1.7; overflow-wrap:anywhere; }
+.centers-directory-page .public-center-review{ margin-top:12px; padding:10px 12px; overflow-wrap:anywhere; }
+.centers-directory-page .public-center-review p{ font-size:13px; line-height:1.65; }
+.centers-directory-page .public-center-toggle{ margin-top:18px; box-shadow:none; }
+.centers-directory-page .public-center-image-arrows{ inset-inline:8px; }
+.centers-directory-page .public-center-image-arrows button{ width:44px; height:44px; }
+.centers-directory-page .public-center-image-nav{ gap:4px; padding:2px 6px; bottom:8px; left:8px; right:8px; max-width:calc(100% - 16px); }
+.centers-directory-page .public-center-image-dots{ display:grid; }
+.centers-directory-page .public-center-image-nav button{ flex:0 0 24px; width:24px; height:24px; display:grid; place-items:center; border:0; background:transparent; }
+.centers-directory-page .public-center-image-nav button::before{ content:""; width:6px; height:6px; border:1px solid rgba(255,255,255,.85); border-radius:50%; }
+.centers-directory-page .public-center-image-nav button.active::before{ background:#fff; }
+.centers-directory-page .public-center-image-nav button:focus-visible{ outline:2px solid #fff; outline-offset:-2px; }
+.centers-directory-page .public-center-image-nav span{ padding:4px; white-space:nowrap; }
+.centers-directory-page :is(.public-comparison-package,.public-comparison-package li,.public-comparison-results-heading){ overflow-wrap:anywhere; }
+.centers-directory-page .public-comparison-package li{ flex-wrap:wrap; font-size:12px; }
+.centers-directory-page .public-comparison-package li strong{ font-size:11px; }
+.centers-directory-page :is(.public-comparison-package>span,.public-comparison-package>p){ font-size:12px; }
+.centers-directory-page .public-comparison-package>a{ width:fit-content; max-width:100%; min-height:44px; display:flex; align-items:center; font-size:11px; }
+.centers-directory-page .public-comparison-results-heading>button{ width:44px; height:44px; flex-basis:44px; }
+@media(max-width:720px){
+  .centers-directory-page .section-inner{ padding-inline:max(20px,env(safe-area-inset-left)) max(20px,env(safe-area-inset-right)); }
+  .centers-directory-page .public-search-heading{ padding:26px 20px; }
+  .centers-directory-page .public-search-filters{ grid-template-columns:minmax(0,1fr); }
+  .centers-directory-page .public-search-field{ min-height:76px; }
+  .centers-directory-page .public-search-submit{ width:100%; margin:0; justify-self:stretch; }
+  .centers-directory-page .public-comparison-workspace{ padding:20px 16px; }
+  .centers-directory-page .public-center-card{ grid-template-columns:minmax(0,1fr); }
+  .centers-directory-page .public-center-card-image{ aspect-ratio:4/3; }
+  .centers-directory-page .public-center-card-body{ padding:20px; }
+  .centers-directory-page .public-center-card h3{ font-size:24px; }
+}
+@media(pointer:coarse),(max-width:1100px){
+  .centers-directory-page :is(.public-search-filters input,.public-comparison-picker input,.public-comparison-package-select select){ font-size:16px; }
+}
+
 .public-centre-detail-page{
   background:radial-gradient(circle at 92% 7%,rgba(184,135,47,.055),transparent 22%),#fff;
 }

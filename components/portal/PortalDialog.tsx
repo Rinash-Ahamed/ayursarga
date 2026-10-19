@@ -30,7 +30,7 @@ export function PortalDialog({
   const titleId = useId();
   const messageId = useId();
   return <ModalLayer open={open} className="portal-dialog-backdrop" busy={busy} onClose={onCancel} initialFocusRef={children ? undefined : cancelRef}>
-    <section className="portal-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={message ? messageId : undefined}>
+    <section className="portal-dialog" data-tone={tone} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={message ? messageId : undefined}>
       <span className="portal-dialog-leaf" aria-hidden="true" />
       <span className="portal-eyebrow">Please confirm</span>
       <h2 id={titleId}>{title}</h2>

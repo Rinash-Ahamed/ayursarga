@@ -388,7 +388,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
       ? { title: hospital?.status === "inactive" ? "Reactivate this hospital?" : "Activate this hospital?", message: hospital?.status === "pending" && !contractReady ? "Add the secure link to the signed contract. Continuing will confirm the signing, activate the hospital, and send its login setup email." : "The hospital will become visible to consumers and receive a secure login setup email.", confirmLabel: hospital?.status === "inactive" ? "Reactivate hospital" : "Activate hospital", tone: "default" as const }
         : pendingAction === "setup"
           ? { title: "Send login setup link?", message: `A secure password setup/reset link will be sent to ${hospital?.email ?? "this hospital"}.`, confirmLabel: "Send setup link", tone: "default" as const }
-          : { title: "Deactivate this hospital?", message: "The hospital will be hidden from consumers while its operational history remains stored.", confirmLabel: "Deactivate hospital", tone: "default" as const };
+          : { title: "Deactivate this hospital?", message: "The hospital will be hidden from consumers while its operational history remains stored.", confirmLabel: "Deactivate hospital", tone: "danger" as const };
   return <PortalShell role="admin" title="Hospital Details">
     <PortalLoadGuard notification={errorNotification} loading={loading} error={error} hasData={Boolean(hospital)} fallbackHref="/admin/hospitals" loadingMessage="Loading hospital details…" />
     <div className="portal-actions portal-page-actions"><Link className="portal-button secondary" href="/admin/hospitals">Back to hospitals</Link></div>
@@ -478,7 +478,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
           <label>Expiry date *<input name="contractExpiryDate" type="date" defaultValue={defaultContractExpiryDate} min={defaultContractEffectiveDate} required disabled={!editingContractParticulars} aria-invalid={Boolean(contractFieldErrors.contractExpiryDate)} /><ContractFieldError field="contractExpiryDate" errors={contractFieldErrors} /></label>
           <label>Partner emergency contact *<input name="emergencyContact" defaultValue={hospital.emergencyContact ?? ""} maxLength={160} required disabled={!editingContractParticulars} aria-invalid={Boolean(contractFieldErrors.emergencyContact)} /><ContractFieldError field="emergencyContact" errors={contractFieldErrors} /></label>
           <label>Emergency transfer (nearby hospital transfer in case of an emergency) *<input name="emergencyReferralHospital" defaultValue={hospital.emergencyReferralHospital ?? ""} maxLength={200} required disabled={!editingContractParticulars} aria-invalid={Boolean(contractFieldErrors.emergencyReferralHospital)} /><ContractFieldError field="emergencyReferralHospital" errors={contractFieldErrors} /></label>
-          {editingContractParticulars && <div className="portal-actions full"><button className="portal-button secondary" disabled={busy}>{busy ? "Saving..." : "Save contract particulars"}</button></div>}
+          {editingContractParticulars && <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save contract particulars"}</button></div>}
         </form>}
         {hospital.contractUrl && <p>Signed contract: <a className="portal-inline-link" href={hospital.contractUrl} target="_blank" rel="noreferrer">View contract</a></p>}
         <div className="portal-actions">
@@ -486,7 +486,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
           {hospital.status === "pending" && contractStatus !== "not_generated" && <button className="portal-button" type="button" disabled={busy} onClick={() => { setContractUrlError(null); setPendingAction("activate"); }}>Activate hospital</button>}
           {hospital.status === "inactive" && contractStatus === "signed" && contractReady && <button className="portal-button" type="button" disabled={busy} onClick={() => setPendingAction("activate")}>Reactivate hospital</button>}
           {hospital.status === "active" && <button className="portal-button" type="button" disabled={busy} onClick={() => setPendingAction("setup")}>Send login setup / reset</button>}
-          {hospital.status === "active" && <button className="portal-button secondary" type="button" disabled={busy} onClick={() => setPendingAction("deactivate")}>Deactivate hospital</button>}
+          {hospital.status === "active" && <button className="portal-button danger" type="button" disabled={busy} onClick={() => setPendingAction("deactivate")}>Deactivate hospital</button>}
         </div>
         {hospital.status === "pending" && !contractParticularsComplete && <p className="portal-form-note">Complete and save all required contract particulars to enable Preview Contract.</p>}
         <p>Preview and download the contract first. After the hospital returns the signed copy, select Activate hospital and add its secure link to complete signing and activation.</p>

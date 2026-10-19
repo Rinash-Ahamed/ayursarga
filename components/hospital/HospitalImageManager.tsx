@@ -84,17 +84,17 @@ export function HospitalImageManager({ hospitalId, hospitalName, imageUrls, onCh
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={url} alt={`${hospitalName} image ${index + 1}`} loading="lazy" decoding="async" referrerPolicy="no-referrer" />
         </a>
-        <button className="portal-button secondary" type="button" disabled={busy || disabled} onClick={() => setRemoving(url)} aria-label={`Remove centre image ${index + 1}`}>Remove</button>
+        <button className="portal-button danger" type="button" disabled={busy || disabled} onClick={() => setRemoving(url)} aria-label={`Remove centre image ${index + 1}`}>Remove</button>
       </div>)}
     </div>}
     <div className="portal-actions">
       <input className="portal-image-file-input" ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={busy || disabled || imageUrls.length >= MAX_HOSPITAL_IMAGES} onChange={(event) => void upload(Array.from(event.target.files ?? []))} aria-label="Select hospital images" tabIndex={-1} />
-      <button className="portal-button secondary" type="button" disabled={busy || disabled || imageUrls.length >= MAX_HOSPITAL_IMAGES} onClick={() => inputRef.current?.click()}>{busy ? progress || "Saving..." : "Upload images"}</button>
+      <button className="portal-button" type="button" disabled={busy || disabled || imageUrls.length >= MAX_HOSPITAL_IMAGES} onClick={() => inputRef.current?.click()}>{busy ? progress || "Saving..." : "Upload images"}</button>
       <span className="portal-image-count" role="status">{imageUrls.length} of {MAX_HOSPITAL_IMAGES} images added</span>
     </div>
     {error && <p className="portal-form-error" role="alert">{error}</p>}
     <PortalToast message={error} notification={errorNotification} tone="error" />
     <PortalToast message={message} notification={messageNotification} />
-    <PortalDialog open={Boolean(removing)} title="Remove this image?" message="This image will no longer appear in the centre gallery." confirmLabel="Remove image" busy={busy} onCancel={() => setRemoving(null)} onConfirm={() => void remove()} />
+    <PortalDialog open={Boolean(removing)} tone="danger" title="Remove this image?" message="This image will no longer appear in the centre gallery." confirmLabel="Remove image" busy={busy} onCancel={() => setRemoving(null)} onConfirm={() => void remove()} />
   </div>;
 }

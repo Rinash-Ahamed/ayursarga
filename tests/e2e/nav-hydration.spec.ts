@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { createElement } from "react";
+import { createElement, type ComponentType } from "react";
 import { renderToString } from "react-dom/server";
 import { bundleDialogHarness } from "../helpers/bundleDialogHarness";
 import { loadTypeScript } from "../helpers/loadTypeScript.mjs";
@@ -7,7 +7,7 @@ import { loadTypeScript } from "../helpers/loadTypeScript.mjs";
 const paths = ["next/navigation", "@/contexts/AuthContext", "@/hooks/useAuth", "next/image", "@/components/ScrollLogo", "@/components/ModalLayer"];
 const mocks = loadTypeScript("tests/fixtures/navHydrationMocks.tsx");
 const overrides = Object.fromEntries(paths.map((path) => [path, mocks]));
-const { default: Nav } = loadTypeScript("components/Nav.tsx", overrides);
+const { default: Nav } = loadTypeScript<{ default: ComponentType }>("components/Nav.tsx", overrides);
 const html = renderToString(createElement(Nav));
 const bundle = bundleDialogHarness("tests/fixtures/navHydrationHarness.tsx", Object.fromEntries(paths.map((path) => [path, "tests/fixtures/navHydrationMocks.tsx"])));
 

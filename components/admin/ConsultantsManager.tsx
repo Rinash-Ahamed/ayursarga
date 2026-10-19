@@ -143,7 +143,7 @@ export function ConsultantsManager() {
           {consultant.address && <div className="consultant-detail-wide"><dt>Address</dt><dd>{consultant.address}</dd></div>}
           {consultant.emergencyContactNo && <div><dt>Emergency contact</dt><dd>{consultant.emergencyContactNo}</dd></div>}
         </dl>
-        <div className="portal-actions"><button className="portal-button secondary" type="button" disabled={Boolean(busyId)} onClick={() => { setEditingId(consultant.id); setShowCreateForm(false); setFieldErrors({}); setActionError(null); setMessage(null); }}>Edit</button><button className="portal-button secondary" type="button" disabled={Boolean(busyId)} onClick={() => void toggleStatus(consultant)}>{consultant.status === "active" ? "Make inactive" : "Make active"}</button></div>
+        <div className="portal-actions"><button className="portal-button secondary" type="button" disabled={Boolean(busyId)} onClick={() => { setEditingId(consultant.id); setShowCreateForm(false); setFieldErrors({}); setActionError(null); setMessage(null); }}>Edit</button><button className={`portal-button${consultant.status === "active" ? " danger" : ""}`} type="button" disabled={Boolean(busyId)} onClick={() => void toggleStatus(consultant)}>{consultant.status === "active" ? "Make inactive" : "Make active"}</button></div>
       </>}
     </article>)}</div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />

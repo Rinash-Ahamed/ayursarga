@@ -95,7 +95,7 @@ function PackageFields({ service, usedIn, onAmountValidityChange }: { service?: 
         <section>
           <div className="portal-package-custom-heading">
             <div><h3>Other procedures</h3><p>Add up to five centre-specific procedures.</p></div>
-            <button className="portal-button secondary" type="button" disabled={customProcedures.length >= 5} onClick={addCustomProcedure}>Add another</button>
+            <button className="portal-button" type="button" disabled={customProcedures.length >= 5} onClick={addCustomProcedure}>Add another</button>
           </div>
           <div className="portal-package-custom-list">
             {customProcedures.map((procedure, index) => <div className="portal-package-custom-row" key={procedure.id}>
@@ -258,11 +258,11 @@ export function ServicesManager() {
         </article>
         : <article className="portal-row portal-service-row" key={item.id}>
           <div className="portal-service-content"><div className="portal-row-heading portal-service-heading"><h3>{packageTitle(item)}</h3><span className="portal-status portal-service-status" data-status={item.status}>{formatStatus(item.status)}</span></div><p>{packageProcedureEntries(item).length} procedures included</p>{typeof item.price === "number" && <p>₹{item.price.toLocaleString("en-IN")}</p>}{item.description && <p>{item.description}</p>}<ul className="portal-package-summary">{packageProcedureEntries(item).slice(0, 4).map((procedure) => <li key={procedure.id}>{procedure.label} {procedure.days !== null && <span>{procedure.days} days</span>}</li>)}</ul></div>
-          <div className="portal-service-controls"><div className="portal-actions"><button className="portal-button secondary" type="button" disabled={busyId !== null} onClick={() => { setEditingId(item.id); setActionError(null); setActionMessage(null); }}>Edit package</button><button className="portal-button secondary" type="button" disabled={busyId !== null} onClick={() => void toggleStatus(item)}>{item.status === "active" ? "Deactivate" : "Activate"}</button><button className="portal-button danger" type="button" disabled={busyId !== null} onClick={() => setServiceToRemove(item)}>Delete</button></div></div>
+          <div className="portal-service-controls"><div className="portal-actions"><button className="portal-button secondary" type="button" disabled={busyId !== null} onClick={() => { setEditingId(item.id); setActionError(null); setActionMessage(null); }}>Edit package</button><button className={`portal-button${item.status === "active" ? " danger" : ""}`} type="button" disabled={busyId !== null} onClick={() => void toggleStatus(item)}>{item.status === "active" ? "Deactivate" : "Activate"}</button><button className="portal-button danger" type="button" disabled={busyId !== null} onClick={() => setServiceToRemove(item)}>Delete</button></div></div>
         </article>)}
     </div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
     <PortalDialog open={Boolean(serviceToRemove)} tone="danger" title="Delete this package?" message={serviceToRemove ? `${packageTitle(serviceToRemove)} will be removed from normal package views. Its history will remain safely archived.` : undefined} confirmLabel="Delete package" busy={busyId !== null} onCancel={() => setServiceToRemove(null)} onConfirm={() => { if (serviceToRemove) void removeService(serviceToRemove); }} />
-    <PortalDialog open={Boolean(serviceToToggle)} title="Deactivate this package?" message={serviceToToggle ? `${packageTitle(serviceToToggle)} will be hidden from public views until it is activated again.` : undefined} confirmLabel="Deactivate package" busy={busyId !== null} onCancel={() => setServiceToToggle(null)} onConfirm={() => { if (serviceToToggle) { const item = serviceToToggle; setServiceToToggle(null); void applyStatusChange(item); } }} />
+    <PortalDialog open={Boolean(serviceToToggle)} tone="danger" title="Deactivate this package?" message={serviceToToggle ? `${packageTitle(serviceToToggle)} will be hidden from public views until it is activated again.` : undefined} confirmLabel="Deactivate package" busy={busyId !== null} onCancel={() => setServiceToToggle(null)} onConfirm={() => { if (serviceToToggle) { const item = serviceToToggle; setServiceToToggle(null); void applyStatusChange(item); } }} />
   </PortalShell>;
 }
