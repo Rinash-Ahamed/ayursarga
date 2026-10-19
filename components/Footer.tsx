@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import { ROUTES } from "@/config/routes";
 
 const reveal = {
@@ -23,8 +24,25 @@ const wordmarkLetterReveal = {
 
 export default function Footer({ sectionPrefix = "", backToTopHref }: { sectionPrefix?: string; backToTopHref?: string }) {
   const shouldReduceMotion = useReducedMotion();
+  const footerRef = useRef<HTMLElement>(null);
+  const [showBackgroundVideo, setShowBackgroundVideo] = useState(false);
 
-  return <footer id="site-footer">
+  useEffect(() => {
+    const footer = footerRef.current;
+    if (!footer || shouldReduceMotion) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      setShowBackgroundVideo(true);
+      observer.disconnect();
+    }, { rootMargin: "500px 0px" });
+
+    observer.observe(footer);
+    return () => observer.disconnect();
+  }, [shouldReduceMotion]);
+
+  return <footer id="site-footer" ref={footerRef}>
+    {showBackgroundVideo && <video className="footer-background-video" src="/footer.mp4" autoPlay muted loop playsInline preload="metadata" aria-hidden="true" tabIndex={-1} />}
     <div className="footer-inner">
       <motion.section className="footer-invitation" {...reveal} aria-labelledby="footer-invitation-title">
         <div>
