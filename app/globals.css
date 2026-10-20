@@ -487,6 +487,7 @@ main>.dark-section{
 .public-comparison-picker-options strong{ font-size:10px; }
 .public-comparison-picker-options span{ color:var(--sage); font-size:8px; }
 .public-comparison-picker-options>p{ padding:15px; color:var(--sage); font-size:9px; text-align:center; }
+.public-comparison-picker-options>p[role="alert"]{ color:var(--rust); }
 .public-comparison-actions{ display:flex; align-items:center; gap:8px; }
 .public-comparison-clear,.public-comparison-start{ min-height:40px; padding:9px 14px; border-radius:100px; font:inherit; font-size:9px; font-weight:800; letter-spacing:.055em; text-transform:uppercase; cursor:pointer; transition:background-color .18s ease,border-color .18s ease,color .18s ease; }
 .public-comparison-clear{ border:1px solid rgba(31,61,43,.28); background:#fff; color:var(--forest); }
@@ -1677,16 +1678,19 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .centers-directory-page .public-comparison-picker-options strong{ font-size:13px; }
 .centers-directory-page .public-comparison-picker-options span{ font-size:12px; }
 .centers-directory-page .public-comparison-picker-status{ position:static; display:block; margin-top:7px; font-size:12px; line-height:1.5; }
-.centers-directory-page .public-center-card{ grid-template-columns:minmax(220px,32%) minmax(0,1fr); border-top-width:2px; box-shadow:0 6px 22px rgba(31,61,43,.065); }
-.centers-directory-page .public-center-card-image{ align-self:start; }
-.centers-directory-page .public-center-card-body{ padding:22px 24px; background:#fff; }
+.centers-directory-page .public-center-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); align-items:stretch; gap:18px; }
+.centers-directory-page .public-center-card{ display:flex; flex-direction:column; align-self:stretch; border-top-width:2px; box-shadow:0 4px 14px rgba(31,61,43,.055); }
+.centers-directory-page .public-center-card-image{ flex:none; align-self:start; width:calc(100% - 24px); margin:12px 12px 0; aspect-ratio:4/3; box-shadow:none; }
+.centers-directory-page .public-center-card-body{ flex:1; width:100%; padding:18px; background:#fff; }
 .centers-directory-page .public-center-card-topline{ font-size:10px; line-height:1.55; letter-spacing:.025em; }
 .centers-directory-page .public-center-card-topline>span{ border-radius:10px; overflow-wrap:anywhere; }
-.centers-directory-page .public-center-card h3{ margin-top:12px; font-size:clamp(22px,2.2vw,28px); line-height:1.28; overflow-wrap:anywhere; }
-.centers-directory-page .public-center-card-body>p{ font-size:14px; line-height:1.7; overflow-wrap:anywhere; }
+.centers-directory-page .public-center-card h3{ display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; margin-top:10px; font-size:22px; line-height:1.35; overflow-wrap:anywhere; }
+.centers-directory-page .public-center-card-body>p{ display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; font-size:14px; line-height:1.65; overflow-wrap:anywhere; }
 .centers-directory-page .public-center-review{ margin-top:12px; padding:10px 12px; overflow-wrap:anywhere; }
-.centers-directory-page .public-center-review p{ font-size:13px; line-height:1.65; }
-.centers-directory-page .public-center-toggle{ margin-top:18px; box-shadow:none; }
+.centers-directory-page .public-center-review p{ display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; font-size:13px; line-height:1.65; }
+.centers-directory-page .public-center-toggle{ max-width:100%; margin-top:auto; align-self:stretch; padding:11px 12px; box-shadow:none; text-align:center; }
+.centers-directory-page .public-center-card-body::after{ content:""; order:1; height:14px; flex:none; }
+.centers-directory-page .public-center-toggle{ order:2; }
 .centers-directory-page .public-center-image-arrows{ inset-inline:8px; }
 .centers-directory-page .public-center-image-arrows button{ width:44px; height:44px; }
 .centers-directory-page .public-center-image-nav{ gap:4px; padding:2px 6px; bottom:8px; left:8px; right:8px; max-width:calc(100% - 16px); }
@@ -1702,6 +1706,15 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .centers-directory-page :is(.public-comparison-package>span,.public-comparison-package>p){ font-size:12px; }
 .centers-directory-page .public-comparison-package>a{ width:fit-content; max-width:100%; min-height:44px; display:flex; align-items:center; font-size:11px; }
 .centers-directory-page .public-comparison-results-heading>button{ width:44px; height:44px; flex-basis:44px; }
+.centers-directory-page .public-search-loading{ grid-column:1/-1; color:var(--sage); font-size:13px; line-height:1.6; }
+.centers-directory-page .public-center-skeleton{ pointer-events:none; }
+.centers-directory-page .public-center-skeleton .public-center-card-image{ background:rgba(31,61,43,.075); }
+.centers-directory-page .public-center-skeleton .public-center-card-body{ gap:14px; min-height:190px; }
+.centers-directory-page .public-center-skeleton .public-center-card-body>span{ width:100%; height:16px; border-radius:6px; background:rgba(31,61,43,.075); }
+.centers-directory-page .public-center-skeleton .public-center-card-body>span:last-child{ width:65%; }
+@media(min-width:1101px){
+  .centers-directory-page .public-center-grid{ grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
 @media(max-width:720px){
   .centers-directory-page .section-inner{ padding-inline:max(20px,env(safe-area-inset-left)) max(20px,env(safe-area-inset-right)); }
   .centers-directory-page .public-search-heading{ padding:26px 20px; }
@@ -1709,10 +1722,31 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   .centers-directory-page .public-search-field{ min-height:76px; }
   .centers-directory-page .public-search-submit{ width:100%; margin:0; justify-self:stretch; }
   .centers-directory-page .public-comparison-workspace{ padding:20px 16px; }
-  .centers-directory-page .public-center-card{ grid-template-columns:minmax(0,1fr); }
-  .centers-directory-page .public-center-card-image{ aspect-ratio:4/3; }
-  .centers-directory-page .public-center-card-body{ padding:20px; }
-  .centers-directory-page .public-center-card h3{ font-size:24px; }
+  .centers-directory-page .public-center-grid{ gap:12px; }
+  .centers-directory-page .public-center-card{ border-radius:14px; }
+  .centers-directory-page .public-center-card-image{ width:calc(100% - 16px); margin:8px 8px 0; border-radius:9px; }
+  .centers-directory-page .public-center-card-image.placeholder span{ font-size:20px; }
+  .centers-directory-page .public-center-card-body{ padding:12px; }
+  .centers-directory-page .public-center-card h3{ font-size:17px; }
+  .centers-directory-page .public-center-card-topline{ font-size:10px; text-transform:none; }
+  .centers-directory-page .public-center-card-topline>span{ display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; padding:4px 6px; border-radius:6px; }
+  .centers-directory-page .public-center-card-body>p{ font-size:12px; line-height:1.6; }
+  .centers-directory-page .public-center-review{ padding:8px; }
+  .centers-directory-page .public-center-review p{ font-size:12px; }
+  .centers-directory-page .public-center-assessment{ max-width:100%; padding:6px; gap:5px; }
+  .centers-directory-page .public-center-stars{ font-size:12px; letter-spacing:0; }
+  .centers-directory-page .public-center-assessment strong{ font-size:11px; }
+  .centers-directory-page .public-center-toggle{ min-height:44px; font-size:9px; line-height:1.5; letter-spacing:.025em; padding:8px; gap:5px; }
+  .centers-directory-page .public-center-image-dots{ display:none; }
+  .centers-directory-page .public-center-image-nav{ left:auto; max-width:calc(100% - 8px); right:4px; bottom:4px; padding:0 4px; }
+  .centers-directory-page .public-center-image-nav span{ font-size:10px; }
+  .centers-directory-page .public-center-image-arrows{ inset-inline:2px; }
+  .centers-directory-page .public-center-image-arrows button{ box-shadow:none; }
+}
+@media(max-width:360px){
+  .centers-directory-page .public-center-grid{ gap:10px; }
+  .centers-directory-page .public-center-card-body{ padding:10px; }
+  .centers-directory-page .public-center-card h3{ font-size:15px; }
 }
 @media(pointer:coarse),(max-width:1100px){
   .centers-directory-page :is(.public-search-filters input,.public-comparison-picker input,.public-comparison-package-select select){ font-size:16px; }

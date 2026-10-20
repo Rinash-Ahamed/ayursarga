@@ -18,7 +18,7 @@ async function decodeGalleryImage(url: string, sizes: string, priority: "auto" |
 }
 
 /** Keep the current photo visible while its replacement downloads and decodes. */
-export function useHospitalImageGallery(source: string[], sizes: string) {
+export function useHospitalImageGallery(source: string[], sizes: string, preloadNext = true) {
   const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
   const [failedImages, setFailedImages] = useState<string[]>([]);
   const [loadedImageUrl, setLoadedImageUrl] = useState<string | null>(null);
@@ -32,12 +32,12 @@ export function useHospitalImageGallery(source: string[], sizes: string) {
   useEffect(() => () => { navigationRequest.current += 1; }, []);
 
   useEffect(() => {
-    if (!nextUrl || loadedImageUrl !== imageUrl) return;
+    if (!preloadNext || !nextUrl || loadedImageUrl !== imageUrl) return;
     const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
     if (connection?.saveData || connection?.effectiveType?.includes("2g")) return;
     // One adjacent photo only; never fetch every gallery image on page load.
     void decodeGalleryImage(nextUrl, sizes, "low").catch(() => undefined);
-  }, [imageUrl, loadedImageUrl, nextUrl, sizes]);
+  }, [imageUrl, loadedImageUrl, nextUrl, preloadNext, sizes]);
 
   function failImage(url: string) {
     setFailedImages((current) => current.includes(url) ? current : [...current, url]);

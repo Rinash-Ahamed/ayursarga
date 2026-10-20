@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState, type FormEvent, type MouseEvent } from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import type { HospitalDocument } from "@/features/firestore/models";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import {
@@ -22,15 +22,31 @@ type PublicHospitalSearchProps = {
   initialSearch?: string;
 };
 
-function PublicHospitalImages({ hospital, priority = false }: { hospital: DocumentRecord<HospitalDocument>; priority?: boolean }) {
-  const sizes = "(max-width: 720px) calc(100vw - 72px), (max-width: 1100px) 32vw, 340px";
-  const { images, displayedIndex, imageUrl, direction, loadedImageUrl, markLoaded, failImage, showImage } = useHospitalImageGallery(getHospitalImageUrls(hospital), sizes);
+const SearchCentreComparison = memo(PublicCentreComparison);
+
+const PublicHospitalImages = memo(function PublicHospitalImages({ hospital, priority = false }: { hospital: DocumentRecord<HospitalDocument>; priority?: boolean }) {
+  const sizes = "(max-width: 600px) calc((100vw - 86px) / 2), (max-width: 1100px) calc((100vw - 106px) / 2), 318px";
+  const galleryRef = useRef<HTMLDivElement>(null);
+  const [nearViewport, setNearViewport] = useState(false);
+  const { images, displayedIndex, imageUrl, direction, loadedImageUrl, markLoaded, failImage, showImage } = useHospitalImageGallery(getHospitalImageUrls(hospital), sizes, nearViewport);
+
+  useEffect(() => {
+    const gallery = galleryRef.current;
+    if (!gallery || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      setNearViewport(true);
+      observer.disconnect();
+    }, { rootMargin: "160px" });
+    observer.observe(gallery);
+    return () => observer.disconnect();
+  }, []);
 
   if (!imageUrl) return <div className="public-center-card-image placeholder" aria-hidden="true">
     <span>Ayursarga</span>
   </div>;
 
-  return <div className="public-center-card-image">
+  return <div className="public-center-card-image" ref={galleryRef}>
     {/* Uploaded photos provide responsive sources; existing external links remain supported. */}
     {/* eslint-disable-next-line @next/next/no-img-element */}
     <img
@@ -81,10 +97,32 @@ function PublicHospitalImages({ hospital, priority = false }: { hospital: Docume
       <span>{displayedIndex + 1} / {images.length}</span>
     </div>}
   </div>;
-}
+});
+
+const HospitalResultCard = memo(function HospitalResultCard({ hospital, detailQuery, priority }: {
+  hospital: DocumentRecord<HospitalDocument>; detailQuery: string; priority: boolean;
+}) {
+  return <article className="public-center-card">
+    <Link className="public-center-card-link" href={`/centers/${encodeURIComponent(hospital.id)}?${detailQuery}`} prefetch={false} aria-label={`View details for ${hospital.name}`} />
+    <PublicHospitalImages hospital={hospital} priority={priority} />
+    <div className="public-center-card-body">
+      <div className="public-center-card-topline"><span>{hospital.city}{hospital.district ? `, ${hospital.district}` : ""}, {hospital.state}</span></div>
+      <h3>{hospital.name}</h3>
+      {hospital.ayursargaRating && <div className="public-center-assessment" aria-label={`Ayursarga assessment ${hospital.ayursargaRating} out of 5`}>
+        <span className="public-center-stars" aria-hidden="true"><span>★★★★★</span><span style={{ width: `${hospital.ayursargaRating / 5 * 100}%` }}>★★★★★</span></span>
+        <strong>{hospital.ayursargaRating.toFixed(1)}</strong>
+      </div>}
+      {hospital.description && <p>{hospital.description}</p>}
+      {hospital.ayursargaReviewNote && <div className="public-center-review"><p>{hospital.ayursargaReviewNote}</p></div>}
+      <span className="public-center-toggle" aria-hidden="true">View centre details <span>→</span></span>
+    </div>
+  </article>;
+});
 
 export default function PublicHospitalSearch({ initialService = "", initialContext, initialSearch = "" }: PublicHospitalSearchProps) {
   const [search, setSearch] = useState(initialSearch);
+  // Input paints first; filtering and result links follow without a debounce timer.
+  const resultSearch = useDeferredValue(search);
   const [startDate, setStartDate] = useState(initialContext.startDate);
   const [dateError, setDateError] = useState<string | null>(null);
   const today = new Date().toISOString().slice(0, 10);
@@ -100,14 +138,21 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
   );
 
   const visibleHospitals = useMemo(() => {
-    const term = search.trim().toLowerCase();
+    const term = resultSearch.trim().toLowerCase();
     return hospitals.filter((hospital) => {
       const searchable = `${hospital.name} ${hospital.city} ${hospital.district ?? ""} ${hospital.state} ${hospital.address}`.toLowerCase();
       const matchesSearch = !term || searchable.includes(term);
       const availableForDates = !startDate || !isHospitalUnavailable(hospital, startDate);
       return matchesSearch && availableForDates;
     });
-  }, [hospitals, search, startDate]);
+  }, [hospitals, resultSearch, startDate]);
+
+  const detailQuery = useMemo(() => {
+    const params = addCentreSearchContext(new URLSearchParams(), { ...initialContext, startDate, endDate: "" });
+    if (initialService) params.set("service", initialService);
+    if (resultSearch) params.set("q", resultSearch);
+    return params.toString();
+  }, [initialContext, initialService, resultSearch, startDate]);
 
   function openDatePicker(event: MouseEvent<HTMLLabelElement>) {
     const input = event.currentTarget.querySelector("input");
@@ -155,7 +200,6 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
         </form>
         {dateError && <p id="centre-date-error" className="public-search-date-error" role="alert">{dateError}</p>}
 
-        {isLoading && hospitals.length === 0 && <div className="public-search-status" role="status">Finding approved Ayurvedic centers...</div>}
         {error && <div className="public-search-status error" role="alert">{error}</div>}
         {!isLoading && !error && visibleHospitals.length === 0 && (
           <div className="public-search-status">
@@ -169,43 +213,21 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
           </div>
         )}
 
-        <PublicCentreComparison detailQuery={(() => {
+        <SearchCentreComparison detailQuery={(() => {
           const params = addCentreSearchContext(new URLSearchParams(), { ...initialContext, startDate, endDate: "" });
           if (initialService) params.set("service", initialService);
           return params.toString();
         })()} />
 
-        <div className="public-center-grid">
-          {visibleHospitals.map((hospital, hospitalIndex) => {
-            const detailParams = addCentreSearchContext(new URLSearchParams(), { ...initialContext, startDate, endDate: "" });
-            if (initialService) detailParams.set("service", initialService);
-            if (search) detailParams.set("q", search);
-            const detailHref = `/centers/${encodeURIComponent(hospital.id)}?${detailParams.toString()}`;
-            return (
-              <article className="public-center-card" key={hospital.id}>
-                <Link className="public-center-card-link" href={detailHref} aria-label={`View details for ${hospital.name}`} />
-                <PublicHospitalImages hospital={hospital} priority={hospitalIndex === 0} />
-                <div className="public-center-card-body">
-                  <div className="public-center-card-topline">
-                    <span>{hospital.city}{hospital.district ? `, ${hospital.district}` : ""}, {hospital.state}</span>
-                  </div>
-                  <h3>{hospital.name}</h3>
-                  {hospital.ayursargaRating && <div className="public-center-assessment" aria-label={`Ayursarga assessment ${hospital.ayursargaRating} out of 5`}>
-                    <span className="public-center-stars" aria-hidden="true">
-                      <span>★★★★★</span>
-                      <span style={{ width: `${hospital.ayursargaRating / 5 * 100}%` }}>★★★★★</span>
-                    </span>
-                    <strong>{hospital.ayursargaRating.toFixed(1)}</strong>
-                  </div>}
-                  {hospital.description && <p>{hospital.description}</p>}
-                  {hospital.ayursargaReviewNote && <div className="public-center-review">
-                    <p>{hospital.ayursargaReviewNote}</p>
-                  </div>}
-                  <span className="public-center-toggle" aria-hidden="true">View centre details <span>→</span></span>
-                </div>
-              </article>
-            );
-          })}
+        <div className="public-center-grid" aria-busy={isLoading}>
+          {isLoading && hospitals.length === 0 && <>
+            <p className="public-search-loading" role="status">Finding approved Ayurvedic centers...</p>
+            {Array.from({ length: 12 }, (_, index) => <article className="public-center-card public-center-skeleton" key={`loading-${index}`} aria-hidden="true">
+              <div className="public-center-card-image" />
+              <div className="public-center-card-body"><span /><span /><span /></div>
+            </article>)}
+          </>}
+          {visibleHospitals.map((hospital, hospitalIndex) => <HospitalResultCard key={hospital.id} hospital={hospital} detailQuery={detailQuery} priority={hospitalIndex === 0} />)}
         </div>
 
         {hasMore && (

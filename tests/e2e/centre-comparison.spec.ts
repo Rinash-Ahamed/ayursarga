@@ -45,3 +45,41 @@ test("changing a center cancels obsolete packages and handles no matching durati
   await expect(page.getByRole("combobox", { name: "First center", exact: true })).toBeVisible();
   await expect(page.locator(".public-comparison-results")).toHaveCount(0);
 });
+
+test("touch selection survives a Safari-style blur with no related target", async ({ page }) => {
+  const input = page.getByRole("combobox", { name: "First center", exact: true });
+  await input.fill("Alpha");
+  const option = page.getByRole("option", { name: /Alpha/ });
+  await expect(option).toBeVisible();
+  // Safari may not focus the tapped button before blurring a search input.
+  await input.evaluate((element) => element.dispatchEvent(new FocusEvent("focusout", { bubbles: true, relatedTarget: null })));
+  await expect(option).toBeVisible();
+  if (test.info().project.use.hasTouch) await option.tap();
+  else await option.click();
+  await expect(page.locator(".public-comparison-picker.is-selected").first()).toContainText("Alpha");
+});
+
+test("comparison waits for a completed search before displaying an empty result", async ({ page }) => {
+  await page.evaluate(() => { window.comparisonSearchDelay = 600; });
+  await page.getByRole("combobox", { name: "First center", exact: true }).fill("Unknown");
+  await expect(page.getByRole("status")).toHaveText("Searching centers...");
+  await expect(page.getByText("No matching active center found.")).toHaveCount(0);
+  await expect(page.getByText("No matching active center found.")).toBeVisible();
+});
+
+test("outside taps close results and refocusing restores matching options", async ({ page }) => {
+  const input = page.getByRole("combobox", { name: "First center", exact: true });
+  await input.fill("Alpha");
+  await expect(page.getByRole("option", { name: /Alpha/ })).toBeVisible();
+  await page.getByRole("heading", { name: "Compare two Ayurvedic centers" }).click();
+  await expect(input).toHaveAttribute("aria-expanded", "false");
+  await input.focus();
+  await expect(page.getByRole("option", { name: /Alpha/ })).toBeVisible();
+});
+
+test("search failures are not misreported as no matching centers", async ({ page }) => {
+  await page.evaluate(() => { window.comparisonSearchFails = true; });
+  await page.getByRole("combobox", { name: "First center", exact: true }).fill("Alpha");
+  await expect(page.getByRole("alert")).toHaveText("We could not search centers right now.");
+  await expect(page.getByText("No matching active center found.")).toHaveCount(0);
+});

@@ -53,48 +53,61 @@ function SearchCentreField({ label, selected, excludedId, onSelect, onRemove }: 
   onRemove: () => void;
 }) {
   const [query, setQuery] = useState("");
-  const [options, setOptions] = useState<DocumentRecord<HospitalDocument>[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [response, setResponse] = useState<{
+    query: string; excludedId?: string; options: DocumentRecord<HospitalDocument>[]; error: string | null;
+  } | null>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
   const requestVersion = useRef(0);
   const optionsId = useId();
+  const term = query.trim();
+  const canSearch = !selected && term.length >= 2;
+  const settled = response?.query === term && response.excludedId === excludedId;
+  const isLoading = canSearch && !settled;
+  const options = settled ? response.options : [];
+  const error = settled ? response.error : null;
 
   useEffect(() => {
-    const term = query.trim();
-    if (selected || term.length < 2) return;
+    const closeOutside = (event: PointerEvent) => {
+      if (event.target instanceof Node && !pickerRef.current?.contains(event.target)) setIsOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    return () => document.removeEventListener("pointerdown", closeOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!canSearch) return;
     const version = ++requestVersion.current;
     const timeout = window.setTimeout(() => {
-      setIsLoading(true);
-      setError(null);
       void searchPublicHospitals(term, { pageSize: 8 }).then((page) => {
         if (requestVersion.current !== version) return;
-        setOptions(page.documents.filter((hospital) => hospital.id !== excludedId));
+        setResponse({ query: term, excludedId, options: page.documents.filter((hospital) => hospital.id !== excludedId), error: null });
       }).catch(() => {
         if (requestVersion.current !== version) return;
-        setOptions([]);
-        setError("We could not search centers right now.");
-      }).finally(() => {
-        if (requestVersion.current === version) setIsLoading(false);
+        setResponse({ query: term, excludedId, options: [], error: "We could not search centers right now." });
       });
     }, 280);
     return () => {
       window.clearTimeout(timeout);
       requestVersion.current += 1;
     };
-  }, [excludedId, query, selected]);
+  }, [canSearch, excludedId, term]);
 
-  if (selected) return <div className="public-comparison-picker is-selected">
+  if (selected) return <div className="public-comparison-picker is-selected" ref={pickerRef}>
     <span>{label}</span>
     <div>
       <strong>{selected.hospital.name}</strong>
       <small>{selected.hospital.city}{selected.hospital.district ? `, ${selected.hospital.district}` : ""}, {selected.hospital.state}</small>
     </div>
-    <button type="button" onClick={() => { setQuery(""); setOptions([]); onRemove(); }}>Change</button>
+    <button type="button" onClick={() => { setQuery(""); setResponse(null); setIsOpen(false); onRemove(); }}>Change</button>
   </div>;
 
-  const showOptions = query.trim().length >= 2 && !isLoading;
-  return <div className="public-comparison-picker" onBlur={(event) => {
-    if (!event.currentTarget.contains(event.relatedTarget)) setOptions([]);
+  const showOptions = isOpen && canSearch;
+  return <div className="public-comparison-picker" ref={pickerRef} onBlur={(event) => {
+    // Safari can report no related target when an option is tapped. Outside
+    // pointerdown and keyboard navigation close the list without discarding it
+    // before that option's click event is delivered.
+    if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setIsOpen(false);
   }}>
     <label>
       <span>{label}</span>
@@ -105,35 +118,33 @@ function SearchCentreField({ label, selected, excludedId, onSelect, onRemove }: 
           value={query}
           placeholder="Search center by name"
           autoComplete="off"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
           role="combobox"
           aria-expanded={showOptions}
           aria-controls={optionsId}
           aria-autocomplete="list"
+          onFocus={() => setIsOpen(true)}
           onChange={(event) => {
             const value = event.target.value;
             setQuery(value);
-            setError(null);
-            if (value.trim().length < 2) {
-              requestVersion.current += 1;
-              setOptions([]);
-              setIsLoading(false);
-            }
+            setIsOpen(true);
           }}
           onKeyDown={(event) => {
             if (event.key === "Escape") {
-              setOptions([]);
+              setIsOpen(false);
               event.currentTarget.blur();
             }
+            if (event.key === "Tab" && event.shiftKey) setIsOpen(false);
           }}
         />
       </div>
     </label>
-    {isLoading && <small className="public-comparison-picker-status">Searching centers...</small>}
-    {error && <small className="public-comparison-picker-status error" role="alert">{error}</small>}
-    {showOptions && <div id={optionsId} className="public-comparison-picker-options" role="listbox" aria-label={`${label} search results`}>
-      {options.length > 0 ? options.map((hospital) => <button key={hospital.id} type="button" role="option" aria-selected="false" onClick={() => {
+    {showOptions && <div id={optionsId} className="public-comparison-picker-options" role="listbox" aria-busy={isLoading} aria-label={`${label} search results`}>
+      {isLoading ? <p role="status">Searching centers...</p> : error ? <p role="alert">{error}</p> : options.length > 0 ? options.map((hospital) => <button key={hospital.id} type="button" role="option" aria-selected="false" onClick={() => {
         setQuery("");
-        setOptions([]);
+        setIsOpen(false);
         onSelect(hospital);
       }}>
         <strong>{hospital.name}</strong>
