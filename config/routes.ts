@@ -21,6 +21,8 @@ export const ROUTES = {
   consumer: {
     home: "/app",
     bookings: "/app/bookings",
+    profile: "/app/profile",
+    support: "/app/support",
     completeProfile: "/app/complete-profile",
     login: "/app/login",
   },

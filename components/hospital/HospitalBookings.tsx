@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useDeferredValue, useMemo, useState } from "react";
+import Link from "next/link";
 import type { BookingDocument, BookingStatus, TreatmentStatus } from "@/features/firestore/models";
-import { formatBookingCarePreference } from "@/features/bookings/display";
+import { bookingReferenceLabel, bookingStatusLabel, formatBookingCarePreference } from "@/features/bookings/display";
 import { getTreatmentStatus } from "@/features/bookings/treatmentStatus";
 import { emptyQueryPage, type DocumentRecord, type QueryPageOptions } from "@/services/firestore/firestoreService";
-import { listHospitalBookings, updateHospitalBooking, updateTreatmentProgress, type HospitalBookingUpdate } from "@/services/bookings/bookingService";
+import { getPortalBooking, listHospitalBookings, updateHospitalBooking, updateTreatmentProgress, type HospitalBookingUpdate } from "@/services/bookings/bookingService";
 import { formatCurrency } from "@/utils/currency";
 import { getCalendarMonthRange } from "@/utils/date";
 import { formatStatus } from "@/utils/text";
@@ -36,7 +37,7 @@ type PendingTreatmentAction = {
   treatmentStatus: Exclude<TreatmentStatus, "not_started">;
 };
 
-export function HospitalBookings() {
+export function HospitalBookings({ bookingId }: { bookingId?: string } = {}) {
   const { userProfile } = useAuth();
   const hospitalId = userProfile?.hospitalId;
   const [actionError, setActionError, actionErrorNotification] = useRepeatableMessage();
@@ -53,19 +54,24 @@ export function HospitalBookings() {
     const [year, monthNumber] = month.split("-").map(Number);
     return getCalendarMonthRange(new Date(year, monthNumber - 1, 1));
   }, [month]);
-  const loader = useCallback((cursor: QueryPageOptions["cursor"]) => hospitalId
-    ? listHospitalBookings(hospitalId, {
+  const loader = useCallback(async (cursor: QueryPageOptions["cursor"]) => {
+    if (!hospitalId) return emptyQueryPage<BookingDocument>();
+    if (bookingId) {
+      const booking = await getPortalBooking(bookingId);
+      return { documents: booking?.hospitalId === hospitalId ? [booking] : [], cursor: null, hasMore: false };
+    }
+    return listHospitalBookings(hospitalId, {
       status: status || undefined,
       createdFrom: monthRange?.start,
       createdBefore: monthRange?.end,
-    }, { pageSize: 20, cursor })
-    : Promise.resolve(emptyQueryPage<BookingDocument>()), [hospitalId, monthRange, status]);
+    }, { pageSize: 20, cursor });
+  }, [bookingId, hospitalId, monthRange, status]);
   const { errorNotification: loadErrorNotification, items, error: loadError, isLoading, hasMore, loadMore, patchItem, removeItem } = usePaginatedList<BookingDocument>(
     loader,
     "We could not load the bookings. Refresh the page and try again.",
   );
   const visible = useMemo(() => deferredSearch
-    ? items.filter((item) => `${item.consumerName} ${item.consumerEmail} ${item.consumerPhone}`.toLowerCase().includes(deferredSearch))
+    ? items.filter((item) => `${item.bookingReference ?? ""} ${item.consumerName} ${item.consumerEmail} ${item.consumerPhone}`.toLowerCase().includes(deferredSearch))
     : items, [deferredSearch, items]);
   const hasFilters = Boolean(search.trim() || status || month);
 
@@ -136,8 +142,9 @@ export function HospitalBookings() {
   }
 
   return <PortalShell role="hospital" title="Bookings">
-    <PortalLoadGuard notification={loadErrorNotification} loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/hospital" loadingMessage="Loading booking requests…" />
-    <section className="portal-card portal-booking-filters" aria-label="Booking search and filters">
+    <PortalLoadGuard notification={loadErrorNotification} loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/hospital" loadingMessage="Loading bookings…" />
+    {bookingId && <Link className="portal-button secondary" href="/hospital/bookings">View all bookings</Link>}
+    {!bookingId && <section className="portal-card portal-booking-filters" aria-label="Booking search and filters">
       <span className="portal-filter-eyebrow">Filters</span>
       <div className="portal-filter-field">
         <label htmlFor="hospital-booking-search">Search bookings</label>
@@ -147,7 +154,7 @@ export function HospitalBookings() {
         <label htmlFor="hospital-booking-status">Booking status</label>
         <select id="hospital-booking-status" value={status} onChange={(event) => setStatus(event.target.value as BookingStatus | "")}>
           <option value="">All statuses</option>
-          {BOOKING_STATUSES.map((value) => <option value={value} key={value}>{formatStatus(value)}</option>)}
+          {BOOKING_STATUSES.map((value) => <option value={value} key={value}>{bookingStatusLabel(value)}</option>)}
         </select>
       </div>
       <div className="portal-filter-field">
@@ -155,16 +162,18 @@ export function HospitalBookings() {
         <input id="hospital-booking-month" type="month" value={month} onChange={(event) => setMonth(event.target.value)} />
       </div>
       <div className="portal-filter-actions"><button type="button" className="portal-button secondary" disabled={!hasFilters} onClick={clearFilters}>Clear filters</button></div>
-    </section>
+    </section>}
     <PortalFeedback notification={loadErrorNotification} error={items.length > 0 ? loadError : null} empty={!loadError && !isLoading && visible.length === 0
-      ? (hasFilters ? "No bookings match this search or filter. Adjust the selections and try again." : "No booking requests yet. New patient requests will appear here.")
+      ? (hasFilters ? "No bookings match this search or filter. Adjust the selections and try again." : "No bookings yet. New patient bookings will appear here.")
       : undefined} />
     <PortalToast message={actionMessage} notification={actionMessageNotification} />
     <PortalToast message={actionError} notification={actionErrorNotification} tone="error" />
     {visible.length > 0 && <div className="portal-result-count">Showing <strong>{visible.length}</strong> booking{visible.length !== 1 ? "s" : ""}{hasMore ? " · more available" : ""}</div>}
     <div className="portal-list">
       {visible.map((item) => <article className="portal-card" key={item.id} data-accent={item.status}>
-        <div className="portal-row-heading"><h3>{item.servicePrice > 0 ? formatCurrency(item.servicePrice) : "Package request"}</h3><span className="portal-status" data-status={item.status}>{formatStatus(item.status)}</span></div>
+        <span className="consumer-booking-reference">Booking ID: {bookingReferenceLabel(item)}</span>
+        <div className="portal-row-heading"><h3>{item.servicePrice > 0 ? formatCurrency(item.servicePrice) : "Care booking"}</h3><span className="portal-status" data-status={item.status}>{bookingStatusLabel(item.status)}</span></div>
+        {item.serviceName && <p><strong>{item.serviceName}</strong></p>}
         <p><strong>{item.consumerName || "Patient"}</strong> · {item.consumerPhone || "Phone not recorded"} · {item.consumerEmail || "Email not recorded"}</p>
         <p>Address: {item.consumerAddress || "Not provided"}</p>
         <p>Preferred: {formatBookingCarePreference(item)}</p>

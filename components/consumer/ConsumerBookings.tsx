@@ -4,10 +4,11 @@ import { useCallback, useState } from "react";
 import Link from "next/link";
 import { ROUTES } from "@/config/routes";
 import type { BookingDocument } from "@/features/firestore/models";
-import { formatBookingCarePreference } from "@/features/bookings/display";
 import { getTreatmentStatus } from "@/features/bookings/treatmentStatus";
 import { emptyQueryPage, type DocumentRecord, type QueryPageOptions } from "@/services/firestore/firestoreService";
-import { cancelConsumerBooking, listConsumerBookings } from "@/services/bookings/bookingService";
+import { cancelConsumerBooking, getConsumerBookingDetails, getPortalBooking, listConsumerBookings } from "@/services/bookings/bookingService";
+import { bookingReferenceLabel, bookingStatusLabel } from "@/features/bookings/display";
+import { formatBystanders } from "@/features/hospitals/searchContext";
 import { formatCurrency } from "@/utils/currency";
 import { formatStatus } from "@/utils/text";
 import { useAuth } from "@/hooks/useAuth";
@@ -25,20 +26,33 @@ function TreatmentTrail({ status }: { status: string }) {
   if (currentIndex === -1 && status !== "not_started") return null;
   return <div className="portal-treatment-trail">
     {steps.map((step, index) => <div className="portal-treatment-step" key={step}>
-      {index > 0 && <div className="portal-treatment-line" data-done={currentIndex >= index ? "true" : undefined} />}
       <div className="portal-treatment-dot" data-done={currentIndex > index ? "true" : undefined} data-active={currentIndex === index ? "true" : undefined} />
+      <span>{formatStatus(step)}</span>
     </div>)}
   </div>;
 }
 
-export function ConsumerBookings() {
+export function ConsumerBookings({ bookingId }: { bookingId?: string } = {}) {
   const { firebaseUser } = useAuth();
   const [actionError, setActionError, actionErrorNotification] = useRepeatableMessage();
   const [busy, setBusy] = useState<string | null>(null);
   const [actionMessage, setActionMessage, actionMessageNotification] = useRepeatableMessage();
-  const loader = useCallback((cursor: QueryPageOptions["cursor"]) => firebaseUser
-    ? listConsumerBookings(firebaseUser.uid, { pageSize: 20, cursor })
-    : Promise.resolve(emptyQueryPage<BookingDocument>()), [firebaseUser]);
+  const [detailsError, setDetailsError] = useState(false);
+  const loader = useCallback(async (cursor: QueryPageOptions["cursor"]) => {
+    if (!firebaseUser) return emptyQueryPage<BookingDocument>();
+    const selected = bookingId ? await getPortalBooking(bookingId) : null;
+    const page = bookingId ? { documents: selected?.consumerId === firebaseUser.uid ? [selected] : [], cursor: null, hasMore: false }
+      : await listConsumerBookings(firebaseUser.uid, { pageSize: 20, cursor });
+    const legacy = page.documents.filter((booking) => !booking.hospitalName || !booking.serviceName);
+    if (legacy.length) {
+      try {
+        const { details } = await getConsumerBookingDetails(legacy.map((booking) => booking.id));
+        page.documents = page.documents.map((booking) => ({ ...booking, ...details[booking.id] }));
+        setDetailsError(false);
+      } catch { setDetailsError(true); }
+    }
+    return page;
+  }, [firebaseUser, bookingId]);
   const { errorNotification: loadErrorNotification, items, error: loadError, isLoading, hasMore, loadMore, patchItem } = usePaginatedList<BookingDocument>(
     loader,
     "We could not load your bookings. Refresh the page and try again.",
@@ -46,6 +60,7 @@ export function ConsumerBookings() {
   const error = actionError ?? loadError;
 
   async function cancel(item: DocumentRecord<BookingDocument>) {
+    if (busy) return;
     setBusy(item.id); setActionError(null); setActionMessage(null);
     try {
       await cancelConsumerBooking(item.id, item);
@@ -58,37 +73,48 @@ export function ConsumerBookings() {
     }
   }
 
-  return <PortalShell role="consumer" title="My bookings" focused>
+  return <PortalShell role="consumer" title="My bookings">
     <div className="consumer-booking-toolbar">
       <div>
         <span>Your care journey</span>
-        <p>Review your appointment requests and follow each centre&apos;s response.</p>
+        <p>Review your bookings and follow each centre&apos;s confirmation.</p>
       </div>
       <nav className="consumer-booking-nav" aria-label="Consumer booking navigation">
         <Link className="portal-button" href={ROUTES.public.centers}>Search hospitals</Link>
         <Link className="portal-button secondary" href={ROUTES.public.home}>Back to home</Link>
       </nav>
     </div>
+    {bookingId && <p className="consumer-selected-booking"><Link href="/app/bookings">View all bookings</Link></p>}
     <PortalLoadGuard notification={loadErrorNotification} loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/" loadingMessage="Loading your bookings…" />
     <PortalFeedback notification={loadErrorNotification} error={items.length > 0 ? loadError : null} empty={!error && !isLoading && items.length === 0 ? "You have no bookings yet." : undefined} />
     <PortalToast message={actionMessage} notification={actionMessageNotification} />
     <PortalToast message={actionError} notification={actionErrorNotification} tone="error" />
+    {detailsError && <p className="portal-form-error" role="status">Centre and package names could not be loaded. Your booking dates and status are still shown. Refresh to try again.</p>}
     <div className="portal-list consumer-booking-list">
       {items.map((booking) => <article className="portal-row consumer-booking-row" key={booking.id}>
         <div className="consumer-booking-copy">
-          <span className="consumer-booking-reference">Booking {booking.id.slice(0, 8).toUpperCase()}</span>
-          <h3>Appointment request</h3>
-          <p>{formatBookingCarePreference(booking)}</p>
+          <span className="consumer-booking-reference">Booking ID: {bookingReferenceLabel(booking)}</span>
+          <h3>{booking.hospitalName || "Centre details unavailable"}</h3>
+          {booking.hospitalLocation && <p className="consumer-booking-location">{booking.hospitalLocation}</p>}
+          <p className="consumer-booking-package">{booking.serviceName || `Package reference: ${booking.serviceId}`}</p>
+          <dl className="consumer-booking-facts">
+            <div><dt>Requested care dates</dt><dd>{booking.preferredDate.toDate().toLocaleDateString("en-IN")}{booking.preferredEndDate && booking.preferredEndDate.toDate().getTime() !== booking.preferredDate.toDate().getTime() ? ` to ${booking.preferredEndDate.toDate().toLocaleDateString("en-IN")}` : ""}</dd></div>
+            <div><dt>Accompanying</dt><dd>{formatBystanders(booking.bystanderCount ?? 1)}{(booking.additionalBystanderTotal ?? 0) > 0 && <small>{formatCurrency(booking.additionalBystanderTotal!)} additional</small>}</dd></div>
+            {booking.confirmedDate && <div><dt>{booking.status === "reschedule_requested" ? "Proposed appointment" : "Confirmed appointment"}</dt><dd>{booking.confirmedDate.toDate().toLocaleDateString("en-IN")}{booking.confirmedTime ? ` · ${booking.confirmedTime}` : ""}</dd></div>}
+          </dl>
+          {booking.hospitalNotes && <div className="consumer-booking-note"><strong>Centre response</strong><p>{booking.hospitalNotes}</p></div>}
+          {booking.consumerNotes && <details className="consumer-booking-notes"><summary>Your request notes</summary><p>{booking.consumerNotes}</p></details>}
+          {booking.status === "requested" && <p className="consumer-booking-pending">Your booking has been placed and is awaiting the centre&apos;s confirmation. Your appointment is not confirmed yet.</p>}
           {(booking.status === "confirmed" || booking.status === "completed") && <>
             <p className="consumer-booking-treatment">Treatment: {formatStatus(getTreatmentStatus(booking))}</p>
             <TreatmentTrail status={getTreatmentStatus(booking)} />
           </>}
         </div>
         <div className="consumer-booking-meta">
-          <span className="portal-status" data-status={booking.status}>{formatStatus(booking.status)}</span>
-          {booking.servicePrice > 0 && <strong className="consumer-booking-price">{formatCurrency(booking.servicePrice)}</strong>}
+          <span className="portal-status" data-status={booking.status}>{bookingStatusLabel(booking.status)}</span>
+          <div className="consumer-booking-cost"><span>Package amount</span><strong className="consumer-booking-price">{formatCurrency(booking.servicePrice)}</strong><small>At time of request</small></div>
           {["requested", "confirmed", "reschedule_requested"].includes(booking.status) && getTreatmentStatus(booking) === "not_started" && <div className="portal-actions">
-            <button className="portal-button secondary" disabled={busy === booking.id} onClick={() => void cancel(booking)}>Cancel</button>
+            <button className="portal-button secondary" disabled={busy !== null} onClick={() => void cancel(booking)}>{busy === booking.id ? "Cancelling…" : "Cancel booking"}</button>
           </div>}
         </div>
       </article>)}

@@ -1,6 +1,15 @@
 import type { BookingDocument } from "@/features/firestore/models";
 import { formatBystanders } from "@/features/hospitals/searchContext";
 import { formatCurrency } from "@/utils/currency";
+import { formatStatus } from "@/utils/text";
+
+export function bookingReferenceLabel(booking: Pick<BookingDocument, "bookingReference">) {
+  return booking.bookingReference || "Reference unavailable. Refresh to retry.";
+}
+
+export function bookingStatusLabel(status: BookingDocument["status"]) {
+  return status === "requested" ? "Booked · awaiting confirmation" : formatStatus(status);
+}
 
 type BookingCarePreference = Pick<BookingDocument, "preferredDate" | "preferredEndDate" | "preferredTime" | "bystanderCount" | "additionalBystanderTotal">;
 

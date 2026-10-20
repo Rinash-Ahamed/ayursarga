@@ -5,10 +5,12 @@ import { useEffect, useRef, useState } from "react";
 import type { NotificationDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import {
+  clearAllNotifications,
   markAllNotificationsRead,
   markNotificationRead,
   subscribeToNotifications,
 } from "@/services/notifications/notificationService";
+import { PortalDialog } from "@/components/portal/PortalDialog";
 
 function notificationTime(value: NotificationDocument["createdAt"]) {
   const date = value?.toDate?.();
@@ -22,8 +24,36 @@ export function PortalNotifications({ recipientId }: { recipientId: string }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [clearing, setClearing] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [markingRead, setMarkingRead] = useState(false);
+  const actionInFlight = useRef(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const unread = items.filter((item) => !item.readAt);
+
+  async function clear() {
+    if (actionInFlight.current) return;
+    actionInFlight.current = true;
+    setClearing(true);
+    setError("");
+    try {
+      const { clearedThrough } = await clearAllNotifications();
+      setItems((current) => current.filter((item) => item.createdAt.seconds > clearedThrough.seconds
+        || (item.createdAt.seconds === clearedThrough.seconds && item.createdAt.nanoseconds > clearedThrough.nanoseconds)));
+      setConfirmClear(false);
+      setOpen(true);
+    } catch { setError("We could not clear notifications. Please try again."); setConfirmClear(false); setOpen(true); }
+    finally { actionInFlight.current = false; setClearing(false); }
+  }
+
+  async function markAllRead() {
+    if (actionInFlight.current) return;
+    actionInFlight.current = true;
+    setMarkingRead(true);
+    try { await markAllNotificationsRead(items); }
+    catch { setError("We could not mark the notifications as read."); }
+    finally { actionInFlight.current = false; setMarkingRead(false); }
+  }
 
   useEffect(() => subscribeToNotifications(recipientId, (nextItems) => {
     setItems(nextItems);
@@ -64,13 +94,15 @@ export function PortalNotifications({ recipientId }: { recipientId: string }) {
     {open && <section className="portal-notification-panel" aria-label="Recent notifications">
       <div className="portal-notification-heading">
         <strong>Notifications</strong>
-        {unread.length > 0 && <button type="button" onClick={() => void markAllNotificationsRead(items)
-          .catch(() => setError("We could not mark the notifications as read."))}>Mark all read</button>}
+        <div className="portal-notification-actions">
+          {unread.length > 0 && <button type="button" disabled={clearing || markingRead} onClick={() => void markAllRead()}>Mark all read</button>}
+          {items.length > 0 && <button className="portal-notification-clear" type="button" disabled={clearing || markingRead} onClick={() => { setOpen(false); setConfirmClear(true); }}>Clear</button>}
+        </div>
       </div>
       {loading && <p className="portal-notification-state">Loading notifications...</p>}
       {error && <p className="portal-notification-state">{error}</p>}
       {!loading && !error && items.length === 0 && <p className="portal-notification-state">No notifications yet.</p>}
-      {!loading && !error && items.length > 0 && <div className="portal-notification-list">
+      {!loading && items.length > 0 && <div className="portal-notification-list">
         {items.map((item) => <Link
           className="portal-notification-item"
           data-unread={!item.readAt || undefined}
@@ -88,5 +120,6 @@ export function PortalNotifications({ recipientId }: { recipientId: string }) {
         </Link>)}
       </div>}
     </section>}
+    <PortalDialog open={confirmClear} title="Clear all notifications?" message="Earlier notifications will be dismissed from your list. Bookings, notification records and audit history are kept. New notifications will still appear." tone="danger" confirmLabel="Clear notifications" busy={clearing} onConfirm={() => void clear()} onCancel={() => { if (!clearing) { setConfirmClear(false); setOpen(true); } }} />
   </div>;
 }

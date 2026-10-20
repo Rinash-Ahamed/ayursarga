@@ -83,3 +83,15 @@ export async function listPublicHospitalServices(hospitalId: string, options: Pu
     hasMore: Boolean(body.hasMore),
   };
 }
+
+export async function getPublicHospitalService(hospitalId: string, serviceId: string, signal?: AbortSignal) {
+  let cursor: PublicPageCursor | null = null;
+  do {
+    const page = await listPublicHospitalServices(hospitalId, { pageSize: 24, cursor, signal });
+    const selected = page.documents.find((service) => service.id === serviceId);
+    if (selected) return selected;
+    if (!page.hasMore || !page.cursor || page.cursor === cursor) return null;
+    cursor = page.cursor;
+  } while (!signal?.aborted);
+  return null;
+}

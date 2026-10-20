@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import type { BookingDocument, BookingStatus, HospitalDocument } from "@/features/firestore/models";
-import { formatBookingCarePreference } from "@/features/bookings/display";
+import { bookingReferenceLabel, bookingStatusLabel, formatBookingCarePreference } from "@/features/bookings/display";
 import type { DocumentRecord, QueryPageOptions } from "@/services/firestore/firestoreService";
-import { listAdminBookings } from "@/services/bookings/bookingService";
+import { getPortalBooking, listAdminBookings } from "@/services/bookings/bookingService";
 import { listAllHospitals } from "@/services/hospitals/hospitalService";
 import { formatCurrency } from "@/utils/currency";
 import { getCalendarMonthRange } from "@/utils/date";
@@ -20,7 +21,7 @@ const BOOKING_STATUSES: readonly BookingStatus[] = [
   "requested", "confirmed", "reschedule_requested", "completed", "cancelled", "rejected",
 ];
 
-export function AdminBookings() {
+export function AdminBookings({ bookingId }: { bookingId?: string } = {}) {
   const [hospitalSearch, setHospitalSearch] = useState("");
   const [selectedHospital, setSelectedHospital] = useState<DocumentRecord<HospitalDocument> | null>(null);
   const [hospitalResults, setHospitalResults] = useState<DocumentRecord<HospitalDocument>[]>([]);
@@ -59,13 +60,18 @@ export function AdminBookings() {
     return getCalendarMonthRange(new Date(year, monthNumber - 1, 1));
   }, [month]);
 
-  const loader = useCallback((cursor: QueryPageOptions["cursor"]) =>
-    listAdminBookings({
+  const loader = useCallback(async (cursor: QueryPageOptions["cursor"]) => {
+    if (bookingId) {
+      const booking = await getPortalBooking(bookingId);
+      return { documents: booking ? [booking] : [], cursor: null, hasMore: false };
+    }
+    return listAdminBookings({
       hospitalId: selectedHospital?.id,
       status: status || undefined,
       createdFrom: monthRange?.start,
       createdBefore: monthRange?.end,
-    }, { pageSize: 20, cursor }), [monthRange, selectedHospital, status]);
+    }, { pageSize: 20, cursor });
+  }, [bookingId, monthRange, selectedHospital, status]);
   const { errorNotification: loadErrorNotification, items, error, isLoading, hasMore, loadMore } = usePaginatedList<BookingDocument>(
     loader,
     "We could not load the bookings. Refresh the page and try again.",
@@ -83,7 +89,8 @@ export function AdminBookings() {
 
   return <PortalShell role="admin" title="Bookings">
     <PortalLoadGuard notification={loadErrorNotification} loading={isLoading} error={error} hasData={items.length > 0} fallbackHref="/admin" loadingMessage="Loading bookings…" />
-    <section className="portal-card portal-booking-filters" aria-label="Booking filters">
+    {bookingId && <Link className="portal-button secondary" href="/admin/bookings">View all bookings</Link>}
+    {!bookingId && <section className="portal-card portal-booking-filters" aria-label="Booking filters">
       <div className="portal-filter-field portal-hospital-filter">
         <label htmlFor="booking-hospital-search">Hospital</label>
         <input id="booking-hospital-search" value={hospitalSearch} onChange={(event) => {
@@ -108,7 +115,7 @@ export function AdminBookings() {
         <label htmlFor="booking-status-filter">Status</label>
         <select id="booking-status-filter" value={status} onChange={(event) => setStatus(event.target.value as BookingStatus | "")}>
           <option value="">All statuses</option>
-          {BOOKING_STATUSES.map((value) => <option key={value} value={value}>{formatStatus(value)}</option>)}
+          {BOOKING_STATUSES.map((value) => <option key={value} value={value}>{bookingStatusLabel(value)}</option>)}
         </select>
       </div>
       <div className="portal-filter-field">
@@ -118,14 +125,14 @@ export function AdminBookings() {
       <div className="portal-filter-actions">
         <button type="button" className="portal-button secondary" disabled={!hasFilters} onClick={clearFilters}>Clear filters</button>
       </div>
-    </section>
+    </section>}
     <PortalFeedback notification={loadErrorNotification} error={items.length > 0 ? error : null} empty={!error && !isLoading && items.length === 0
-      ? (hasFilters ? "No bookings match these filters. Adjust or clear the filters and try again." : "No bookings yet. New appointment requests will appear here.")
+      ? (hasFilters ? "No bookings match these filters. Adjust or clear the filters and try again." : "No bookings yet. New appointments will appear here.")
       : undefined} />
     {items.length > 0 && <div className="portal-result-count">Showing <strong>{items.length}</strong> booking{items.length !== 1 ? "s" : ""}{hasMore ? " · more available" : ""}</div>}
     <div className="portal-list">{items.map((item) => <article className="portal-row" key={item.id} data-accent={item.status}>
-      <div><h3>{item.consumerName || "Consumer"}{item.servicePrice > 0 ? ` · ${formatCurrency(item.servicePrice)}` : ""}</h3><p>{item.consumerPhone || "No contact number"}{item.estimatedCommission > 0 ? ` · Estimated commission ${formatCurrency(item.estimatedCommission)}` : ""} · Hospital {selectedHospital?.id === item.hospitalId ? selectedHospital.name : item.hospitalId}</p><p>Preferred: {formatBookingCarePreference(item)}</p>{item.status === "confirmed" || item.status === "completed" ? <p>Treatment: {formatStatus(getTreatmentStatus(item))}</p> : null}</div>
-      <span className="portal-status" data-status={item.status}>{formatStatus(item.status)}</span>
+      <div><span className="consumer-booking-reference">Booking ID: {bookingReferenceLabel(item)}</span><h3>{item.consumerName || "Consumer"}{item.servicePrice > 0 ? ` · ${formatCurrency(item.servicePrice)}` : ""}</h3><p>{item.consumerPhone || "No contact number"}{item.estimatedCommission > 0 ? ` · Estimated commission ${formatCurrency(item.estimatedCommission)}` : ""} · Hospital {item.hospitalName || (selectedHospital?.id === item.hospitalId ? selectedHospital.name : item.hospitalId)}</p>{item.serviceName && <p>{item.serviceName}</p>}<p>Preferred: {formatBookingCarePreference(item)}</p>{item.status === "confirmed" || item.status === "completed" ? <p>Treatment: {formatStatus(getTreatmentStatus(item))}</p> : null}</div>
+      <span className="portal-status" data-status={item.status}>{bookingStatusLabel(item.status)}</span>
     </article>)}</div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
   </PortalShell>;

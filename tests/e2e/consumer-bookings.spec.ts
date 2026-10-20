@@ -1,0 +1,155 @@
+import { expect, test, type Page } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { portalUiBundle } from "../helpers/portalUiBundle";
+
+const styles = ["node_modules/tailwindcss/lib/css/preflight.css", "app/globals.css", "app/portal.css"].map((file) => readFileSync(file, "utf8")).join("\n");
+
+async function mount(page: Page, screen: string, unavailable = false) {
+  await page.evaluate(() => window.unmountPortalUi?.());
+  await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
+  await page.setContent('<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="fixture-root"></div></body></html>');
+  await page.addStyleTag({ content: styles });
+  await page.addScriptTag({ content: portalUiBundle });
+  await page.evaluate(({ screen, unavailable }) => {
+    // about:blank is not a secure context; production HTTPS provides this API.
+    if (!crypto.randomUUID) Object.defineProperty(crypto, "randomUUID", { value: () => "00000000-0000-4000-8000-000000000001" });
+    Object.assign((window as unknown as { consumerBookingFixture: object }).consumerBookingFixture, { unavailablePackage: unavailable });
+    window.mountPortalUi(screen);
+  }, { screen, unavailable });
+}
+
+async function checkLayout(page: Page) {
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const overflow = await page.locator(".portal-consumer-focus-content *, .consumer-content-body *, .consumer-portal-footer *").evaluateAll((elements) => elements.filter((element) => {
+    const bounds = element.getBoundingClientRect();
+    return bounds.width > 0 && bounds.right > innerWidth + 1;
+  }).map((element) => element.className));
+  expect(overflow).toEqual([]);
+}
+
+test("booking history identifies the centre, package, dates, prices and response", async ({ page }, testInfo) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await mount(page, "consumer-bookings");
+  const cards = page.locator(".consumer-booking-row");
+  await expect(cards).toHaveCount(3);
+  await expect(cards.first().getByRole("heading")).toContainText("Ayursarga Mother and Baby");
+  await expect(cards.first().locator(".consumer-booking-package")).toHaveText("14-day package");
+  await expect(cards.first()).toContainText("Requested care dates");
+  await expect(cards.first()).toContainText("₹24,000");
+  await expect(cards.first()).toContainText("2 adult bystanders");
+  await expect(cards.nth(1)).toContainText("Confirmed appointment");
+  await expect(cards.nth(1)).toContainText("Your preferred care dates are available.");
+  await expect(cards.first()).toContainText("appointment is not confirmed yet");
+  await expect(cards.first()).toContainText("AYUR000000");
+  await cards.first().getByText("Your request notes", { exact: true }).click();
+  await expect(cards.first()).toContainText("Please confirm room accessibility.");
+  await checkLayout(page);
+  await page.screenshot({ path: testInfo.outputPath("booking-history.png"), fullPage: true });
+  await cards.first().getByRole("button", { name: "Cancel booking" }).click();
+  await expect(cards.first().locator(".portal-status")).toHaveText("cancelled");
+  await expect(cards.first().getByRole("button")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("request summary and mandatory consent remain usable at every size", async ({ page }, testInfo) => {
+  await mount(page, "consumer-request");
+  const summary = page.getByRole("region", { name: "Selected centre and package" });
+  await expect(summary).toContainText("Ayursarga Mother and Baby");
+  await expect(summary).toContainText("14-day package");
+  await expect(summary).toContainText("₹24,000");
+  await summary.getByText("View included procedures", { exact: true }).click();
+  await expect(summary).toContainText("Head Massage");
+  await expect(summary).toContainText("3 days");
+  const submit = page.getByRole("button", { name: "Book Appointment", exact: true });
+  await submit.click();
+  await expect(page.locator('[name="date"]')).toHaveAttribute("aria-invalid", "true");
+  await page.locator('[name="date"]').fill("2099-10-25");
+  await submit.click();
+  await expect(page.locator('[name="bookingTerms"]')).toHaveAttribute("aria-invalid", "true");
+  await page.locator('[name="bookingTerms"]').check();
+  await checkLayout(page);
+  await page.screenshot({ path: testInfo.outputPath("booking-request.png"), fullPage: true });
+  await submit.click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { consumerBookingFixture: { navigatedTo: string } }).consumerBookingFixture.navigatedTo)).toBe("/app/bookings?booking=booking-0");
+});
+
+test("unavailable packages cannot be submitted", async ({ page }) => {
+  await mount(page, "consumer-request", true);
+  await expect(page.getByRole("button", { name: "Book Appointment", exact: true })).toBeDisabled();
+  await expect(page.locator(".portal-form-error")).toContainText("no longer available");
+  await checkLayout(page);
+});
+
+test("one canonical reference identifies the selected booking in every portal", async ({ page }) => {
+  for (const role of ["consumer", "hospital", "admin"]) {
+    await mount(page, `${role}-booking-detail`);
+    const reference = page.locator(".consumer-booking-reference");
+    await expect(reference).toHaveCount(1);
+    await expect(reference).toContainText("AYUR000001");
+    await expect(page.getByRole("link", { name: "View all bookings", exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+});
+
+test("admin and hospital bell panels confirm clearing, lock scrolling and keep bookings", async ({ page }) => {
+  for (const role of ["admin", "hospital"]) {
+    await mount(page, `${role}-bookings`);
+    await page.getByRole("button", { name: /Notifications/ }).click();
+    const panel = page.getByRole("region", { name: "Recent notifications" });
+    await expect(panel).toContainText("AYUR000000");
+    await expect(panel.getByRole("link")).toHaveAttribute("href", `/${role}/bookings?booking=booking-0`);
+    await panel.getByRole("button", { name: "Clear", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    expect(await page.evaluate(() => document.body.style.position)).toBe("fixed");
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(panel).toContainText("AYUR000000");
+    await panel.getByRole("button", { name: "Clear", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Clear notifications", exact: true }).evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
+    await expect(panel).toContainText("No notifications yet.");
+    await expect(page.locator(".portal-list")).toContainText("AYUR000000");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => document.body.style.position)).not.toBe("fixed");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+});
+
+test("consumer workspace has role-specific navigation, account menu and compact footer", async ({ page }, testInfo) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  for (const screen of ["consumer-bookings", "consumer-profile", "consumer-support"]) {
+    await mount(page, screen);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    const isCompact = await page.evaluate(() => matchMedia("(max-width:1023px), (max-height:500px) and (pointer:coarse)").matches);
+    const navigation = page.getByRole("navigation", { name: isCompact ? "Consumer mobile navigation" : "consumer navigation", exact: true });
+    await expect(navigation).toBeVisible();
+    await expect(navigation.getByRole("link")).toHaveCount(4);
+    await expect(navigation.getByRole("link", { name: "Search hospitals", exact: true })).toHaveAttribute("href", "/centers");
+    const activeLabel = screen === "consumer-bookings" ? "My bookings" : screen === "consumer-profile" ? "My profile" : "Help & support";
+    await expect(navigation.getByRole("link", { name: activeLabel, exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(page.locator(".portal-notification-trigger")).toHaveCount(0);
+    const footer = page.locator(".consumer-portal-footer");
+    await expect(footer).toHaveCount(1);
+    await expect(footer).toContainText("Privacy policy");
+    await expect(footer).toContainText("Terms & conditions");
+    await expect(footer).not.toContainText("For hospitals");
+    await page.getByRole("button", { name: "Open account menu", exact: true }).click();
+    const accountMenu = page.locator(".portal-header-account-menu");
+    await expect(accountMenu).toBeVisible();
+    await expect(accountMenu).toContainText("hospital.contact.with.long.address@example.com");
+    await expect(accountMenu.getByRole("button", { name: "Logout", exact: true })).toBeVisible();
+    const bounds = await accountMenu.boundingBox();
+    expect(bounds!.x).toBeGreaterThanOrEqual(0);
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
+    await page.keyboard.press("Escape");
+    await expect(accountMenu).toHaveCount(0);
+    await checkLayout(page);
+    if (screen === "consumer-profile") {
+      await page.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(page.locator(".portal-toast")).toContainText("Your profile has been saved.");
+    }
+    if (screen === "consumer-bookings") await page.screenshot({ path: testInfo.outputPath("consumer-workspace.png"), fullPage: true });
+  }
+  expect(errors).toEqual([]);
+});

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-/** Route boundary reserved for consumer discovery and booking features. */
+/** Protected consumer account and booking workflows; discovery stays public. */
 export default function ConsumerLayout({ children }: { children: ReactNode }) {
   return <PortalProviders area="consumer">{children}</PortalProviders>;
 }

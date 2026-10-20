@@ -48,3 +48,23 @@ test("caller-abortable package reads remain independent", async (t) => {
   ]);
   assert.equal(calls, 2);
 });
+
+test("selected booking package resolves beyond the first bounded page", async (t) => {
+  const urls = [];
+  t.mock.method(globalThis, "fetch", async (url) => {
+    urls.push(String(url));
+    return urls.length === 1
+      ? Response.json({ documents: [{ id: "first" }], cursor: "first", hasMore: true })
+      : Response.json({ documents: [{ id: "selected", name: "14-day package" }], cursor: "selected", hasMore: false });
+  });
+  const selected = await service().getPublicHospitalService("centre", "selected");
+  assert.equal(selected.id, "selected");
+  assert.equal(urls.length, 2);
+  assert.match(urls[0], /pageSize=24/);
+  assert.match(urls[1], /cursor=first/);
+});
+
+test("missing packages stop at the final page rather than selecting another package", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => Response.json({ documents: [{ id: "other" }], hasMore: false }));
+  assert.equal(await service().getPublicHospitalService("centre", "missing"), null);
+});

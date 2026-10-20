@@ -5,7 +5,8 @@ import type { BookingDocument, BookingStatus, TreatmentStatus } from "@/features
 import { getTreatmentStatus } from "@/features/bookings/treatmentStatus";
 import { COLLECTIONS } from "@/constants/firestore";
 import {
-  firestoreTimestamp, runFilteredQuery,
+  firestoreTimestamp, runFilteredQuery, readDocument,
+  type QueryPage, type DocumentRecord,
   type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
 import { getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
@@ -34,7 +35,7 @@ export async function createBookingRequest(input: BookingRequestInput) {
     const day = String(value.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   };
-  return authorizedApiRequest<{ ok: true; bookingId: string }>("/api/consumer/bookings", {
+  return authorizedApiRequest<{ ok: true; bookingId: string; bookingReference: string }>("/api/consumer/bookings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -47,20 +48,56 @@ export async function createBookingRequest(input: BookingRequestInput) {
       bookingTermsAccepted: input.bookingTermsAccepted,
       requestId: input.requestId,
     }),
-    signedOutMessage: "Sign in before sending an appointment request.",
-    failureMessage: "We could not send your appointment request. Please try again.",
+    signedOutMessage: "Sign in before booking an appointment.",
+    failureMessage: "We could not place your booking. Please try again.",
   });
 }
 
-function listBookings(filters: QueryPageOptions["filters"], options: Pick<QueryPageOptions, "pageSize" | "cursor"> = {}) {
-  return runFilteredQuery<BookingDocument>({
+async function withBookingReferences<T extends QueryPage<BookingDocument>>(page: T): Promise<T> {
+  const missing = page.documents.filter((booking) => !booking.bookingReference);
+  if (!missing.length) return page;
+  try {
+    const chunks = Array.from({ length: Math.ceil(missing.length / 20) }, (_, index) => missing.slice(index * 20, index * 20 + 20));
+    const responses = await Promise.all(chunks.map((chunk) => authorizedApiRequest<{ references: Record<string, string> }>("/api/bookings/references", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bookingIds: chunk.map((booking) => booking.id) }),
+      signedOutMessage: "Sign in to view booking references.", failureMessage: "Booking references are temporarily unavailable.",
+    })));
+    const references = Object.assign({}, ...responses.map((response) => response.references)) as Record<string, string>;
+    return { ...page, documents: page.documents.map((booking) => references[booking.id] ? { ...booking, bookingReference: references[booking.id] } : booking) };
+  } catch {
+    // Keep records accessible on migration/network failure. Never manufacture a
+    // different reference in a portal; the shared label explicitly offers retry.
+    return page;
+  }
+}
+
+async function listBookings(filters: QueryPageOptions["filters"], options: Pick<QueryPageOptions, "pageSize" | "cursor"> = {}) {
+  const page = await runFilteredQuery<BookingDocument>({
     collectionPath: COLLECTIONS.bookings, filters,
     sort: { field: "createdAt", direction: "desc" }, ...options,
   });
+  return withBookingReferences(page);
+}
+
+export async function getPortalBooking(id: string) {
+  if (!id || id.length > 160 || id.includes("/")) return null;
+  const booking = await readDocument<BookingDocument>(COLLECTIONS.bookings, id);
+  if (!booking) return null;
+  const page = await withBookingReferences({ documents: [booking], cursor: null, hasMore: false });
+  return page.documents[0] as DocumentRecord<BookingDocument>;
 }
 
 export const listConsumerBookings = (consumerId: string, options?: Pick<QueryPageOptions, "pageSize" | "cursor">) =>
   listBookings([{ field: "consumerId", operator: "==", value: consumerId }], options);
+
+export async function getConsumerBookingDetails(ids: string[]) {
+  const params = new URLSearchParams();
+  for (const id of ids) params.append("id", id);
+  return authorizedApiRequest<{ details: Record<string, Pick<BookingDocument, "hospitalName" | "hospitalLocation" | "serviceName">> }>(`/api/consumer/bookings?${params}`, {
+    signedOutMessage: "Sign in to view your booking details.",
+    failureMessage: "We could not load the centre and package names. Please refresh to try again.",
+  });
+}
 type HospitalBookingFilters = {
   status?: BookingStatus;
   createdFrom?: Date;

@@ -45,6 +45,7 @@ const RECORD_LABELS: Record<string, string> = {
   availability: "Availability request",
   services: "Service package",
   bookings: "Booking",
+  notificationInboxes: "Notification inbox",
 };
 
 function formatDate(value: unknown) {
@@ -74,6 +75,7 @@ function areaLabel(module: string) {
     availability: "Availability",
     services: "Services",
     bookings: "Bookings",
+    notificationInboxes: "Notifications",
   };
   return labels[module] ?? formatStatus(module);
 }

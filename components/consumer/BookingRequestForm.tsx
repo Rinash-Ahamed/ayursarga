@@ -2,14 +2,16 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { createBookingRequest } from "@/services/bookings/bookingService";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { formatBystanders, type CentreSearchContext } from "@/features/hospitals/searchContext";
-import type { HospitalDocument } from "@/features/firestore/models";
+import type { HospitalDocument, ServiceDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
-import { getPublicHospital } from "@/services/hospitals/publicHospitalService";
+import { getPublicHospital, getPublicHospitalService } from "@/services/hospitals/publicHospitalService";
+import { packageTitle, packageProcedureEntries } from "@/features/hospitals/packages";
 import { INCLUDED_BYSTANDERS, resolveHospitalBystanderPolicy } from "@/features/hospitals/bystanders";
 import { formatCurrency } from "@/utils/currency";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
@@ -23,8 +25,11 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
   const [preferredDate, setPreferredDate] = useState(searchContext.startDate);
   const [preferredEndDate, setPreferredEndDate] = useState(searchContext.endDate);
   const [bookingTermsAccepted, setBookingTermsAccepted] = useState(false);
-  const [hospital, setHospital] = useState<DocumentRecord<HospitalDocument> | null>(null);
-  const [hospitalLoading, setHospitalLoading] = useState(true);
+  const selectionKey = `${hospitalId}:${serviceId}`;
+  const [selection, setSelection] = useState<{ key: string; hospital: DocumentRecord<HospitalDocument> | null; service: DocumentRecord<ServiceDocument> | null } | null>(null);
+  const hospitalLoading = selection?.key !== selectionKey;
+  const hospital = !hospitalLoading ? selection.hospital : null;
+  const service = !hospitalLoading ? selection.service : null;
   const [bystanderCount, setBystanderCount] = useState(INCLUDED_BYSTANDERS);
   const [busy, setBusy] = useState(false); const [error, setError, errorNotification] = useRepeatableMessage();
   const [fieldErrors, setFieldErrors] = useState<BookingFieldErrors>({});
@@ -32,25 +37,31 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
 
   useEffect(() => {
     let active = true;
-    void getPublicHospital(hospitalId).then((record) => {
-      if (active) setHospital(record);
+    const controller = new AbortController();
+    void Promise.all([getPublicHospital(hospitalId), getPublicHospitalService(hospitalId, serviceId, controller.signal)]).then(([record, selected]) => {
+      if (!active) return;
+      setSelection({ key: selectionKey, hospital: record, service: selected });
+      if (!record || !selected) setError("This centre or package is no longer available. Return to the centre page to choose another package.");
+      else setError(null);
     }).catch(() => {
-      if (active) setError("We could not load this hospital's bystander policy. Return to the centre page and try again.");
-    }).finally(() => {
-      if (active) setHospitalLoading(false);
+      if (active) {
+        setSelection({ key: selectionKey, hospital: null, service: null });
+        setError("We could not load your centre and package details. Return to the centre page and try again.");
+      }
     });
-    return () => { active = false; };
-  }, [hospitalId, setError]);
+    return () => { active = false; controller.abort(); };
+  }, [hospitalId, serviceId, selectionKey, setError]);
 
   const bystanderPolicy = resolveHospitalBystanderPolicy(hospital ?? {});
   const maximumBystanders = INCLUDED_BYSTANDERS + bystanderPolicy.maxAdditionalBystanders;
   const additionalBystanderTotal = (bystanderCount - INCLUDED_BYSTANDERS) * bystanderPolicy.additionalBystanderCharge;
+  const procedures = service ? packageProcedureEntries(service) : [];
   async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); if (!firebaseUser || !userProfile?.phone) return;
+    event.preventDefault(); if (busy || !firebaseUser || !userProfile?.phone) return;
     const form = event.currentTarget;
     setFieldErrors({});
-    if (hospitalLoading || !hospital) {
-      setError("Wait for the hospital's bystander policy to finish loading, then try again.");
+    if (hospitalLoading || !hospital || !service) {
+      setError("Wait for your centre and package details to finish loading, then try again.");
       return;
     }
     const data = new FormData(form);
@@ -74,19 +85,28 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
     }
     setBusy(true); setError(null);
     try {
-      await createBookingRequest({ consumerId: firebaseUser.uid, consumerName: userProfile.name,
+      const result = await createBookingRequest({ consumerId: firebaseUser.uid, consumerName: userProfile.name,
         consumerEmail: userProfile.email, consumerPhone: userProfile.phone, consumerAddress: userProfile.address,
         hospitalId, serviceId,
         preferredDate: new Date(`${preferredDate}T00:00:00`),
         preferredEndDate: preferredEndDate ? new Date(`${preferredEndDate}T00:00:00`) : null,
         preferredTime: "Flexible", bystanderCount,
         consumerNotes: String(data.get("notes") || ""), bookingTermsAccepted, requestId: requestId.current });
-      router.replace("/app/bookings");
-    } catch (caught) { setError(caught instanceof Error ? caught.message : "We could not send your appointment request. Check the details and try again."); }
+      router.replace(`/app/bookings?booking=${encodeURIComponent(result.bookingId)}`);
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "We could not place your booking. Check the details and try again."); }
     finally { setBusy(false); }
   }
-  return <PortalShell role="consumer" title="Request an appointment" focused>
-    <form className="portal-card portal-form" onSubmit={submit} noValidate>
+  return <PortalShell role="consumer" title="Book an appointment">
+    <nav className="consumer-request-navigation" aria-label="Booking navigation"><Link href={`/centers/${encodeURIComponent(hospitalId)}`}>Back to centre</Link><Link href="/app/bookings">My bookings</Link></nav>
+    <section className="portal-card consumer-request-summary" aria-label="Selected centre and package" aria-busy={hospitalLoading}>
+      {hospitalLoading ? <p role="status">Loading your centre and package details…</p> : <>
+        <div><span className="consumer-booking-reference">Your selected care</span><h2>{hospital?.name || "Centre unavailable"}</h2><p>{[hospital?.city, hospital?.district, hospital?.state].filter(Boolean).join(", ")}</p><h3>{service ? packageTitle(service) : "Package unavailable"}</h3>{service?.description && <p>{service.description}</p>}</div>
+        {service && <div className="consumer-booking-cost"><span>Package amount</span><strong>{formatCurrency(service.price ?? 0)}</strong><small>Final availability confirmed by the centre</small></div>}
+        {procedures.length > 0 && <details className="consumer-booking-notes"><summary>View included procedures</summary><ul className="consumer-package-procedures">{procedures.map((procedure) => <li key={procedure.id}><span>{procedure.label}</span>{procedure.days !== null && <strong>{procedure.days} {procedure.days === 1 ? "day" : "days"}</strong>}</li>)}</ul></details>}
+      </>}
+    </section>
+    <form className="portal-card portal-form consumer-request-form" onSubmit={submit} noValidate>
+      <div className="consumer-request-intro full"><h2>Your care preferences</h2><p>Choose your preferred dates and share anything the centre should know. Your appointment is confirmed only after the centre responds.</p></div>
       <label>Preferred start date<input name="date" type="date" min={new Date().toISOString().slice(0, 10)} value={preferredDate} onChange={(event) => { setPreferredDate(event.target.value); setFieldErrors((current) => ({ ...current, preferredDate: undefined })); }} required aria-invalid={Boolean(fieldErrors.preferredDate)} />{fieldErrors.preferredDate && <span className="portal-field-error" role="alert">{fieldErrors.preferredDate}</span>}</label>
       <label>Preferred end date <small>Optional for consultation or single-day care</small><input name="endDate" type="date" min={preferredDate || new Date().toISOString().slice(0, 10)} value={preferredEndDate} onChange={(event) => { setPreferredEndDate(event.target.value); setFieldErrors((current) => ({ ...current, preferredEndDate: undefined })); }} aria-invalid={Boolean(fieldErrors.preferredEndDate)} />{fieldErrors.preferredEndDate && <span className="portal-field-error" role="alert">{fieldErrors.preferredEndDate}</span>}</label>
       <label>Accompanying bystanders
@@ -115,7 +135,7 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
       </fieldset>
       <PortalToast message={error} notification={errorNotification} tone="error" />
       {error && <p className="portal-form-error full">{error}</p>}
-      <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Sending…" : "Send request"}</button></div>
+      <div className="portal-actions full"><button className="portal-button" disabled={busy || hospitalLoading || !hospital || !service}>{busy ? "Booking…" : "Book Appointment"}</button></div>
     </form>
   </PortalShell>;
 }

@@ -13,17 +13,18 @@ import { useAuth } from "@/hooks/useAuth";
 import { updateUserProfile } from "@/services/users/userService";
 import { focusFirstInvalidField } from "@/utils/formFocus";
 
-export function ConsumerProfile({ requestedPath }: { requestedPath?: string }) {
+export function ConsumerProfile({ requestedPath, editing = false }: { requestedPath?: string; editing?: boolean }) {
   const router = useRouter();
   const { firebaseUser, userProfile, refreshUserProfile } = useAuth();
   const [error, setError, errorNotification] = useRepeatableMessage();
+  const [message, setMessage, messageNotification] = useRepeatableMessage();
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<"name" | "phone" | "address" | "privacyConsent", string>>>({});
   const [busy, setBusy] = useState(false);
   const needsPrivacyConsent = !hasCurrentConsumerPrivacyConsent(userProfile);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!firebaseUser) return;
+    if (busy || !firebaseUser) return;
     const form = event.currentTarget;
     const data = new FormData(form);
     const validation = validateConsumerContact({
@@ -34,6 +35,7 @@ export function ConsumerProfile({ requestedPath }: { requestedPath?: string }) {
     }, needsPrivacyConsent);
     setFieldErrors(validation.errors);
     setError(null);
+    setMessage(null);
     if (!validation.isValid) {
       setError("Complete the highlighted contact details before continuing.");
       focusFirstInvalidField(form);
@@ -43,7 +45,8 @@ export function ConsumerProfile({ requestedPath }: { requestedPath?: string }) {
     try {
       await updateUserProfile(firebaseUser.uid, validation.data);
       await refreshUserProfile();
-      router.replace(getSafeRoleRedirect(requestedPath, "consumer"));
+      if (editing) setMessage("Your profile has been saved.");
+      else router.replace(getSafeRoleRedirect(requestedPath, "consumer"));
     } catch {
       setError("We could not update your contact details. Check the information and try again.");
     } finally {
@@ -53,8 +56,8 @@ export function ConsumerProfile({ requestedPath }: { requestedPath?: string }) {
 
   return <PortalShell
     role="consumer"
-    title="Complete Your Profile"
-    focused
+    title={editing ? "My profile" : "Complete Your Profile"}
+    focused={!editing}
   >
     <form className="portal-card portal-form" onSubmit={submit} noValidate>
       <p className="portal-form-note full">Google shares your name, email, and profile photo only. Add a phone number so your chosen centre can contact you after a request. Address is optional.</p>
@@ -72,7 +75,8 @@ export function ConsumerProfile({ requestedPath }: { requestedPath?: string }) {
         {fieldErrors.privacyConsent && <span className="portal-field-error">{fieldErrors.privacyConsent}</span>}
       </fieldset> : <p className="portal-consent-recorded full">Customer agreement and privacy consent are recorded for this Consumer profile. To withdraw consent, contact <a href="mailto:info@ayursarga.com">info@ayursarga.com</a>.</p>}
       <PortalToast message={error} notification={errorNotification} tone="error" />
-      <div className="portal-actions full">{error && <p className="portal-form-error">{error}</p>}<button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save and continue"}</button></div>
+      <PortalToast message={message} notification={messageNotification} />
+      <div className="portal-actions full">{error && <p className="portal-form-error">{error}</p>}<button className="portal-button" disabled={busy}>{busy ? "Saving..." : editing ? "Save changes" : "Save and continue"}</button></div>
     </form>
   </PortalShell>;
 }

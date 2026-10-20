@@ -126,6 +126,7 @@ export type BookingStatus =
 export type TreatmentStatus = "not_started" | "started" | "ongoing" | "completed";
 
 export type BookingDocument = AuditedDocument & {
+  bookingReference?: string;
   consumerId: string;
   consumerName: string;
   consumerEmail: string;
@@ -133,6 +134,10 @@ export type BookingDocument = AuditedDocument & {
   consumerAddress: string | null;
   hospitalId: string;
   serviceId: string;
+  /** Server-trusted care labels captured when the request was made. */
+  hospitalName?: string;
+  hospitalLocation?: string;
+  serviceName?: string;
   preferredDate: Timestamp;
   preferredEndDate?: Timestamp | null;
   preferredTime: string;
@@ -218,7 +223,8 @@ export type PaymentDocument = AuditedDocument & {
 export type NotificationDocument = AuditedDocument & {
   recipientId: string;
   recipientRole: "admin" | "hospital" | "consumer";
-  type: "availability_requested" | "availability_approved" | "availability_rejected" | "availability_cancelled";
+  type: "availability_requested" | "availability_approved" | "availability_rejected" | "availability_cancelled" | "booking_created";
+  bookingReference?: string;
   title: string;
   message: string;
   actionHref: string;

@@ -2,6 +2,7 @@
 
 import {
   collection,
+  doc,
   limit,
   onSnapshot,
   orderBy,
@@ -21,17 +22,37 @@ export function subscribeToNotifications(
   onChange: (notifications: DocumentRecord<NotificationDocument>[]) => void,
   onError: (error: Error) => void,
 ) {
-  const notificationsQuery = query(
-    collection(getClientFirestore(), COLLECTIONS.notifications),
-    where("recipientId", "==", recipientId),
-    orderBy("createdAt", "desc"),
-    limit(NOTIFICATION_LIMIT),
-  );
-  return onSnapshot(notificationsQuery, (snapshot) => {
-    onChange(snapshot.docs
-      .map((item) => ({ id: item.id, ...item.data() } as DocumentRecord<NotificationDocument>))
-      .filter((item) => item.status === "active"));
-  }, (error) => onError(error));
+  let stopNotifications: (() => void) | undefined;
+  let generation = 0;
+  let active = true;
+  const firestore = getClientFirestore();
+  const stopInbox = onSnapshot(doc(firestore, "notificationInboxes", recipientId), (inbox) => {
+    if (!active) return;
+    const version = ++generation;
+    stopNotifications?.();
+    const clearedThrough = inbox.data()?.clearedThrough;
+    const notificationsQuery = query(
+      collection(firestore, COLLECTIONS.notifications),
+      where("recipientId", "==", recipientId),
+      ...(clearedThrough ? [where("createdAt", ">", clearedThrough)] : []),
+      orderBy("createdAt", "desc"), limit(NOTIFICATION_LIMIT),
+    );
+    stopNotifications = onSnapshot(notificationsQuery, (snapshot) => {
+      if (version !== generation) return;
+      onChange(snapshot.docs
+        .map((item) => ({ id: item.id, ...item.data() } as DocumentRecord<NotificationDocument>))
+        .filter((item) => item.status === "active"));
+    }, (error) => { if (version === generation) onError(error); });
+  }, (error) => { if (active) onError(error); });
+  return () => { active = false; generation++; stopInbox(); stopNotifications?.(); };
+}
+
+export function clearAllNotifications() {
+  return authorizedApiRequest<{ ok: true; clearedThrough: { seconds: number; nanoseconds: number } }>("/api/notifications/clear", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirmed: true }),
+    signedOutMessage: "Sign in again to clear your notifications.",
+    failureMessage: "We could not clear your notifications. Please try again.",
+  });
 }
 
 export function markNotificationRead(notificationId: string) {

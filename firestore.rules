@@ -648,6 +648,15 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    match /bookingReferences/{referenceId} {
+      allow read, write: if false;
+    }
+
+    match /notificationInboxes/{recipientId} {
+      allow read: if hasActiveProfile() && recipientId == request.auth.uid;
+      allow create, update, delete: if false;
+    }
+
     match /notifications/{notificationId} {
       allow read: if hasActiveProfile()
         && resource.data.recipientId == request.auth.uid;
@@ -725,6 +734,8 @@ service cloud.firestore {
           == resource.data.get('bookingTermsAcceptedAt', null)
         && request.resource.data.get('bookingTermsVersion', null)
           == resource.data.get('bookingTermsVersion', null)
+        && request.resource.data.get('bookingReference', null)
+          == resource.data.get('bookingReference', null)
         && (isAdmin()
         || (isConsumer()
           && resource.data.consumerId == request.auth.uid

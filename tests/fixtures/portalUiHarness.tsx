@@ -18,6 +18,10 @@ import { HospitalChangePasswordForm } from "@/components/hospital/ChangePassword
 import { LoginForm } from "@/components/auth/LoginForm";
 import { ForgotPasswordForm } from "@/components/auth/ForgotPasswordForm";
 import { portalUiState } from "./portalUiMocks";
+import { ConsumerBookings } from "@/components/consumer/ConsumerBookings";
+import { BookingRequestForm } from "@/components/consumer/BookingRequestForm";
+import { ConsumerProfile } from "@/components/consumer/ConsumerProfile";
+import { ConsumerSupport } from "@/components/consumer/ConsumerSupport";
 
 declare global { interface Window { mountPortalUi: (screen: string) => void; unmountPortalUi?: () => void; } }
 const screens = {
@@ -28,10 +32,19 @@ const screens = {
   "hospital-bookings": <HospitalBookings />, "hospital-availability": <HospitalAvailability />, "hospital-password": <HospitalChangePasswordForm />,
   "admin-login": <LoginForm role="admin" />, "hospital-login": <LoginForm role="hospital" />,
   "admin-forgot": <ForgotPasswordForm role="admin" />, "hospital-forgot": <ForgotPasswordForm role="hospital" />,
+  "consumer-bookings": <ConsumerBookings />,
+  "consumer-profile": <ConsumerProfile editing />,
+  "consumer-support": <ConsumerSupport />,
+  "consumer-completion": <ConsumerProfile />,
+  "consumer-booking-detail": <ConsumerBookings bookingId="booking-1" />,
+  "admin-booking-detail": <AdminBookings bookingId="booking-1" />,
+  "hospital-booking-detail": <HospitalBookings bookingId="booking-1" />,
+  "consumer-request": <BookingRequestForm hospitalId="centre" serviceId="package-14" searchContext={{ startDate: "", endDate: "", bystanders: 1 }} />,
 };
 window.mountPortalUi = (screen) => {
   portalUiState.screen = screen;
   const root = createRoot(document.getElementById("fixture-root")!);
   window.unmountPortalUi = () => root.unmount();
-  root.render(<PortalEnvironment area={screen.startsWith("hospital") ? "hospital" : "admin"}>{screens[screen as keyof typeof screens]}<PortalToastViewport /></PortalEnvironment>);
+  root.render(<PortalEnvironment area={screen.startsWith("consumer") ? "consumer" : screen.startsWith("hospital") ? "hospital" : "admin"}>{screens[screen as keyof typeof screens]}<PortalToastViewport /></PortalEnvironment>);
 };
+Object.assign(window, { consumerBookingFixture: portalUiState });

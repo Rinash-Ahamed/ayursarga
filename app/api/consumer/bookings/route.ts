@@ -7,8 +7,16 @@ import { apiJson, logApiError } from "@/services/api/server";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
 import { isValidPhoneNumber } from "@/utils/phone";
+import { packageTitle } from "@/features/hospitals/packages";
+import { ensureBookingReference, reserveBookingReference } from "@/services/bookings/bookingReferenceAdmin";
+import { addBookingNotifications, bookingNotificationRecipients } from "@/services/notifications/bookingNotificationsAdmin";
+import { requestAuditDevice } from "@/services/api/audit";
 
 export const runtime = "nodejs";
+
+class BookingFlowError extends Error {
+  constructor(message: string, public readonly status: 400 | 409) { super(message); }
+}
 
 function validId(value: unknown) {
   return typeof value === "string" && value.length > 0 && value.length <= 160 && !value.includes("/") ? value : null;
@@ -36,6 +44,49 @@ function dateBlocked(hospital: FirebaseFirestore.DocumentData, start: Date, end:
     const blockedEnd = value.endDate?.toDate?.();
     return Boolean(blockedStart && blockedEnd && start <= blockedEnd && end >= blockedStart);
   });
+}
+
+// Only resolve labels for bookings owned by this Consumer. Historical centres
+// may no longer be public; never expose their full management documents.
+export async function GET(request: Request) {
+  try {
+    const { uid, firestore } = await requireActiveUser(request, ["consumer"]);
+    if (!allowRequest(requestFingerprint(request, `consumer-booking-details:${uid}`), 120, 10 * 60 * 1000)) {
+      return apiJson({ error: "Please wait a moment before loading more booking details." }, 429);
+    }
+    const ids = [...new Set(new URL(request.url).searchParams.getAll("id"))];
+    if (!ids.length || ids.length > 20 || ids.some((id) => !validId(id))) {
+      return apiJson({ error: "Choose up to 20 valid bookings." }, 400);
+    }
+    const bookings = await firestore.getAll(...ids.map((id) => firestore.collection("bookings").doc(id)), {
+      fieldMask: ["consumerId", "hospitalId", "serviceId", "hospitalName", "hospitalLocation", "serviceName"],
+    });
+    if (bookings.some((booking) => !booking.exists || booking.data()?.consumerId !== uid)) {
+      return apiJson({ error: "These booking details are not available." }, 403);
+    }
+    const hospitalIds = [...new Set(bookings.map((booking) => validId(booking.data()?.hospitalId)).filter((id) => id !== null))];
+    const serviceIds = [...new Set(bookings.map((booking) => validId(booking.data()?.serviceId)).filter((id) => id !== null))];
+    const [hospitals, services] = await Promise.all([
+      hospitalIds.length ? firestore.getAll(...hospitalIds.map((id) => firestore.collection("hospitals").doc(id)), { fieldMask: ["name", "city", "district", "state"] }) : [],
+      serviceIds.length ? firestore.getAll(...serviceIds.map((id) => firestore.collection("services").doc(id)), { fieldMask: ["name", "packageDurationDays", "hospitalId"] }) : [],
+    ]);
+    const hospitalMap = new Map(hospitals.map((hospital) => [hospital.id, hospital.data()]));
+    const serviceMap = new Map(services.map((service) => [service.id, service.data()]));
+    return apiJson({ details: Object.fromEntries(bookings.map((booking) => {
+      const data = booking.data()!;
+      const hospital = hospitalMap.get(data.hospitalId);
+      const service = serviceMap.get(data.serviceId);
+      return [booking.id, {
+        hospitalName: data.hospitalName || hospital?.name || "",
+        hospitalLocation: data.hospitalLocation || [hospital?.city, hospital?.district, hospital?.state].filter(Boolean).join(", "),
+        serviceName: data.serviceName || (service && service.hospitalId === data.hospitalId ? packageTitle(service) : ""),
+      }];
+    })) });
+  } catch (error) {
+    if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
+    logApiError("GET /api/consumer/bookings", error);
+    return apiJson({ error: "Booking details are temporarily unavailable." }, 503);
+  }
 }
 
 export async function POST(request: Request) {
@@ -68,101 +119,116 @@ export async function POST(request: Request) {
       return apiJson({ error: "Choose a valid hospital, package, and preferred care date." }, 400);
     }
 
-    const [hospitalSnapshot, serviceSnapshot] = await Promise.all([
-      firestore.collection("hospitals").doc(hospitalId).get(),
-      firestore.collection("services").doc(serviceId).get(),
-    ]);
-    const hospital = hospitalSnapshot.data();
-    const service = serviceSnapshot.data();
-    if (!hospitalSnapshot.exists || hospital?.status !== "active" || hospital.isPublic !== true) {
-      return apiJson({ error: "This hospital is not accepting appointment requests right now." }, 409);
-    }
-    if (!serviceSnapshot.exists || service?.status !== "active" || service.hospitalId !== hospitalId) {
-      return apiJson({ error: "This package is not accepting appointment requests right now." }, 409);
-    }
-    if (dateBlocked(hospital, preferredDate, preferredEndDate)) {
-      return apiJson({ error: "This hospital is unavailable for the selected dates. Choose another date and try again." }, 409);
-    }
-
-    const bystanderPolicy = resolveHospitalBystanderPolicy(hospital);
-    const maximumBystanders = INCLUDED_BYSTANDERS + bystanderPolicy.maxAdditionalBystanders;
-    if (!Number.isInteger(bystanderCount) || bystanderCount < INCLUDED_BYSTANDERS || bystanderCount > maximumBystanders) {
-      return apiJson({ error: "Choose a valid number of accompanying bystanders." }, 400);
-    }
-    const servicePrice = Number(service.price ?? 0);
-    const commissionPercentage = Number(hospital.commissionPercentage);
-    if (!Number.isFinite(servicePrice) || servicePrice < 0 || !Number.isFinite(commissionPercentage) || commissionPercentage < 0 || commissionPercentage > 100) {
-      return apiJson({ error: "This package cannot be booked until its pricing is reviewed." }, 409);
-    }
-
     const bookingId = createHash("sha256").update(`${uid}:${requestId}`).digest("hex");
-    const bookingReference = firestore.collection("bookings").doc(bookingId);
-    const auditReference = firestore.collection("auditLogs").doc();
-    const now = FieldValue.serverTimestamp();
-    const additionalBystanderTotal = (bystanderCount - INCLUDED_BYSTANDERS) * bystanderPolicy.additionalBystanderCharge;
-    const bookingData = {
-      consumerId: uid,
-      consumerName: String(profile.name ?? "").trim(),
-      consumerEmail: String(profile.email ?? "").trim().toLowerCase(),
-      consumerPhone: profile.phone.trim(),
-      consumerAddress: typeof profile.address === "string" ? profile.address.trim() || null : null,
-      hospitalId,
-      serviceId,
-      preferredDate: Timestamp.fromDate(preferredDate),
-      preferredEndDate: preferredEndDateText ? Timestamp.fromDate(preferredEndDate) : null,
-      preferredTime: "Flexible",
-      bystanderCount,
-      additionalBystanderCharge: bystanderPolicy.additionalBystanderCharge,
-      additionalBystanderTotal,
-      confirmedDate: null,
-      confirmedTime: null,
-      status: "requested",
-      treatmentStatus: "not_started",
-      servicePrice,
-      commissionPercentage,
-      estimatedCommission: servicePrice * commissionPercentage / 100,
-      consumerNotes: consumerNotes || null,
-      hospitalNotes: null,
-      createdAt: now,
-      createdBy: uid,
-      updatedAt: now,
-      updatedBy: uid,
-      archivedAt: null,
-      archivedBy: null,
-      confirmedAt: null,
-      completedAt: null,
-      treatmentStartedAt: null,
-      treatmentCompletedAt: null,
-      bookingTermsAcceptedAt: now,
-      bookingTermsVersion: BOOKING_TERMS_VERSION,
-      lastAuditId: auditReference.id,
-    };
-    const batch = firestore.batch();
-    batch.create(bookingReference, bookingData);
-    batch.set(auditReference, {
-      action: "create", module: "bookings", recordId: bookingId,
-      actorId: uid, actorRole: "consumer", previousValues: null, updatedValues: bookingData,
-      timestamp: now, source: "server",
-      device: {
-        userAgent: request.headers.get("user-agent")?.slice(0, 500) || null,
-        platform: null,
-        ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
-      },
-    });
-    try {
-      await batch.commit();
-      return apiJson({ ok: true, bookingId }, 201);
-    } catch (error) {
-      if ((error as { code?: number | string }).code === 6 || (error as { code?: number | string }).code === "already-exists") {
-        const existing = await bookingReference.get();
-        if (existing.exists && existing.data()?.consumerId === uid) return apiJson({ ok: true, bookingId, duplicate: true });
+    const bookingDocument = firestore.collection("bookings").doc(bookingId);
+    const existing = await bookingDocument.get();
+    if (existing.exists) {
+      if (existing.data()?.consumerId !== uid || existing.data()?.hospitalId !== hospitalId || existing.data()?.serviceId !== serviceId) {
+        return apiJson({ error: "This booking attempt is already associated with different care details." }, 409);
       }
-      throw error;
+      const bookingReference = await ensureBookingReference(firestore, bookingId, { uid, role: "consumer" }, request);
+      return apiJson({ ok: true, bookingId, bookingReference, duplicate: true });
     }
+    const result = await firestore.runTransaction(async (transaction) => {
+      const [current, hospitalSnapshot, serviceSnapshot] = await transaction.getAll(
+        bookingDocument, firestore.collection("hospitals").doc(hospitalId), firestore.collection("services").doc(serviceId),
+      );
+      if (current.exists) {
+        const data = current.data()!;
+        if (data.consumerId !== uid || data.hospitalId !== hospitalId || data.serviceId !== serviceId) throw new BookingFlowError("This booking attempt is already associated with different care details.", 409);
+        return { duplicate: true, bookingReference: String(data.bookingReference ?? "") };
+      }
+      const hospital = hospitalSnapshot.data();
+      const service = serviceSnapshot.data();
+      if (!hospitalSnapshot.exists || hospital?.status !== "active" || hospital.isPublic !== true) {
+        throw new BookingFlowError("This hospital is not accepting bookings right now.", 409);
+      }
+      if (!serviceSnapshot.exists || service?.status !== "active" || service.hospitalId !== hospitalId) {
+        throw new BookingFlowError("This package is not accepting bookings right now.", 409);
+      }
+      if (dateBlocked(hospital, preferredDate, preferredEndDate)) {
+        throw new BookingFlowError("This hospital is unavailable for the selected dates. Choose another date and try again.", 409);
+      }
+
+      const bystanderPolicy = resolveHospitalBystanderPolicy(hospital);
+      const maximumBystanders = INCLUDED_BYSTANDERS + bystanderPolicy.maxAdditionalBystanders;
+      if (!Number.isInteger(bystanderCount) || bystanderCount < INCLUDED_BYSTANDERS || bystanderCount > maximumBystanders) {
+        throw new BookingFlowError("Choose a valid number of accompanying bystanders.", 400);
+      }
+      const servicePrice = Number(service.price ?? 0);
+      const commissionPercentage = Number(hospital.commissionPercentage);
+      if (!Number.isFinite(servicePrice) || servicePrice < 0 || !Number.isFinite(commissionPercentage) || commissionPercentage < 0 || commissionPercentage > 100) {
+        throw new BookingFlowError("This package cannot be booked until its pricing is reviewed.", 409);
+      }
+
+      const recipients = await bookingNotificationRecipients(transaction, firestore, hospitalId);
+      const bookingReference = await reserveBookingReference(transaction, firestore, bookingId);
+      const auditReference = firestore.collection("auditLogs").doc();
+      const now = FieldValue.serverTimestamp();
+      const additionalBystanderTotal = (bystanderCount - INCLUDED_BYSTANDERS) * bystanderPolicy.additionalBystanderCharge;
+      const bookingData = {
+        bookingReference,
+        consumerId: uid,
+        consumerName: String(profile.name ?? "").trim(),
+        consumerEmail: String(profile.email ?? "").trim().toLowerCase(),
+        consumerPhone: profile.phone.trim(),
+        consumerAddress: typeof profile.address === "string" ? profile.address.trim() || null : null,
+        hospitalId,
+        serviceId,
+        hospitalName: String(hospital.name ?? "").trim(),
+        hospitalLocation: [hospital.city, hospital.district, hospital.state].filter(Boolean).join(", "),
+        serviceName: packageTitle(service),
+        preferredDate: Timestamp.fromDate(preferredDate),
+        preferredEndDate: preferredEndDateText ? Timestamp.fromDate(preferredEndDate) : null,
+        preferredTime: "Flexible",
+        bystanderCount,
+        additionalBystanderCharge: bystanderPolicy.additionalBystanderCharge,
+        additionalBystanderTotal,
+        confirmedDate: null,
+        confirmedTime: null,
+        status: "requested",
+        treatmentStatus: "not_started",
+        servicePrice,
+        commissionPercentage,
+        estimatedCommission: servicePrice * commissionPercentage / 100,
+        consumerNotes: consumerNotes || null,
+        hospitalNotes: null,
+        createdAt: now,
+        createdBy: uid,
+        updatedAt: now,
+        updatedBy: uid,
+        archivedAt: null,
+        archivedBy: null,
+        confirmedAt: null,
+        completedAt: null,
+        treatmentStartedAt: null,
+        treatmentCompletedAt: null,
+        bookingTermsAcceptedAt: now,
+        bookingTermsVersion: BOOKING_TERMS_VERSION,
+        lastAuditId: auditReference.id,
+      };
+      transaction.create(bookingDocument, bookingData);
+      transaction.create(auditReference, {
+        action: "create", module: "bookings", recordId: bookingId,
+        actorId: uid, actorRole: "consumer", previousValues: null, updatedValues: bookingData,
+        timestamp: now, source: "server",
+        device: requestAuditDevice(request),
+      });
+      addBookingNotifications(transaction, firestore, {
+        recipients, documentId: bookingId, bookingReference, hospitalName: bookingData.hospitalName,
+        consumerName: bookingData.consumerName, consumerPhone: bookingData.consumerPhone,
+        serviceName: bookingData.serviceName, preferredDate, preferredEndDate, bystanderCount,
+        actorId: uid, auditId: auditReference.id, now,
+      });
+      return { duplicate: false, bookingReference };
+    });
+    const canonical = result.bookingReference || await ensureBookingReference(firestore, bookingId, { uid, role: "consumer" }, request);
+    return apiJson({ ok: true, bookingId, bookingReference: canonical, duplicate: result.duplicate }, result.duplicate ? 200 : 201);
   } catch (error) {
+    if (error instanceof BookingFlowError) return apiJson({ error: error.message }, error.status);
     if (error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
     if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
     logApiError("POST /api/consumer/bookings", error);
-    return apiJson({ error: "We could not send your appointment request. Please try again." }, 503);
+    return apiJson({ error: "We could not place your booking. Please try again." }, 503);
   }
 }

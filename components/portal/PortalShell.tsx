@@ -9,8 +9,9 @@ import { ROUTES } from "@/config/routes";
 import { useAuth } from "@/hooks/useAuth";
 import { PortalNotifications } from "@/components/portal/PortalNotifications";
 import { lockDocumentScroll } from "@/utils/documentScrollLock";
+import { ConsumerPortalFooter } from "@/components/consumer/ConsumerPortalFooter";
 
-type PortalNavigationIcon = "dashboard" | "hospitals" | "consultants" | "users" | "bookings" | "availability" | "audit" | "profile" | "services" | "password";
+type PortalNavigationIcon = "dashboard" | "hospitals" | "consultants" | "users" | "bookings" | "availability" | "audit" | "profile" | "services" | "password" | "search" | "person" | "support";
 type NavigationItem = readonly [label: string, href: string, icon: PortalNavigationIcon, nested?: boolean];
 const SIDEBAR_STORAGE_KEY = "ayursarga-portal-sidebar-collapsed";
 const SIDEBAR_CHANGE_EVENT = "ayursarga-sidebar-change";
@@ -47,7 +48,12 @@ const NAVIGATION: Record<PortalRole, readonly NavigationItem[]> = {
     ["Availability", ROUTES.hospital.availability, "availability"],
     ["Change Password", ROUTES.hospital.changePassword, "password"],
   ],
-  consumer: [],
+  consumer: [
+    ["My bookings", ROUTES.consumer.bookings, "bookings"],
+    ["Search hospitals", ROUTES.public.centers, "search"],
+    ["My profile", ROUTES.consumer.profile, "person"],
+    ["Help & support", ROUTES.consumer.support, "support"],
+  ],
 };
 
 function PortalNavigationIcon({ name }: { name: PortalNavigationIcon }) {
@@ -62,6 +68,9 @@ function PortalNavigationIcon({ name }: { name: PortalNavigationIcon }) {
     profile: <><path d="M4 21V6h16v15M8 6V3h8v3M3 21h18M9 10h6M12 7v6" /><circle cx="12" cy="17" r="2" /></>,
     services: <><path d="M4 6h16M4 12h16M4 18h16" /><circle cx="8" cy="6" r="2" /><circle cx="16" cy="12" r="2" /><circle cx="10" cy="18" r="2" /></>,
     password: <><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3" /></>,
+    search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></>,
+    person: <><circle cx="12" cy="8" r="4" /><path d="M4 21v-2a8 8 0 0 1 16 0v2" /></>,
+    support: <><path d="M4 14v-2a8 8 0 0 1 16 0v2M4 12H3v6h4v-6zm16 0h1v6h-4v-6zM18 18v1a2 2 0 0 1-2 2h-4" /></>,
   };
   return <svg className="portal-nav-icon" viewBox="0 0 24 24" aria-hidden="true">{paths[name]}</svg>;
 }
@@ -82,7 +91,9 @@ export function PortalShell({ role, title, children, focused = false }: {
   role: PortalRole; title: string; children: ReactNode; focused?: boolean;
 }) {
   const pathname = usePathname();
-  const { userProfile, logout, isLoading } = useAuth();
+  const { firebaseUser, userProfile, logout, isLoading } = useAuth();
+  const [failedAvatar, setFailedAvatar] = useState<string | null>(null);
+  const consumerAvatar = role === "consumer" && firebaseUser?.photoURL && firebaseUser.photoURL !== failedAvatar ? firebaseUser.photoURL : null;
   const [accountOpen, setAccountOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const sidebarCollapsed = useSyncExternalStore(subscribeToSidebarPreference, getSidebarCollapsedSnapshot, () => false);
@@ -90,7 +101,7 @@ export function PortalShell({ role, title, children, focused = false }: {
   const headerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    if (role === "consumer") return;
+    if (role === "consumer" && focused) return;
     let frame = 0;
     const updateToastPosition = () => {
       if (frame) return;
@@ -113,7 +124,7 @@ export function PortalShell({ role, title, children, focused = false }: {
       if (frame) window.cancelAnimationFrame(frame);
       document.documentElement.style.removeProperty("--portal-toast-top");
     };
-  }, [pathname, role]);
+  }, [pathname, role, focused]);
 
   function toggleSidebar() {
     const next = !sidebarCollapsed;
@@ -192,11 +203,12 @@ export function PortalShell({ role, title, children, focused = false }: {
       </header>
       <section className="portal-consumer-focus-content">
         <div className="portal-page-enter" key={pathname}>{children}</div>
+        <ConsumerPortalFooter />
       </section>
     </main>;
   }
 
-  return <main className="portal-workspace" data-sidebar-collapsed={sidebarCollapsed || undefined}>
+  return <main className={`portal-workspace${role === "consumer" ? " portal-consumer-workspace" : ""}`} data-sidebar-collapsed={sidebarCollapsed || undefined}>
     <aside className="portal-sidebar" data-role={role} data-mobile-open={mobileMenuOpen || undefined} data-collapsed={sidebarCollapsed || undefined}>
       <div className="portal-sidebar-top">
         <Link href="/" className="portal-wordmark" aria-label="Return to Ayursarga home">
@@ -234,11 +246,12 @@ export function PortalShell({ role, title, children, focused = false }: {
     {mobileMenuOpen && <button className="portal-mobile-menu-backdrop" type="button" aria-label="Close portal menu" onClick={() => setMobileMenuOpen(false)} />}
     <section className="portal-content">
       <header className="portal-page-header" ref={headerRef}>
+        {role === "consumer" && <Link className="consumer-mobile-brand" href={ROUTES.public.home} aria-label="Return to Ayursarga home"><Image src="/mainlogo.png" alt="" width={30} height={30} sizes="30px" /><span>Ayursarga</span></Link>}
         <div className="portal-page-heading">
           <h1>{title}</h1>
         </div>
-        {userProfile && role !== "consumer" && <div className="portal-header-tools">
-          <PortalNotifications recipientId={userProfile.uid} />
+        {userProfile && <div className="portal-header-tools">
+          {role !== "consumer" && <PortalNotifications key={userProfile.uid} recipientId={userProfile.uid} />}
           <div className="portal-header-account" ref={accountRef}>
           <button
             className="portal-header-account-trigger"
@@ -247,20 +260,25 @@ export function PortalShell({ role, title, children, focused = false }: {
             aria-expanded={accountOpen}
             onClick={() => setAccountOpen((current) => !current)}
           >
-            <span className="portal-header-account-avatar" aria-hidden="true">{getAccountInitials(userProfile.name, userProfile.email)}</span>
+            <span className="portal-header-account-avatar" aria-hidden="true">{consumerAvatar ? <Image className="consumer-account-photo" src={consumerAvatar} alt="" width={32} height={32} unoptimized referrerPolicy="no-referrer" onError={() => setFailedAvatar(consumerAvatar)} /> : getAccountInitials(userProfile.name, userProfile.email)}</span>
             <span className="portal-header-account-name">{userProfile.name}</span>
           </button>
           {accountOpen && <div className="portal-header-account-menu">
             <span>{userProfile.name}</span>
             <small>{userProfile.email}</small>
-            <button className="portal-signout" type="button" onClick={() => void logout()} disabled={isLoading}>Sign out</button>
+            {role === "consumer" && <Link className="consumer-account-profile" href={ROUTES.consumer.profile} onClick={() => setAccountOpen(false)}>My profile</Link>}
+            <button className="portal-signout" type="button" onClick={() => void logout()} disabled={isLoading}>{role === "consumer" ? "Logout" : "Sign out"}</button>
           </div>}
           </div>
         </div>}
       </header>
-      <div className="portal-page-enter" key={pathname}>
+      <div className={`portal-page-enter${role === "consumer" ? " consumer-content-body" : ""}`} key={pathname}>
         {children}
       </div>
+      {role === "consumer" && <ConsumerPortalFooter />}
     </section>
+    {role === "consumer" && <nav className="consumer-bottom-nav" aria-label="Consumer mobile navigation">
+      {NAVIGATION.consumer.map(([label, href, icon], index) => <Link key={href} href={href} aria-label={label} aria-current={isNavigationActive(pathname, href) ? "page" : undefined}><PortalNavigationIcon name={icon} /><span>{["Bookings", "Search", "Profile", "Help"][index]}</span></Link>)}
+    </nav>}
   </main>;
 }

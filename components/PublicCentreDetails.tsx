@@ -184,7 +184,7 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
                   })}>{expanded ? "View less" : "View more"}</button>}
                   {expanded && <ul className="public-package-procedures">{procedures.map((procedure) => <li key={procedure.id}><span>{procedure.label}</span>{procedure.days !== null && <strong>{procedure.days} {procedure.days === 1 ? "day" : "days"}</strong>}</li>)}</ul>}
                 </div>
-                <div>{unavailableForSelectedDates ? <span className="public-package-unavailable">Unavailable for selected date</span> : <Link href={`/app/bookings/new?${bookingParams.toString()}`}>Request appointment</Link>}</div>
+                <div>{unavailableForSelectedDates ? <span className="public-package-unavailable">Unavailable for selected date</span> : <Link href={`/app/bookings/new?${bookingParams.toString()}`}>Book Appointment</Link>}</div>
               </article>;
             })}</div>
             {hasMore && <button className="public-load-more" type="button" disabled={servicesLoading} onClick={() => void loadMore()}>{servicesLoading ? "Loading..." : "Show more packages"}</button>}
