@@ -7,6 +7,35 @@ the implementation authority; these notes do not authorize deployments or data
 maintenance. Preserve unrelated working-tree changes; the workspace contains
 substantial uncommitted work across multiple tasks.
 
+## Automatic versioning decision (20 October 2026)
+
+- Owner approved agent-managed semantic version bumps for future completed
+  implementation tasks: patch for compatible fixes/polish/performance, minor for
+  compatible features, major for approved breaking changes. Bump once per task or
+  explicitly grouped change set and keep package.json/package-lock.json in sync.
+- Documentation-only changes, reviews and validation alone do not bump versions.
+  No watcher, Git automation or deployment was introduced. This rule addition
+  does not retroactively bump earlier changes. No validation commands were run.
+
+## Search prompt typography (20 October 2026, after build validation)
+
+- Centre/location and Start date / expected delivery date placeholders are now
+  13px, normal-weight sage text, scoped to the public search fields. Entered
+  values, labels, input dimensions and date behavior are unchanged.
+- Package to compare uses 13px desktop text, normal-weight sage for its empty
+  prompt, and stronger forest text for a selected package. Mobile controls retain
+  16px sizing by default to avoid iOS focus zoom.
+- At the owner's request, only Android's empty comparison package prompt is
+  reduced to 13px under the existing mobile/coarse-pointer media rule. The select
+  is marked through a ref in a mount effect using the Android user-agent token;
+  server and initial client markup remain identical. Selected values, iOS/iPadOS
+  and desktop behavior are unchanged. No shared platform abstraction was added.
+- These subsequent typography changes received source inspection only, not new
+  lint, build, typecheck, browser tests or real-device validation. The successful
+  checks below predate them. No deployment or cloud writes were performed.
+- AGENTS.md now records date-format preservation, the mobile sizing exception,
+  and the owner's explicit-request-only validation preference.
+
 ## Cleanup and requested build validation (20 October 2026)
 
 - On the owner's explicit request, ran ESLint, typecheck and the production

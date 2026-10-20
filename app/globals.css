@@ -471,7 +471,8 @@ main>.dark-section{
 .public-comparison-package-status.error{ color:var(--rust); }
 .public-comparison-package-status button{ min-height:44px; padding:4px 8px; border:0; background:transparent; color:var(--forest); font:inherit; font-weight:800; text-decoration:underline; cursor:pointer; }
 .public-comparison-package-select{ min-width:0; grid-column:1/-1; display:grid; gap:7px; color:var(--forest); font-size:11px; font-weight:750; }
-.public-comparison-package-select select{ width:100%; min-height:44px; padding:10px 12px; border:1px solid rgba(31,61,43,.25); border-radius:12px; background:rgba(31,61,43,.035); color:var(--forest); font:inherit; }
+.public-comparison-package-select select{ width:100%; min-height:44px; padding:10px 12px; border:1px solid rgba(31,61,43,.25); border-radius:12px; background:rgba(31,61,43,.035); color:var(--forest); font:inherit; font-size:13px; font-weight:600; }
+.public-comparison-package-select select[data-empty="true"]{ color:var(--sage); font-weight:400; }
 .public-comparison-package-select select:focus-visible{ outline:2px solid var(--forest); outline-offset:2px; }
 .public-comparison-package-select select:disabled{ color:var(--sage); cursor:not-allowed; }
 .public-comparison-picker{ position:relative; min-width:0; min-height:76px; padding:10px 12px; border:1px solid rgba(31,61,43,.24); border-radius:13px; background:#fff; }
@@ -1687,6 +1688,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .centers-directory-page .public-search-field{ min-height:76px; gap:10px; }
 .centers-directory-page .public-search-field small,.centers-directory-page .public-date-control>span{ font-size:10px; line-height:1.5; letter-spacing:.035em; }
 .centers-directory-page .public-search-filters input{ min-height:32px; background:transparent; font-size:15px; }
+.centers-directory-page .public-search-destination input::placeholder,
+.centers-directory-page .public-date-control input.date-input-text::placeholder{ color:var(--sage); font-size:13px; font-weight:400; opacity:1; }
 .centers-directory-page .public-date-control{ padding:0; border:0; background:transparent; }
 .centers-directory-page input[type="date"]{ display:block; max-width:100%; min-width:0; text-align:left; }
 .centers-directory-page input[type="date"]::-webkit-date-and-time-value{ min-height:1.5em; text-align:left; }
@@ -1784,6 +1787,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 }
 @media(pointer:coarse),(max-width:1100px){
   .centers-directory-page :is(.public-search-filters input,.public-comparison-picker input,.public-comparison-package-select select){ font-size:16px; }
+  .centers-directory-page .public-comparison-package-select select[data-android="true"][data-empty="true"]{ font-size:13px; }
 }
 
 .public-centre-detail-page{

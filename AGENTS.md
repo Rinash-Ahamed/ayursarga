@@ -22,6 +22,14 @@ to deploy, rerun maintenance scripts, or modify live data.
   visual collisions.
 - Read the version from `package.json`; the portal footer receives it through
   `NEXT_PUBLIC_APP_VERSION` in `next.config.mjs`.
+- Display full UI dates as DD/MM/YYYY using `utils/date.ts` and the shared
+  `DateInput`. Preserve ISO/API/database formats and India care-date boundaries;
+  do not parse day-first display strings with the native Date constructor.
+- Keep search placeholders visually lighter than entered values. Preserve 16px
+  mobile control sizing on iOS to avoid focus zoom. The comparison package
+  dropdown has an explicitly requested Android-only 13px empty-prompt exception;
+  do not apply it to selected values or other devices. Detect platform only after
+  hydration, not during server/client initial rendering.
 - Confirmation dialogs must use `PortalDialog`; other modal surfaces use the
   shared body-level `ModalLayer`. Reuse its reference-counted document scroll
   lock, focus containment and viewport handling. Never render a fixed dialog
@@ -173,14 +181,30 @@ to deploy, rerun maintenance scripts, or modify live data.
 
 ## Change discipline and validation
 
+- Automatically bump the application version once per completed implementation
+  task or explicitly grouped set of related changes, not per file edit, tool call,
+  retry or validation run. Choose by user-facing impact, not line/file count:
+  patch for compatible fixes, styling and performance improvements; minor for
+  backward-compatible features or workflows; major for breaking changes. This
+  rule does not authorize introducing breaking changes without owner approval.
+- Keep the version in `package.json` and both application-version entries in
+  `package-lock.json` synchronized without changing dependency versions. Continue
+  deriving displayed versions through the existing Next configuration. Report
+  the version change in the handoff. Do not bump for documentation-only changes,
+  reviews, tests/checks alone, or work that has not been completed. Respect an
+  explicit owner version override and do not re-bump the same completed task on
+  continuation. This is an agent workflow rule, not a watcher for external edits;
+  it does not authorize commits, tags, publishing or deployment.
 - Reuse existing services, validation, helpers, and components. Avoid duplicate
   folders, parallel abstractions, and speculative dependencies.
 - Do not hardcode Firebase Web SDK credentials in components. Keep client
   configuration centralized and environment-driven; initialize Firebase once.
 - Preserve unrelated working-tree changes. Remove generated debug logs and
   `tsconfig.tsbuildinfo` after validation if they appear.
-- For relevant changes run ESLint and `npm run typecheck`; use `npm run build`
-  for routing, configuration, or production-sensitive changes.
+- Run ESLint, typecheck, build and API/full-site checks only when the owner
+  explicitly requests them. When requested, run the relevant checks after the
+  related changes are complete, not after every small edit. Prior authorization
+  for one validation run is not ongoing authorization for later changes.
 - Firestore rule/index changes are not live until deployed to
   `ayursarga-connect`. Use a scoped, non-interactive Firebase deployment and
   report whether an index is still initializing.

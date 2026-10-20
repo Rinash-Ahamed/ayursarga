@@ -283,10 +283,18 @@ export function PublicCentreComparison({ detailQuery }: { detailQuery: string })
   const [selected, setSelected] = useState<[SelectedCentre | null, SelectedCentre | null]>([null, null]);
   const [results, setResults] = useState<ComparisonResult[] | null>(null);
   const [duration, setDuration] = useState("");
+  const packageSelectRef = useRef<HTMLSelectElement>(null);
   const comparisonRef = useRef<HTMLDivElement>(null);
   const requestVersions = useRef<[number, number]>([0, 0]);
   const requests = useRef<[AbortController | null, AbortController | null]>([null, null]);
   const scrollFrame = useRef<number | null>(null);
+
+  useEffect(() => {
+    // Apply Android-only presentation after hydration; keep iOS native sizing.
+    if (packageSelectRef.current && /Android/i.test(navigator.userAgent)) {
+      packageSelectRef.current.dataset.android = "true";
+    }
+  }, []);
 
   useEffect(() => {
     const versions = requestVersions.current;
@@ -394,7 +402,7 @@ export function PublicCentreComparison({ detailQuery }: { detailQuery: string })
           {selected[index]?.error && <p className="public-comparison-package-status error" role="alert">{selected[index].error} <button type="button" onClick={() => { const centre = selected[index]; if (centre) selectCentre(index, centre.hospital); }}>Retry</button></p>}
         </div>)}
         <label className="public-comparison-package-select">Package to compare
-          <select value={duration} disabled={!ready || commonDurations.length === 0} onChange={(event) => { setDuration(event.target.value); setResults(null); }}>
+          <select ref={packageSelectRef} value={duration} data-empty={!duration} disabled={!ready || commonDurations.length === 0} onChange={(event) => { setDuration(event.target.value); setResults(null); }}>
             <option value="">{isLoading ? "Loading packages..." : !ready ? "Select both centers first" : commonDurations.length ? "Select package duration" : "No matching package duration"}</option>
             {commonDurations.map((days) => <option key={days} value={days}>{days}-day package</option>)}
           </select>
