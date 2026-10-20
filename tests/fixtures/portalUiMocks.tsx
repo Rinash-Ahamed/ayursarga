@@ -24,7 +24,7 @@ export function useAuth() { return { firebaseUser, userProfile: { ...user, role:
 export function usePathname() {
   if (portalUiState.screen === "consumer-profile") return "/app/profile";
   if (portalUiState.screen === "consumer-support") return "/app/support";
-  if (portalUiState.screen === "consumer-request") return "/app/bookings/new";
+  if (portalUiState.screen.startsWith("consumer-request")) return "/app/bookings/new";
   if (portalUiState.screen === "consumer-completion") return "/app/complete-profile";
   if (portalUiState.screen.startsWith("consumer")) return "/app/bookings";
   const paths: Record<string, string> = { "admin-dashboard": "/admin", "admin-hospitals": "/admin/hospitals", "admin-details": "/admin/hospitals/centre", "admin-consultants": "/admin/consultants", "admin-users": "/admin/users", "admin-bookings": "/admin/bookings", "admin-availability": "/admin/availability", "admin-audits": "/admin/audits", "hospital-dashboard": "/hospital", "hospital-profile": "/hospital/profile", "hospital-services": "/hospital/services", "hospital-bookings": "/hospital/bookings", "hospital-availability": "/hospital/availability", "hospital-password": "/hospital/change-password" };

@@ -62,11 +62,15 @@ test("request summary and mandatory consent remain usable at every size", async 
   await expect(summary).toContainText("Head Massage");
   await expect(summary).toContainText("3 days");
   const submit = page.getByRole("button", { name: "Book Appointment", exact: true });
+  await expect(submit).toBeDisabled();
+  await expect(page.locator('[name="endDate"]')).toHaveCount(0);
+  await page.locator('[name="bookingTerms"]').check();
+  await expect(submit).toBeEnabled();
   await submit.click();
   await expect(page.locator('[name="date"]')).toHaveAttribute("aria-invalid", "true");
   await page.locator('[name="date"]').fill("2099-10-25");
-  await submit.click();
-  await expect(page.locator('[name="bookingTerms"]')).toHaveAttribute("aria-invalid", "true");
+  await page.locator('[name="bookingTerms"]').uncheck();
+  await expect(submit).toBeDisabled();
   await page.locator('[name="bookingTerms"]').check();
   await checkLayout(page);
   await page.screenshot({ path: testInfo.outputPath("booking-request.png"), fullPage: true });
@@ -80,12 +84,28 @@ test("sold-out booking dates disable submission but other dates remain bookable"
   await page.evaluate(() => { (window as unknown as { bookingSoldOut: boolean }).bookingSoldOut = true; });
   await mount(page, "consumer-request");
   const submit = page.getByRole("button", { name: "Book Appointment", exact: true });
+  await expect(submit).toBeDisabled();
+  await page.locator('[name="bookingTerms"]').check();
   await expect(submit).toBeEnabled();
   await page.locator('[name="date"]').fill("2099-10-25");
   await expect(submit).toBeDisabled();
   await expect(page.getByRole("status")).toContainText("Sold Out");
   await page.locator('[name="date"]').fill("2099-10-26");
   await expect(submit).toBeEnabled();
+});
+
+test("search start or EDD date prefills booking and legacy end dates are not editable", async ({ page }) => {
+  await mount(page, "consumer-request-prefilled");
+  await expect(page.getByRole("textbox", { name: "Preferred start date / Expected Delivery Date", exact: true })).toHaveValue("25/10/2099");
+  await expect(page.locator('[name="date"]')).toHaveValue("2099-10-25");
+  await expect(page.locator('[name="endDate"]')).toHaveCount(0);
+  const submit = page.getByRole("button", { name: "Book Appointment", exact: true });
+  await expect(submit).toBeDisabled();
+  await page.locator('[name="bookingTerms"]').check();
+  await expect(submit).toBeEnabled();
+  await page.locator('[name="bookingTerms"]').uncheck();
+  await expect(submit).toBeDisabled();
+  await checkLayout(page);
 });
 
 test("unavailable packages cannot be submitted", async ({ page }) => {

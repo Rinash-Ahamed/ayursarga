@@ -7,6 +7,57 @@ the implementation authority; these notes do not authorize deployments or data
 maintenance. Preserve unrelated working-tree changes; the workspace contains
 substantial uncommitted work across multiple tasks.
 
+## Booking date label expansion (20 October 2026)
+
+- Changed the booking label to Preferred start date / Expected Delivery Date and
+  updated the matching browser-test locator. Date behavior is unchanged.
+- Patch version 4.2.5 synchronized in both package files. No validation commands
+  or deployment run for this wording-only change; checks below predate it.
+
+## Requested validation at 4.2.4 (20 October 2026)
+
+- On the owner's subsequent request, ESLint completed with zero warnings/errors,
+  npm run typecheck passed, and the production build completed successfully,
+  including generation of all 62 static pages. No source fixes were needed.
+- Removed generated tsconfig.tsbuildinfo after validation. No API checks,
+  deployment or live mutations were performed; no validation-only version bump.
+  These results supersede the earlier no-build/lint notes for preceding changes.
+
+## Consumer booking care preferences (20 October 2026)
+
+- Removed the preferred end-date control, its state and validation from the new
+  booking form. Label is now Preferred start date / EDD; the existing search
+  startDate context prepopulates it, otherwise the consumer selects a date.
+  Legacy URL end dates are ignored by this form; new requests send null for the
+  optional preferredEndDate. Historical records and API schema remain unchanged.
+- Book Appointment stays disabled until booking confirmation is checked, and
+  becomes disabled again when unchecked. Existing unavailable/sold-out/loading
+  and busy guards, submit validation, and server-side versioned consent remain.
+- Reviewed caller/service/consumer booking API: null end dates are supported,
+  date-only requests use existing India care-date validation; no Firestore rule
+  change or deployment required for these UI changes.
+- 12 focused booking-flow/date unit tests and 9 booking browser regressions
+  passed across Chromium phone/desktop and WebKit phone fixtures. Tests cover
+  empty-date validation, prefill, end-field removal, consent toggling, submission
+  and sold-out dates. No physical-device/live API checks, lint, typecheck, build
+  or deployment run. Version 4.2.3 to 4.2.4 synchronized in both package files.
+
+## Consultant detail alignment (20 October 2026)
+
+- Follow-up compactness request: reduced consultant-only card padding to 18px,
+  card gap to 10px, detail margins/gaps, label spacing and name size to 20px.
+  Details now use three equal columns on wider screens, two at <=1000px;
+  availability/address remain full-width, with available slots wrapping inline.
+  No fields or actions removed; edit forms and backend behavior preserved.
+  Version 4.2.3 synchronized. Source inspection only; no new browser, lint,
+  build, API checks or deployment. Supersedes the two-column desktop choice below.
+- Replaced the auto-fit consultant detail grid with two predictable minmax(0,1fr)
+  columns. Availability and address now span the full row rather than two of an
+  arbitrary number of columns; detail values explicitly reset browser dd margins.
+  Existing phone spacing, fields, actions and backend behavior are unchanged.
+- Patch version 4.2.1 to 4.2.2, synchronized in both package files. Source review
+  only; no new browser checks, lint, build, API checks or deployment performed.
+
 ## Consultant update permission fix (20 October 2026)
 
 - Found a confirmed rules mismatch: hasValidConsultantFields accepted designation,
@@ -17,12 +68,16 @@ substantial uncommitted work across multiple tasks.
   validation, immutable identity/creation metadata, linked atomic audits, separate
   status transitions and denied deletion are unchanged. The existing save path
   uses the client Firestore SDK, not the consultant creation API.
+- Owner subsequently authorized redeployment after authentication. Firebase
+  successfully compiled and released the corrected rules to ayursarga-connect
+  on 20 October 2026. Deployment was scoped to firestore:rules only; no indexes,
+  Storage rules, hosting or operational records were changed. Authenticated
+  consultant save behavior still requires verification in the owner's browser.
 - Six focused consultant tests passed, including a new source-contract check
   comparing all validated profile keys with the update allowlist. This is not
   emulator coverage or proof of deployed authorization. No live save, build,
-  lint, deployment or production mutation was run. Deploy corrected Firestore
-  rules explicitly before expecting this permission fix to work in any client
-  using the deployed project, including local development.
+  lint or production mutation was run during implementation. Rules deployment
+  was completed separately with the owner's authorization as recorded above.
 - AGENTS.md now requires affected API/SDK authorization, schema and audit review
   plus focused local regression checks for persistence/workflow updates. This
   targeted-check exception does not authorize broad checks or live operations.

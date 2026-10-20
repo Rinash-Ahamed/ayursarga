@@ -40,6 +40,7 @@ const screens = {
   "admin-booking-detail": <AdminBookings bookingId="booking-1" />,
   "hospital-booking-detail": <HospitalBookings bookingId="booking-1" />,
   "consumer-request": <BookingRequestForm hospitalId="centre" serviceId="package-14" searchContext={{ startDate: "", endDate: "", bystanders: 1 }} />,
+  "consumer-request-prefilled": <BookingRequestForm hospitalId="centre" serviceId="package-14" searchContext={{ startDate: "2099-10-25", endDate: "2099-10-30", bystanders: 1 }} />,
 };
 window.mountPortalUi = (screen) => {
   portalUiState.screen = screen;
