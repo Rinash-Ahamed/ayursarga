@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type FormEvent, type MouseEvent } from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { DateInput } from "@/components/forms/DateInput";
+import { toDateInputValue } from "@/utils/date";
 import type { HospitalDocument } from "@/features/firestore/models";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import {
@@ -13,7 +15,7 @@ import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import { getHospitalImageUrls, hospitalImageSrcSet } from "@/features/hospitals/images";
 import { useHospitalImageGallery } from "@/hooks/useHospitalImageGallery";
 import { addCentreSearchContext, type CentreSearchContext } from "@/features/hospitals/searchContext";
-import { isHospitalUnavailable } from "@/features/hospitals/availability";
+import { isHospitalSoldOut } from "@/features/hospitals/availability";
 import { PublicCentreComparison } from "@/components/PublicCentreComparison";
 
 type PublicHospitalSearchProps = {
@@ -105,22 +107,22 @@ const PublicHospitalImages = memo(function PublicHospitalImages({ hospital, prio
   </div>;
 });
 
-const HospitalResultCard = memo(function HospitalResultCard({ hospital, detailQuery, priority }: {
-  hospital: DocumentRecord<HospitalDocument>; detailQuery: string; priority: boolean;
+const HospitalResultCard = memo(function HospitalResultCard({ hospital, detailQuery, priority, soldOut }: {
+  hospital: DocumentRecord<HospitalDocument>; detailQuery: string; priority: boolean; soldOut: boolean;
 }) {
   return <article className="public-center-card">
-    <Link className="public-center-card-link" href={`/centers/${encodeURIComponent(hospital.id)}?${detailQuery}`} prefetch={false} aria-label={`View details for ${hospital.name}`} />
     <PublicHospitalImages hospital={hospital} priority={priority} />
     <div className="public-center-card-body">
       <div className="public-center-card-topline"><span>{hospital.city}{hospital.district ? `, ${hospital.district}` : ""}, {hospital.state}</span></div>
       <h3>{hospital.name}</h3>
+      {soldOut && <span className="public-sold-out-badge">Sold Out</span>}
       {hospital.ayursargaRating && <div className="public-center-assessment" aria-label={`Ayursarga assessment ${hospital.ayursargaRating} out of 5`}>
         <span className="public-center-stars" aria-hidden="true"><span>★★★★★</span><span style={{ width: `${hospital.ayursargaRating / 5 * 100}%` }}>★★★★★</span></span>
         <strong>{hospital.ayursargaRating.toFixed(1)}</strong>
       </div>}
       {hospital.description && <p>{hospital.description}</p>}
       {hospital.ayursargaReviewNote && <div className="public-center-review"><p>{hospital.ayursargaReviewNote}</p></div>}
-      <span className="public-center-toggle" aria-hidden="true">View centre details <span>→</span></span>
+      <Link className="public-center-toggle" href={`/centers/${encodeURIComponent(hospital.id)}?${detailQuery}`} prefetch={false} aria-label={`View details for ${hospital.name}`}>View centre details <span aria-hidden="true">→</span></Link>
     </div>
   </article>;
 });
@@ -131,7 +133,7 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
   const resultSearch = useDeferredValue(search);
   const [startDate, setStartDate] = useState(initialContext.startDate);
   const [dateError, setDateError] = useState<string | null>(null);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = toDateInputValue();
   const hospitalLoader = useCallback(
     (cursor: PublicPageCursor | null) => initialService
       ? listPublicHospitalsByServiceName(initialService, { pageSize: 12, cursor })
@@ -148,10 +150,9 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
     return hospitals.filter((hospital) => {
       const searchable = `${hospital.name} ${hospital.city} ${hospital.district ?? ""} ${hospital.state} ${hospital.address}`.toLowerCase();
       const matchesSearch = !term || searchable.includes(term);
-      const availableForDates = !startDate || !isHospitalUnavailable(hospital, startDate);
-      return matchesSearch && availableForDates;
+      return matchesSearch;
     });
-  }, [hospitals, resultSearch, startDate]);
+  }, [hospitals, resultSearch]);
 
   const detailQuery = useMemo(() => {
     const params = addCentreSearchContext(new URLSearchParams(), { ...initialContext, startDate, endDate: "" });
@@ -159,18 +160,6 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
     if (resultSearch) params.set("q", resultSearch);
     return params.toString();
   }, [initialContext, initialService, resultSearch, startDate]);
-
-  function openDatePicker(event: MouseEvent<HTMLLabelElement>) {
-    const input = event.currentTarget.querySelector("input");
-    if (!input || event.target === input || typeof input.showPicker !== "function") return;
-    event.preventDefault();
-    input.focus();
-    try {
-      input.showPicker();
-    } catch {
-      // The focused native date input remains usable when a browser blocks showPicker.
-    }
-  }
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -199,7 +188,7 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
           <div className="public-search-field public-search-dates">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v3m12-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z" /></svg>
             <span className="public-date-inputs">
-              <label className="public-date-control" onClick={openDatePicker}><span>Start date / expected delivery date</span><input aria-label="Start date or expected delivery date" aria-invalid={Boolean(dateError)} aria-describedby={dateError ? "centre-date-error" : undefined} type="date" min={today} value={startDate} onChange={(event) => { setStartDate(event.target.value); setDateError(null); }} /></label>
+              <label className="public-date-control"><span>Start date / expected delivery date</span><DateInput aria-label="Start date or expected delivery date" aria-invalid={Boolean(dateError)} aria-describedby={dateError ? "centre-date-error" : undefined} min={today} value={startDate} onChange={(event) => { setStartDate(event.target.value); setDateError(null); }} /></label>
             </span>
           </div>
           <button type="submit" className="public-search-submit"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></svg><span>Search</span></button>
@@ -233,7 +222,7 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
               <div className="public-center-card-body"><span /><span /><span /></div>
             </article>)}
           </>}
-          {visibleHospitals.map((hospital, hospitalIndex) => <HospitalResultCard key={hospital.id} hospital={hospital} detailQuery={detailQuery} priority={hospitalIndex === 0} />)}
+          {visibleHospitals.map((hospital, hospitalIndex) => <HospitalResultCard key={hospital.id} hospital={hospital} detailQuery={detailQuery} priority={hospitalIndex === 0} soldOut={isHospitalSoldOut(hospital, startDate)} />)}
         </div>
 
         {hasMore && (

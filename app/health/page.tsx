@@ -4,6 +4,7 @@ import Link from "next/link";
 import { createApiHealthReport } from "@/services/api/server";
 import { isContactEmailReady } from "@/services/contact/contactEmailService";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
+import { formatDisplayDateTime } from "@/utils/date";
 
 export const dynamic = "force-dynamic";
 
@@ -73,11 +74,7 @@ export default function HealthPage() {
       </div>
 
       <footer className="health-footer">
-        <p>Last checked <time dateTime={report.checkedAt}>{new Date(report.checkedAt).toLocaleString("en-IN", {
-          dateStyle: "medium",
-          timeStyle: "short",
-          timeZone: "Asia/Kolkata",
-        })}</time></p>
+        <p>Last checked <time dateTime={report.checkedAt}>{formatDisplayDateTime(report.checkedAt)}</time></p>
         <Link href="/">Return to Ayursarga</Link>
       </footer>
     </section>

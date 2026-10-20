@@ -74,6 +74,20 @@ test("request summary and mandatory consent remain usable at every size", async 
   await expect.poll(() => page.evaluate(() => (window as unknown as { consumerBookingFixture: { navigatedTo: string } }).consumerBookingFixture.navigatedTo)).toBe("/app/bookings?booking=booking-0");
 });
 
+test("sold-out booking dates disable submission but other dates remain bookable", async ({ page }) => {
+  await page.addInitScript(() => { (window as unknown as { bookingSoldOut: boolean }).bookingSoldOut = true; });
+  // The fixture stays on about:blank, so set this before the actual component mounts.
+  await page.evaluate(() => { (window as unknown as { bookingSoldOut: boolean }).bookingSoldOut = true; });
+  await mount(page, "consumer-request");
+  const submit = page.getByRole("button", { name: "Book Appointment", exact: true });
+  await expect(submit).toBeEnabled();
+  await page.locator('[name="date"]').fill("2099-10-25");
+  await expect(submit).toBeDisabled();
+  await expect(page.getByRole("status")).toContainText("Sold Out");
+  await page.locator('[name="date"]').fill("2099-10-26");
+  await expect(submit).toBeEnabled();
+});
+
 test("unavailable packages cannot be submitted", async ({ page }) => {
   await mount(page, "consumer-request", true);
   await expect(page.getByRole("button", { name: "Book Appointment", exact: true })).toBeDisabled();
@@ -88,6 +102,27 @@ test("one canonical reference identifies the selected booking in every portal", 
     await expect(reference).toHaveCount(1);
     await expect(reference).toContainText("AYUR000001");
     await expect(page.getByRole("link", { name: "View all bookings", exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+});
+
+test("admin and hospital bookings have clear labeled summaries and role-specific amounts", async ({ page }) => {
+  for (const role of ["admin", "hospital"]) {
+    await mount(page, `${role}-bookings`);
+    const cards = page.locator(".operational-booking-card");
+    await expect(cards).toHaveCount(3);
+    const card = cards.first();
+    await expect(card.locator("h3")).toContainText("Ayursarga Mother and Baby");
+    await expect(card.locator(".consumer-booking-package")).toHaveText("14-day package");
+    await expect(card.locator("dt")).toContainText(["Customer", "Phone", "Email", "Requested care dates", "Accompanying", "Customer address"]);
+    await expect(card.locator(".consumer-booking-cost").first()).toContainText("Package amount");
+    await expect(card).not.toContainText("Hospital centre");
+    await expect(card.getByText("Estimated commission", { exact: true })).toHaveCount(role === "admin" ? 1 : 0);
+    if (role === "hospital") {
+      await card.getByRole("button", { name: "Confirm", exact: true }).click();
+      await expect(page.getByRole("dialog")).toBeVisible();
+      await page.getByRole("dialog").getByRole("button", { name: "Cancel", exact: true }).click();
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
 });

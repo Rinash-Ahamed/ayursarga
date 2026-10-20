@@ -12,6 +12,72 @@ async function mount(page: Page, screen: string) {
   await expect(page.locator("h1")).toBeVisible();
   await page.waitForTimeout(120);
 }
+test("availability review requires confirmation and prevents duplicate submissions", async ({ page }) => {
+  await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "admin-availability");
+  const state = () => page.evaluate(() => (window as unknown as { consumerBookingFixture: { availabilityReviews: string[] } }).consumerBookingFixture.availabilityReviews);
+  for (const action of ["approve", "reject"] as const) {
+    const trigger = page.getByRole("button", { name: action === "approve" ? "Approve and block" : "Reject", exact: true });
+    await trigger.click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toContainText(`Are you sure you want to ${action} this availability request?`);
+    await expect(dialog.getByRole("button", { name: "Confirm", exact: true })).toHaveClass(action === "reject" ? /danger/ : /^portal-button$/);
+    expect(await page.evaluate(() => document.body.style.position)).toBe("fixed");
+    const bounds = await dialog.boundingBox();
+    expect(bounds!.y).toBeGreaterThanOrEqual(0);
+    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(page.viewportSize()!.height + 1);
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(dialog).toBeHidden();
+    expect(await state()).toEqual(action === "approve" ? [] : ["approve"]);
+    expect(await page.evaluate(() => document.body.style.position)).not.toBe("fixed");
+    await page.evaluate(() => { (window as unknown as { consumerBookingFixture: { holdAvailability: boolean } }).consumerBookingFixture.holdAvailability = true; });
+    await trigger.click();
+    await dialog.getByRole("button", { name: "Confirm", exact: true }).click();
+    await expect(dialog.getByRole("button", { name: "Working...", exact: true })).toBeDisabled();
+    await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeDisabled();
+    await page.keyboard.press("Enter");
+    expect(await state()).toEqual(action === "approve" ? ["approve"] : ["approve", "reject"]);
+    await page.evaluate(() => (window as unknown as { finishAvailabilityReview: () => void }).finishAvailabilityReview());
+    await expect(dialog).toBeHidden();
+  }
+  await page.evaluate(() => { Object.assign((window as unknown as { consumerBookingFixture: object }).consumerBookingFixture, { holdAvailability: false, failAvailability: true }); });
+  await page.getByRole("button", { name: "Reject", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: "Confirm", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toHaveText("Availability review failed. Try again.");
+  await expect(dialog.getByRole("button", { name: "Confirm", exact: true })).toBeEnabled();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+});
+
+test("consultant designation and preferred availability edit legacy records safely", async ({ page }) => {
+  await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "admin-consultants");
+  await expect(page.getByText("Not specified", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "Designation" })).toHaveValue("");
+  await page.getByRole("textbox", { name: "Designation" }).fill("Ayurvedic Doctor");
+  await page.getByRole("checkbox", { name: "Morning", exact: true }).check();
+  await page.getByRole("checkbox", { name: "Evening", exact: true }).check();
+  await page.locator('input[name="morningStartTime"]').fill("09:30");
+  await page.locator('input[name="morningEndTime"]').fill("11:45");
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByText("Ayurvedic Doctor", { exact: true })).toBeVisible();
+  await expect(page.getByText("Morning: 9:30 AM – 11:45 AM", { exact: true })).toBeVisible();
+  await expect(page.getByText("Evening: 3:00 PM – 6:00 PM", { exact: true })).toBeVisible();
+  const writes = await page.evaluate(() => (window as unknown as { consumerBookingFixture: { consultantWrites: { designation: string; preferredTimeSlots: string[] }[] } }).consumerBookingFixture.consultantWrites);
+  expect(writes).toHaveLength(1);
+  expect(writes[0]).toMatchObject({ designation: "Ayurvedic Doctor", preferredTimeSlots: ["morning", "evening"], preferredSlotTimings: { morning: { startTime: "09:30", endTime: "11:45" }, evening: { startTime: "15:00", endTime: "18:00" } } });
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(page.getByRole("checkbox", { name: "Morning", exact: true })).toBeChecked();
+  await expect(page.locator('input[name="morningStartTime"]')).toHaveValue("09:30");
+  await expect(page.getByRole("checkbox", { name: "Noon", exact: true })).not.toBeChecked();
+  await page.getByRole("checkbox", { name: "Noon", exact: true }).check();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.getByText("Morning: 9:30 AM – 11:45 AM", { exact: true })).toBeVisible();
+  await expect(page.getByText("Noon: 12:00 PM – 3:00 PM", { exact: true })).toHaveCount(0);
+});
+
 test("portal screens fit the viewport with representative long data", async ({ page }, testInfo) => {
   const findings: string[] = [];
   const errors: string[] = [];

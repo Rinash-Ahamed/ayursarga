@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import { CONSUMER_PRIVACY_NOTICE_VERSION, CUSTOMER_TERMS_VERSION } from "@/features/consumers/privacyConsent";
 
-export const portalUiState = { screen: "admin-dashboard", calls: 0, bookingRequests: 0, cancelledBookings: 0, navigatedTo: "", unavailablePackage: false };
+export const portalUiState = { screen: "admin-dashboard", calls: 0, bookingRequests: 0, cancelledBookings: 0, navigatedTo: "", unavailablePackage: false, availabilityReviews: [] as string[], holdAvailability: false, failAvailability: false, consultantWrites: [] as unknown[] };
+export let finishAvailabilityReview: (() => void) | undefined;
+Object.assign(globalThis, { finishAvailabilityReview: () => finishAvailabilityReview?.() });
 export class Timestamp {
   constructor(public seconds = 1_790_000_000, public nanoseconds = 0) {}
   toDate() { return new Date(this.seconds * 1000); }
@@ -38,15 +40,17 @@ export const getHospital = async () => ({ ...hospital, facilities: "Free WiFi\nF
 export const getHospitalCapacity = async () => ({ ...metadata, id: "centre", hospitalId: "centre", totalRooms: 10, occupiedRooms: 4, status: "active" });
 export const listAllHospitals = () => page([hospital]);
 export const listHospitalServices = () => page(services);
-export const listHospitalBookings = () => page(bookings);
+const operationalBookings = () => bookings.map((booking, index) => index === 0 ? { ...booking, hospitalName: undefined, serviceName: undefined, serviceId: "package-14" } : booking);
+export const listHospitalBookings = () => page(operationalBookings());
 export const listConsumerBookings = () => page(bookings.map((booking, index) => ({ ...booking, serviceId: "package-14", hospitalName: index === 0 ? undefined : hospital.name, serviceName: index === 0 ? undefined : "14-day package", treatmentStatus: index === 0 ? "not_started" : "started", confirmedDate: index === 1 ? now : null, confirmedTime: index === 1 ? "10:30" : null, consumerNotes: "Please confirm room accessibility.", hospitalNotes: index === 1 ? "Your preferred care dates are available." : null, bystanderCount: 2, additionalBystanderTotal: 500 })));
 export const getConsumerBookingDetails = async () => ({ details: { "booking-0": { hospitalName: hospital.name, serviceName: "14-day package", hospitalLocation: "Palakkad, Kerala" } } });
 export const cancelConsumerBooking = async () => { portalUiState.cancelledBookings++; };
 export const createBookingRequest = async () => { portalUiState.bookingRequests++; return { ok: true, bookingId: "booking-0", bookingReference: "AYUR000000" }; };
 export const getPortalBooking = async (id: string) => bookings.find((booking) => booking.id === id) ?? null;
-export const getPublicHospital = async () => hospital;
+export const getPublicHospital = async () => ({ ...hospital, blockedDateRanges: (globalThis as unknown as { bookingSoldOut?: boolean }).bookingSoldOut ? [{ startDate: Timestamp.fromDate(new Date("2099-10-25T00:00:00+05:30")), endDate: Timestamp.fromDate(new Date("2099-10-25T00:00:00+05:30")) }] : [] });
 export const getPublicHospitalService = async () => portalUiState.unavailablePackage ? null : services[1];
-export const listAdminBookings = () => page(bookings);
+export const listAdminBookings = () => page(operationalBookings());
+export const readDocumentsByIds = async (collectionPath: string, ids: string[]) => collectionPath === "hospitals" ? [hospital].filter((item) => ids.includes(item.id)) : collectionPath === "services" ? services.filter((item) => ids.includes(item.id)) : [];
 export const listUsers = () => page([user]);
 export const listConsultants = () => page([consultant]);
 export const listHospitalAvailabilityRequests = () => page(availability);
@@ -77,12 +81,17 @@ export const updateService = async () => ({});
 export const archiveService = async () => ({});
 export const requestAvailabilityBlock = async () => ({});
 export const createAdminAvailabilityBlock = async () => ({});
-export const reviewAvailabilityRequest = async () => ({});
+export const reviewAvailabilityRequest = async (_item: unknown, action: string) => {
+  portalUiState.availabilityReviews.push(action);
+  if (portalUiState.holdAvailability) await new Promise<void>((resolve) => { finishAvailabilityReview = resolve; });
+  if (portalUiState.failAvailability) throw new Error("Availability review failed. Try again.");
+  return {};
+};
 export const updateHospitalBooking = async () => ({});
 export const updateTreatmentProgress = async () => ({});
 export const archiveConsumer = async () => ({});
-export const createConsultant = async () => "AS002";
-export const updateConsultant = async () => ({});
+export const createConsultant = async (input: unknown) => { portalUiState.consultantWrites.push(input); return "AS002"; };
+export const updateConsultant = async (_id: string, input: unknown) => { portalUiState.consultantWrites.push(input); return {}; };
 export const updateUserProfile = async () => { portalUiState.calls++; };
 export const setConsultantStatus = async () => ({});
 export const clearAllAuditLogs = async () => 0;

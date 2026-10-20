@@ -3,12 +3,12 @@
 import { useCallback, useDeferredValue, useMemo, useState } from "react";
 import Link from "next/link";
 import type { BookingDocument, BookingStatus, TreatmentStatus } from "@/features/firestore/models";
-import { bookingReferenceLabel, bookingStatusLabel, formatBookingCarePreference } from "@/features/bookings/display";
+import { bookingStatusLabel } from "@/features/bookings/display";
 import { getTreatmentStatus } from "@/features/bookings/treatmentStatus";
 import { emptyQueryPage, type DocumentRecord, type QueryPageOptions } from "@/services/firestore/firestoreService";
 import { getPortalBooking, listHospitalBookings, updateHospitalBooking, updateTreatmentProgress, type HospitalBookingUpdate } from "@/services/bookings/bookingService";
-import { formatCurrency } from "@/utils/currency";
-import { getCalendarMonthRange } from "@/utils/date";
+import { getCalendarMonthRange, toDateInputValue, parseDateInputValue } from "@/utils/date";
+import { DateInput } from "@/components/forms/DateInput";
 import { formatStatus } from "@/utils/text";
 import { useAuth } from "@/hooks/useAuth";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
@@ -19,6 +19,8 @@ import { PortalToast } from "@/components/portal/PortalToast";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 import { PortalDialog } from "@/components/portal/PortalDialog";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
+import { withPortalBookingDetails } from "@/services/bookings/portalBookingDetails";
+import { PortalBookingSummary } from "@/components/portal/PortalBookingSummary";
 
 const BOOKING_STATUSES: readonly BookingStatus[] = [
   "requested", "confirmed", "reschedule_requested", "completed", "cancelled", "rejected",
@@ -48,23 +50,28 @@ export function HospitalBookings({ bookingId }: { bookingId?: string } = {}) {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<BookingStatus | "">("");
   const [month, setMonth] = useState("");
+  const [detailsError, setDetailsError] = useState(false);
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
   const monthRange = useMemo(() => {
     if (!/^\d{4}-\d{2}$/.test(month)) return null;
-    const [year, monthNumber] = month.split("-").map(Number);
-    return getCalendarMonthRange(new Date(year, monthNumber - 1, 1));
+    return getCalendarMonthRange(parseDateInputValue(`${month}-01`)!);
   }, [month]);
   const loader = useCallback(async (cursor: QueryPageOptions["cursor"]) => {
     if (!hospitalId) return emptyQueryPage<BookingDocument>();
-    if (bookingId) {
-      const booking = await getPortalBooking(bookingId);
-      return { documents: booking?.hospitalId === hospitalId ? [booking] : [], cursor: null, hasMore: false };
-    }
-    return listHospitalBookings(hospitalId, {
+    const booking = bookingId ? await getPortalBooking(bookingId) : null;
+    const page = bookingId ? { documents: booking?.hospitalId === hospitalId ? [booking] : [], cursor: null, hasMore: false } : await listHospitalBookings(hospitalId, {
       status: status || undefined,
       createdFrom: monthRange?.start,
       createdBefore: monthRange?.end,
     }, { pageSize: 20, cursor });
+    try {
+      const resolved = await withPortalBookingDetails(page, hospitalId);
+      setDetailsError(false);
+      return resolved;
+    } catch {
+      setDetailsError(true);
+      return page;
+    }
   }, [bookingId, hospitalId, monthRange, status]);
   const { errorNotification: loadErrorNotification, items, error: loadError, isLoading, hasMore, loadMore, patchItem, removeItem } = usePaginatedList<BookingDocument>(
     loader,
@@ -85,7 +92,7 @@ export function HospitalBookings({ bookingId }: { bookingId?: string } = {}) {
     setPendingBookingAction({
       item,
       nextStatus,
-      date: item.preferredDate.toDate().toISOString().slice(0, 10),
+      date: toDateInputValue(item.preferredDate),
       time: /^\d{2}:\d{2}$/.test(item.preferredTime) ? item.preferredTime : "",
       notes: item.hospitalNotes ?? "",
     });
@@ -96,8 +103,8 @@ export function HospitalBookings({ bookingId }: { bookingId?: string } = {}) {
     const { item, nextStatus, date, time, notes } = pendingBookingAction;
     const update: HospitalBookingUpdate = { status: nextStatus, hospitalNotes: notes.trim() || null };
     if (nextStatus === "confirmed" || nextStatus === "reschedule_requested") {
-      const confirmedDate = new Date(`${date}T00:00:00`);
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(confirmedDate.getTime()) || !time) {
+      const confirmedDate = parseDateInputValue(date);
+      if (!confirmedDate || !time) {
         setActionError("Enter a valid proposed date and time before continuing.");
         return;
       }
@@ -169,16 +176,9 @@ export function HospitalBookings({ bookingId }: { bookingId?: string } = {}) {
     <PortalToast message={actionMessage} notification={actionMessageNotification} />
     <PortalToast message={actionError} notification={actionErrorNotification} tone="error" />
     {visible.length > 0 && <div className="portal-result-count">Showing <strong>{visible.length}</strong> booking{visible.length !== 1 ? "s" : ""}{hasMore ? " · more available" : ""}</div>}
-    <div className="portal-list">
-      {visible.map((item) => <article className="portal-card" key={item.id} data-accent={item.status}>
-        <span className="consumer-booking-reference">Booking ID: {bookingReferenceLabel(item)}</span>
-        <div className="portal-row-heading"><h3>{item.servicePrice > 0 ? formatCurrency(item.servicePrice) : "Care booking"}</h3><span className="portal-status" data-status={item.status}>{bookingStatusLabel(item.status)}</span></div>
-        {item.serviceName && <p><strong>{item.serviceName}</strong></p>}
-        <p><strong>{item.consumerName || "Patient"}</strong> · {item.consumerPhone || "Phone not recorded"} · {item.consumerEmail || "Email not recorded"}</p>
-        <p>Address: {item.consumerAddress || "Not provided"}</p>
-        <p>Preferred: {formatBookingCarePreference(item)}</p>
-        {item.consumerNotes && <p>Patient note: {item.consumerNotes}</p>}
-        {item.status === "confirmed" || item.status === "completed" ? <p>Treatment: <span className="portal-status" data-status={getTreatmentStatus(item)}>{formatStatus(getTreatmentStatus(item))}</span></p> : null}
+    {detailsError && <p className="portal-form-error" role="status">Some centre or package names could not be loaded. Booking details are still available. Refresh to retry.</p>}
+    <div className="portal-list consumer-booking-list">
+      {visible.map((item) => <PortalBookingSummary key={item.id} booking={item}>
         <div className="portal-actions">
           {item.status === "requested" && <><button className="portal-button" disabled={busy === item.id} onClick={() => void act(item, "confirmed")}>Confirm</button><button className="portal-button secondary" disabled={busy === item.id} onClick={() => void act(item, "reschedule_requested")}>Reschedule</button><button className="portal-button danger" disabled={busy === item.id} onClick={() => void act(item, "rejected")}>Reject</button></>}
           {item.status === "reschedule_requested" && <button className="portal-button" disabled={busy === item.id} onClick={() => void act(item, "confirmed")}>Confirm</button>}
@@ -186,13 +186,13 @@ export function HospitalBookings({ bookingId }: { bookingId?: string } = {}) {
           {item.status === "confirmed" && getTreatmentStatus(item) === "started" && <><button className="portal-button" disabled={busy === item.id} onClick={() => void markTreatment(item, "ongoing")}>Mark ongoing</button><button className="portal-button" disabled={busy === item.id} onClick={() => void markTreatment(item, "completed")}>Complete treatment</button></>}
           {item.status === "confirmed" && getTreatmentStatus(item) === "ongoing" && <button className="portal-button" disabled={busy === item.id} onClick={() => void markTreatment(item, "completed")}>Complete treatment</button>}
         </div>
-      </article>)}
+      </PortalBookingSummary>)}
     </div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
     <PortalDialog open={Boolean(pendingBookingAction)} title={pendingBookingAction?.nextStatus === "rejected" ? "Reject this booking?" : "Update booking details"} message={pendingBookingAction?.nextStatus === "rejected" ? "The patient request will be marked as rejected." : "Confirm the proposed appointment details before sending the update."} tone={pendingBookingAction?.nextStatus === "rejected" ? "danger" : "default"} confirmLabel={pendingBookingAction?.nextStatus === "rejected" ? "Reject booking" : "Save booking update"} busy={busy === pendingBookingAction?.item.id} onCancel={() => setPendingBookingAction(null)} onConfirm={() => void submitBookingAction()}>
       {pendingBookingAction && <div className="portal-dialog-form">
         {(pendingBookingAction.nextStatus === "confirmed" || pendingBookingAction.nextStatus === "reschedule_requested") && <div className="portal-form">
-          <label>Proposed date<input type="date" value={pendingBookingAction.date} onChange={(event) => setPendingBookingAction((current) => current ? { ...current, date: event.target.value } : current)} /></label>
+          <label>Proposed date<DateInput value={pendingBookingAction.date} onChange={(event) => setPendingBookingAction((current) => current ? { ...current, date: event.target.value } : current)} /></label>
           <label>Proposed time<input type="time" value={pendingBookingAction.time} onChange={(event) => setPendingBookingAction((current) => current ? { ...current, time: event.target.value } : current)} /></label>
         </div>}
         <label className="portal-dialog-field">Hospital note (optional)<textarea value={pendingBookingAction.notes} onChange={(event) => setPendingBookingAction((current) => current ? { ...current, notes: event.target.value } : current)} /></label>

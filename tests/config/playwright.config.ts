@@ -1,9 +1,11 @@
 import { defineConfig } from "@playwright/test";
+import { projectRoot, testDir, testOutputDir } from "./paths";
 
 const port = Number(process.env.PLAYWRIGHT_PORT ?? 3100);
 
 export default defineConfig({
-  testDir: "./tests/e2e",
+  testDir,
+  outputDir: testOutputDir(),
   timeout: 45_000,
   expect: { timeout: 8_000 },
   fullyParallel: false,
@@ -25,6 +27,7 @@ export default defineConfig({
     { name: "wide-1440", use: { viewport: { width: 1440, height: 900 } } },
   ],
   webServer: {
+    cwd: projectRoot,
     command: `npm run dev -- -p ${port}`,
     url: `http://localhost:${port}`,
     reuseExistingServer: true,

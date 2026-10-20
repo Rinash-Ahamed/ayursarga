@@ -1,4 +1,6 @@
 "use client";
+import { DateInput } from "@/components/forms/DateInput";
+import { toDateInputValue } from "@/utils/date";
 
 import { useCallback, useState, type FormEvent } from "react";
 import type { AvailabilityDocument } from "@/features/firestore/models";
@@ -20,7 +22,7 @@ export function HospitalAvailability() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage, messageNotification] = useRepeatableMessage();
   const [actionError, setActionError, actionErrorNotification] = useRepeatableMessage();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = toDateInputValue();
 
   const loader = useCallback((cursor: QueryPageOptions["cursor"]) => hospitalId
     ? listHospitalAvailabilityRequests(hospitalId, { pageSize: 20, cursor })
@@ -55,8 +57,8 @@ export function HospitalAvailability() {
   return <PortalShell role="hospital" title="Availability">
     <form className="portal-card portal-form" onSubmit={submit}>
       <div className="full portal-section-heading"><h2>Request unavailable dates</h2><p>Send dates when the hospital cannot accept new appointment requests. Admin will review the request before the dates are blocked.</p></div>
-      <label>Start date *<input name="startDate" type="date" min={today} required /></label>
-      <label>End date *<input name="endDate" type="date" min={today} required /></label>
+      <label>Start date *<DateInput name="startDate" min={today} required /></label>
+      <label>End date *<DateInput name="endDate" min={today} required /></label>
       <label className="full">Reason *<textarea name="reason" minLength={3} maxLength={500} required placeholder="For example: rooms fully occupied or centre maintenance" /></label>
       <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Sending..." : "Send request"}</button></div>
     </form>

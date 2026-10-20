@@ -167,6 +167,10 @@ html[data-theme="dark"] .portal-toast[data-tone="error"],body[data-theme="dark"]
 .consumer-booking-copy .portal-treatment-trail{ margin-top:12px; gap:20px; }
 .consumer-booking-copy .portal-treatment-step{ display:grid; gap:5px; justify-items:center; }
 .consumer-booking-copy .portal-treatment-step>span{ color:var(--sage); font-size:10px; }
+.operational-booking-actions{ grid-column:1/-1; min-width:0; padding-top:16px; border-top:1px solid rgba(31,61,43,.13); }
+.operational-booking-actions .portal-actions{ margin-top:0; }
+.operational-booking-card .operational-booking-commission strong{ font-size:17px; }
+@media(max-width:700px){ .operational-booking-card .operational-booking-commission{ grid-column:1/-1; text-align:left; } }
 .consumer-request-navigation{ display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
 .consumer-request-navigation a{ min-height:44px; display:inline-flex; align-items:center; color:var(--forest); font-size:12px; font-weight:650; text-decoration:underline; text-underline-offset:4px; }
 .portal-card.consumer-request-summary{ margin-bottom:18px; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:18px 24px; padding:24px; border-top:3px solid var(--forest); }
@@ -305,6 +309,14 @@ html[data-theme="dark"] .portal-toast[data-tone="error"],body[data-theme="dark"]
 .consultant-employee-id{ display:block; margin-top:5px; color:var(--clay-dark); font-size:10px; letter-spacing:.1em; }
 .consultant-details{ margin:18px 0 20px; display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px 20px; }
 .consultant-details>div{ min-width:0; }
+.consultant-preferences{ margin:0; padding:12px 14px; border:1px solid var(--portal-border,rgba(31,61,43,.2)); border-radius:12px; }
+.consultant-preferences legend{ padding:0 6px; color:var(--forest); font-size:12px; font-weight:700; }
+.consultant-preferences legend small{ font-weight:400; }
+.consultant-preferences .portal-inline-check{ min-height:44px; padding-right:12px; }
+.consultant-slot{ display:block; }
+.consultant-slot-options{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr)); gap:12px; }
+.consultant-slot-option{ min-width:0; }
+.consultant-slot-times:not([hidden]){ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
 .consultant-details dt{ margin-bottom:4px; color:var(--clay-dark); font-size:8px; font-weight:850; letter-spacing:.11em; text-transform:uppercase; }
 .consultant-details dd{ overflow-wrap:anywhere; color:var(--forest); font-size:11px; font-weight:650; line-height:1.5; }
 .consultant-detail-wide{ grid-column:span 2; }

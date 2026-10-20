@@ -6,6 +6,7 @@ import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
 export const runtime = "nodejs";
 
 export async function GET(request: Request, context: { params: Promise<{ hospitalId: string }> }) {
+  // Fresh availability is required before offering a booking for selected dates.
   try {
     if (!allowRequest(requestFingerprint(request, "public-hospital-detail"), 900, 10 * 60 * 1000)) {
       return apiJson({ error: "Too many centre requests were sent. Please wait a moment and try again." }, 429);
@@ -18,7 +19,7 @@ export async function GET(request: Request, context: { params: Promise<{ hospita
     if (!snapshot.exists || hospital?.status !== "active" || hospital.isPublic !== true) {
       return apiJson({ error: "The Ayurvedic centre could not be found." }, 404);
     }
-    return apiJson({ hospital: publicHospitalProjection(snapshot.id, hospital) }, 200, { cache: "public-short" });
+    return apiJson({ hospital: publicHospitalProjection(snapshot.id, hospital) });
   } catch (error) {
     logApiError("GET /api/public/hospitals/:hospitalId", error);
     return apiJson({ error: "This Ayurvedic centre is temporarily unavailable." }, 503);

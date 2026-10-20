@@ -15,7 +15,8 @@ import { PasswordField } from "@/components/auth/PasswordField";
 import { useAuth } from "@/hooks/useAuth";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import { formatStatus } from "@/utils/text";
-import { toDate } from "@/utils/date";
+import { formatDisplayDateTime, toDate, parseDateInputValue, toDateInputValue } from "@/utils/date";
+import { DateInput } from "@/components/forms/DateInput";
 
 type AuditCursor = QueryPageOptions["cursor"];
 type DateRange = "" | "today" | "7days" | "30days" | "custom";
@@ -49,22 +50,17 @@ const RECORD_LABELS: Record<string, string> = {
 };
 
 function formatDate(value: unknown) {
-  const date = toDate(value);
-  return date ? new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(date) : "Unknown time";
+  return formatDisplayDateTime(value, "Unknown time");
 }
 
 function localDate(value: string) {
-  const [year, month, day] = value.split("-").map(Number);
-  if (!year || !month || !day) return null;
-  const date = new Date(year, month - 1, day);
-  return Number.isNaN(date.getTime()) ? null : date;
+  return parseDateInputValue(value);
 }
 
 function nextLocalDay(value: string) {
   const date = localDate(value);
   if (!date) return null;
-  date.setDate(date.getDate() + 1);
-  return date;
+  return new Date(date.getTime() + 24 * 60 * 60 * 1000);
 }
 
 function areaLabel(module: string) {
@@ -151,8 +147,8 @@ export function AdminAuditLogs() {
   const cursor = pageCursors[pageIndex] ?? null;
   const dateBounds = useMemo(() => {
     const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    if (dateRange === "today") return { from: startOfToday, before: new Date(startOfToday.getFullYear(), startOfToday.getMonth(), startOfToday.getDate() + 1) };
+    const startOfToday = parseDateInputValue(toDateInputValue(now))!;
+    if (dateRange === "today") return { from: startOfToday, before: new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000) };
     if (dateRange === "7days") return { from: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1_000), before: undefined };
     if (dateRange === "30days") return { from: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1_000), before: undefined };
     if (dateRange === "custom") return { from: localDate(customDateFrom) ?? undefined, before: nextLocalDay(customDateTo) ?? undefined };
@@ -296,8 +292,8 @@ export function AdminAuditLogs() {
       <label className="portal-filter-field"><span>When</span><select value={dateRange} onChange={(event) => changeDateRange(event.target.value as DateRange)}><option value="">Any date</option><option value="today">Today</option><option value="7days">Last 7 days</option><option value="30days">Last 30 days</option><option value="custom">Custom date range</option></select></label>
       <div className="portal-filter-actions"><button className="portal-button secondary" type="button" disabled={!hasFilters} onClick={clearFilters}>Clear filters</button></div>
       {dateRange === "custom" && <div className="portal-audit-custom-dates">
-        <label className="portal-filter-field"><span>From date</span><input type="date" value={customDateFrom} max={customDateTo || undefined} onChange={(event) => changeCustomDateFrom(event.target.value)} /></label>
-        <label className="portal-filter-field"><span>To date</span><input type="date" value={customDateTo} min={customDateFrom || undefined} onChange={(event) => changeCustomDateTo(event.target.value)} /></label>
+        <label className="portal-filter-field"><span>From date</span><DateInput value={customDateFrom} max={customDateTo || undefined} onChange={(event) => changeCustomDateFrom(event.target.value)} /></label>
+        <label className="portal-filter-field"><span>To date</span><DateInput value={customDateTo} min={customDateFrom || undefined} onChange={(event) => changeCustomDateTo(event.target.value)} /></label>
       </div>}
       <p className="portal-audit-filter-note">Date filters search the full audit history. Search, area and activity filters apply to the 20 activities on this page.</p>
     </div>

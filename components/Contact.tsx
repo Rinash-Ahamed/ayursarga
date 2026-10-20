@@ -5,6 +5,7 @@ import { FadeUp } from "./Reveal";
 import MagneticButton from "./MagneticButton";
 import { clearGuidanceProfile, formatGuidanceProfile, loadGuidanceProfile, type GuidanceProfile } from "@/lib/guidanceProfile";
 import { PhoneInput } from "@/components/forms/PhoneInput";
+import { formatDisplayDate } from "@/utils/date";
 
 type FormStatus = "idle" | "sending" | "sent" | "error";
 
@@ -84,12 +85,12 @@ export default function Contact({ guidanceProfile = null, initialInterest = "" }
           {displayedGuidanceProfile && <div className="captured-match" role="status">
             <span>Your guidance preferences</span>
             <strong>{displayedGuidanceProfile.wellnessPath}</strong>
-            {displayedGuidanceProfile.expectedDeliveryDate && <p>Expected delivery date: {displayedGuidanceProfile.expectedDeliveryDate}</p>}
-            {displayedGuidanceProfile.lastMenstrualPeriod && <p>Last menstrual period: {displayedGuidanceProfile.lastMenstrualPeriod}</p>}
+            {displayedGuidanceProfile.expectedDeliveryDate && <p>Expected delivery date: {formatDisplayDate(displayedGuidanceProfile.expectedDeliveryDate)}</p>}
+            {displayedGuidanceProfile.lastMenstrualPeriod && <p>Last menstrual period: {formatDisplayDate(displayedGuidanceProfile.lastMenstrualPeriod)}</p>}
             {displayedGuidanceProfile.consultationProvider && <p>Preferred consultant: {displayedGuidanceProfile.consultationProvider}</p>}
-            {displayedGuidanceProfile.preferredAppointmentDate && <p>Preferred appointment date: {displayedGuidanceProfile.preferredAppointmentDate}</p>}
+            {displayedGuidanceProfile.preferredAppointmentDate && <p>Preferred appointment date: {formatDisplayDate(displayedGuidanceProfile.preferredAppointmentDate)}</p>}
             {displayedGuidanceProfile.preferredTimeSlot && <p>Preferred time slot: {displayedGuidanceProfile.preferredTimeSlot}</p>}
-            <p>{displayedGuidanceProfile.preferences.join(" / ")} &middot; {displayedGuidanceProfile.district} &middot; {displayedGuidanceProfile.budget}</p>
+            <p>{displayedGuidanceProfile.preferences.join(" / ")} &middot; {displayedGuidanceProfile.district}</p>
           </div>}
           <input type="hidden" name="guidanceProfile" value={guidanceSummary} />
           <select name="interest" aria-label="Care you are interested in" required value={selectedInterest} onChange={(event) => setInterest(event.target.value)}>

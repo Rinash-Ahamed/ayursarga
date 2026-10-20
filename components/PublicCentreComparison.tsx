@@ -4,13 +4,15 @@ import Link from "next/link";
 import { useEffect, useId, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import type { HospitalDocument, ServiceDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
-import { listPublicHospitalServices, searchPublicHospitals } from "@/services/hospitals/publicHospitalService";
+import { getPublicHospital, listPublicHospitalServices, searchPublicHospitals } from "@/services/hospitals/publicHospitalService";
 import { packageProcedureEntries } from "@/features/hospitals/packages";
 import { getHospitalImageUrls, hospitalImageSrcSet } from "@/features/hospitals/images";
+import { isHospitalSoldOut } from "@/features/hospitals/availability";
+import { groupHospitalFacilities } from "@/features/hospitals/facilities";
+import { FacilityIcon } from "@/components/icons/FacilityIcon";
 
 type ComparisonCentre = {
   hospital: DocumentRecord<HospitalDocument>;
-  detailHref: string;
 };
 
 type ComparisonResult = {
@@ -30,7 +32,7 @@ function ComparisonImage({ hospital }: { hospital: DocumentRecord<HospitalDocume
     {url && !failed
       // Uploaded and legacy external gallery images share responsive display helpers.
       // eslint-disable-next-line @next/next/no-img-element
-      ? <img src={url} srcSet={hospitalImageSrcSet(url)} sizes="(max-width: 700px) 90vw, 460px" width={1200} height={900} alt={`${hospital.name} Ayurvedic center`} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)} />
+      ? <img src={url} srcSet={hospitalImageSrcSet(url)} sizes="(max-width: 700px) 40vw, 460px" width={1200} height={900} alt={`${hospital.name} Ayurvedic center`} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)} />
       : <span>Center image not available</span>}
   </div>;
 }
@@ -244,23 +246,36 @@ function SearchCentreField({ label, selected, excludedId, onSelect, onRemove }: 
   </div>;
 }
 
-function PackageColumn({ result, duration }: { result: ComparisonResult; duration: number }) {
+function PackageColumn({ result, duration, detailQuery }: { result: ComparisonResult; duration: number; detailQuery: string }) {
+  const dates = new URLSearchParams(detailQuery);
+  const soldOut = isHospitalSoldOut(result.centre.hospital, dates.get("startDate"), dates.get("endDate"));
   const carePackage = result.packages.get(duration);
   if (!carePackage) return null;
   const procedures = packageProcedureEntries(carePackage);
+  const facilityData = groupHospitalFacilities(result.centre.hospital.facilities);
+  const facilities = [...new Set([...facilityData.groups.flatMap((group) => group.options), ...facilityData.custom])];
+  const facilityItems = (values: string[]) => values.map((facility) => <li key={facility}><FacilityIcon facility={facility} /><span>{facility}</span></li>);
   return <article className="public-comparison-package">
     <ComparisonImage key={getHospitalImageUrls(result.centre.hospital)[0] ?? "no-image"} hospital={result.centre.hospital} />
     <h4>{result.centre.hospital.name}</h4>
+    {soldOut && <span className="public-sold-out-badge">Sold Out</span>}
     {typeof carePackage.price === "number" && <strong className="public-comparison-price">₹{carePackage.price.toLocaleString("en-IN")}</strong>}
     <span>{procedures.length} {procedures.length === 1 ? "procedure" : "procedures"} included</span>
     {carePackage.description && <p>{carePackage.description}</p>}
-    <ul>
+    <ul className="public-comparison-procedures">
       {procedures.map((procedure) => <li key={procedure.id}>
         <span>{procedure.label}</span>
         {procedure.days !== null && <strong>{procedure.days} {procedure.days === 1 ? "day" : "days"}</strong>}
       </li>)}
     </ul>
-    <Link href={result.centre.detailHref}>View center details</Link>
+    <section className="public-comparison-facilities" aria-label={`${result.centre.hospital.name} facilities`}>
+      <h5>Facilities</h5>
+      {facilities.length > 0 ? <>
+        <ul>{facilityItems(facilities.slice(0, 6))}</ul>
+        {facilities.length > 6 && <details><summary>+{facilities.length - 6} more facilities</summary><ul>{facilityItems(facilities.slice(6))}</ul></details>}
+      </> : <p>Facilities not listed</p>}
+    </section>
+    <Link className="public-comparison-details-button" href={`/centers/${encodeURIComponent(result.centre.hospital.id)}${detailQuery ? `?${detailQuery}` : ""}`}>View Centre Details</Link>
   </article>;
 }
 
@@ -296,12 +311,16 @@ export function PublicCentreComparison({ detailQuery }: { detailQuery: string })
     const controller = new AbortController();
     requests.current[index] = controller;
     try {
-      const page = await listPublicHospitalServices(hospitalId, { pageSize: 24, signal: controller.signal });
+      const [page, hospital] = await Promise.all([
+        listPublicHospitalServices(hospitalId, { pageSize: 24, signal: controller.signal }),
+        getPublicHospital(hospitalId, controller.signal),
+      ]);
       if (requestVersions.current[index] !== version) return;
+      if (!hospital || hospital.id !== hospitalId) throw new Error("Centre details unavailable");
       setSelected((current) => {
         const next: typeof current = [...current];
         const centre = current[index];
-        if (centre?.hospital.id === hospitalId) next[index] = { ...centre, packages: packageMap(page.documents), error: null };
+        if (centre?.hospital.id === hospitalId) next[index] = { ...centre, hospital, packages: packageMap(page.documents), error: null };
         return next;
       });
     } catch {
@@ -309,7 +328,7 @@ export function PublicCentreComparison({ detailQuery }: { detailQuery: string })
       setSelected((current) => {
         const next: typeof current = [...current];
         const centre = current[index];
-        if (centre?.hospital.id === hospitalId) next[index] = { ...centre, error: "We could not load this center's packages." };
+        if (centre?.hospital.id === hospitalId) next[index] = { ...centre, error: "We could not load this center's comparison details." };
         return next;
       });
     }
@@ -317,11 +336,10 @@ export function PublicCentreComparison({ detailQuery }: { detailQuery: string })
 
   function selectCentre(index: 0 | 1, hospital: DocumentRecord<HospitalDocument>) {
     if (selected[index === 0 ? 1 : 0]?.hospital.id === hospital.id) return;
-    const suffix = detailQuery ? `?${detailQuery}` : "";
     setSelected((current) => {
       if (current[index === 0 ? 1 : 0]?.hospital.id === hospital.id) return current;
       const next: typeof current = [...current];
-      next[index] = { hospital, detailHref: `/centers/${encodeURIComponent(hospital.id)}${suffix}`, packages: null, error: null };
+      next[index] = { hospital, packages: null, error: null };
       return next;
     });
     resetComparison();
@@ -399,7 +417,7 @@ export function PublicCentreComparison({ detailQuery }: { detailQuery: string })
       <section className="public-comparison-duration">
         <h3>{duration}-day package</h3>
         <div className="public-comparison-columns">
-          {results.map((result) => <PackageColumn key={result.centre.hospital.id} result={result} duration={Number(duration)} />)}
+          {results.map((result) => <PackageColumn key={result.centre.hospital.id} result={result} duration={Number(duration)} detailQuery={detailQuery} />)}
         </div>
       </section>
     </div>}

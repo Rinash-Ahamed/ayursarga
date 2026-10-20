@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { ConsultantDocument } from "@/features/firestore/models";
 import type { ConsultantField, ConsultantValidationErrors } from "@/features/consultants/validation";
+import { CONSULTANT_TIME_SLOTS, CONSULTANT_TIME_SLOT_CONFIG, type ConsultantTimeSlot } from "@/features/consultants/validation";
 import { PhoneInput } from "@/components/forms/PhoneInput";
 
 type ConsultantDefaults = Partial<ConsultantDocument>;
@@ -20,9 +21,28 @@ export function ConsultantFormFields({ defaultValues = {}, errors }: {
   const [contactNo, setContactNo] = useState(initialContact);
   const [whatsappNo, setWhatsappNo] = useState(initialWhatsapp);
   const [sameAsContact, setSameAsContact] = useState(Boolean(initialContact && initialContact === initialWhatsapp));
+  const [selectedSlots, setSelectedSlots] = useState<ConsultantTimeSlot[]>(defaultValues.preferredTimeSlots ?? []);
 
   return <>
     <label>Name *<input name="name" defaultValue={defaultValues.name} required minLength={2} maxLength={120} autoComplete="name" aria-invalid={Boolean(errors.name)} /><FieldError field="name" errors={errors} /></label>
+    <label>Designation <small>Optional</small><input name="designation" defaultValue={defaultValues.designation} maxLength={120} aria-invalid={Boolean(errors.designation)} /><FieldError field="designation" errors={errors} /></label>
+    <fieldset className="full consultant-preferences" aria-invalid={Boolean(errors.preferredTimeSlots)}>
+      <legend>Preferred availability <small>Optional · select one or more</small></legend>
+      <div className="consultant-slot-options">{CONSULTANT_TIME_SLOTS.map((slot) => {
+        const config = CONSULTANT_TIME_SLOT_CONFIG[slot];
+        const timing = defaultValues.preferredSlotTimings?.[slot] ?? config;
+        const selected = selectedSlots.includes(slot);
+        return <div className="consultant-slot-option" key={slot}>
+          <label className="portal-inline-check"><input type="checkbox" name="preferredTimeSlots" value={slot} checked={selected} onChange={(event) => setSelectedSlots((current) => event.target.checked ? [...current, slot] : current.filter((value) => value !== slot))} />{config.label}</label>
+          <div className="consultant-slot-times" hidden={!selected}>
+            <label>Start time<input type="time" name={`${slot}StartTime`} aria-label={`${config.label} start time`} defaultValue={timing.startTime} disabled={!selected} required={selected} aria-invalid={Boolean(errors.preferredSlotTimings)} /></label>
+            <label>End time<input type="time" name={`${slot}EndTime`} aria-label={`${config.label} end time`} defaultValue={timing.endTime} disabled={!selected} required={selected} aria-invalid={Boolean(errors.preferredSlotTimings)} /></label>
+          </div>
+        </div>;
+      })}</div>
+      <FieldError field="preferredTimeSlots" errors={errors} />
+      <FieldError field="preferredSlotTimings" errors={errors} />
+    </fieldset>
     <label>Email *<input name="email" type="email" defaultValue={defaultValues.email} required maxLength={160} autoComplete="email" aria-invalid={Boolean(errors.email)} /><FieldError field="email" errors={errors} /></label>
     <label>Contact No. *<PhoneInput name="contactNo" value={contactNo} required autoComplete="tel" aria-invalid={Boolean(errors.contactNo)} onChange={(event) => {
       const value = event.target.value;

@@ -1,8 +1,9 @@
+import { formatDisplayDate } from "@/utils/date";
+
 export type GuidanceProfile = {
   wellnessPath: string;
   preferences: string[];
   district: string;
-  budget: string;
   expectedDeliveryDate?: string;
   lastMenstrualPeriod?: string;
   consultationProvider?: string;
@@ -18,8 +19,7 @@ function isGuidanceProfile(value: unknown): value is GuidanceProfile {
   return typeof profile.wellnessPath === "string"
     && Array.isArray(profile.preferences)
     && profile.preferences.every((item) => typeof item === "string")
-    && typeof profile.district === "string"
-    && typeof profile.budget === "string";
+    && typeof profile.district === "string";
 }
 
 export function saveGuidanceProfile(profile: GuidanceProfile) {
@@ -53,12 +53,11 @@ export function formatGuidanceProfile(profile: GuidanceProfile) {
   return [
     `Wellness path: ${profile.wellnessPath}`,
     `Preferences: ${profile.preferences.join(", ")}`,
-    profile.expectedDeliveryDate ? `Expected delivery date: ${profile.expectedDeliveryDate}` : null,
-    profile.lastMenstrualPeriod ? `Last menstrual period: ${profile.lastMenstrualPeriod}` : null,
+    profile.expectedDeliveryDate ? `Expected delivery date: ${formatDisplayDate(profile.expectedDeliveryDate)}` : null,
+    profile.lastMenstrualPeriod ? `Last menstrual period: ${formatDisplayDate(profile.lastMenstrualPeriod)}` : null,
     profile.consultationProvider ? `Preferred consultant: ${profile.consultationProvider}` : null,
-    profile.preferredAppointmentDate ? `Preferred appointment date: ${profile.preferredAppointmentDate}` : null,
+    profile.preferredAppointmentDate ? `Preferred appointment date: ${formatDisplayDate(profile.preferredAppointmentDate)}` : null,
     profile.preferredTimeSlot ? `Preferred time slot: ${profile.preferredTimeSlot}` : null,
     `Preferred district: ${profile.district}`,
-    `Budget: ${profile.budget}`,
   ].filter(Boolean).join("\n");
 }

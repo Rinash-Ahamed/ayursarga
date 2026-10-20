@@ -14,8 +14,9 @@ import { getHospitalMapEmbedUrl } from "@/features/hospitals/location";
 import { FacilityIcon } from "@/components/icons/FacilityIcon";
 import { addCentreSearchContext, type CentreSearchContext } from "@/features/hospitals/searchContext";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
-import { isHospitalUnavailable } from "@/features/hospitals/availability";
+import { isHospitalSoldOut } from "@/features/hospitals/availability";
 import { ROUTES } from "@/config/routes";
+import { formatDisplayDate } from "@/utils/date";
 
 const CENTRE_DETAIL_SECTIONS = [
   ["overview", "Overview"],
@@ -29,7 +30,7 @@ const CENTRE_DETAIL_SECTIONS = [
 
 function formatCareDates(context: CentreSearchContext) {
   if (!context.startDate && !context.endDate) return "Dates are flexible";
-  const format = (value: string) => new Date(`${value}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  const format = formatDisplayDate;
   if (!context.endDate || context.startDate === context.endDate) return format(context.startDate || context.endDate);
   return `${format(context.startDate)} to ${format(context.endDate)}`;
 }
@@ -126,7 +127,7 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
   const { groups: facilityGroups, custom: customFacilities, hasFacilities } = groupHospitalFacilities(hospital.facilities);
   const centreAddress = `${hospital.address}, ${hospital.city}${hospital.district ? `, ${hospital.district}` : ""}, ${hospital.state}`;
   const mapEmbedUrl = hospital.locationUrl ? getHospitalMapEmbedUrl(hospital.locationUrl, centreAddress) : null;
-  const unavailableForSelectedDates = Boolean(searchContext.startDate && isHospitalUnavailable(hospital, searchContext.startDate, searchContext.endDate || null));
+  const unavailableForSelectedDates = isHospitalSoldOut(hospital, searchContext.startDate, searchContext.endDate);
 
   return <section className="section public-centre-detail-page">
     <div className="section-inner public-centre-detail-inner">
@@ -139,6 +140,7 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
         <div>
           <span className="eyebrow">Ayursarga partner centre</span>
           <h1>{hospital.name}</h1>
+          {unavailableForSelectedDates && <span className="public-sold-out-badge">Sold Out</span>}
           <p className="public-centre-address"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-6.2 6-12A6 6 0 1 0 6 9c0 5.8 6 12 6 12Z" /><circle cx="12" cy="9" r="2" /></svg>{hospital.address}, {hospital.city}{hospital.district ? `, ${hospital.district}` : ""}, {hospital.state}</p>
           {hospital.ayursargaRating && <div className="public-center-assessment" aria-label={`Ayursarga assessment ${hospital.ayursargaRating} out of 5`}><span className="public-center-stars" aria-hidden="true"><span>★★★★★</span><span style={{ width: `${hospital.ayursargaRating / 5 * 100}%` }}>★★★★★</span></span><strong>{hospital.ayursargaRating.toFixed(1)}</strong></div>}
         </div>
@@ -151,7 +153,7 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
         <div><span>Preferred care dates</span><strong>{formatCareDates(searchContext)}</strong></div>
         <Link href={backHref}>Change search</Link>
       </div>
-      {unavailableForSelectedDates && <div className="public-centre-inline-error" role="status">This centre is unavailable for the selected date. Change the search date to request an appointment.</div>}
+      {unavailableForSelectedDates && <div className="public-centre-inline-error" role="status">Sold Out {searchContext.startDate ? "for your selected care dates" : "today"}. You can still explore this centre. Change the search date to request an appointment.</div>}
 
       <div className="public-centre-content-grid">
         <main>
@@ -171,7 +173,7 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
               const bookingParams = addCentreSearchContext(new URLSearchParams({ hospitalId: hospital.id, serviceId: service.id }), searchContext);
               const procedures = packageProcedureEntries(service);
               const expanded = expandedPackages.has(service.id);
-              return <article className="public-centre-package" key={service.id}>
+              return <article className="public-centre-package" data-expanded={expanded} data-collapsible={procedures.length > 0} key={service.id}>
                 <div className="public-centre-package-copy">
                   <h3>{packageTitle(service)}</h3>
                   <p>{service.description || `${procedures.length} procedures included in this package.`}</p>
@@ -184,7 +186,7 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
                   })}>{expanded ? "View less" : "View more"}</button>}
                   {expanded && <ul className="public-package-procedures">{procedures.map((procedure) => <li key={procedure.id}><span>{procedure.label}</span>{procedure.days !== null && <strong>{procedure.days} {procedure.days === 1 ? "day" : "days"}</strong>}</li>)}</ul>}
                 </div>
-                <div>{unavailableForSelectedDates ? <span className="public-package-unavailable">Unavailable for selected date</span> : <Link href={`/app/bookings/new?${bookingParams.toString()}`}>Book Appointment</Link>}</div>
+                <div>{unavailableForSelectedDates ? <button type="button" className="public-package-unavailable" disabled>Sold Out</button> : <Link href={`/app/bookings/new?${bookingParams.toString()}`}>Book Appointment</Link>}</div>
               </article>;
             })}</div>
             {hasMore && <button className="public-load-more" type="button" disabled={servicesLoading} onClick={() => void loadMore()}>{servicesLoading ? "Loading..." : "Show more packages"}</button>}

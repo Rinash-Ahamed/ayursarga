@@ -20,6 +20,7 @@ export function ConsumerProfile({ requestedPath, editing = false }: { requestedP
   const [message, setMessage, messageNotification] = useRepeatableMessage();
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<"name" | "phone" | "address" | "privacyConsent", string>>>({});
   const [busy, setBusy] = useState(false);
+  const [privacyConsentAccepted, setPrivacyConsentAccepted] = useState(false);
   const needsPrivacyConsent = !hasCurrentConsumerPrivacyConsent(userProfile);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -69,14 +70,14 @@ export function ConsumerProfile({ requestedPath, editing = false }: { requestedP
         <legend>Customer agreement and privacy consent *</legend>
         <p>Ayursarga will process your name, Google email, phone number, optional address, wellness preferences, and booking information to provide your account, personal guidance, center discovery, and appointment-request services. Your contact and booking details are shared only with the center you choose when you request an appointment. You may withdraw consent by contacting <a href="mailto:info@ayursarga.com">info@ayursarga.com</a>.</p>
         <label className="portal-consent-choice">
-          <input name="privacyConsent" type="checkbox" required aria-invalid={Boolean(fieldErrors.privacyConsent)} />
+          <input name="privacyConsent" type="checkbox" required checked={privacyConsentAccepted} onChange={(event) => setPrivacyConsentAccepted(event.target.checked)} aria-invalid={Boolean(fieldErrors.privacyConsent)} />
           <span>I have read and agree to the Ayursarga Customer Terms &amp; Conditions and Privacy Policy.</span>
         </label>
         {fieldErrors.privacyConsent && <span className="portal-field-error">{fieldErrors.privacyConsent}</span>}
       </fieldset> : <p className="portal-consent-recorded full">Customer agreement and privacy consent are recorded for this Consumer profile. To withdraw consent, contact <a href="mailto:info@ayursarga.com">info@ayursarga.com</a>.</p>}
       <PortalToast message={error} notification={errorNotification} tone="error" />
       <PortalToast message={message} notification={messageNotification} />
-      <div className="portal-actions full">{error && <p className="portal-form-error">{error}</p>}<button className="portal-button" disabled={busy}>{busy ? "Saving..." : editing ? "Save changes" : "Save and continue"}</button></div>
+      <div className="portal-actions full">{error && <p className="portal-form-error">{error}</p>}<button className="portal-button" disabled={busy || (needsPrivacyConsent && !privacyConsentAccepted)}>{busy ? "Saving..." : editing ? "Save changes" : "Save and continue"}</button></div>
     </form>
   </PortalShell>;
 }

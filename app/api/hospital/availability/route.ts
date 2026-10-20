@@ -5,6 +5,7 @@ import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
 import { requestAuditDevice } from "@/services/api/audit";
+import { formatDisplayDate } from "@/utils/date";
 
 export const runtime = "nodejs";
 
@@ -27,9 +28,7 @@ function indiaDateKey(date: Date) {
   return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
-function dateLabel(date: Date) {
-  return date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" });
-}
+function dateLabel(date: Date) { return formatDisplayDate(date); }
 
 export async function POST(request: Request) {
   try {

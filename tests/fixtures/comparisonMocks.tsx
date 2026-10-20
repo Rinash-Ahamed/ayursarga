@@ -1,9 +1,15 @@
-import type { ReactNode } from "react";
+import type { AnchorHTMLAttributes } from "react";
 
 const centers = ["Alpha", "Beta", "Gamma"].map((name) => ({ id: name.toLowerCase(), name, city: "Palakkad", state: "Kerala", imageUrls: ["https://images.test/center.webp"] }));
 export const comparisonCalls: string[] = [];
+export const comparisonDetailCalls: string[] = [];
 declare global { interface Window { comparisonSearchDelay?: number; comparisonSearchFails?: boolean; } }
-export default function MockLink({ href, children }: { href: string; children: ReactNode }) { return <a href={href}>{children}</a>; }
+export default function MockLink(props: AnchorHTMLAttributes<HTMLAnchorElement>) { return <a {...props} />; }
+export async function getPublicHospital(id: string) {
+  comparisonDetailCalls.push(id);
+  const center = centers.find((item) => item.id === id);
+  return center ? { ...center, facilities: id === "alpha" ? "Free Wi-Fi\nFree parking\nDoctor on call\nGarden\nLift\nTV\nFamily rooms" : id === "beta" ? "Baby cradle\nPower backup" : "" } : null;
+}
 export async function searchPublicHospitals(term: string) {
   if (window.comparisonSearchDelay) await new Promise((resolve) => setTimeout(resolve, window.comparisonSearchDelay));
   if (window.comparisonSearchFails) throw new Error("Test search failed");

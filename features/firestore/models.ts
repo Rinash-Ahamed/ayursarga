@@ -169,6 +169,9 @@ export type HospitalCapacityDocument = AuditedDocument & {
 };
 
 export type ConsultantDocument = AuditedDocument & {
+  designation?: string;
+  preferredTimeSlots?: import("@/features/consultants/validation").ConsultantTimeSlot[];
+  preferredSlotTimings?: import("@/features/consultants/validation").ConsultantSlotTimings;
   employeeId: string;
   employeeSequence: number;
   name: string;

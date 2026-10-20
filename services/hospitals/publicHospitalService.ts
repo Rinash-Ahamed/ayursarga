@@ -65,9 +65,10 @@ export function listPublicHospitalsByServiceName(serviceName: string, options: P
   return hospitalPage(publicPageUrl("/api/public/hospitals", options, serviceName.trim().slice(0, 100)));
 }
 
-export async function getPublicHospital(hospitalId: string) {
+export async function getPublicHospital(hospitalId: string, signal?: AbortSignal) {
   const body = await publicRequest<{ hospital?: SerializedHospital }>(
     `/api/public/hospitals/${encodeURIComponent(hospitalId)}`,
+    signal,
   );
   return body.hospital ? restoreHospital(body.hospital) : null;
 }

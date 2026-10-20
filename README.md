@@ -28,6 +28,21 @@ npm run typecheck
 npm run build
 ```
 
+Playwright configuration files live in `tests/config/`, with shared paths in
+`tests/config/paths.ts`. Tests remain in `tests/e2e/`, fixtures/helpers stay in
+their existing test folders, and generated artifacts remain in the ignored
+root `test-results/` folder. Run commands from the repository root:
+
+```bash
+npm run test:e2e:consumer-bookings
+npm run test:e2e:centre-search
+npm run test:e2e:portal-ui
+```
+
+Each suite has a `test:e2e:*` shortcut in `package.json`. To check discovery
+without starting browsers or the application, append `-- --list`. Direct
+Playwright commands must specify `--config=tests/config/<config-file>`.
+
 Focused dialog regression checks: `npm run test:e2e:dialogs`. These render the
 actual shared dialog components and production React in isolated browser
 fixtures with the application CSS. No test routes, login bypasses or cloud writes

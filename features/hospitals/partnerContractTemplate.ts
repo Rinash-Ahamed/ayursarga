@@ -1,6 +1,7 @@
 import type { HospitalDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import { AYURSARGA_GSTIN, AYURSARGA_REGISTERED_OFFICE_PIN } from "@/features/hospitals/ayursargaCompanyDetails";
+import { formatDisplayDate } from "@/utils/date";
 
 const CONTRACT_BODY = `
       <h2><span class="contract-section-number">1.</span><span>Parties and term</span></h2>
@@ -117,14 +118,11 @@ function partnerAddress(hospital: DocumentRecord<HospitalDocument>, rawAddress: 
 }
 
 function displayContractDate(value: string | undefined) {
-  if (!value) return "";
-  const [year, month, day] = value.split("-").map(Number);
-  if (!year || !month || !day) return value;
-  return new Intl.DateTimeFormat("en-IN", { dateStyle: "long", timeZone: "Asia/Kolkata" }).format(new Date(Date.UTC(year, month - 1, day)));
+  return formatDisplayDate(value);
 }
 
 function currentContractDate() {
-  return new Intl.DateTimeFormat("en-IN", { dateStyle: "long", timeZone: "Asia/Kolkata" }).format(new Date());
+  return formatDisplayDate(new Date());
 }
 
 export function buildHospitalContractHtml(hospital: DocumentRecord<HospitalDocument>) {

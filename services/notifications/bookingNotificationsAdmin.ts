@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import type { FieldValue, Firestore, Transaction } from "firebase-admin/firestore";
+import { formatDisplayDate } from "@/utils/date";
 
 export async function bookingNotificationRecipients(transaction: Transaction, firestore: Firestore, hospitalId: string) {
   const [admins, partners] = await Promise.all([
@@ -25,7 +26,7 @@ export function addBookingNotifications(transaction: Transaction, firestore: Fir
   serviceName: string; preferredDate: Date; preferredEndDate: Date; bystanderCount: number;
   actorId: string; auditId: string; now: FieldValue;
 }) {
-  const dateLabel = (date: Date) => date.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric" });
+  const dateLabel = formatDisplayDate;
   const dates = input.preferredDate.getTime() === input.preferredEndDate.getTime()
     ? dateLabel(input.preferredDate) : `${dateLabel(input.preferredDate)} to ${dateLabel(input.preferredEndDate)}`;
   for (const recipient of input.recipients) {

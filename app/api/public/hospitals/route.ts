@@ -7,6 +7,7 @@ import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
+  // These projections include approved block dates. Do not serve stale availability.
   try {
     if (!allowRequest(requestFingerprint(request, "public-hospitals"), 600, 10 * 60 * 1000)) {
       return apiJson({ error: "Too many searches were requested. Please wait a moment and try again." }, 429);
@@ -44,7 +45,7 @@ export async function GET(request: Request) {
         documents,
         cursor: page.at(-1)?.id ?? null,
         hasMore: serviceSnapshot.size > pageSize,
-      }, 200, { cache: "public-short" });
+      });
     }
 
     if (searchText) {
@@ -64,7 +65,7 @@ export async function GET(request: Request) {
         .sort((left, right) => String(left.data().name ?? "").localeCompare(String(right.data().name ?? "")))
         .slice(0, pageSize)
         .map((document) => publicHospitalListProjection(document.id, document.data()));
-      return apiJson({ documents, cursor: null, hasMore: false }, 200, { cache: "public-short" });
+      return apiJson({ documents, cursor: null, hasMore: false });
     }
 
     let hospitalQuery: FirebaseFirestore.Query = firestore.collection("hospitals")
@@ -84,7 +85,7 @@ export async function GET(request: Request) {
       documents: page.map((document) => publicHospitalListProjection(document.id, document.data())),
       cursor: page.at(-1)?.id ?? null,
       hasMore: snapshot.size > pageSize,
-    }, 200, { cache: "public-short" });
+    });
   } catch (error) {
     logApiError("GET /api/public/hospitals", error);
     return apiJson({ error: "Ayurvedic centers are temporarily unavailable." }, 503);

@@ -11,6 +11,7 @@ import {
 } from "@/services/firestore/firestoreService";
 import { getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
 import { authorizedApiRequest, authorizedMutationRequest } from "@/services/api/client";
+import { toDateInputValue } from "@/utils/date";
 
 type BookingRequestInput = {
   consumerId: string; hospitalId: string; serviceId: string; preferredDate: Date;
@@ -23,26 +24,18 @@ type BookingRequestInput = {
 export async function createBookingRequest(input: BookingRequestInput) {
   if (!input.bookingTermsAccepted) throw new Error("Read and accept the applicable terms and policies before sending your request.");
   if (Number.isNaN(input.preferredDate.getTime())) throw new Error("Choose a valid preferred start date.");
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  if (input.preferredDate < today) throw new Error("Choose a preferred start date from today onwards.");
+  if (toDateInputValue(input.preferredDate) < toDateInputValue()) throw new Error("Choose a preferred start date from today onwards.");
   if (input.preferredEndDate && (Number.isNaN(input.preferredEndDate.getTime()) || input.preferredEndDate < input.preferredDate)) {
     throw new Error("Choose an end date on or after the preferred start date.");
   }
-  const localDate = (value: Date) => {
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, "0");
-    const day = String(value.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
   return authorizedApiRequest<{ ok: true; bookingId: string; bookingReference: string }>("/api/consumer/bookings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       hospitalId: input.hospitalId,
       serviceId: input.serviceId,
-      preferredDate: localDate(input.preferredDate),
-      preferredEndDate: input.preferredEndDate ? localDate(input.preferredEndDate) : null,
+      preferredDate: toDateInputValue(input.preferredDate),
+      preferredEndDate: input.preferredEndDate ? toDateInputValue(input.preferredEndDate) : null,
       bystanderCount: input.bystanderCount,
       consumerNotes: input.consumerNotes?.trim() || null,
       bookingTermsAccepted: input.bookingTermsAccepted,
@@ -147,9 +140,7 @@ export type HospitalBookingUpdate = {
 };
 
 export function updateHospitalBooking(id: string, input: HospitalBookingUpdate) {
-  const localDate = input.confirmedDate
-    ? `${input.confirmedDate.getFullYear()}-${String(input.confirmedDate.getMonth() + 1).padStart(2, "0")}-${String(input.confirmedDate.getDate()).padStart(2, "0")}`
-    : null;
+  const localDate = input.confirmedDate ? toDateInputValue(input.confirmedDate) : null;
   return authorizedMutationRequest<BookingDocument>(`/api/hospital/bookings/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },

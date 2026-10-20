@@ -7,6 +7,20 @@ the implementation authority; these notes do not authorize deployments or data
 maintenance. Preserve unrelated working-tree changes; the workspace contains
 substantial uncommitted work across multiple tasks.
 
+## Cleanup and requested build validation (20 October 2026)
+
+- On the owner's explicit request, ran ESLint, typecheck and the production
+  build against the current worktree. All passed; final ESLint has zero warnings.
+- Fixed three DateInput hook-dependency warnings without changing its behavior.
+  Removed a redundant contract-date wrapper, a booking date-format alias, and
+  an ineffective grid declaration on flex-based public package cards.
+- Reviewed source references; no additional source files were confirmed unused.
+  Retained authentication services, idle-session handling, tests and moved configs.
+- All 15 focused date-format, booking-flow and sold-out availability regression
+  tests passed. No live API checks, deployment or cloud data changes were made.
+- Removed generated tsconfig.tsbuildinfo after validation. Unrelated existing
+  changes, including public imagery, were preserved.
+
 ## Hospital gallery uploads
 
 - Firebase Storage uploads are authorized on Blaze for Admin and the assigned
@@ -90,9 +104,9 @@ substantial uncommitted work across multiple tasks.
 - Playwright fixture configurations now have separate artifact directories.
   The fixtures do not mutate live cloud data. Relevant commands:
   - `node --test --test-isolation=none tests/unit/portal-mutations.test.mjs`
-  - `npx.cmd playwright test --config=playwright.performance.config.ts`
-  - `npx.cmd playwright test --config=playwright.dialogs.config.ts`
-  - `npx.cmd playwright test --config=playwright.toasts.config.ts`
+  - `npm.cmd run test:e2e:performance`
+  - `npm.cmd run test:e2e:dialogs`
+  - `npm.cmd run test:e2e:toasts`
 - Windows PowerShell script execution restrictions require `npm.cmd`/`npx.cmd`
   here. Chromium may require approved execution outside the process sandbox.
 - No rules/index deployment or live mutations were performed for performance
@@ -101,6 +115,129 @@ substantial uncommitted work across multiple tasks.
   end-to-end against production.
 
 ## Latest small changes
+
+- App-managed full dates now display as zero-padded DD/MM/YYYY through
+  `utils/date.ts`. Includes strict date-only/DD/MM parsing, India-timezone
+  display and calendar boundaries, timestamps/date-time labels, booking detail
+  cards, availability ranges/dialogs, audit rows, notifications, guidance/contact
+  summaries, health-page timestamp and populated contract dates. Existing
+  generated notification messages normalize legacy date labels on display only.
+  User-authored free text and protected legal copy are not rewritten. Month-only
+  filters/time-only consultant preferences remain semantically unchanged.
+- Shared `components/forms/DateInput.tsx` is used for all former full-date
+  inputs: fixed-format text with numeric-keyboard slash insertion, strict
+  validation, a retained native calendar, and named ISO form values. Supports
+  controlled/uncontrolled fields, clearing, min/max, disabled state, resets,
+  contract expiry's programmatic input update and accessible labels. Safari
+  input/change commits are published immediately and deduplicated. Native OS
+  calendar language/layout remains device-controlled; app field display is fixed.
+- Booking clients serialize the intended India calendar date without reversing
+  day/month or shifting at UTC midnight. API date formats/schema, timestamp
+  storage, historical records and contract filenames remain unchanged. No live
+  data migration, Firebase rules change, deployment, build or lint was performed.
+- Validation: typecheck and 26 focused unit tests passed, including strict/leap
+  dates, midnight/overseas timezones, ISO booking payloads, booking/audit/
+  notification atomicity and guidance flows. Browser checks covered DD/MM typing,
+  native selection and reset, search/centre date context and booking links,
+  blocked dates, consent submission, availability confirmations and role-specific
+  booking cards. Final responsive scan of 18 Admin/Hospital screens each on
+  Chromium phone/desktop and WebKit phone found zero overflow. Early test failures
+  exposed and led to fixes for accessible-name contamination and Safari native
+  input-before-change behavior; affected checks then passed. No physical-device
+  test or live endpoint check was performed.
+
+- Centre details Available Packages now uses two compact columns on mobile,
+  tablets and desktop. Cards stack their content and keep 44px booking actions
+  aligned at the bottom, with wrapping procedure rows and unchanged emerald/white
+  styling. Long descriptions are summarized to three lines only when View more
+  can reveal the complete text and procedures. Packages without expandable
+  procedures keep their full descriptions. Gallery/media and booking links,
+  prices, package order and sold-out guards are unchanged.
+- Validation: typecheck, 14 initial responsive package-grid/sold-out checks and
+  7 final compact-summary/expansion checks passed on Chromium phone, landscape,
+  portrait/landscape tablets, desktop and WebKit phone/tablet fixtures. Reviewed
+  the 320px package screenshot. No physical-device test, lint/build, deployment,
+  backend changes or live mutations. The existing centre-search test config now
+  includes the new isolated centre-details fixture/spec.
+
+- Compare Care Options now loads public details for only its two selected centres
+  in parallel with packages, with shared cancellation/version guards. Uses actual
+  facility data, existing normalization/icons and an empty-state message. Displays
+  six facilities initially with a disclosure for the remainder. Does not expand
+  the lightweight hospital search projection or refetch when switching durations.
+- Comparison details links are full-width emerald View Centre Details buttons.
+  Comparison retains two columns on narrow mobile, portrait/landscape, tablets
+  and desktop with compact wrapping, responsive images, aligned button bottoms,
+  44px touch targets and focus states. Public design/selection logic preserved.
+- Validation: typecheck and 20 focused browser checks passed (12 initial
+  comparison regressions, 6 final layout/request-count checks and 2 full search
+  integration checks). Chromium widths 320/390/768/844/1440 and WebKit phone
+  fixtures were covered; physical iOS/Android remain untested. No lint/build,
+  cloud writes or deployment. A final CSS list-padding reset received diff review.
+
+- Stress Management now asks “What kind of wellness experience are you looking
+  for?” and is single-select. Psychologist consultation reuses the same single
+  online-provider card and inactive booking placeholder as Prenatal/Rejuvenation,
+  without district/date fields. Non-consultation choices retain their guidance
+  flow. The shared online-consultation branch avoids duplicate provider markup.
+  Eight focused flow tests and typecheck passed; other categories' behavior is
+  covered by regressions. No lint/build/deployment or real-device testing.
+
+- Rejuvenation options are now single-select: Detox & Panchakarma and
+  Cosmetologist consultation. Removed Private stay and separate detox/Panchakarma
+  choices; its question is Explore Your Wellness Options. Cosmetologist uses
+  the shared responsive online-provider card (same inactive booking placeholder
+  as Prenatal), without location/date fields. Detox keeps the guidance flow;
+  other categories' selection behavior and the main section heading are unchanged.
+  Eight focused guidance/provider tests and typecheck passed. No build/lint,
+  deployment, live writes or real-device testing was performed.
+
+- Removed Budget Preference from every Wellness Path, including its state,
+  request summaries and contact handoff. Guidance profiles no longer require
+  budget; older session preferences remain readable but their budget is ignored
+  in summaries. Other fields and navigation remain unchanged. Typecheck and five
+  focused guidance/prenatal tests passed; no lint/build or deployment.
+
+- Prenatal Wellness Path step two now filters provider cards by the selected
+  service: Pregnancy yoga -> Yoga instructor, Dietary advice -> Dietitian,
+  Doctor consultation -> Doctor. Reuses the existing responsive single-provider
+  layout. Back/Continue/path navigation and disabled booking placeholders are
+  unchanged. Three focused render regression tests and typecheck passed; no
+  lint/build or live mutations. No new real-device test was performed.
+
+- Approved availability blocks no longer remove matching centres from public
+  search. Search/cards, comparison and centre details derive a Sold Out state
+  from approved date ranges, using selected care dates or today in India when
+  none is selected. Overlap includes the block's start/end calendar dates.
+  Unaffected dates stay bookable; cancelling a block clears the derived status
+  on the next fresh load. No new persisted flag or live listener was introduced.
+- Search cards navigate only through the View centre details button; removed the
+  full-card link overlay. Galleries remain interactive. Details and booking forms
+  disable actual booking buttons for blocked dates; server-side block validation,
+  approval/cancellation transactions, visibility and auditing are unchanged.
+- Public hospital list/detail projections now return no-store responses to avoid
+  stale approved/revoked ranges on fresh loads. Service/image caching remains.
+  Comparison uses current search dates/links even after its selection is made.
+- Validation: 3 availability unit tests, typecheck, 10 search responsive fixtures
+  and 5 blocked-booking fixtures passed across Chromium phone/landscape/tablet/
+  desktop and WebKit phone. No build/lint, live mutations or deployment.
+
+- Consumer profile Save/Save and continue is disabled until a required consent
+  checkbox is selected. Existing current-version consent is still accepted;
+  mandatory validation remains in place. Typecheck passed; no build/lint.
+- Admin and Hospital bookings now reuse `PortalBookingSummary` and consumer-card
+  styling with labeled centre/package/customer/contact/date/bystander details,
+  notes and status. Only Admin renders estimated commission. Hospital actions
+  and financial snapshots are unchanged. Internal hospital/package IDs are not
+  used as card labels when descriptive names are missing.
+- `withPortalBookingDetails` uses the existing bounded, deduplicated ID reader
+  in parallel for missing legacy hospital/package labels, with Hospital-scoped
+  service queries and package-ownership checks. Consumer flows remain on their
+  existing ownership-checked endpoint. No persisted booking rewrite or new API.
+- Booking-card validation: typecheck, 3 unit tests, and 10 focused Playwright
+  tests passed on phone/landscape/tablet/desktop Chromium and WebKit phone
+  fixtures. No build/lint, cloud writes, or deployment; physical devices were
+  not tested.
 
 - Contract and approval timeline: completed steps display white SVG ticks in
   existing emerald circles; incomplete steps retain numbers. Scoped label colors
@@ -115,6 +252,23 @@ substantial uncommitted work across multiple tasks.
   lint/build/API checks for a documentation-only handoff.
 
 ## Pending deployment and safety reminders
+
+- Admin availability approvals/rejections now use `PortalDialog` with explicit
+  Confirm/Cancel, emerald/red semantics, a synchronous duplicate-submit guard,
+  busy dismissal protection, and inline failure feedback. Cancel makes no call.
+- Consultants now support optional designation, multiple preferred slot keys
+  (`morning`, `noon`, `evening`), and editable per-consultant start/end times in
+  `preferredSlotTimings`. Defaults are 09:00–12:00, 12:00–15:00, 15:00–18:00;
+  old records remain supported. Shared validation handles form/API/service data;
+  existing atomic audited create/update paths are unchanged.
+- Consultant rule allowlists/validation were extended for these optional fields.
+  On 20 October 2026, the owner authorized deployment: Firebase compiled and
+  released `firestore.rules` successfully to `ayursarga-connect` using the scoped
+  `--only firestore:rules --non-interactive` command. No indexes, Storage rules,
+  application hosting, or operational records were changed by this deployment.
+- Validation: typecheck, 5 consultant unit tests, and 10 focused Playwright tests
+  passed across Chromium phone/landscape/tablet/desktop and WebKit phone fixtures.
+  Build/lint were deliberately not run. Physical iOS/Android remain unverified.
 
 - No deployment was requested for the latest changes. Do not deploy implicitly.
 - Do not replay gallery clearing or any live test mutation as a validation step.

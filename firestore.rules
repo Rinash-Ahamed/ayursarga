@@ -212,14 +212,35 @@ service cloud.firestore {
         && request.resource.data.commissionPercentage <= 100;
     }
 
+    function validConsultantSlotTiming(timings, slot) {
+      return !(slot in timings) || (timings[slot] is map
+        && timings[slot].keys().hasOnly(['startTime', 'endTime'])
+        && timings[slot].get('startTime', '') is string
+        && timings[slot].get('endTime', '') is string
+        && timings[slot].get('startTime', '').matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')
+        && timings[slot].get('endTime', '').matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')
+        && timings[slot].startTime != timings[slot].endTime);
+    }
+
     function hasValidConsultantFields() {
       return request.resource.data.keys().hasOnly([
           'employeeId', 'employeeSequence', 'name', 'email', 'contactNo', 'whatsappNo',
-          'qualification', 'yearsExperience', 'lastWorkedCompany', 'address',
+          'qualification', 'yearsExperience', 'lastWorkedCompany', 'address', 'designation', 'preferredTimeSlots', 'preferredSlotTimings',
           'emergencyContactNo', 'status', 'createdAt', 'createdBy', 'updatedAt',
           'updatedBy', 'archivedAt', 'archivedBy', 'lastAuditId'
         ])
         && request.resource.data.employeeId is string
+        && request.resource.data.get('designation', '') is string
+        && request.resource.data.get('designation', '').size() <= 120
+        && request.resource.data.get('preferredTimeSlots', []) is list
+        && request.resource.data.get('preferredTimeSlots', []).size() <= 3
+        && request.resource.data.get('preferredTimeSlots', []).hasOnly(['morning', 'noon', 'evening'])
+        && request.resource.data.get('preferredTimeSlots', []).toSet().size() == request.resource.data.get('preferredTimeSlots', []).size()
+        && request.resource.data.get('preferredSlotTimings', {}) is map
+        && request.resource.data.get('preferredSlotTimings', {}).keys().hasOnly(request.resource.data.get('preferredTimeSlots', []))
+        && validConsultantSlotTiming(request.resource.data.get('preferredSlotTimings', {}), 'morning')
+        && validConsultantSlotTiming(request.resource.data.get('preferredSlotTimings', {}), 'noon')
+        && validConsultantSlotTiming(request.resource.data.get('preferredSlotTimings', {}), 'evening')
         && request.resource.data.employeeId.matches('AS[0-9]{3,}')
         && request.resource.data.employeeSequence is int
         && request.resource.data.employeeSequence > 0

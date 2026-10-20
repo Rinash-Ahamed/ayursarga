@@ -3,7 +3,7 @@
 import { useCallback, useDeferredValue, useState, type FormEvent } from "react";
 import type { ConsultantDocument } from "@/features/firestore/models";
 import type { QueryPageOptions } from "@/services/firestore/firestoreService";
-import { consultantFormValues, validateConsultantFields, type ConsultantValidationErrors } from "@/features/consultants/validation";
+import { consultantFormValues, validateConsultantFields, formatConsultantTimeSlot, type ConsultantValidationErrors } from "@/features/consultants/validation";
 import { createConsultant, listConsultants, setConsultantStatus, updateConsultant } from "@/services/consultants/consultantService";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
@@ -128,12 +128,13 @@ export function ConsultantsManager() {
     <PortalFeedback error={error} notification={actionError ? actionErrorNotification : loadErrorNotification} empty={!error && !isLoading && items.length === 0 ? (deferredSearch.trim() ? "No consultants match your search." : "No consultants have been added yet.") : undefined} />
     <PortalToast message={message} notification={messageNotification} />
     <div className="portal-list consultant-list">{items.map((consultant) => <article className="portal-card" key={consultant.id}>
-      <div className="portal-row-heading"><div><h3>{consultant.name}</h3><strong className="consultant-employee-id">{consultant.employeeId}</strong></div><span className="portal-status" data-status={consultant.status}>{formatStatus(consultant.status)}</span></div>
+      <div className="portal-row-heading"><div><h3>{consultant.name}</h3>{consultant.designation && <p>{consultant.designation}</p>}<strong className="consultant-employee-id">{consultant.employeeId}</strong></div><span className="portal-status" data-status={consultant.status}>{formatStatus(consultant.status)}</span></div>
       {editingId === consultant.id ? <form className="portal-form portal-edit-form" onSubmit={(event) => void edit(event, consultant)} noValidate>
         <ConsultantFormFields key={consultant.id} defaultValues={consultant} errors={fieldErrors} />
         <div className="portal-actions full"><button className="portal-button" disabled={busyId === consultant.id}>{busyId === consultant.id ? "Saving..." : "Save changes"}</button><button className="portal-button secondary" type="button" disabled={busyId === consultant.id} onClick={resetEditor}>Cancel</button></div>
       </form> : <>
         <dl className="consultant-details">
+          <div className="consultant-detail-wide"><dt>Preferred availability</dt><dd>{consultant.preferredTimeSlots?.length ? consultant.preferredTimeSlots.map((slot) => <span className="consultant-slot" key={slot}>{formatConsultantTimeSlot(slot, consultant.preferredSlotTimings)}</span>) : "Not specified"}</dd></div>
           <div><dt>Email</dt><dd>{consultant.email}</dd></div>
           <div><dt>Contact number</dt><dd>{consultant.contactNo}</dd></div>
           <div><dt>WhatsApp number</dt><dd>{consultant.whatsappNo}</dd></div>

@@ -16,6 +16,9 @@ import { INCLUDED_BYSTANDERS, resolveHospitalBystanderPolicy } from "@/features/
 import { formatCurrency } from "@/utils/currency";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import { focusFirstInvalidField } from "@/utils/formFocus";
+import { isHospitalSoldOut } from "@/features/hospitals/availability";
+import { DateInput } from "@/components/forms/DateInput";
+import { toDateInputValue, parseDateInputValue } from "@/utils/date";
 
 type BookingFieldErrors = Partial<Record<"preferredDate" | "preferredEndDate" | "bookingTerms", string>>;
 
@@ -56,6 +59,7 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
   const maximumBystanders = INCLUDED_BYSTANDERS + bystanderPolicy.maxAdditionalBystanders;
   const additionalBystanderTotal = (bystanderCount - INCLUDED_BYSTANDERS) * bystanderPolicy.additionalBystanderCharge;
   const procedures = service ? packageProcedureEntries(service) : [];
+  const soldOut = Boolean(hospital && isHospitalSoldOut(hospital, preferredDate, preferredEndDate));
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (busy || !firebaseUser || !userProfile?.phone) return;
     const form = event.currentTarget;
@@ -65,6 +69,12 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
       return;
     }
     const data = new FormData(form);
+    if (soldOut) {
+      setFieldErrors({ preferredDate: "Sold Out for these dates. Choose another care date." });
+      setError("This centre is sold out for these dates. Choose another care date before booking.");
+      focusFirstInvalidField(form);
+      return;
+    }
     if (!preferredDate) {
       setFieldErrors({ preferredDate: "Choose a preferred start date." });
       setError("Choose a preferred start date before sending your request.");
@@ -88,8 +98,8 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
       const result = await createBookingRequest({ consumerId: firebaseUser.uid, consumerName: userProfile.name,
         consumerEmail: userProfile.email, consumerPhone: userProfile.phone, consumerAddress: userProfile.address,
         hospitalId, serviceId,
-        preferredDate: new Date(`${preferredDate}T00:00:00`),
-        preferredEndDate: preferredEndDate ? new Date(`${preferredEndDate}T00:00:00`) : null,
+        preferredDate: parseDateInputValue(preferredDate)!,
+        preferredEndDate: preferredEndDate ? parseDateInputValue(preferredEndDate) : null,
         preferredTime: "Flexible", bystanderCount,
         consumerNotes: String(data.get("notes") || ""), bookingTermsAccepted, requestId: requestId.current });
       router.replace(`/app/bookings?booking=${encodeURIComponent(result.bookingId)}`);
@@ -107,8 +117,9 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
     </section>
     <form className="portal-card portal-form consumer-request-form" onSubmit={submit} noValidate>
       <div className="consumer-request-intro full"><h2>Your care preferences</h2><p>Choose your preferred dates and share anything the centre should know. Your appointment is confirmed only after the centre responds.</p></div>
-      <label>Preferred start date<input name="date" type="date" min={new Date().toISOString().slice(0, 10)} value={preferredDate} onChange={(event) => { setPreferredDate(event.target.value); setFieldErrors((current) => ({ ...current, preferredDate: undefined })); }} required aria-invalid={Boolean(fieldErrors.preferredDate)} />{fieldErrors.preferredDate && <span className="portal-field-error" role="alert">{fieldErrors.preferredDate}</span>}</label>
-      <label>Preferred end date <small>Optional for consultation or single-day care</small><input name="endDate" type="date" min={preferredDate || new Date().toISOString().slice(0, 10)} value={preferredEndDate} onChange={(event) => { setPreferredEndDate(event.target.value); setFieldErrors((current) => ({ ...current, preferredEndDate: undefined })); }} aria-invalid={Boolean(fieldErrors.preferredEndDate)} />{fieldErrors.preferredEndDate && <span className="portal-field-error" role="alert">{fieldErrors.preferredEndDate}</span>}</label>
+      {soldOut && <p className="portal-form-error full" role="status">Sold Out {preferredDate ? "for your selected care dates" : "today"}. Please choose another care date.</p>}
+      <label>Preferred start date<DateInput name="date" min={toDateInputValue()} value={preferredDate} onChange={(event) => { setPreferredDate(event.target.value); setFieldErrors((current) => ({ ...current, preferredDate: undefined })); }} required aria-invalid={Boolean(fieldErrors.preferredDate)} />{fieldErrors.preferredDate && <span className="portal-field-error" role="alert">{fieldErrors.preferredDate}</span>}</label>
+      <label>Preferred end date <small>Optional for consultation or single-day care</small><DateInput name="endDate" min={preferredDate || toDateInputValue()} value={preferredEndDate} onChange={(event) => { setPreferredEndDate(event.target.value); setFieldErrors((current) => ({ ...current, preferredEndDate: undefined })); }} aria-invalid={Boolean(fieldErrors.preferredEndDate)} />{fieldErrors.preferredEndDate && <span className="portal-field-error" role="alert">{fieldErrors.preferredEndDate}</span>}</label>
       <label>Accompanying bystanders
         {bystanderPolicy.additionalBystandersAllowed
           ? <select name="bystanders" value={bystanderCount} onChange={(event) => setBystanderCount(Number(event.target.value))} disabled={hospitalLoading}>
@@ -135,7 +146,7 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
       </fieldset>
       <PortalToast message={error} notification={errorNotification} tone="error" />
       {error && <p className="portal-form-error full">{error}</p>}
-      <div className="portal-actions full"><button className="portal-button" disabled={busy || hospitalLoading || !hospital || !service}>{busy ? "Booking…" : "Book Appointment"}</button></div>
+      <div className="portal-actions full"><button className="portal-button" disabled={busy || hospitalLoading || !hospital || !service || soldOut}>{busy ? "Booking…" : "Book Appointment"}</button></div>
     </form>
   </PortalShell>;
 }

@@ -8,7 +8,7 @@ const bundle = bundleDialogHarness("tests/fixtures/comparisonHarness.tsx", {
 });
 test.beforeEach(async ({ page }) => {
   await page.route("https://images.test/**", (route) => route.fulfill({ status: 404 }));
-  await page.setContent('<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="fixture-root"></div></body></html>');
+  await page.setContent('<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><main class="centers-directory-page"><div id="fixture-root"></div></main></body></html>');
   await page.addStyleTag({ content: readFileSync("app/globals.css", "utf8") });
   await page.addScriptTag({ content: bundle });
 });
@@ -26,13 +26,36 @@ test("compare only chosen packages with image frames and no extra requests on co
   await expect(page.locator(".public-comparison-package")).toHaveCount(2);
   await expect(page.locator(".public-comparison-image")).toHaveCount(2);
   await expect(page.locator(".public-comparison-duration>h3")).toHaveText("7-day package");
+  const cards = page.locator(".public-comparison-package");
+  await expect(cards.first().getByRole("region", { name: "Alpha facilities" })).toContainText("Free Wi-Fi");
+  await expect(cards.first().getByRole("region", { name: "Alpha facilities" })).not.toContainText("Baby cradle");
+  await expect(cards.last().getByRole("region", { name: "Beta facilities" })).toContainText("Baby cradle");
+  await expect(cards.last().getByRole("region", { name: "Beta facilities" })).not.toContainText("Free Wi-Fi");
+  await cards.first().locator(".public-comparison-facilities summary").click();
+  await expect(cards.first().locator(".public-comparison-facilities")).toContainText("Garden");
+  for (const [index, id] of ["alpha", "beta"].entries()) {
+    const link = cards.nth(index).getByRole("link", { name: "View Centre Details", exact: true });
+    await expect(link).toHaveAttribute("href", `/centers/${id}`);
+    await expect(link).toHaveCSS("background-color", "rgb(31, 61, 43)");
+    expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  }
+  const layout = await cards.evaluateAll((elements) => elements.map((element) => {
+    const rect = element.getBoundingClientRect();
+    const button = element.querySelector(".public-comparison-details-button")!.getBoundingClientRect();
+    return { left: rect.left, right: rect.right, top: rect.top, buttonBottom: button.bottom };
+  }));
+  expect(layout[1].left).toBeGreaterThanOrEqual(layout[0].right - 1);
+  expect(Math.abs(layout[0].top - layout[1].top)).toBeLessThanOrEqual(1);
+  expect(Math.abs(layout[0].buttonBottom - layout[1].buttonBottom)).toBeLessThanOrEqual(1);
   expect(await page.evaluate(() => window.comparisonCalls)).toEqual(["alpha", "beta"]);
   await duration.selectOption("14");
   await expect(page.locator(".public-comparison-results")).toHaveCount(0);
   await page.getByRole("button", { name: "Compare package", exact: true }).click();
   await expect(page.locator(".public-comparison-duration>h3")).toHaveText("14-day package");
   expect(await page.evaluate(() => window.comparisonCalls.length)).toBe(2);
+  expect(await page.evaluate(() => window.comparisonDetailCalls)).toEqual(["alpha", "beta"]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: test.info().outputPath("comparison-facilities.png"), fullPage: true });
 });
 test("changing a center cancels obsolete packages and handles no matching durations", async ({ page }) => {
   await choose(page, "First center", "Alpha");

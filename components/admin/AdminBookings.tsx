@@ -3,19 +3,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { BookingDocument, BookingStatus, HospitalDocument } from "@/features/firestore/models";
-import { bookingReferenceLabel, bookingStatusLabel, formatBookingCarePreference } from "@/features/bookings/display";
+import { bookingStatusLabel } from "@/features/bookings/display";
 import type { DocumentRecord, QueryPageOptions } from "@/services/firestore/firestoreService";
 import { getPortalBooking, listAdminBookings } from "@/services/bookings/bookingService";
 import { listAllHospitals } from "@/services/hospitals/hospitalService";
-import { formatCurrency } from "@/utils/currency";
-import { getCalendarMonthRange } from "@/utils/date";
+import { getCalendarMonthRange, parseDateInputValue } from "@/utils/date";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
-import { formatStatus } from "@/utils/text";
 import { PortalPagination } from "@/components/portal/PortalPagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
-import { getTreatmentStatus } from "@/features/bookings/treatmentStatus";
+import { withPortalBookingDetails } from "@/services/bookings/portalBookingDetails";
+import { PortalBookingSummary } from "@/components/portal/PortalBookingSummary";
 
 const BOOKING_STATUSES: readonly BookingStatus[] = [
   "requested", "confirmed", "reschedule_requested", "completed", "cancelled", "rejected",
@@ -28,6 +27,7 @@ export function AdminBookings({ bookingId }: { bookingId?: string } = {}) {
   const [hospitalSearchError, setHospitalSearchError] = useState<string | null>(null);
   const [status, setStatus] = useState<BookingStatus | "">("");
   const [month, setMonth] = useState("");
+  const [detailsError, setDetailsError] = useState(false);
 
   useEffect(() => {
     const term = hospitalSearch.trim();
@@ -56,21 +56,25 @@ export function AdminBookings({ bookingId }: { bookingId?: string } = {}) {
 
   const monthRange = useMemo(() => {
     if (!/^\d{4}-\d{2}$/.test(month)) return null;
-    const [year, monthNumber] = month.split("-").map(Number);
-    return getCalendarMonthRange(new Date(year, monthNumber - 1, 1));
+    return getCalendarMonthRange(parseDateInputValue(`${month}-01`)!);
   }, [month]);
 
   const loader = useCallback(async (cursor: QueryPageOptions["cursor"]) => {
-    if (bookingId) {
-      const booking = await getPortalBooking(bookingId);
-      return { documents: booking ? [booking] : [], cursor: null, hasMore: false };
-    }
-    return listAdminBookings({
+    const booking = bookingId ? await getPortalBooking(bookingId) : null;
+    const page = bookingId ? { documents: booking ? [booking] : [], cursor: null, hasMore: false } : await listAdminBookings({
       hospitalId: selectedHospital?.id,
       status: status || undefined,
       createdFrom: monthRange?.start,
       createdBefore: monthRange?.end,
     }, { pageSize: 20, cursor });
+    try {
+      const resolved = await withPortalBookingDetails(page);
+      setDetailsError(false);
+      return resolved;
+    } catch {
+      setDetailsError(true);
+      return page;
+    }
   }, [bookingId, monthRange, selectedHospital, status]);
   const { errorNotification: loadErrorNotification, items, error, isLoading, hasMore, loadMore } = usePaginatedList<BookingDocument>(
     loader,
@@ -130,10 +134,8 @@ export function AdminBookings({ bookingId }: { bookingId?: string } = {}) {
       ? (hasFilters ? "No bookings match these filters. Adjust or clear the filters and try again." : "No bookings yet. New appointments will appear here.")
       : undefined} />
     {items.length > 0 && <div className="portal-result-count">Showing <strong>{items.length}</strong> booking{items.length !== 1 ? "s" : ""}{hasMore ? " · more available" : ""}</div>}
-    <div className="portal-list">{items.map((item) => <article className="portal-row" key={item.id} data-accent={item.status}>
-      <div><span className="consumer-booking-reference">Booking ID: {bookingReferenceLabel(item)}</span><h3>{item.consumerName || "Consumer"}{item.servicePrice > 0 ? ` · ${formatCurrency(item.servicePrice)}` : ""}</h3><p>{item.consumerPhone || "No contact number"}{item.estimatedCommission > 0 ? ` · Estimated commission ${formatCurrency(item.estimatedCommission)}` : ""} · Hospital {item.hospitalName || (selectedHospital?.id === item.hospitalId ? selectedHospital.name : item.hospitalId)}</p>{item.serviceName && <p>{item.serviceName}</p>}<p>Preferred: {formatBookingCarePreference(item)}</p>{item.status === "confirmed" || item.status === "completed" ? <p>Treatment: {formatStatus(getTreatmentStatus(item))}</p> : null}</div>
-      <span className="portal-status" data-status={item.status}>{bookingStatusLabel(item.status)}</span>
-    </article>)}</div>
+    {detailsError && <p className="portal-form-error" role="status">Some centre or package names could not be loaded. Booking details are still available. Refresh to retry.</p>}
+    <div className="portal-list consumer-booking-list">{items.map((item) => <PortalBookingSummary key={item.id} booking={item} showCommission />)}</div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
   </PortalShell>;
 }

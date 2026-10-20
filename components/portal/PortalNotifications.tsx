@@ -11,12 +11,10 @@ import {
   subscribeToNotifications,
 } from "@/services/notifications/notificationService";
 import { PortalDialog } from "@/components/portal/PortalDialog";
+import { formatDisplayDateTime, formatDateMentions } from "@/utils/date";
 
 function notificationTime(value: NotificationDocument["createdAt"]) {
-  const date = value?.toDate?.();
-  return date ? date.toLocaleString("en-IN", {
-    day: "numeric", month: "short", hour: "numeric", minute: "2-digit",
-  }) : "Just now";
+  return formatDisplayDateTime(value, "Just now");
 }
 
 export function PortalNotifications({ recipientId }: { recipientId: string }) {
@@ -115,7 +113,7 @@ export function PortalNotifications({ recipientId }: { recipientId: string }) {
           }}
         >
           <span>{item.title}</span>
-          <p>{item.message}</p>
+          <p>{formatDateMentions(item.message)}</p>
           <small>{notificationTime(item.createdAt)}</small>
         </Link>)}
       </div>}

@@ -22,7 +22,8 @@ import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import { PortalDialog } from "@/components/portal/PortalDialog";
 import { formatStatus } from "@/utils/text";
-import { toDate } from "@/utils/date";
+import { toDate, formatDisplayDateTime, toDateInputValue } from "@/utils/date";
+import { DateInput } from "@/components/forms/DateInput";
 import { hospitalFormValues, validateHospitalFields, type HospitalValidationErrors } from "@/features/hospitals/validation";
 import { HospitalFormFields } from "@/components/forms/HospitalFormFields";
 import { sendHospitalLoginSetup } from "@/services/auth/hospitalAccountService";
@@ -39,8 +40,7 @@ import { validateHospitalContractDetails, type HospitalContractDetailErrors, typ
 import { focusFirstInvalidField } from "@/utils/formFocus";
 
 function formatDate(value: unknown) {
-  const date = toDate(value);
-  return date ? new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(date) : "Not yet";
+  return formatDisplayDateTime(value, "Not yet");
 }
 
 function isOnOrAfter(value: unknown, minimum: unknown) {
@@ -55,14 +55,6 @@ function isHttpsUrl(value: string) {
   } catch {
     return false;
   }
-}
-
-function indiaDateInputValue() {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
-  }).formatToParts(new Date());
-  const part = (type: "year" | "month" | "day") => parts.find((item) => item.type === type)?.value ?? "";
-  return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
 function addYearsToDateInput(value: string, years: number) {
@@ -80,6 +72,7 @@ function updateContractExpiry(event: ChangeEvent<HTMLInputElement>) {
   if (!(expiryInput instanceof HTMLInputElement)) return;
   expiryInput.value = addYearsToDateInput(event.currentTarget.value, 3);
   expiryInput.min = event.currentTarget.value;
+  expiryInput.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 function ContractFieldError({ field, errors }: { field: HospitalContractDetailField; errors: HospitalContractDetailErrors }) {
@@ -367,7 +360,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   }
 
   const contractStatus = hospital?.contractStatus ?? "not_generated";
-  const defaultContractEffectiveDate = hospital?.contractEffectiveDate ?? indiaDateInputValue();
+  const defaultContractEffectiveDate = hospital?.contractEffectiveDate ?? toDateInputValue();
   const defaultContractExpiryDate = hospital?.contractExpiryDate ?? addYearsToDateInput(defaultContractEffectiveDate, 3);
   const contractParticularsComplete = Boolean(
     hospital && validateHospitalContractDetails({ ...hospital }).isValid,
@@ -474,8 +467,8 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
           <label>CIN / Not applicable *<input name="cinNumber" defaultValue={hospital.cinNumber ?? ""} maxLength={21} required disabled={!editingContractParticulars} autoCapitalize="characters" placeholder="CIN or NOT APPLICABLE" aria-invalid={Boolean(contractFieldErrors.cinNumber)} /><ContractFieldError field="cinNumber" errors={contractFieldErrors} /></label>
           <label>PAN *<input name="panNumber" defaultValue={hospital.panNumber ?? ""} minLength={10} maxLength={10} required disabled={!editingContractParticulars} autoCapitalize="characters" aria-invalid={Boolean(contractFieldErrors.panNumber)} /><ContractFieldError field="panNumber" errors={contractFieldErrors} /></label>
           <label>GSTIN / Not applicable *<input name="gstin" defaultValue={hospital.gstin ?? ""} maxLength={20} required disabled={!editingContractParticulars} autoCapitalize="characters" placeholder="GSTIN or NOT APPLICABLE" aria-invalid={Boolean(contractFieldErrors.gstin)} /><ContractFieldError field="gstin" errors={contractFieldErrors} /></label>
-          <label>Effective date *<input name="contractEffectiveDate" type="date" defaultValue={defaultContractEffectiveDate} onChange={updateContractExpiry} required disabled={!editingContractParticulars} aria-invalid={Boolean(contractFieldErrors.contractEffectiveDate)} /><ContractFieldError field="contractEffectiveDate" errors={contractFieldErrors} /></label>
-          <label>Expiry date *<input name="contractExpiryDate" type="date" defaultValue={defaultContractExpiryDate} min={defaultContractEffectiveDate} required disabled={!editingContractParticulars} aria-invalid={Boolean(contractFieldErrors.contractExpiryDate)} /><ContractFieldError field="contractExpiryDate" errors={contractFieldErrors} /></label>
+          <label>Effective date *<DateInput name="contractEffectiveDate" defaultValue={defaultContractEffectiveDate} onChange={updateContractExpiry} required disabled={!editingContractParticulars} aria-invalid={Boolean(contractFieldErrors.contractEffectiveDate)} /><ContractFieldError field="contractEffectiveDate" errors={contractFieldErrors} /></label>
+          <label>Expiry date *<DateInput name="contractExpiryDate" defaultValue={defaultContractExpiryDate} min={defaultContractEffectiveDate} required disabled={!editingContractParticulars} aria-invalid={Boolean(contractFieldErrors.contractExpiryDate)} /><ContractFieldError field="contractExpiryDate" errors={contractFieldErrors} /></label>
           <label>Partner emergency contact *<input name="emergencyContact" defaultValue={hospital.emergencyContact ?? ""} maxLength={160} required disabled={!editingContractParticulars} aria-invalid={Boolean(contractFieldErrors.emergencyContact)} /><ContractFieldError field="emergencyContact" errors={contractFieldErrors} /></label>
           <label>Emergency transfer (nearby hospital transfer in case of an emergency) *<input name="emergencyReferralHospital" defaultValue={hospital.emergencyReferralHospital ?? ""} maxLength={200} required disabled={!editingContractParticulars} aria-invalid={Boolean(contractFieldErrors.emergencyReferralHospital)} /><ContractFieldError field="emergencyReferralHospital" errors={contractFieldErrors} /></label>
           {editingContractParticulars && <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save contract particulars"}</button></div>}

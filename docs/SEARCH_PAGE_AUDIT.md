@@ -74,6 +74,6 @@ Firestore/query bottleneck. Live backend latency remains unverified.
 Reproduce with a production server on port 3107:
 
 ```text
-npx.cmd playwright test --config=playwright.centre-search.config.ts
-npx.cmd playwright test --config=playwright.search-performance.config.ts --repeat-each=3
+npm.cmd run test:e2e:centre-search
+npm.cmd run test:e2e:search-performance -- --repeat-each=3
 ```

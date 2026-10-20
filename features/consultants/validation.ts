@@ -1,8 +1,30 @@
 import { isValidEmail, toTrimmedString } from "@/utils/text";
 import { isValidPhoneNumber } from "@/utils/phone";
 
+export const CONSULTANT_TIME_SLOTS = ["morning", "noon", "evening"] as const;
+export type ConsultantTimeSlot = typeof CONSULTANT_TIME_SLOTS[number];
+export type ConsultantSlotTimings = Partial<Record<ConsultantTimeSlot, { startTime: string; endTime: string }>>;
+// Defaults for new selections; admins can override times per consultant.
+export const CONSULTANT_TIME_SLOT_CONFIG: Record<ConsultantTimeSlot, { label: string; startTime: string; endTime: string }> = {
+  morning: { label: "Morning", startTime: "09:00", endTime: "12:00" },
+  noon: { label: "Noon", startTime: "12:00", endTime: "15:00" },
+  evening: { label: "Evening", startTime: "15:00", endTime: "18:00" },
+};
+export function formatConsultantTimeSlot(slot: ConsultantTimeSlot, timings?: ConsultantSlotTimings) {
+  const { label } = CONSULTANT_TIME_SLOT_CONFIG[slot];
+  const { startTime, endTime } = timings?.[slot] ?? CONSULTANT_TIME_SLOT_CONFIG[slot];
+  const format = (value: string) => {
+    const [hour, minute] = value.split(":").map(Number);
+    return `${hour % 12 || 12}:${String(minute).padStart(2, "0")} ${hour < 12 ? "AM" : "PM"}`;
+  };
+  return `${label}: ${format(startTime)} – ${format(endTime)}`;
+}
+
 export type ConsultantFields = {
   name: string;
+  designation: string;
+  preferredTimeSlots: ConsultantTimeSlot[];
+  preferredSlotTimings: ConsultantSlotTimings;
   email: string;
   contactNo: string;
   whatsappNo: string;
@@ -19,6 +41,9 @@ export type ConsultantValidationErrors = Partial<Record<ConsultantField, string>
 export function validateConsultantFields(input: Record<string, unknown>) {
   const data: ConsultantFields = {
     name: toTrimmedString(input.name, 120),
+    designation: toTrimmedString(input.designation, 120),
+    preferredTimeSlots: CONSULTANT_TIME_SLOTS.filter((slot) => Array.isArray(input.preferredTimeSlots) && input.preferredTimeSlots.includes(slot)),
+    preferredSlotTimings: {},
     email: toTrimmedString(input.email, 160).toLowerCase(),
     contactNo: toTrimmedString(input.contactNo, 25),
     whatsappNo: toTrimmedString(input.whatsappNo, 25),
@@ -29,6 +54,24 @@ export function validateConsultantFields(input: Record<string, unknown>) {
     emergencyContactNo: toTrimmedString(input.emergencyContactNo, 25),
   };
   const errors: ConsultantValidationErrors = {};
+  const timings = input.preferredSlotTimings;
+  if (timings != null && (typeof timings !== "object" || Array.isArray(timings) || Object.keys(timings).some((key) => !data.preferredTimeSlots.includes(key as ConsultantTimeSlot)))) {
+    errors.preferredSlotTimings = "Provide timings only for the selected slots.";
+  } else {
+    for (const slot of data.preferredTimeSlots) {
+      const defaults = CONSULTANT_TIME_SLOT_CONFIG[slot];
+      const timing = timings && Object.hasOwn(timings, slot) ? (timings as ConsultantSlotTimings)[slot] : { startTime: defaults.startTime, endTime: defaults.endTime };
+      if (typeof timing !== "object" || !timing || Object.keys(timing).some((key) => !["startTime", "endTime"].includes(key)) ||
+        typeof timing.startTime !== "string" || typeof timing.endTime !== "string" ||
+        !/^([01]\d|2[0-3]):[0-5]\d$/.test(timing.startTime) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(timing.endTime) || timing.endTime <= timing.startTime) {
+        errors.preferredSlotTimings = "Enter valid start and end times for each selected slot. End time must be after start time.";
+      } else data.preferredSlotTimings[slot] = { startTime: timing.startTime, endTime: timing.endTime };
+    }
+  }
+  if (input.designation != null && (typeof input.designation !== "string" || input.designation.trim().length > 120)) errors.designation = "Enter a designation of up to 120 characters.";
+  if (input.preferredTimeSlots != null && (!Array.isArray(input.preferredTimeSlots) || input.preferredTimeSlots.length > 3 || input.preferredTimeSlots.some((slot: unknown) => !CONSULTANT_TIME_SLOTS.includes(slot as ConsultantTimeSlot)) || new Set(input.preferredTimeSlots).size !== input.preferredTimeSlots.length)) {
+    errors.preferredTimeSlots = "Choose Morning, Noon or Evening, without duplicates.";
+  }
   if (data.name.length < 2) errors.name = "Enter the consultant's name.";
   if (!isValidEmail(data.email)) errors.email = "Enter a valid email address.";
   if (!isValidPhoneNumber(data.contactNo)) errors.contactNo = "Enter a 10-digit contact number.";
@@ -46,6 +89,12 @@ export function validateConsultantFields(input: Record<string, unknown>) {
 export function consultantFormValues(form: FormData): Record<string, unknown> {
   return {
     name: form.get("name"),
+    designation: form.get("designation"),
+    preferredTimeSlots: form.getAll("preferredTimeSlots"),
+    preferredSlotTimings: Object.fromEntries(CONSULTANT_TIME_SLOTS.filter((slot) => form.getAll("preferredTimeSlots").includes(slot)).map((slot) => [slot, {
+      startTime: form.get(`${slot}StartTime`) ?? CONSULTANT_TIME_SLOT_CONFIG[slot].startTime,
+      endTime: form.get(`${slot}EndTime`) ?? CONSULTANT_TIME_SLOT_CONFIG[slot].endTime,
+    }])),
     email: form.get("email"),
     contactNo: form.get("contactNo"),
     whatsappNo: form.get("whatsappNo"),

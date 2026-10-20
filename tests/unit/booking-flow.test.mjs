@@ -29,7 +29,7 @@ test("booking, canonical reference, audit and correctly addressed bell notificat
     assert.equal(item.bookingReference, body.bookingReference);
     assert.equal(item.recordId, body.bookingId);
     assert.equal(item.actionHref, `/${item.recipientRole}/bookings?booking=${body.bookingId}`);
-    assert.ok(item.message.includes("Trusted centre") && item.message.includes("7-day package") && item.message.includes("25 Oct 2099"));
+    assert.ok(item.message.includes("Trusted centre") && item.message.includes("7-day package") && item.message.includes("25/10/2099"));
   }
   const retry = await POST(createRequest());
   assert.equal(retry.status, 200);

@@ -1,6 +1,7 @@
 import { defineConfig } from "@playwright/test";
+import { testDir, testOutputDir } from "./paths";
 export default defineConfig({
-  testDir: "./tests/e2e", testMatch: "centre-search-ui.spec.ts", outputDir: "test-results/centre-search", workers: 2,
+  testDir, testMatch: ["centre-search-ui.spec.ts", "centre-details.spec.ts"], outputDir: testOutputDir("centre-search"), workers: 2,
   use: { browserName: "chromium", reducedMotion: "reduce" },
   projects: [
     { name: "phone", use: { viewport: { width: 320, height: 720 }, isMobile: true, hasTouch: true } },
