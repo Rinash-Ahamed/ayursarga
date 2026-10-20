@@ -10,9 +10,12 @@ const hospitals = [
   { id: "alpha", name: "Ayursarga Mother and Baby Ayurvedic Care and Wellness Centre", city: "Kozhikode", district: "Kozhikode", state: "Kerala", address: "Centre Road", description: "Personalised Ayurvedic care for mothers and families, with residential packages and professional guidance.", ayursargaRating: 4.5, ayursargaReviewNote: "A calm setting with clear care information for families.", imageUrls: Array.from({ length: 10 }, (_, i) => `https://images.test/centre-${i}.svg`) },
   { id: "beta", name: "Sanjeevani", city: "Palakkad", state: "Kerala", address: "Hospital Road", description: "Explore the centre's available care options.", imageUrls: [] },
 ];
-declare global { interface Window { centreSearchDelay?: number; } }
-export async function listPublicHospitals() {
+declare global { interface Window { centreSearchDelay?: number; centreSearchHasMore?: boolean; centreSearchCalls?: Array<string | null>; } }
+export async function listPublicHospitals(options?: { cursor?: string | null }) {
+  window.centreSearchCalls ??= [];
+  window.centreSearchCalls.push(options?.cursor ?? null);
   if (window.centreSearchDelay) await new Promise((resolve) => setTimeout(resolve, window.centreSearchDelay));
-  return { documents: hospitals, cursor: null, hasMore: false };
+  if (options?.cursor) return { documents: [{ ...hospitals[1], id: "further", name: "Further Centre" }], cursor: null, hasMore: false };
+  return { documents: hospitals, cursor: window.centreSearchHasMore ? "next" : null, hasMore: Boolean(window.centreSearchHasMore) };
 }
 export const listPublicHospitalsByServiceName = listPublicHospitals;

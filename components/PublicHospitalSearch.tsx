@@ -32,12 +32,17 @@ const PublicHospitalImages = memo(function PublicHospitalImages({ hospital, prio
 
   useEffect(() => {
     const gallery = galleryRef.current;
-    if (!gallery || typeof IntersectionObserver === "undefined") return;
+    if (!gallery) return;
+    if (typeof IntersectionObserver === "undefined") {
+      // Older browsers still load the requested photo; never leave an empty frame.
+      const frame = window.requestAnimationFrame(() => setNearViewport(true));
+      return () => window.cancelAnimationFrame(frame);
+    }
     const observer = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting) return;
       setNearViewport(true);
       observer.disconnect();
-    }, { rootMargin: "160px" });
+    }, { rootMargin: "320px" });
     observer.observe(gallery);
     return () => observer.disconnect();
   }, []);
@@ -46,10 +51,11 @@ const PublicHospitalImages = memo(function PublicHospitalImages({ hospital, prio
     <span>Ayursarga</span>
   </div>;
 
-  return <div className="public-center-card-image" ref={galleryRef}>
+  return <div className="public-center-card-image" ref={galleryRef} aria-busy={nearViewport && loadedImageUrl !== imageUrl}>
+    {loadedImageUrl !== imageUrl && <span className="public-center-image-skeleton" aria-hidden="true" />}
     {/* Uploaded photos provide responsive sources; existing external links remain supported. */}
     {/* eslint-disable-next-line @next/next/no-img-element */}
-    <img
+    {nearViewport && <img
       key={imageUrl}
       ref={(image) => { if (image?.complete && image.naturalWidth > 0) markLoaded(imageUrl); }}
       className={loadedImageUrl === imageUrl ? "is-loaded" : ""}
@@ -66,7 +72,7 @@ const PublicHospitalImages = memo(function PublicHospitalImages({ hospital, prio
       referrerPolicy="no-referrer"
       onLoad={() => markLoaded(imageUrl)}
       onError={() => failImage(imageUrl)}
-    />
+    />}
     {images.length > 1 && <div className="public-center-image-arrows">
       <button
         type="button"

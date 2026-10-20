@@ -83,3 +83,63 @@ test("search failures are not misreported as no matching centers", async ({ page
   await expect(page.getByRole("alert")).toHaveText("We could not search centers right now.");
   await expect(page.getByText("No matching active center found.")).toHaveCount(0);
 });
+
+test("a touch release selects once even if blur targets the page and no click arrives", async ({ page }) => {
+  const input = page.getByRole("combobox", { name: "First center", exact: true });
+  await input.fill("Alpha");
+  const option = page.getByRole("option", { name: /Alpha/ });
+  await expect(option).toBeVisible();
+  await option.dispatchEvent("pointerdown", { pointerId: 1, pointerType: "touch", isPrimary: true, button: 0, clientX: 30, clientY: 30 });
+  await input.evaluate((element) => element.dispatchEvent(new FocusEvent("focusout", { bubbles: true, relatedTarget: document.body })));
+  await expect(option).toBeVisible();
+  await option.dispatchEvent("pointerup", { pointerId: 1, pointerType: "touch", isPrimary: true, button: 0, clientX: 30, clientY: 30 });
+  await expect(page.locator(".public-comparison-picker.is-selected").first()).toContainText("Alpha");
+  expect(await page.evaluate(() => window.comparisonCalls)).toEqual(["alpha"]);
+});
+
+test("dragged and cancelled gestures do not select; keyboard selection still works", async ({ page }) => {
+  const input = page.getByRole("combobox", { name: "First center", exact: true });
+  await input.fill("Alpha");
+  const option = page.getByRole("option", { name: /Alpha/ });
+  await option.dispatchEvent("pointerdown", { pointerId: 2, pointerType: "touch", isPrimary: true, button: 0, clientX: 20, clientY: 20 });
+  await option.dispatchEvent("pointermove", { pointerId: 2, pointerType: "touch", clientX: 20, clientY: 60 });
+  await option.dispatchEvent("pointerup", { pointerId: 2, pointerType: "touch", clientX: 20, clientY: 20 });
+  await option.dispatchEvent("click", { detail: 1 });
+  await expect(input).toHaveValue("Alpha");
+  await option.dispatchEvent("pointerdown", { pointerId: 3, pointerType: "touch", isPrimary: true, button: 0, clientX: 20, clientY: 20 });
+  await option.dispatchEvent("pointercancel", { pointerId: 3, pointerType: "touch" });
+  await option.dispatchEvent("pointerup", { pointerId: 3, pointerType: "touch", clientX: 20, clientY: 20 });
+  await option.dispatchEvent("click", { detail: 1 });
+  expect(await page.evaluate(() => window.comparisonCalls)).toEqual([]);
+  await option.focus();
+  await option.press("Enter");
+  await expect(page.locator(".public-comparison-picker.is-selected").first()).toContainText("Alpha");
+  const second = page.getByRole("combobox", { name: "Second center", exact: true });
+  await second.fill("Alpha");
+  await expect(page.getByText("No matching active center found.")).toBeVisible();
+  expect(await page.evaluate(() => window.comparisonCalls)).toEqual(["alpha"]);
+});
+
+test("a pointer release followed by a compatibility click commits only once", async ({ page }) => {
+  await page.getByRole("combobox", { name: "First center", exact: true }).fill("Beta");
+  await page.getByRole("option", { name: /Beta/ }).evaluate((element) => {
+    element.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, pointerId: 4, pointerType: "touch", isPrimary: true, button: 0, clientX: 20, clientY: 20 }));
+    element.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, pointerId: 4, pointerType: "touch", isPrimary: true, button: 0, clientX: 20, clientY: 20 }));
+    element.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
+  });
+  await expect(page.locator(".public-comparison-picker.is-selected").first()).toContainText("Beta");
+  expect(await page.evaluate(() => window.comparisonCalls)).toEqual(["beta"]);
+});
+
+test("suggestions fit the viewport when keyboard-sized space is limited", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 270 });
+  await page.getByRole("combobox", { name: "First center", exact: true }).fill("Alpha");
+  const list = page.getByRole("listbox", { name: "First center search results" });
+  await expect(page.getByRole("option", { name: /Alpha/ })).toBeVisible();
+  const bounds = await list.boundingBox();
+  expect(bounds!.y).toBeGreaterThanOrEqual(0);
+  expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(270);
+  if (test.info().project.use.hasTouch) await page.getByRole("option", { name: /Alpha/ }).tap();
+  else await page.getByRole("option", { name: /Alpha/ }).click();
+  await expect(page.locator(".public-comparison-picker.is-selected").first()).toContainText("Alpha");
+});

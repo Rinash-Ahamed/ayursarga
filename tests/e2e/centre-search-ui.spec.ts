@@ -1,5 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Route } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import sharp from "sharp";
 import { bundleDialogHarness } from "../helpers/bundleDialogHarness";
 const bundle = bundleDialogHarness("tests/fixtures/centreSearchHarness.tsx", {
   "next/link": "tests/fixtures/centreSearchMocks.tsx",
@@ -9,12 +10,14 @@ const bundle = bundleDialogHarness("tests/fixtures/centreSearchHarness.tsx", {
 test("search page reflows and retains live filtering, galleries and comparison", async ({ page }, info) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.route("https://images.test/**", (route) => route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#c9d8cd"/></svg>' }));
+  const photo = await sharp({ create: { width: 400, height: 300, channels: 3, background: "#c9d8cd" } }).webp().toBuffer();
+  await page.route("https://images.test/**", (route) => route.fulfill({ contentType: "image/webp", body: photo }));
   await page.setContent('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="fixture-root"></div></body></html>');
   for (const file of ["node_modules/tailwindcss/lib/css/preflight.css", "app/globals.css"]) await page.addStyleTag({ content: readFileSync(file, "utf8") });
   await page.addStyleTag({ content: ':root{--font-body:Arial,sans-serif;--font-display:Arial,sans-serif}' });
   await page.addScriptTag({ content: bundle });
   await expect(page.locator(".public-center-card")).toHaveCount(2);
+  await page.locator(".public-center-card").first().scrollIntoViewIfNeeded();
   await expect(page.locator(".public-center-card-image img")).toHaveClass("is-loaded");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   const columns = await page.locator('.public-center-grid').evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length);
@@ -68,4 +71,44 @@ test("loading placeholders do not block search or comparison controls", async ({
   await expect(page.locator('.public-center-skeleton')).toHaveCount(0);
   await expect(page.locator('.public-center-card')).toHaveCount(1);
   await expect(page.locator('.public-center-grid')).toHaveAttribute('aria-busy', 'false');
+});
+
+test("off-screen photos wait for scrolling and retain a skeleton until loaded", async ({ page }) => {
+  await page.setViewportSize({ width: page.viewportSize()!.width, height: 240 });
+  const images: Route[] = [];
+  await page.route("https://images.test/**", (route) => { images.push(route); });
+  await page.setContent('<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="fixture-root"></div></body></html>');
+  for (const file of ["node_modules/tailwindcss/lib/css/preflight.css", "app/globals.css"]) await page.addStyleTag({ content: readFileSync(file, "utf8") });
+  await page.addScriptTag({ content: bundle });
+  await expect(page.locator('.public-center-card')).toHaveCount(2);
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  expect(images).toHaveLength(0);
+  await expect(page.locator('.public-center-card-image img')).toHaveCount(0);
+  const frame = page.locator('.public-center-card-image').first();
+  await frame.scrollIntoViewIfNeeded();
+  await expect.poll(() => images.length).toBe(1);
+  await expect(frame).toHaveAttribute('aria-busy', 'true');
+  await expect(frame.locator('.public-center-image-skeleton')).toBeVisible();
+  await images[0].fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#c9d8cd"/></svg>' });
+  await expect(frame.locator('img')).toHaveClass('is-loaded');
+  await expect(frame).toHaveAttribute('aria-busy', 'false');
+  await expect(frame.locator('.public-center-image-skeleton')).toHaveCount(0);
+});
+
+test("more results load incrementally without resetting the current filter", async ({ page }) => {
+  await page.route("https://images.test/**", (route) => route.fulfill({ status: 404 }));
+  await page.setContent('<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="fixture-root"></div></body></html>');
+  await page.evaluate(() => { window.centreSearchHasMore = true; });
+  for (const file of ["node_modules/tailwindcss/lib/css/preflight.css", "app/globals.css"]) await page.addStyleTag({ content: readFileSync(file, "utf8") });
+  await page.addScriptTag({ content: bundle });
+  await expect(page.locator('.public-center-card')).toHaveCount(2);
+  expect(await page.evaluate(() => window.centreSearchCalls)).toEqual([null]);
+  const search = page.getByRole('searchbox', { name: 'Centre or location' });
+  await search.fill('Palakkad');
+  await expect(page.locator('.public-center-card')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Show more centers' }).click();
+  await expect(page.locator('.public-center-card')).toHaveCount(2);
+  await expect(search).toHaveValue('Palakkad');
+  expect(await page.evaluate(() => window.centreSearchCalls)).toEqual([null, 'next']);
+  await expect(page.getByRole('button', { name: 'Show more centers' })).toHaveCount(0);
 });

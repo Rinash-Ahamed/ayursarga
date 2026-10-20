@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import type { HospitalDocument, ServiceDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import { listPublicHospitalServices, searchPublicHospitals } from "@/services/hospitals/publicHospitalService";
@@ -58,6 +58,11 @@ function SearchCentreField({ label, selected, excludedId, onSelect, onRemove }: 
     query: string; excludedId?: string; options: DocumentRecord<HospitalDocument>[]; error: string | null;
   } | null>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const optionGesture = useRef<{ pointerId: number; hospitalId: string; x: number; y: number; moved: boolean } | null>(null);
+  const suppressPointerClick = useRef(false);
+  const selectionCommitted = useRef(false);
   const requestVersion = useRef(0);
   const optionsId = useId();
   const term = query.trim();
@@ -66,6 +71,46 @@ function SearchCentreField({ label, selected, excludedId, onSelect, onRemove }: 
   const isLoading = canSearch && !settled;
   const options = settled ? response.options : [];
   const error = settled ? response.error : null;
+
+  useLayoutEffect(() => {
+    if (!isOpen || !canSearch) return;
+    let frame = 0;
+    const viewport = window.visualViewport;
+    const position = () => {
+      const picker = pickerRef.current;
+      const dropdown = dropdownRef.current;
+      if (!picker || !dropdown) return;
+      const rect = picker.getBoundingClientRect();
+      let top = viewport?.offsetTop ?? 0;
+      let bottom = top + (viewport?.height ?? window.innerHeight);
+      const header = document.getElementById("site-nav")?.getBoundingClientRect();
+      const dock = document.querySelector(".mobile-bottom-nav")?.getBoundingClientRect();
+      if (header?.height && header.top <= top) top = Math.max(top, header.bottom);
+      if (dock?.height && dock.top > top && dock.top < bottom) bottom = dock.top;
+      const above = Math.max(0, rect.top - top - 8);
+      const below = Math.max(0, bottom - rect.bottom - 8);
+      const opensAbove = below < 100 && above > below;
+      dropdown.style.top = opensAbove ? "auto" : "calc(100% + 7px)";
+      dropdown.style.bottom = opensAbove ? "calc(100% + 7px)" : "auto";
+      dropdown.style.maxHeight = `${Math.max(44, Math.min(260, opensAbove ? above : below))}px`;
+    };
+    const schedule = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => { frame = 0; position(); });
+    };
+    position();
+    window.addEventListener("resize", schedule, { passive: true });
+    window.addEventListener("scroll", schedule, { passive: true, capture: true });
+    viewport?.addEventListener("resize", schedule, { passive: true });
+    viewport?.addEventListener("scroll", schedule, { passive: true });
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", schedule);
+      window.removeEventListener("scroll", schedule, true);
+      viewport?.removeEventListener("resize", schedule);
+      viewport?.removeEventListener("scroll", schedule);
+    };
+  }, [canSearch, isOpen]);
 
   useEffect(() => {
     const closeOutside = (event: PointerEvent) => {
@@ -93,20 +138,55 @@ function SearchCentreField({ label, selected, excludedId, onSelect, onRemove }: 
     };
   }, [canSearch, excludedId, term]);
 
+  function selectOption(hospital: DocumentRecord<HospitalDocument>) {
+    if (selectionCommitted.current || selected || hospital.id === excludedId || !options.some((option) => option.id === hospital.id)) return;
+    selectionCommitted.current = true;
+    requestVersion.current++;
+    optionGesture.current = null;
+    setQuery("");
+    setResponse(null);
+    setIsOpen(false);
+    onSelect(hospital);
+    // Dismiss the keyboard only after committing the hospital, not mid-gesture.
+    inputRef.current?.blur();
+  }
+
+  function beginOptionGesture(event: ReactPointerEvent<HTMLButtonElement>, hospitalId: string) {
+    if (!event.isPrimary || event.button !== 0) return;
+    suppressPointerClick.current = true;
+    optionGesture.current = { pointerId: event.pointerId, hospitalId, x: event.clientX, y: event.clientY, moved: false };
+    // Keep focus/keyboard geometry stable until release. Native list scrolling is
+    // still permitted by touch-action and cancels the pointer gesture when panning.
+    event.preventDefault();
+    if (event.isTrusted) event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function moveOptionGesture(event: ReactPointerEvent<HTMLButtonElement>) {
+    const gesture = optionGesture.current;
+    if (gesture?.pointerId === event.pointerId && Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 10) gesture.moved = true;
+  }
+
+  function finishOptionGesture(event: ReactPointerEvent<HTMLButtonElement>, hospital: DocumentRecord<HospitalDocument>) {
+    const gesture = optionGesture.current;
+    optionGesture.current = null;
+    if (!gesture || gesture.pointerId !== event.pointerId || gesture.hospitalId !== hospital.id || gesture.moved
+      || Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 10) return;
+    event.preventDefault();
+    selectOption(hospital);
+  }
+
   if (selected) return <div className="public-comparison-picker is-selected" ref={pickerRef}>
     <span>{label}</span>
     <div>
       <strong>{selected.hospital.name}</strong>
       <small>{selected.hospital.city}{selected.hospital.district ? `, ${selected.hospital.district}` : ""}, {selected.hospital.state}</small>
     </div>
-    <button type="button" onClick={() => { setQuery(""); setResponse(null); setIsOpen(false); onRemove(); }}>Change</button>
+    <button type="button" onClick={() => { selectionCommitted.current = false; setQuery(""); setResponse(null); setIsOpen(false); onRemove(); }}>Change</button>
   </div>;
 
   const showOptions = isOpen && canSearch;
   return <div className="public-comparison-picker" ref={pickerRef} onBlur={(event) => {
-    // Safari can report no related target when an option is tapped. Outside
-    // pointerdown and keyboard navigation close the list without discarding it
-    // before that option's click event is delivered.
+    if (optionGesture.current) return;
     if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setIsOpen(false);
   }}>
     <label>
@@ -114,6 +194,7 @@ function SearchCentreField({ label, selected, excludedId, onSelect, onRemove }: 
       <div>
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></svg>
         <input
+          ref={inputRef}
           type="search"
           value={query}
           placeholder="Search center by name"
@@ -127,6 +208,9 @@ function SearchCentreField({ label, selected, excludedId, onSelect, onRemove }: 
           aria-autocomplete="list"
           onFocus={() => setIsOpen(true)}
           onChange={(event) => {
+            selectionCommitted.current = false;
+            suppressPointerClick.current = false;
+            optionGesture.current = null;
             const value = event.target.value;
             setQuery(value);
             setIsOpen(true);
@@ -141,12 +225,18 @@ function SearchCentreField({ label, selected, excludedId, onSelect, onRemove }: 
         />
       </div>
     </label>
-    {showOptions && <div id={optionsId} className="public-comparison-picker-options" role="listbox" aria-busy={isLoading} aria-label={`${label} search results`}>
-      {isLoading ? <p role="status">Searching centers...</p> : error ? <p role="alert">{error}</p> : options.length > 0 ? options.map((hospital) => <button key={hospital.id} type="button" role="option" aria-selected="false" onClick={() => {
-        setQuery("");
-        setIsOpen(false);
-        onSelect(hospital);
-      }}>
+    {showOptions && <div ref={dropdownRef} id={optionsId} className="public-comparison-picker-options" role="listbox" aria-busy={isLoading} aria-label={`${label} search results`}>
+      {isLoading ? <p role="status">Searching centers...</p> : error ? <p role="alert">{error}</p> : options.length > 0 ? options.map((hospital) => <button key={hospital.id} type="button" role="option" aria-selected="false"
+        onPointerDown={(event) => beginOptionGesture(event, hospital.id)}
+        onPointerMove={moveOptionGesture}
+        onPointerUp={(event) => finishOptionGesture(event, hospital)}
+        onPointerCancel={() => { optionGesture.current = null; }}
+        onClick={(event) => {
+          // Keyboard/assistive activation still uses click. Pointer activation
+          // commits on release; its compatibility click must not select twice.
+          if (event.detail > 0 && suppressPointerClick.current) return;
+          selectOption(hospital);
+        }}>
         <strong>{hospital.name}</strong>
         <span>{hospital.city}{hospital.district ? `, ${hospital.district}` : ""}, {hospital.state}</span>
       </button>) : <p>No matching active center found.</p>}
@@ -226,8 +316,10 @@ export function PublicCentreComparison({ detailQuery }: { detailQuery: string })
   }
 
   function selectCentre(index: 0 | 1, hospital: DocumentRecord<HospitalDocument>) {
+    if (selected[index === 0 ? 1 : 0]?.hospital.id === hospital.id) return;
     const suffix = detailQuery ? `?${detailQuery}` : "";
     setSelected((current) => {
+      if (current[index === 0 ? 1 : 0]?.hospital.id === hospital.id) return current;
       const next: typeof current = [...current];
       next[index] = { hospital, detailHref: `/centers/${encodeURIComponent(hospital.id)}${suffix}`, packages: null, error: null };
       return next;

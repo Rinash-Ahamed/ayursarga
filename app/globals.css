@@ -58,7 +58,7 @@ em{ font-style: italic; color: var(--clay-dark); }
 html[data-ayursarga-opening="seen"] .public-opening{ display:none; }
 .public-opening[data-phase="leaving"]{ opacity:0; visibility:hidden; pointer-events:none; }
 .public-opening-mark{ display:grid; justify-items:center; gap:9px; color:var(--forest); animation:public-opening-arrive .36s var(--ease-out) both; }
-.public-opening-mark img{ width:72px; height:72px; object-fit:cover; border-radius:50%; }
+.public-opening-mark img{ display:block; width:72px; height:72px; object-fit:contain; object-position:center; border-radius:0; }
 .public-opening-mark span{ font-family:var(--font-display); font-size:18px; font-weight:600; letter-spacing:0; word-spacing:0; }
 @keyframes public-opening-arrive{
   from{ opacity:0; transform:translate3d(0,7px,0) scale(.97); }
@@ -414,6 +414,7 @@ main>.dark-section{
 .public-center-card:hover{ border-color:rgba(31,61,43,.35); box-shadow:0 12px 32px rgba(31,61,43,.1); }
 .public-center-card-image{ position:relative; z-index:3; width:calc(100% - 14px); min-height:0; aspect-ratio:4/3; align-self:center; overflow:hidden; contain:paint; margin:14px 0 14px 14px; border:1px solid rgba(31,61,43,.16); border-radius:14px; background:rgba(31,61,43,.06); pointer-events:none; }
 .public-center-card-image img{ width:100%; height:100%; object-fit:contain; opacity:0; backface-visibility:hidden; }
+.public-center-image-skeleton{ position:absolute; inset:0; border-radius:inherit; background:linear-gradient(135deg,rgba(31,61,43,.065),rgba(184,135,47,.045)); pointer-events:none; }
 .public-center-card-image img.is-loaded{ animation:publicCenterImageNext .38s var(--ease-out) both; }
 .public-center-card-image img.is-loaded[data-direction="previous"]{ animation-name:publicCenterImagePrevious; }
 @keyframes publicCenterImageNext{ from{ opacity:.35; transform:translate3d(18px,0,0); } to{ opacity:1; transform:translate3d(0,0,0); } }
@@ -480,7 +481,7 @@ main>.dark-section{
 .public-comparison-picker.is-selected>button{ padding:6px 9px; border:1px solid rgba(31,61,43,.25); border-radius:100px; background:#fff; color:var(--forest); font:inherit; font-size:8px; font-weight:800; text-transform:uppercase; cursor:pointer; }
 .public-comparison-picker-status{ position:absolute; top:calc(100% + 5px); left:4px; z-index:11; color:var(--sage); font-size:8px; }
 .public-comparison-picker-status.error{ color:var(--rust); }
-.public-comparison-picker-options{ position:absolute; z-index:10; top:calc(100% + 7px); right:0; left:0; max-height:260px; overflow-y:auto; border:1px solid rgba(31,61,43,.25); border-radius:12px; background:#fff; box-shadow:0 16px 36px rgba(31,61,43,.16); }
+.public-comparison-picker-options{ position:absolute; z-index:10; top:calc(100% + 7px); right:0; left:0; max-height:260px; overflow-y:auto; touch-action:pan-y pinch-zoom; overscroll-behavior:contain; border:1px solid rgba(31,61,43,.25); border-radius:12px; background:#fff; box-shadow:0 16px 36px rgba(31,61,43,.16); }
 .public-comparison-picker-options button{ width:100%; padding:11px 13px; display:grid; gap:3px; border:0; border-bottom:1px solid rgba(31,61,43,.11); background:#fff; color:var(--forest); font:inherit; text-align:left; cursor:pointer; }
 .public-comparison-picker-options button:last-of-type{ border-bottom:0; }
 .public-comparison-picker-options button:hover,.public-comparison-picker-options button:focus-visible{ background:rgba(31,61,43,.055); }

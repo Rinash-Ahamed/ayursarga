@@ -5,5 +5,7 @@ export default defineConfig({
   projects: [
     { name: "mobile", use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
     { name: "desktop", use: { viewport: { width: 1440, height: 900 } } },
+    { name: "webkit-mobile", use: { browserName: "webkit", viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
+    { name: "webkit-desktop", use: { browserName: "webkit", viewport: { width: 1440, height: 900 } } },
   ],
 });

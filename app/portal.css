@@ -118,7 +118,7 @@ html[data-theme="dark"] .portal-toast[data-tone="error"],body[data-theme="dark"]
 .portal-consumer-focus{ position:relative; min-height:100svh; overflow:hidden; background:linear-gradient(180deg,rgba(31,61,43,.045) 0,rgba(255,255,255,0) 260px),#fff; color:var(--ink); }
 .portal-consumer-focus::before{ content:""; position:absolute; z-index:0; top:52px; right:max(-48px,calc((100vw - 1080px)/2)); width:180px; height:250px; background:url("/neem-leaf.svg") center/contain no-repeat; opacity:.055; transform:rotate(14deg); pointer-events:none; }
 .portal-consumer-focus-header{ position:relative; z-index:1; width:min(920px,calc(100% - 40px)); min-height:82px; margin:0 auto; padding:16px 0; display:flex; align-items:center; justify-content:space-between; gap:24px; border-bottom:1px solid rgba(31,61,43,.2); }
-.portal-consumer-focus-header .portal-wordmark{ flex:none; margin:0; font-size:21px; }
+.portal-consumer-focus-header .portal-wordmark{ flex:none; margin:0; color:var(--forest); font-size:21px; font-weight:600; }
 .portal-consumer-focus-header .portal-wordmark img{ width:40px; height:40px; }
 .portal-consumer-focus-title{ min-width:0; display:grid; justify-items:end; gap:3px; text-align:right; }
 .portal-consumer-focus-title>span{ color:var(--gold); font-size:8px; font-weight:850; letter-spacing:.16em; text-transform:uppercase; }

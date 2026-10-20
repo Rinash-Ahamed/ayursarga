@@ -3,6 +3,7 @@
 import { Timestamp } from "firebase/firestore";
 import type { HospitalDocument, ServiceDocument } from "@/features/firestore/models";
 import type { DocumentRecord, QueryPage } from "@/services/firestore/firestoreService";
+import { shareInFlightRequest } from "@/utils/inFlightRequests";
 
 export type PublicPageCursor = string;
 type PublicPageOptions = { pageSize?: number; cursor?: PublicPageCursor | null };
@@ -10,11 +11,15 @@ type SerializedRange = { startDate: string; endDate: string };
 type SerializedHospital = Omit<DocumentRecord<HospitalDocument>, "blockedDateRanges"> & { blockedDateRanges?: SerializedRange[] };
 type ApiPage<T> = { documents?: T[]; cursor?: string | null; hasMore?: boolean; error?: string };
 
-async function publicRequest<T>(url: string, signal?: AbortSignal) {
-  const response = await fetch(url, { signal });
-  const body = await response.json().catch(() => ({})) as T & { error?: string };
-  if (!response.ok) throw new Error(body.error || "The requested information is temporarily unavailable.");
-  return body;
+function publicRequest<T>(url: string, signal?: AbortSignal) {
+  // Only public GETs overlap here. Keep caller-abortable requests independent,
+  // and rely on the endpoint's HTTP cache policy rather than retaining stale data.
+  return shareInFlightRequest<T>(signal ? null : `public-get:${url}`, async () => {
+    const response = await fetch(url, { signal });
+    const body = await response.json().catch(() => ({})) as T & { error?: string };
+    if (!response.ok) throw new Error(body.error || "The requested information is temporarily unavailable.");
+    return body;
+  });
 }
 
 function publicPageUrl(path: string, options: PublicPageOptions, serviceName = "") {

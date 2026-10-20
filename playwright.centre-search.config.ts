@@ -8,5 +8,7 @@ export default defineConfig({
     { name: "tablet", use: { viewport: { width: 768, height: 1024 }, isMobile: true, hasTouch: true } },
     { name: "tablet-landscape", use: { viewport: { width: 1024, height: 768 }, isMobile: true, hasTouch: true } },
     { name: "desktop", use: { viewport: { width: 1440, height: 900 } } },
+    { name: "webkit-phone", use: { browserName: "webkit", viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
+    { name: "webkit-tablet", use: { browserName: "webkit", viewport: { width: 820, height: 1180 }, isMobile: true, hasTouch: true } },
   ],
 });
