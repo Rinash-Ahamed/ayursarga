@@ -197,6 +197,16 @@ to deploy, rerun maintenance scripts, or modify live data.
   it does not authorize commits, tags, publishing or deployment.
 - Reuse existing services, validation, helpers, and components. Avoid duplicate
   folders, parallel abstractions, and speculative dependencies.
+- For each implementation update affecting persisted fields or workflows, trace
+  the caller through the actual API or direct SDK write, shared validation,
+  Firestore field allowlists AND changed-field allowlists, role authorization,
+  atomic audit linkage, and legacy-record compatibility. Add or update focused
+  local contract/regression checks for affected paths, including permission
+  denials and allowed updates where the local test infrastructure supports them.
+  These targeted checks are required; do not substitute a generic health endpoint
+  or claim mocked/source checks prove deployed permissions. Report any missing
+  emulator/live coverage and required rules/index deployment. This does not
+  authorize production mutations, deployment or broader API/security audits.
 - Do not hardcode Firebase Web SDK credentials in components. Keep client
   configuration centralized and environment-driven; initialize Firebase once.
 - Preserve unrelated working-tree changes. Remove generated debug logs and
@@ -205,6 +215,8 @@ to deploy, rerun maintenance scripts, or modify live data.
   explicitly requests them. When requested, run the relevant checks after the
   related changes are complete, not after every small edit. Prior authorization
   for one validation run is not ongoing authorization for later changes.
+  The focused local regression checks required above are a standing exception;
+  broader checks still require an explicit request.
 - Firestore rule/index changes are not live until deployed to
   `ayursarga-connect`. Use a scoped, non-interactive Firebase deployment and
   report whether an index is still initializing.

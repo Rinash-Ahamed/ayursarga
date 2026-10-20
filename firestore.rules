@@ -656,6 +656,7 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name', 'email', 'contactNo', 'whatsappNo', 'qualification',
             'yearsExperience', 'lastWorkedCompany', 'address', 'emergencyContactNo',
+            'designation', 'preferredTimeSlots', 'preferredSlotTimings',
             'updatedAt', 'updatedBy', 'lastAuditId'
           ])) || (linkedAuditAction() == 'status_change'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([

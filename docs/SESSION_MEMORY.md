@@ -7,6 +7,27 @@ the implementation authority; these notes do not authorize deployments or data
 maintenance. Preserve unrelated working-tree changes; the workspace contains
 substantial uncommitted work across multiple tasks.
 
+## Consultant update permission fix (20 October 2026)
+
+- Found a confirmed rules mismatch: hasValidConsultantFields accepted designation,
+  preferredTimeSlots and preferredSlotTimings, but the consultants update action's
+  affectedKeys allowlist omitted all three. Even updating legacy records could
+  fail because shared validation supplies these optional fields on save.
+- Added only those three keys to the profile-update allowlist. Admin-only access,
+  validation, immutable identity/creation metadata, linked atomic audits, separate
+  status transitions and denied deletion are unchanged. The existing save path
+  uses the client Firestore SDK, not the consultant creation API.
+- Six focused consultant tests passed, including a new source-contract check
+  comparing all validated profile keys with the update allowlist. This is not
+  emulator coverage or proof of deployed authorization. No live save, build,
+  lint, deployment or production mutation was run. Deploy corrected Firestore
+  rules explicitly before expecting this permission fix to work in any client
+  using the deployed project, including local development.
+- AGENTS.md now requires affected API/SDK authorization, schema and audit review
+  plus focused local regression checks for persistence/workflow updates. This
+  targeted-check exception does not authorize broad checks or live operations.
+- Patch version bumped from 4.2.0 to 4.2.1 in package.json and package-lock.json.
+
 ## Automatic versioning decision (20 October 2026)
 
 - Owner approved agent-managed semantic version bumps for future completed

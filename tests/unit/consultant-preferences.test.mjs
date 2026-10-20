@@ -1,8 +1,24 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { loadTypeScript } from "../helpers/loadTypeScript.mjs";
 const { validateConsultantFields, consultantFormValues, formatConsultantTimeSlot } = loadTypeScript("features/consultants/validation.ts");
 const legacy = { name: "Doctor Sample", email: "doctor@example.com", contactNo: "9876543210", whatsappNo: "9876543210", qualification: "BAMS", yearsExperience: 3.5 };
+
+test("consultant update rules allow every validated profile field without broadening status or identity edits", () => {
+  // Source-contract regression, not a substitute for emulator/deployed-rule tests.
+  const rules = readFileSync(new URL("../../firestore.rules", import.meta.url), "utf8");
+  const consultantRules = rules.split("match /consultants/{consultantId} {")[1]?.split("match /availability/")[0];
+  assert.ok(consultantRules, "Consultant rules must exist");
+  const updateBranch = consultantRules.split("linkedAuditAction() == 'update'")[1]?.split("linkedAuditAction() == 'status_change'")[0];
+  const allowed = [...updateBranch.matchAll(/'([^']+)'/g)].map((match) => match[1]);
+  const profileFields = Object.keys(validateConsultantFields(legacy).data);
+  assert.deepEqual(allowed.toSorted(), [...profileFields, "updatedAt", "updatedBy", "lastAuditId"].toSorted());
+  assert.match(consultantRules, /allow update: if isAdmin\(\)/);
+  assert.match(consultantRules, /hasValidConsultantFields\(\)/);
+  assert.match(consultantRules, /hasLinkedAudit\('consultants', consultantId\)/);
+  assert.match(consultantRules, /allow delete: if false/);
+});
 test("legacy consultants default to optional empty preferences", () => {
   const result = validateConsultantFields(legacy);
   assert.equal(result.isValid, true);
