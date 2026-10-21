@@ -7,6 +7,50 @@ the implementation authority; these notes do not authorize deployments or data
 maintenance. Preserve unrelated working-tree changes; the workspace contains
 substantial uncommitted work across multiple tasks.
 
+## Branded invitations and password-reset email (21 October 2026)
+
+- Owner approved replacing app-triggered Firebase template emails because the
+  project's Firebase template editor is restricted. Added shared responsive
+  emerald/cream/gold HTML and plain-text authentication templates for Hospital
+  invitations/setup/resend and Admin/Hospital password resets. No dependency on
+  that template editor or Dynamic Links. Firebase Admin generates reset links;
+  Firebase's default hosted action page still verifies codes and sets passwords.
+  Manual Firebase Console emails and Google Consumer sign-in are unchanged.
+- Extracted the existing pooled Gmail SMTP transport into server-only
+  services/email/emailService.ts. Contact email recipients, reply-to, subject
+  and existing template are preserved, with a regression check. SMTP rejection
+  is an error; SMTP acceptance is not guaranteed inbox delivery.
+- Admin-only login-setup endpoint retains audited provisioning/reconnection and
+  now sends its invitation server-side after commit. Prechecks email readiness
+  and canonical URL; rate-limits resends. Client requires emailSent confirmation,
+  never sends through browser Firebase or receives the action link. Email
+  delivery failure preserves provisioned records and reports an explicit retry.
+- New public POST /api/auth/password-reset validates bounded JSON/email, checks
+  cross-site/origin signals, and uses the existing per-instance limiter for
+  request fingerprint, hashed recipient and global delivery limits. Not a
+  distributed anti-abuse guarantee; no new shared rate-limit infrastructure.
+  Sends only to matching active Admin/Hospital profiles and enabled Auth users.
+  Unknown/ineligible accounts and operational delivery failures get the same
+  generic acknowledgement to avoid exposing account existence. Configuration
+  errors are reported independently. Logs never include raw errors/reset codes.
+- Shared auth service now calls that endpoint; forgot-password form prevents
+  same-tick duplicate submission and uses generic inbox/spam acknowledgement.
+  Auth action URLs are neither returned nor persisted. No new Firestore writes
+  or rules changes; existing server-only Admin role checks remain in force.
+- Configuration: existing GMAIL_USER and GMAIL_APP_PASSWORD required on hosting;
+  server-only APP_SITE_URL defaults to https://ayursarga.com. Authorize the
+  canonical domain in Firebase Auth. Do not derive destinations from requests.
+  Local/hosting env files were not read or changed. .env.example and README
+  document configuration, delivery limits and migration behavior.
+- Version 4.4.1 to 4.5.0 synchronized. Twelve focused mocked unit/API/service
+  tests and six Playwright checks passed (Chromium 320px phone/desktop and
+  WebKit phone), including two email templates, reset forms, authorization,
+  invalid input, SMTP rejection, atomic provisioning, generic failures and
+  token-safe output/logs. Visually inspected the 320px invitation screenshot.
+  Browser rendering is not Gmail/Outlook/Apple Mail inbox validation. No real
+  emails, live Firebase calls/mutations, lint/typecheck/build or deployment run.
+  Hosting redeploy and an explicitly authorized controlled delivery test remain.
+
 ## Admin Users internal-ID cleanup (21 October 2026)
 
 - Removed the redundant Hospital [database ID] suffix from Admin user cards.

@@ -61,6 +61,13 @@ to deploy, rerun maintenance scripts, or modify live data.
   link. Never introduce a shared default password or store passwords in
   Firestore. Admin may resend the setup/reset link; Hospital users may change
   their password only after re-authentication.
+- App-triggered Hospital invitations and Admin/Hospital reset emails use the
+  shared server-only SMTP transport and Ayursarga auth-email template. Generate
+  password links with Firebase Admin, not browser sendPasswordResetEmail or the
+  restricted Firebase template editor. Never return, persist or log action links
+  or reset codes. Keep invitations Admin-authorized, reset responses generic for
+  missing/ineligible accounts, and use canonical APP_SITE_URL return URLs rather
+  than request-controlled destinations. Consumers remain Google-only.
 - The verified server-only Admin bootstrap endpoint may recreate a missing
   `users/{uid}` profile only for the password-authenticated
   `info@ayursarga.com` Firebase account. Keep it email-locked, idempotent,

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import type { PortalRole } from "@/features/auth/contracts";
 import { getRoleLoginPath } from "@/features/auth/roles";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,19 +12,24 @@ import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 export function ForgotPasswordForm({ role }: { role: Exclude<PortalRole, "consumer"> }) {
   const { resetPassword, isLoading, error, clearError } = useAuth();
   const [sent, setSent] = useState(false);
+  const submitting = useRef(false);
   const [message, setMessage, messageNotification] = useRepeatableMessage();
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (submitting.current) return;
+    submitting.current = true;
     clearError();
     setMessage(null);
     const data = new FormData(event.currentTarget);
     try {
       await resetPassword(String(data.get("email") || ""));
       setSent(true);
-      setMessage("If an account exists for that email, a reset link has been sent.");
+      setMessage("If an eligible account exists, you will receive a password reset email. Check your inbox and spam folder.");
     } catch {
       setSent(false);
+    } finally {
+      submitting.current = false;
     }
   };
 

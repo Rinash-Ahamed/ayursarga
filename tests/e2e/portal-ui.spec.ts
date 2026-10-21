@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { portalUiBundle } from "../helpers/portalUiBundle";
+import { authEmail } from "../../lib/authEmail";
 const styles = ["node_modules/tailwindcss/lib/css/preflight.css", "app/globals.css", "app/portal.css"].map((file) => readFileSync(file, "utf8")).join("\n");
 const screens = ["admin-dashboard", "admin-hospitals", "admin-details", "admin-consultants", "admin-users", "admin-bookings", "admin-availability", "admin-audits", "hospital-dashboard", "hospital-profile", "hospital-services", "hospital-bookings", "hospital-availability", "hospital-password", "admin-login", "hospital-login", "admin-forgot", "hospital-forgot"];
 async function mount(page: Page, screen: string) {
@@ -12,6 +13,30 @@ async function mount(page: Page, screen: string) {
   await expect(page.locator("h1")).toBeVisible();
   await page.waitForTimeout(120);
 }
+test("authentication emails share a responsive Ayursarga theme with readable reset and invitation links", async ({ page }, testInfo) => {
+  for (const kind of ["hospital-invitation", "password-reset"] as const) {
+    const message = authEmail({ kind, name: "Ayursarga Hospital Partner with a Longer Centre Name", actionUrl: "https://test-project.firebaseapp.com/__/auth/action?mode=resetPassword&oobCode=local-test-placeholder-not-a-real-token" });
+    await page.setContent(message.html);
+    const button = page.getByRole("link", { name: kind === "hospital-invitation" ? "Set your password" : "Reset your password", exact: true });
+    await expect(button).toBeVisible();
+    await expect(button).toHaveCSS("background-color", "rgb(31, 61, 43)");
+    await expect(button).toHaveAttribute("href", /firebaseapp\.com\/__\/auth\/action/);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath(`${kind}.png`), fullPage: true });
+  }
+});
+
+test("portal password reset submits once and shows a generic acknowledgement for both roles", async ({ page }) => {
+  for (const role of ["admin", "hospital"]) {
+    await mount(page, `${role}-forgot`);
+    await page.getByRole("textbox", { name: "Email address" }).fill("partner@example.com");
+    await page.locator("form").evaluate((form: HTMLFormElement) => { form.requestSubmit(); form.requestSubmit(); });
+    await expect(page.getByText("If an eligible account exists, you will receive a password reset email. Check your inbox and spam folder.", { exact: true })).toBeVisible();
+    expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { calls: number } }).consumerBookingFixture.calls)).toBe(1);
+    await expect(page.getByRole("link", { name: "Return to login" })).toHaveAttribute("href", `/${role}/login`);
+  }
+});
+
 test("availability review requires confirmation and prevents duplicate submissions", async ({ page }) => {
   await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
   await mount(page, "admin-availability");

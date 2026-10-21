@@ -2,19 +2,26 @@ import { FieldValue } from "firebase-admin/firestore";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { apiHealth, apiJson } from "@/services/api/server";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
+import { authEmailSiteUrl, sendAuthEmail } from "@/services/auth/authEmailService";
+import { isEmailReady } from "@/services/email/emailService";
+import { allowRequest } from "@/services/api/rateLimit";
 
 export const runtime = "nodejs";
 
 export function GET() {
-  return apiHealth("/api/admin/hospitals/[hospitalId]/login-setup", [{ name: "firebaseAdmin", ready: isFirebaseAdminReady() }]);
+  return apiHealth("/api/admin/hospitals/[hospitalId]/login-setup", [{ name: "firebaseAdmin", ready: isFirebaseAdminReady() }, { name: "email", ready: isEmailReady() }]);
 }
 
 export async function POST(request: Request, context: { params: Promise<{ hospitalId: string }> }) {
+  let deliveringEmail = false;
   try {
     const { uid: adminUid, auth, firestore } = await requireActiveAdmin(request);
 
     const { hospitalId } = await context.params;
     if (!hospitalId || hospitalId.length > 160 || hospitalId.includes("/")) return apiJson({ error: "The hospital could not be found." }, 404);
+    if (!allowRequest(`hospital-invite:${adminUid}:${hospitalId}`, 3, 10 * 60 * 1000)) return apiJson({ error: "Please wait before sending another Hospital invitation." }, 429);
+    if (!isEmailReady()) return apiJson({ error: "Invitation email is not configured. Ask Admin to check the server email settings." }, 503);
+    authEmailSiteUrl();
     const hospitalReference = firestore.collection("hospitals").doc(hospitalId);
     const hospitalSnapshot = await hospitalReference.get();
     const hospital = hospitalSnapshot.data();
@@ -143,10 +150,14 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
       ]),
     ]);
 
-    return apiJson({ ok: true, email });
+    deliveringEmail = true;
+    await sendAuthEmail(auth, { email, name, role: "hospital", invitation: true });
+    return apiJson({ ok: true, email, emailSent: true });
   } catch (error) {
     if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
-    console.error("Hospital login setup failed", error instanceof Error ? error.message : error);
-    return apiJson({ error: "Hospital login setup is unavailable. Check the server Firebase Admin configuration and try again." }, 503);
+    console.error("Hospital login setup or invitation delivery failed.");
+    return apiJson({ error: deliveringEmail
+      ? "The Hospital account is ready, but its invitation email could not be sent. Retry sending the login setup link."
+      : "Hospital login setup is unavailable. Check the server Firebase Admin and email configuration and try again." }, 503);
   }
 }

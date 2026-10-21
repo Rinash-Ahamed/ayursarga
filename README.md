@@ -217,6 +217,26 @@ The preservation and audit design is documented in
 
 ### Hospital login lifecycle
 
+- App-triggered Hospital setup/resend and Admin/Hospital Forgot password emails
+  use shared Ayursarga-themed HTML/plain-text templates and the existing Gmail
+  SMTP transport. This does not depend on Firebase's restricted template editor.
+  Firebase Admin generates the links and Firebase's hosted page still validates
+  codes and sets passwords. Emails manually sent from Firebase Console are not
+  replaced by this app workflow.
+- Set server-only `GMAIL_USER`, `GMAIL_APP_PASSWORD` and
+  `APP_SITE_URL=https://ayursarga.com` (or your canonical production HTTPS URL)
+  locally and on hosting. Authorize that domain in Firebase Authentication.
+  `APP_SITE_URL` defaults to `https://ayursarga.com`; browser/request hosts are
+  never used as email link destinations. SMTP configuration readiness is not an
+  inbox-delivery test. For a final delivery check use a controlled test account
+  only with explicit authorization.
+- Public `/api/auth/password-reset` sends only for active Admin/Hospital profiles
+  matching the Authentication email, with generic acknowledgements for unknown
+  or ineligible accounts and operational delivery failures. It uses the existing
+  per-instance rate limiter (request fingerprint, hashed recipient and total
+  delivery limits); this is not a distributed abuse-prevention guarantee.
+  Hospital invitation delivery is confirmed server-side after audited account
+  provisioning; delivery failure preserves that account and reports a retry.
 - Activating a hospital provisions or reconnects its Firebase Authentication
   account using the official hospital email and sends a secure Firebase password
   setup link. No default password or password hash is stored in Firestore.

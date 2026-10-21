@@ -6,6 +6,7 @@ type AuthErrorCode =
   | "user-disabled"
   | "too-many-requests"
   | "network"
+  | "email-delivery"
   | "database-permission"
   | "profile-not-found"
   | "profile-recovery"
@@ -26,6 +27,7 @@ const MESSAGES: Record<AuthErrorCode, string> = {
   "user-disabled": "This account has been disabled. Please contact support.",
   "too-many-requests": "Too many attempts. Please wait and try again.",
   network: "Unable to connect. Check your connection and try again.",
+  "email-delivery": "Password reset email is temporarily unavailable. Please try again later or contact Ayursarga.",
   "database-permission": "Your account is authenticated but its database access is not configured.",
   "profile-not-found": "Your account profile could not be found.",
   "profile-recovery": "Your Admin profile could not be restored. Check the server Firebase Admin configuration and try again.",

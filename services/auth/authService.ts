@@ -4,7 +4,6 @@ import {
   EmailAuthProvider,
   GoogleAuthProvider,
   reauthenticateWithCredential,
-  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
@@ -103,8 +102,14 @@ export const authService: AuthAdapter = {
   },
   async resetPassword(email: string) {
     try {
-      await sendPasswordResetEmail(getClientAuth(), email.trim());
+      const response = await fetch("/api/auth/password-reset", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }), cache: "no-store",
+      });
+      const body = await response.json().catch(() => null) as { ok?: boolean } | null;
+      if (!response.ok || body?.ok !== true) throw new AuthenticationError(response.status === 429 ? "too-many-requests" : "email-delivery");
     } catch (error) {
+      if (error instanceof TypeError) throw new AuthenticationError("network", { cause: error });
       throw toAuthenticationError(error);
     }
   },

@@ -21,7 +21,7 @@ const consultant = { ...metadata, id: "consultant", employeeId: "AS001", employe
 const user = { ...metadata, id: "actor", uid: "actor", name: hospital.name, email: hospital.email, role: "consumer", status: "active", phone: "9876543210", hospitalId: "centre", privacyConsentAt: now, privacyConsentVersion: CONSUMER_PRIVACY_NOTICE_VERSION, customerTermsAcceptedAt: now, customerTermsVersion: CUSTOMER_TERMS_VERSION };
 const page = (documents: unknown[]) => Promise.resolve({ documents, cursor: null, hasMore: false });
 const firebaseUser = { uid: "patient" };
-export function useAuth() { return { firebaseUser, userProfile: { ...user, role: portalUiState.screen.startsWith("consumer") ? "consumer" : portalUiState.screen.startsWith("hospital") ? "hospital" : "admin" }, isLoading: false, error: null, refreshUserProfile: async () => user, logout: async () => {}, clearError: () => {}, login: async () => {}, reauthenticate: async () => {}, changePassword: async () => {} }; }
+export function useAuth() { return { firebaseUser, userProfile: { ...user, role: portalUiState.screen.startsWith("consumer") ? "consumer" : portalUiState.screen.startsWith("hospital") ? "hospital" : "admin" }, isLoading: false, error: null, refreshUserProfile: async () => user, logout: async () => {}, clearError: () => {}, login: async () => {}, resetPassword: async () => { portalUiState.calls++; }, reauthenticate: async () => {}, changePassword: async () => {} }; }
 export function usePathname() {
   if (portalUiState.screen === "consumer-profile") return "/app/profile";
   if (portalUiState.screen === "consumer-support") return "/app/support";
