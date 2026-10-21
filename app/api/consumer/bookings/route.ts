@@ -11,6 +11,7 @@ import { packageTitle } from "@/features/hospitals/packages";
 import { ensureBookingReference, reserveBookingReference } from "@/services/bookings/bookingReferenceAdmin";
 import { addBookingNotifications, bookingNotificationRecipients } from "@/services/notifications/bookingNotificationsAdmin";
 import { requestAuditDevice } from "@/services/api/audit";
+import { parseDateInputValue } from "@/utils/date";
 
 export const runtime = "nodejs";
 
@@ -20,12 +21,6 @@ class BookingFlowError extends Error {
 
 function validId(value: unknown) {
   return typeof value === "string" && value.length > 0 && value.length <= 160 && !value.includes("/") ? value : null;
-}
-
-function parseCareDate(value: unknown) {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
-  const date = new Date(`${value}T00:00:00+05:30`);
-  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function todayInIndia() {
@@ -110,8 +105,8 @@ export async function POST(request: Request) {
     const requestId = typeof body.requestId === "string" && /^[a-zA-Z0-9-]{16,100}$/.test(body.requestId) ? body.requestId : null;
     const preferredDateText = typeof body.preferredDate === "string" ? body.preferredDate : "";
     const preferredEndDateText = typeof body.preferredEndDate === "string" ? body.preferredEndDate : "";
-    const preferredDate = parseCareDate(preferredDateText);
-    const preferredEndDate = preferredEndDateText ? parseCareDate(preferredEndDateText) : preferredDate;
+    const preferredDate = parseDateInputValue(preferredDateText);
+    const preferredEndDate = preferredEndDateText ? parseDateInputValue(preferredEndDateText) : preferredDate;
     const bystanderCount = Number(body.bystanderCount);
     const consumerNotes = typeof body.consumerNotes === "string" ? body.consumerNotes.trim().slice(0, 500) : "";
     if (!hospitalId || !serviceId || !requestId || !preferredDate || !preferredEndDate
@@ -184,9 +179,9 @@ export async function POST(request: Request) {
         bystanderCount,
         additionalBystanderCharge: bystanderPolicy.additionalBystanderCharge,
         additionalBystanderTotal,
-        confirmedDate: null,
+        confirmedDate: Timestamp.fromDate(preferredDate),
         confirmedTime: null,
-        status: "requested",
+        status: "confirmed",
         treatmentStatus: "not_started",
         servicePrice,
         commissionPercentage,
@@ -199,7 +194,7 @@ export async function POST(request: Request) {
         updatedBy: uid,
         archivedAt: null,
         archivedBy: null,
-        confirmedAt: null,
+        confirmedAt: now,
         completedAt: null,
         treatmentStartedAt: null,
         treatmentCompletedAt: null,

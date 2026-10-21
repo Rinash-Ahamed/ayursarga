@@ -151,6 +151,14 @@ to deploy, rerun maintenance scripts, or modify live data.
   one valid signed-contract URL and signing date. Preserve created, signed, and
   activated dates and audit each transition.
 - Consumer booking creation runs through the authenticated server endpoint and
+  confirms new bookings immediately after checking current hospital/package
+  eligibility and approved blocked dates in the same transaction. Set confirmed
+  date to the selected start/EDD date, confirmedAt to the creation timestamp,
+  leave exact appointment time unset, and begin treatment at not_started.
+  Hospital approval is not required for new bookings. Preserve legacy requested
+  records and their handling; do not silently migrate historical bookings.
+  Blocked-date checks are not room-inventory reservation or capacity enforcement.
+  Booking creation
   snapshots service price and commission values for
   historical consistency. It also snapshots the Consumer's name, Google email,
   phone, optional address, preferred care period, and bystander count so only

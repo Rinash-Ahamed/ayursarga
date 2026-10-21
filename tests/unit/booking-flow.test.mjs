@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Timestamp } from "firebase-admin/firestore";
+import { createHash } from "node:crypto";
 import { bookingFlowFixture, bookingTestRequest, validBookingInput } from "../helpers/bookingFlowFixture.mjs";
 
 const createPath = "app/api/consumer/bookings/route.ts";
@@ -8,10 +9,10 @@ const referencePath = "app/api/bookings/references/route.ts";
 const clearPath = "app/api/notifications/clear/route.ts";
 const createRequest = (changes = {}) => bookingTestRequest("/api/consumer/bookings", { ...validBookingInput, ...changes });
 
-test("booking, canonical reference, audit and correctly addressed bell notifications commit together", async () => {
+test("confirmed booking, canonical reference, audit and correctly addressed bell notifications commit together", async () => {
   const f = bookingFlowFixture();
   const { POST } = f.load(createPath);
-  const response = await POST(createRequest({ hospitalName: "Untrusted", serviceName: "Untrusted" }));
+  const response = await POST(createRequest({ hospitalName: "Untrusted", serviceName: "Untrusted", status: "requested", confirmedTime: "11:30" }));
   assert.equal(response.status, 201);
   const body = await response.json();
   assert.match(body.bookingReference, /^AYUR[A-Z0-9]{6}$/);
@@ -20,7 +21,13 @@ test("booking, canonical reference, audit and correctly addressed bell notificat
   assert.equal(booking.hospitalName, "Trusted centre");
   assert.equal(booking.serviceName, "7-day package");
   assert.equal(booking.servicePrice, 12000);
-  assert.equal(booking.status, "requested");
+  assert.equal(booking.status, "confirmed");
+  assert.equal(booking.confirmedDate.toMillis(), booking.preferredDate.toMillis());
+  assert.equal(booking.confirmedTime, null);
+  assert.equal(booking.treatmentStatus, "not_started");
+  assert.deepEqual(booking.confirmedAt, booking.createdAt);
+  assert.ok(booking.confirmedAt);
+  assert.equal(f.values("auditLogs")[0].updatedValues.status, "confirmed");
   assert.equal(f.values("auditLogs").length, 1);
   assert.equal(f.values("bookingReferences").length, 1);
   const notifications = f.values("notifications");
@@ -30,12 +37,32 @@ test("booking, canonical reference, audit and correctly addressed bell notificat
     assert.equal(item.recordId, body.bookingId);
     assert.equal(item.actionHref, `/${item.recipientRole}/bookings?booking=${body.bookingId}`);
     assert.ok(item.message.includes("Trusted centre") && item.message.includes("7-day package") && item.message.includes("25/10/2099"));
+    assert.match(item.message, /Booking confirmed/);
+    assert.doesNotMatch(item.message, /awaiting/);
   }
   const retry = await POST(createRequest());
   assert.equal(retry.status, 200);
   assert.equal((await retry.json()).bookingReference, body.bookingReference);
   assert.equal(f.values("notifications").length, 2);
   assert.equal(f.values("bookings").length, 1);
+});
+
+test("automatic confirmation rejects blocked dates, invalid calendar dates and unauthorized callers", async () => {
+  const blocked = { startDate: Timestamp.fromDate(new Date("2099-10-25T00:00:00+05:30")), endDate: Timestamp.fromDate(new Date("2099-10-27T00:00:00+05:30")) };
+  for (const [options, input, expected] of [
+    [{ records: { "hospitals/centre": { name: "Blocked", status: "active", isPublic: true, blockedDateRanges: [blocked] } } }, {}, 409],
+    [{}, { preferredDate: "2099-02-30" }, 400],
+    [{}, { preferredEndDate: "2099-11-31" }, 400],
+    [{ actor: { role: "hospital" } }, {}, 403],
+    [{ actor: { role: "admin" } }, {}, 403],
+    [{ denied: true }, {}, 403],
+  ]) {
+    const f = bookingFlowFixture(options);
+    assert.equal((await f.load(createPath).POST(createRequest(input))).status, expected);
+    assert.equal(f.values("bookings").length, 0);
+    assert.equal(f.values("notifications").length, 0);
+    assert.equal(f.values("auditLogs").length, 0);
+  }
 });
 
 test("simultaneous retries and a lost successful response do not duplicate bookings or notifications", async () => {
@@ -52,6 +79,17 @@ test("simultaneous retries and a lost successful response do not duplicate booki
   assert.equal((await route.POST(createRequest())).status, 200);
   assert.equal(ambiguous.values("notifications").length, 2);
   assert.equal(ambiguous.values("bookings").length, 1);
+});
+
+test("retrying a historical requested booking preserves its original status and timestamps", async () => {
+  const id = createHash("sha256").update(`patient:${validBookingInput.requestId}`).digest("hex");
+  const legacy = { consumerId: "patient", hospitalId: "centre", serviceId: "package", status: "requested", bookingReference: "AYUR000001", confirmedAt: null, confirmedDate: null, createdAt: Timestamp.fromMillis(1000) };
+  const f = bookingFlowFixture({ records: { [`bookings/${id}`]: legacy } });
+  const response = await f.load(createPath).POST(createRequest());
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).duplicate, true);
+  assert.deepEqual(f.records.get(`bookings/${id}`), legacy);
+  assert.equal(f.values("notifications").length, 0);
 });
 
 test("reference collisions reserve a different value without overwriting the existing identity", async () => {

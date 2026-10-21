@@ -1,11 +1,82 @@
 # Session handoff
 
-Updated: 20 October 2026 (Asia/Calcutta).
+Updated: 21 October 2026 (Asia/Calcutta).
 
 This file records completed work and verification limits. `AGENTS.md` remains
 the implementation authority; these notes do not authorize deployments or data
 maintenance. Preserve unrelated working-tree changes; the workspace contains
 substantial uncommitted work across multiple tasks.
+
+## Admin Users internal-ID cleanup (21 October 2026)
+
+- Removed the redundant Hospital [database ID] suffix from Admin user cards.
+  Existing account name heading, email, phone and status remain. The underlying
+  hospitalId association is unchanged; no extra lookup/request was introduced.
+- Two focused phone/desktop browser-fixture checks passed, including preserved
+  status and absence of Consumer removal controls in the Hospital account view.
+  No lint/typecheck/build, deployment, API changes or live mutations performed.
+- Patch version 4.4.0 to 4.4.1 synchronized. Consultant Charge rules were
+  subsequently deployed with explicit authorization as noted below.
+
+## Consultant Charge (21 October 2026)
+
+- Owner requested a scoped firestore:rules deployment on 21 October. The CLI
+  failed because saved Firebase credentials expired; no rules were released.
+  Owner subsequently reauthenticated and explicitly requested the retry.
+  Firebase successfully compiled and released firestore.rules to ayursarga-connect
+  on 21 October 2026. No hosting, indexes, Storage rules or operational data
+  changed. Generated debug logs were removed. No version bump for deployment.
+- Admin consultant create/edit forms include optional Consultant Charge (INR).
+  Shared validation parses blank/missing values to null, preserves deliberate
+  zero, and rejects negative/non-numeric/unsafe amounts or more than two decimal
+  places. Cards display formatted INR or Not specified; edits prepopulate it.
+  Older records remain supported without a backfill or invented zero charge.
+- The existing creation API and audited client edit service both reuse this
+  validation; no duplicate endpoint added. Both Firestore full-document and
+  changed-field allowlists now include consultantCharge, with optional numeric
+  validation. Role restrictions, status-only transitions and audit linkage stay.
+- Ten focused unit/API/source-contract tests and three browser checks passed
+  (Chromium 320px phone, desktop, WebKit phone fixtures). Covered actual creation
+  handler with mocked Admin auth/transaction, audited edit payloads, invalid and
+  blank/zero charges, legacy edit/reopen, field errors and stored display values.
+  Source-contract checks do not prove deployed-rule behavior; no emulator/live
+  Firebase save or physical-device checks performed. No lint/typecheck/build run.
+- Updated Firestore rules are now deployed, including Consultant Charge field
+  and changed-field permissions. Authenticated live saves still require browser
+  verification; application hosting was not deployed in this operation.
+- Minor version 4.3.0 to 4.4.0 synchronized; no dependency changes. Earlier
+  immediate-booking work and unrelated next-env.d.ts change were preserved.
+
+## Immediate confirmation for new bookings (21 October 2026)
+
+- Owner changed the booking policy: new Consumer bookings are confirmed on
+  successful placement, without Hospital approval. The authenticated server
+  transaction still checks active/public centre, active owned package, approved
+  blocked dates, pricing, bystanders and mandatory versioned consent. Now writes
+  confirmed status, confirmedDate equal to start/EDD date, confirmedAt equal to
+  creation timestamp, null exact time, and not_started treatment. Creation, audit,
+  canonical reference and Admin/Hospital notifications remain one atomic commit.
+- Reused strict shared India care-date parsing so invalid calendar dates cannot
+  roll over into automatically confirmed bookings. Request idempotency remains;
+  retrying existing historical requested bookings never upgrades their status.
+- Updated booking form, consumer history/help and public Why Ayursarga approval
+  wording. Hospital dashboard counts confirmed bookings rather than new requests.
+  Existing confirmed-state actions already allow starting treatment/rescheduling;
+  kept legacy request actions, cancellation and later treatment transitions.
+- No room inventory reservation or per-day capacity ledger was added. Current
+  availability is approved date blocking, not guaranteed room-level capacity;
+  room occupancy remains separately managed. Legal documents were not rewritten.
+- Twenty-six distinct focused API/unit checks passed across booking-flow,
+  portal-mutations, date-format and sold-out tests;
+  final booking-flow/portal-mutation run passed all 17 after two added regressions.
+  Twelve browser checks passed on Chromium phone/desktop and WebKit phone fixtures,
+  covering all three roles, immediate confirmation, consent and legacy actions.
+  The final Help/Why text edits were source-reviewed after those browser runs.
+- No emulator/live API/physical-device validation, lint, typecheck, build or
+  deployment run. No Firestore rules/index/schema change required: server-only
+  creation remains denied to browser SDK clients, cancellation/treatment rules
+  already accept confirmed bookings. App hosting must be redeployed to publish.
+- Minor version 4.2.5 to 4.3.0 synchronized. AGENTS.md records this workflow.
 
 ## Booking date label expansion (20 October 2026)
 

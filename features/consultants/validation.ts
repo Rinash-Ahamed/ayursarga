@@ -23,6 +23,7 @@ export function formatConsultantTimeSlot(slot: ConsultantTimeSlot, timings?: Con
 export type ConsultantFields = {
   name: string;
   designation: string;
+  consultantCharge: number | null;
   preferredTimeSlots: ConsultantTimeSlot[];
   preferredSlotTimings: ConsultantSlotTimings;
   email: string;
@@ -42,6 +43,7 @@ export function validateConsultantFields(input: Record<string, unknown>) {
   const data: ConsultantFields = {
     name: toTrimmedString(input.name, 120),
     designation: toTrimmedString(input.designation, 120),
+    consultantCharge: input.consultantCharge == null || (typeof input.consultantCharge === "string" && !input.consultantCharge.trim()) ? null : Number(input.consultantCharge),
     preferredTimeSlots: CONSULTANT_TIME_SLOTS.filter((slot) => Array.isArray(input.preferredTimeSlots) && input.preferredTimeSlots.includes(slot)),
     preferredSlotTimings: {},
     email: toTrimmedString(input.email, 160).toLowerCase(),
@@ -54,6 +56,12 @@ export function validateConsultantFields(input: Record<string, unknown>) {
     emergencyContactNo: toTrimmedString(input.emergencyContactNo, 25),
   };
   const errors: ConsultantValidationErrors = {};
+  if (data.consultantCharge !== null && (
+    !["string", "number"].includes(typeof input.consultantCharge) ||
+    !/^\d+(\.\d{1,2})?$/.test(String(input.consultantCharge).trim()) ||
+    !Number.isFinite(data.consultantCharge) || data.consultantCharge < 0 ||
+    !Number.isSafeInteger(Math.round(data.consultantCharge * 100))
+  )) errors.consultantCharge = "Enter a valid non-negative charge with up to 2 decimal places.";
   const timings = input.preferredSlotTimings;
   if (timings != null && (typeof timings !== "object" || Array.isArray(timings) || Object.keys(timings).some((key) => !data.preferredTimeSlots.includes(key as ConsultantTimeSlot)))) {
     errors.preferredSlotTimings = "Provide timings only for the selected slots.";
@@ -90,6 +98,7 @@ export function consultantFormValues(form: FormData): Record<string, unknown> {
   return {
     name: form.get("name"),
     designation: form.get("designation"),
+    consultantCharge: form.get("consultantCharge"),
     preferredTimeSlots: form.getAll("preferredTimeSlots"),
     preferredSlotTimings: Object.fromEntries(CONSULTANT_TIME_SLOTS.filter((slot) => form.getAll("preferredTimeSlots").includes(slot)).map((slot) => [slot, {
       startTime: form.get(`${slot}StartTime`) ?? CONSULTANT_TIME_SLOT_CONFIG[slot].startTime,

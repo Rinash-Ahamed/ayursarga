@@ -16,8 +16,8 @@ import { countUpcomingAvailabilityBlocks } from "@/features/hospitals/availabili
 import { useLocalGreeting } from "@/hooks/useLocalGreeting";
 import { focusFirstInvalidField } from "@/utils/formFocus";
 
-type DashboardCounts = { services: number; bookings: number; requested: number; treatments: number; availabilityBlocks: number };
-const EMPTY_COUNTS: DashboardCounts = { services: 0, bookings: 0, requested: 0, treatments: 0, availabilityBlocks: 0 };
+type DashboardCounts = { services: number; bookings: number; confirmed: number; treatments: number; availabilityBlocks: number };
+const EMPTY_COUNTS: DashboardCounts = { services: 0, bookings: 0, confirmed: 0, treatments: 0, availabilityBlocks: 0 };
 
 export function HospitalDashboard() {
   const { userProfile } = useAuth();
@@ -38,16 +38,16 @@ export function HospitalDashboard() {
     void Promise.allSettled([
         countDocuments(COLLECTIONS.services, [{ field: "hospitalId", operator: "==", value: hospitalId }]),
         countDocuments(COLLECTIONS.bookings, [{ field: "hospitalId", operator: "==", value: hospitalId }]),
-        countDocuments(COLLECTIONS.bookings, [{ field: "hospitalId", operator: "==", value: hospitalId }, { field: "status", operator: "==", value: "requested" }]),
+        countDocuments(COLLECTIONS.bookings, [{ field: "hospitalId", operator: "==", value: hospitalId }, { field: "status", operator: "==", value: "confirmed" }]),
         countDocuments(COLLECTIONS.bookings, [{ field: "hospitalId", operator: "==", value: hospitalId }, { field: "treatmentStatus", operator: "in", value: ["started", "ongoing"] }]),
         getHospitalCapacity(hospitalId),
         readDocument<HospitalDocument>(COLLECTIONS.hospitals, hospitalId),
-      ]).then(([services, bookings, requested, treatments, roomCapacity, hospital]) => {
+      ]).then(([services, bookings, confirmed, treatments, roomCapacity, hospital]) => {
       if (!active) return;
       setCounts({
         services: services.status === "fulfilled" ? services.value : 0,
         bookings: bookings.status === "fulfilled" ? bookings.value : 0,
-        requested: requested.status === "fulfilled" ? requested.value : 0,
+        confirmed: confirmed.status === "fulfilled" ? confirmed.value : 0,
         treatments: treatments.status === "fulfilled" ? treatments.value : 0,
         availabilityBlocks: hospital.status === "fulfilled" && hospital.value
           ? countUpcomingAvailabilityBlocks(hospital.value)
@@ -58,7 +58,7 @@ export function HospitalDashboard() {
         setTotalRooms(String(roomCapacity.value?.totalRooms ?? 0));
         setOccupiedRooms(String(roomCapacity.value?.occupiedRooms ?? 0));
       }
-      if ([services, bookings, requested, treatments, roomCapacity, hospital].some((result) => result.status === "rejected")) {
+      if ([services, bookings, confirmed, treatments, roomCapacity, hospital].some((result) => result.status === "rejected")) {
         setError("Some Hospital dashboard information could not be loaded. The available totals are shown.");
       }
     }).finally(() => {
@@ -101,12 +101,12 @@ export function HospitalDashboard() {
     <div className="portal-welcome">
       <span className="portal-welcome-eyebrow">Your Centre</span>
       <h2>{greeting}.</h2>
-      <p>Your centre overview at a glance. Update room availability or review booking requests below.</p>
+      <p>Your centre overview at a glance. Update room availability or review bookings below.</p>
     </div>
     <div className="portal-grid" aria-busy={loading}>
       <article className="portal-card portal-stat"><strong>{loading ? "…" : counts.services}</strong><span>Services</span></article>
       <article className="portal-card portal-stat"><strong>{loading ? "…" : counts.bookings}</strong><span>Total bookings</span></article>
-      <article className="portal-card portal-stat"><strong>{loading ? "…" : counts.requested}</strong><span>New requests</span></article>
+      <article className="portal-card portal-stat"><strong>{loading ? "…" : counts.confirmed}</strong><span>Confirmed bookings</span></article>
       <article className="portal-card portal-stat"><strong>{loading ? "…" : counts.treatments}</strong><span>Treatments in progress</span></article>
       <article className="portal-card portal-stat"><strong>{loading ? "…" : counts.availabilityBlocks}</strong><span>Upcoming blocked date ranges</span></article>
     </div>
@@ -145,7 +145,7 @@ export function HospitalDashboard() {
     <nav className="portal-quick-actions" aria-label="Quick actions">
       <Link className="portal-quick-action" href={ROUTES.hospital.bookings}>
         <span className="portal-quick-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" /></svg></span>
-        View booking requests
+        View bookings
       </Link>
       <Link className="portal-quick-action" href={ROUTES.hospital.services}>
         <span className="portal-quick-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" /></svg></span>

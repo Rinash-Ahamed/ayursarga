@@ -34,7 +34,7 @@ export function addBookingNotifications(transaction: Transaction, firestore: Fir
     transaction.create(firestore.collection("notifications").doc(id), {
       recipientId: recipient.id, recipientRole: recipient.role, type: "booking_created",
       title: `New booking ${input.bookingReference}`,
-      message: `${input.hospitalName} · ${input.consumerName} · ${input.consumerPhone} · ${input.serviceName} · ${dates} · ${input.bystanderCount} bystander(s). Booked, awaiting hospital confirmation.`,
+      message: `${input.hospitalName} · ${input.consumerName} · ${input.consumerPhone} · ${input.serviceName} · ${dates} · ${input.bystanderCount} bystander(s). Booking confirmed. No hospital approval required.`,
       actionHref: `/${recipient.role}/bookings?booking=${encodeURIComponent(input.documentId)}`,
       recordId: input.documentId, bookingReference: input.bookingReference,
       readAt: null, status: "active", createdAt: input.now, createdBy: input.actorId,

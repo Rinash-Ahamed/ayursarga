@@ -115,6 +115,27 @@ test("unavailable packages cannot be submitted", async ({ page }) => {
   await checkLayout(page);
 });
 
+test("new automatically confirmed bookings display consistently without hospital approval", async ({ page }) => {
+  for (const role of ["consumer", "hospital", "admin"]) {
+    await mount(page, `${role}-auto-confirmed`);
+    const card = page.locator(role === "consumer" ? ".consumer-booking-row" : ".operational-booking-card");
+    await expect(card).toHaveCount(1);
+    await expect(card.locator(".portal-status")).toHaveText(/confirmed/i);
+    await expect(card).toContainText("Confirmed appointment");
+    await expect(card).not.toContainText("awaiting");
+    await expect(card.getByRole("button", { name: "Confirm", exact: true })).toHaveCount(0);
+    if (role === "consumer") {
+      await expect(card).toContainText("Your booking is confirmed.");
+      await expect(card.getByRole("button", { name: "Cancel booking", exact: true })).toBeEnabled();
+    }
+    if (role === "hospital") {
+      await expect(card.getByRole("button", { name: "Start treatment", exact: true })).toBeEnabled();
+      await expect(card.getByRole("button", { name: "Reschedule", exact: true })).toBeEnabled();
+    }
+    await checkLayout(page);
+  }
+});
+
 test("one canonical reference identifies the selected booking in every portal", async ({ page }) => {
   for (const role of ["consumer", "hospital", "admin"]) {
     await mount(page, `${role}-booking-detail`);

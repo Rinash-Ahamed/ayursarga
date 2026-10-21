@@ -5,7 +5,7 @@ import Image from "next/image";
 
 const BENEFITS = [
   ["partners", "Approved hospital partners", "Only active hospitals approved for public discovery appear to consumers."],
-  ["requests", "Hospital-confirmed requests", "Hospitals confirm, reject or propose another time for each appointment request."],
+  ["requests", "Immediate booking confirmation", "Availability is checked when you book, with no separate hospital approval needed."],
   ["pricing", "Visible service pricing", "Review the listed service price before sending your appointment request."],
   ["guidance", "Guidance when needed", "An Ayursarga guide can help when you are unsure where to begin."],
   ["status", "Booking status clarity", "Follow requested, confirmed, rescheduled, cancelled and completed appointments."],

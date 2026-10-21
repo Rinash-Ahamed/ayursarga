@@ -78,7 +78,7 @@ export function ConsumerBookings({ bookingId }: { bookingId?: string } = {}) {
     <div className="consumer-booking-toolbar">
       <div>
         <span>Your care journey</span>
-        <p>Review your bookings and follow each centre&apos;s confirmation.</p>
+        <p>Review your booking details and follow your care journey.</p>
       </div>
       <nav className="consumer-booking-nav" aria-label="Consumer booking navigation">
         <Link className="portal-button" href={ROUTES.public.centers}>Search hospitals</Link>
@@ -107,6 +107,7 @@ export function ConsumerBookings({ bookingId }: { bookingId?: string } = {}) {
           {booking.consumerNotes && <details className="consumer-booking-notes"><summary>Your request notes</summary><p>{booking.consumerNotes}</p></details>}
           {booking.status === "requested" && <p className="consumer-booking-pending">Your booking has been placed and is awaiting the centre&apos;s confirmation. Your appointment is not confirmed yet.</p>}
           {(booking.status === "confirmed" || booking.status === "completed") && <>
+            {booking.status === "confirmed" && <p className="consumer-booking-treatment">Your booking is confirmed.</p>}
             <p className="consumer-booking-treatment">Treatment: {formatStatus(getTreatmentStatus(booking))}</p>
             <TreatmentTrail status={getTreatmentStatus(booking)} />
           </>}

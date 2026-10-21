@@ -100,6 +100,20 @@ test("booking transitions remain validated and canonical results include complet
     } else assert.equal(f.calls.commits, 0);
   }
 });
+
+test("hospital can start automatically confirmed treatment without an exact appointment time or approval", async () => {
+  const f = fixture({ "hospitals/centre": { status: "active" }, "bookings/booking": {
+    hospitalId: "centre", status: "confirmed", treatmentStatus: "not_started",
+    confirmedDate: Timestamp.fromDate(new Date("2099-10-25T00:00:00+05:30")), confirmedTime: null,
+  } });
+  const response = await f.load("app/api/hospital/bookings/[bookingId]/route.ts").PATCH(request({ action: "treatment", treatmentStatus: "started" }), context("bookingId", "booking"));
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.changes.treatmentStatus, "started");
+  assert.ok(body.changes.treatmentStartedAt.__ayursargaTimestamp);
+  assert.equal(f.calls.commits, 1);
+  assert.equal(f.calls.writes.length, 2);
+});
 test("inactive hospitals and denied roles cannot write optimized routes", async () => {
   for (const denied of [false, true]) {
     const f = fixture({ "hospitals/centre": { status: "inactive" } }, { denied });

@@ -15,7 +15,7 @@ export function ConsumerSupport() {
       <section className="portal-card consumer-support-card">
         <h2>Your booking, at a glance</h2>
         <p>My bookings shows your hospital, package, booking ID, care dates and the centre&apos;s latest response.</p>
-        <p>A placed booking is awaiting confirmation until the hospital confirms the appointment. Check the centre&apos;s response for confirmed or proposed dates.</p>
+        <p>New bookings are confirmed when successfully placed, after availability is checked. My bookings shows your confirmed date and any later updates from the centre. Older requests may still show an awaiting-confirmation status.</p>
         <div className="portal-actions"><Link className="portal-button secondary" href={ROUTES.consumer.bookings}>View my bookings</Link></div>
         <Link className="consumer-support-policy" href={ROUTES.public.cancellationRefundPolicy}>Read the cancellation &amp; refund policy</Link>
       </section>

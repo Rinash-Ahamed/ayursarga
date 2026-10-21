@@ -15,6 +15,7 @@ import { ConsultantFormFields } from "@/components/forms/ConsultantFormFields";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { formatStatus } from "@/utils/text";
 import { focusFirstInvalidField } from "@/utils/formFocus";
+import { formatCurrency } from "@/utils/currency";
 
 export function ConsultantsManager() {
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -140,6 +141,7 @@ export function ConsultantsManager() {
           <div><dt>WhatsApp number</dt><dd>{consultant.whatsappNo}</dd></div>
           <div><dt>Qualification</dt><dd>{consultant.qualification}</dd></div>
           <div><dt>Experience</dt><dd>{consultant.yearsExperience} years</dd></div>
+          <div><dt>Consultant Charge</dt><dd>{consultant.consultantCharge != null ? formatCurrency(consultant.consultantCharge) : "Not specified"}</dd></div>
           {consultant.lastWorkedCompany && <div><dt>Last worked at</dt><dd>{consultant.lastWorkedCompany}</dd></div>}
           {consultant.address && <div className="consultant-detail-wide"><dt>Address</dt><dd>{consultant.address}</dd></div>}
           {consultant.emergencyContactNo && <div><dt>Emergency contact</dt><dd>{consultant.emergencyContactNo}</dd></div>}

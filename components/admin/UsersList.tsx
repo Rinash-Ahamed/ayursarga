@@ -66,7 +66,7 @@ export function UsersList() {
     <PortalToast message={message} notification={messageNotification} />
     <PortalToast message={actionError} notification={actionErrorNotification} tone="error" />
     <div className="portal-list">{items.map((item) => <article className="portal-row" key={item.id}>
-      <div><h3>{item.name}</h3><p>{item.email}{item.phone ? ` · ${item.phone}` : ""}{item.hospitalId ? ` · Hospital ${item.hospitalId}` : ""}</p>{group === "consumer" && item.address && <p>{item.address}</p>}</div>
+      <div><h3>{item.name}</h3><p>{item.email}{item.phone ? ` · ${item.phone}` : ""}</p>{group === "consumer" && item.address && <p>{item.address}</p>}</div>
       <div className="portal-user-actions">
         <span className="portal-status" data-status={item.status}>{item.status}</span>
         {group === "consumer" && <button className="portal-button danger" type="button" disabled={busy} onClick={() => {

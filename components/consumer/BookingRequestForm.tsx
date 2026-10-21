@@ -104,12 +104,12 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
     <section className="portal-card consumer-request-summary" aria-label="Selected centre and package" aria-busy={hospitalLoading}>
       {hospitalLoading ? <p role="status">Loading your centre and package details…</p> : <>
         <div><span className="consumer-booking-reference">Your selected care</span><h2>{hospital?.name || "Centre unavailable"}</h2><p>{[hospital?.city, hospital?.district, hospital?.state].filter(Boolean).join(", ")}</p><h3>{service ? packageTitle(service) : "Package unavailable"}</h3>{service?.description && <p>{service.description}</p>}</div>
-        {service && <div className="consumer-booking-cost"><span>Package amount</span><strong>{formatCurrency(service.price ?? 0)}</strong><small>Final availability confirmed by the centre</small></div>}
+        {service && <div className="consumer-booking-cost"><span>Package amount</span><strong>{formatCurrency(service.price ?? 0)}</strong><small>Availability checked when you book</small></div>}
         {procedures.length > 0 && <details className="consumer-booking-notes"><summary>View included procedures</summary><ul className="consumer-package-procedures">{procedures.map((procedure) => <li key={procedure.id}><span>{procedure.label}</span>{procedure.days !== null && <strong>{procedure.days} {procedure.days === 1 ? "day" : "days"}</strong>}</li>)}</ul></details>}
       </>}
     </section>
     <form className="portal-card portal-form consumer-request-form" onSubmit={submit} noValidate>
-      <div className="consumer-request-intro full"><h2>Your care preferences</h2><p>Choose your preferred start date or expected delivery date and share anything the centre should know. Your appointment is confirmed only after the centre responds.</p></div>
+      <div className="consumer-request-intro full"><h2>Your care preferences</h2><p>Choose your preferred start date or expected delivery date and share anything the centre should know. Your booking is confirmed once it is successfully placed.</p></div>
       {soldOut && <p className="portal-form-error full" role="status">Sold Out {preferredDate ? "for your selected care dates" : "today"}. Please choose another care date.</p>}
       <label>Preferred start date / Expected Delivery Date<DateInput name="date" min={toDateInputValue()} value={preferredDate} onChange={(event) => { setPreferredDate(event.target.value); setFieldErrors((current) => ({ ...current, preferredDate: undefined })); }} required aria-invalid={Boolean(fieldErrors.preferredDate)} />{fieldErrors.preferredDate && <span className="portal-field-error" role="alert">{fieldErrors.preferredDate}</span>}</label>
       <label>Accompanying bystanders

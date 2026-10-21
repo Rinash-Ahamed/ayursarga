@@ -225,13 +225,18 @@ service cloud.firestore {
     function hasValidConsultantFields() {
       return request.resource.data.keys().hasOnly([
           'employeeId', 'employeeSequence', 'name', 'email', 'contactNo', 'whatsappNo',
-          'qualification', 'yearsExperience', 'lastWorkedCompany', 'address', 'designation', 'preferredTimeSlots', 'preferredSlotTimings',
+          'qualification', 'yearsExperience', 'lastWorkedCompany', 'address', 'designation', 'consultantCharge', 'preferredTimeSlots', 'preferredSlotTimings',
           'emergencyContactNo', 'status', 'createdAt', 'createdBy', 'updatedAt',
           'updatedBy', 'archivedAt', 'archivedBy', 'lastAuditId'
         ])
         && request.resource.data.employeeId is string
         && request.resource.data.get('designation', '') is string
         && request.resource.data.get('designation', '').size() <= 120
+        && (request.resource.data.get('consultantCharge', null) == null || (
+          request.resource.data.consultantCharge is number
+          && request.resource.data.consultantCharge >= 0
+          && request.resource.data.consultantCharge <= 90071992547409.9
+        ))
         && request.resource.data.get('preferredTimeSlots', []) is list
         && request.resource.data.get('preferredTimeSlots', []).size() <= 3
         && request.resource.data.get('preferredTimeSlots', []).hasOnly(['morning', 'noon', 'evening'])
@@ -656,7 +661,7 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name', 'email', 'contactNo', 'whatsappNo', 'qualification',
             'yearsExperience', 'lastWorkedCompany', 'address', 'emergencyContactNo',
-            'designation', 'preferredTimeSlots', 'preferredSlotTimings',
+            'designation', 'consultantCharge', 'preferredTimeSlots', 'preferredSlotTimings',
             'updatedAt', 'updatedBy', 'lastAuditId'
           ])) || (linkedAuditAction() == 'status_change'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([

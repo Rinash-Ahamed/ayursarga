@@ -26,6 +26,7 @@ export function ConsultantFormFields({ defaultValues = {}, errors }: {
   return <>
     <label>Name *<input name="name" defaultValue={defaultValues.name} required minLength={2} maxLength={120} autoComplete="name" aria-invalid={Boolean(errors.name)} /><FieldError field="name" errors={errors} /></label>
     <label>Designation <small>Optional</small><input name="designation" defaultValue={defaultValues.designation} maxLength={120} aria-invalid={Boolean(errors.designation)} /><FieldError field="designation" errors={errors} /></label>
+    <label>Consultant Charge (₹) <small>Optional</small><input name="consultantCharge" type="number" defaultValue={defaultValues.consultantCharge ?? ""} min="0" step="0.01" inputMode="decimal" aria-invalid={Boolean(errors.consultantCharge)} /><FieldError field="consultantCharge" errors={errors} /></label>
     <fieldset className="full consultant-preferences" aria-invalid={Boolean(errors.preferredTimeSlots)}>
       <legend>Preferred availability <small>Optional · select one or more</small></legend>
       <div className="consultant-slot-options">{CONSULTANT_TIME_SLOTS.map((slot) => {

@@ -170,6 +170,7 @@ export type HospitalCapacityDocument = AuditedDocument & {
 
 export type ConsultantDocument = AuditedDocument & {
   designation?: string;
+  consultantCharge?: number | null;
   preferredTimeSlots?: import("@/features/consultants/validation").ConsultantTimeSlot[];
   preferredSlotTimings?: import("@/features/consultants/validation").ConsultantSlotTimings;
   employeeId: string;
