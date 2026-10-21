@@ -1,17 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { apiHealth } from "@/services/api/server";
-import { isContactEmailReady } from "@/services/contact/contactEmailService";
-import { isFirebaseAdminReady } from "@/services/firebase/admin";
+import { apiJson } from "@/services/api/server";
+import { platformHealthReport } from "@/services/api/platformHealth";
 
 export const runtime = "nodejs";
 
 export function GET(request: NextRequest) {
   if (request.headers.get("accept")?.includes("text/html")) {
-    return NextResponse.redirect(new URL("/health", request.url), 307);
+    const destination = new URL("/health", request.url);
+    if (new URL(request.url).searchParams.get("deep") === "true") destination.searchParams.set("deep", "true");
+    return NextResponse.redirect(destination, 307);
   }
 
-  return apiHealth("/api/health", [
-    { name: "firebase-admin", ready: isFirebaseAdminReady() },
-    { name: "contact-email", ready: isContactEmailReady() },
-  ]);
+  const report = platformHealthReport(new URL(request.url).searchParams.get("deep") === "true");
+  return apiJson(report, report.status === "ok" ? 200 : 503);
 }

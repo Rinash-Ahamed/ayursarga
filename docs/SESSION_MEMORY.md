@@ -7,6 +7,32 @@ the implementation authority; these notes do not authorize deployments or data
 maintenance. Preserve unrelated working-tree changes; the workspace contains
 substantial uncommitted work across multiple tasks.
 
+## Health coverage and post-build validation rule (21 October 2026)
+
+- Confirmed deep=true was previously ignored: the page/API only checked Firebase
+  Admin and contact mail. Added one shared configuration-only health report for
+  the JSON endpoint and themed page. Essential mode adds branded auth-email
+  readiness (Firebase Admin, SMTP configuration, validated canonical return URL).
+  Expanded mode adds Firebase Web SDK and hospital Storage bucket configuration.
+- /api/health?deep=true returns deep-configuration mode, five statuses and no
+  secrets. JSON responses remain no-store and 200/503 based on readiness. Browser
+  HTML redirects retain deep=true. Page labels explicitly distinguish Configured
+  from live connectivity/delivery; no database reads, mail sending, link generation
+  or arbitrary API probes are performed. Health is not full API/rules validation.
+- Hospital login-setup readiness also checks auth email URL configuration. README
+  corrected earlier claims that a health route tests every API.
+- AGENTS.md now requires read-only JSON + themed expanded health verification
+  after each successful owner-requested build, against that fresh production
+  build, not a stale/dev server. No automatic build/deployment or live mutations
+  are authorized by this rule. Report unavailable checks/dependencies honestly.
+- Seventeen focused mocked health/email unit/API tests passed. Live local dev
+  requests: essential JSON HTTP 200 (3 configured checks), expanded JSON HTTP 200
+  (5 configured checks), expanded page HTTP 200 with new sections/disclaimer,
+  HTML redirect HTTP 307 preserving /health?deep=true. No credentials displayed.
+  This was development-server HTTP validation, not production-build testing or
+  SMTP/Firebase connectivity verification. No lint, typecheck, build or deployment
+  run. Patch version 4.5.0 to 4.5.1 synchronized; .env.example www URL preserved.
+
 ## Branded invitations and password-reset email (21 October 2026)
 
 - Owner approved replacing app-triggered Firebase template emails because the

@@ -2,7 +2,7 @@ import "server-only";
 
 import type { Auth } from "firebase-admin/auth";
 import { authEmail } from "@/lib/authEmail";
-import { sendEmail } from "@/services/email/emailService";
+import { isEmailReady, sendEmail } from "@/services/email/emailService";
 
 export function authEmailSiteUrl() {
   const url = new URL(process.env.APP_SITE_URL?.trim() || "https://ayursarga.com");
@@ -11,6 +11,15 @@ export function authEmailSiteUrl() {
     throw new Error("Configure a secure APP_SITE_URL.");
   }
   return url.origin;
+}
+
+export function isAuthEmailReady() {
+  try {
+    authEmailSiteUrl();
+    return isEmailReady();
+  } catch {
+    return false;
+  }
 }
 
 /** Link generation and delivery stay server-only; never return/store action URLs. */

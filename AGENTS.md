@@ -232,6 +232,17 @@ to deploy, rerun maintenance scripts, or modify live data.
   for one validation run is not ongoing authorization for later changes.
   The focused local regression checks required above are a standing exception;
   broader checks still require an explicit request.
+- After each successful owner-requested production build, check that same build's
+  health JSON and themed page, including /api/health?deep=true with Accept:
+  application/json and /health?deep=true. Use a fresh local production server on
+  an available port if needed; do not substitute an old dev server for validation
+  of the new build. Stop only the temporary server started for this check.
+  Check HTTP status, report mode/dependencies and page rendering; report degraded
+  dependencies or inability to run the check rather than claiming success.
+  These read-only health checks are authorized as part of requested build
+  validation. They do not authorize emails, link generation, database probes or
+  mutations, live workflow tests, deployment, or a new build without a request.
+  Configuration health does not prove all APIs, permissions or delivery work.
 - Firestore rule/index changes are not live until deployed to
   `ayursarga-connect`. Use a scoped, non-interactive Firebase deployment and
   report whether an index is still initializing.

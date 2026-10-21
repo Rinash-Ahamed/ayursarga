@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { createApiHealthReport } from "@/services/api/server";
-import { isContactEmailReady } from "@/services/contact/contactEmailService";
-import { isFirebaseAdminReady } from "@/services/firebase/admin";
+import { platformHealthReport } from "@/services/api/platformHealth";
 import { formatDisplayDateTime } from "@/utils/date";
 
 export const dynamic = "force-dynamic";
@@ -17,19 +15,20 @@ export const metadata: Metadata = {
 const dependencyLabels: Record<string, { title: string; description: string }> = {
   "firebase-admin": {
     title: "Platform services",
-    description: "Secure account and application data services.",
+    description: "Server SDK configuration for account and application services.",
   },
   "contact-email": {
     title: "Contact support",
-    description: "Delivery of contact and guidance requests.",
+    description: "Email sender configuration for contact and guidance requests.",
   },
+  "auth-email": { title: "Invitations & password resets", description: "Firebase Admin, email sender and password-link return URL configuration." },
+  "firebase-client": { title: "Browser sign-in", description: "Required Firebase Web SDK configuration is present." },
+  "hospital-images": { title: "Hospital image uploads", description: "Server SDK and Storage bucket configuration." },
 };
 
-export default function HealthPage() {
-  const report = createApiHealthReport("/api/health", [
-    { name: "firebase-admin", ready: isFirebaseAdminReady() },
-    { name: "contact-email", ready: isContactEmailReady() },
-  ]);
+export default async function HealthPage({ searchParams }: { searchParams: Promise<{ deep?: string }> }) {
+  const deep = (await searchParams).deep === "true";
+  const report = platformHealthReport(deep);
   const isHealthy = report.status === "ok";
 
   return <main className="health-page">
@@ -39,7 +38,7 @@ export default function HealthPage() {
           <Image src="/mainlogo.png" alt="" width={52} height={52} priority />
           <span>Ayursarga</span>
         </Link>
-        <span className="health-live-label"><i aria-hidden="true" />Live status</span>
+        <span className="health-live-label"><i aria-hidden="true" />{deep ? "Expanded checks" : "Configuration"}</span>
       </header>
 
       <div className="health-summary">
@@ -48,9 +47,9 @@ export default function HealthPage() {
         </span>
         <div>
           <p className="health-kicker">System health</p>
-          <h1 id="health-title">{isHealthy ? "All services are ready" : "Some services need attention"}</h1>
+          <h1 id="health-title">{isHealthy ? "Configuration checks passed" : "Some settings need attention"}</h1>
           <p>{isHealthy
-            ? "Ayursarga's essential platform services are configured and available."
+            ? "The checked platform settings are configured. Live service connectivity and delivery have not been tested."
             : "The website remains available, but one or more supporting services are not fully configured."}</p>
         </div>
       </div>
@@ -67,14 +66,18 @@ export default function HealthPage() {
               <p>{content.description}</p>
             </div>
             <span className="health-status" data-status={dependency.status}>
-              <i aria-hidden="true" />{dependency.status === "ready" ? "Available" : "Unavailable"}
+              <i aria-hidden="true" />{dependency.status === "ready" ? "Configured" : "Not configured"}
             </span>
           </article>;
         })}
       </div>
 
+      <div className="health-footer">
+        <p>This check does not send emails, read or change records, verify deployed permissions, or test every API.</p>
+      </div>
       <footer className="health-footer">
-        <p>Last checked <time dateTime={report.checkedAt}>{formatDisplayDateTime(report.checkedAt)}</time></p>
+        <div><p>Last checked <time dateTime={report.checkedAt}>{formatDisplayDateTime(report.checkedAt)}</time></p>
+          <Link href={deep ? "/health" : "/health?deep=true"}>{deep ? "Show essential checks" : "Show expanded configuration checks"}</Link></div>
         <Link href="/">Return to Ayursarga</Link>
       </footer>
     </section>

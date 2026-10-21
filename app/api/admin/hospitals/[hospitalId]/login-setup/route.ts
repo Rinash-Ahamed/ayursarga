@@ -2,14 +2,14 @@ import { FieldValue } from "firebase-admin/firestore";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { apiHealth, apiJson } from "@/services/api/server";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
-import { authEmailSiteUrl, sendAuthEmail } from "@/services/auth/authEmailService";
+import { authEmailSiteUrl, isAuthEmailReady, sendAuthEmail } from "@/services/auth/authEmailService";
 import { isEmailReady } from "@/services/email/emailService";
 import { allowRequest } from "@/services/api/rateLimit";
 
 export const runtime = "nodejs";
 
 export function GET() {
-  return apiHealth("/api/admin/hospitals/[hospitalId]/login-setup", [{ name: "firebaseAdmin", ready: isFirebaseAdminReady() }, { name: "email", ready: isEmailReady() }]);
+  return apiHealth("/api/admin/hospitals/[hospitalId]/login-setup", [{ name: "firebaseAdmin", ready: isFirebaseAdminReady() }, { name: "email", ready: isAuthEmailReady() }]);
 }
 
 export async function POST(request: Request, context: { params: Promise<{ hospitalId: string }> }) {

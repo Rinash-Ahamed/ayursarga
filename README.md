@@ -259,12 +259,19 @@ unless that endpoint is deliberately moved to another approved service.
 
 ## API health checks
 
-`GET /api/health` reports readiness for every current API route without reading
-or writing Firestore records, sending email, or exposing credentials. It returns
+`GET /api/health` reports shared dependency configuration, not the execution of
+every API route. It does not read/write Firestore records, send email, generate
+password links or expose credentials. It returns
 HTTP `200` when all required server configuration is ready and HTTP `503` when
-one or more API dependencies are unavailable.
+one or more checked dependencies are unconfigured. Essential checks cover
+Firebase Admin, contact mail and branded invitation/password-reset configuration.
+Use `Accept: application/json` for JSON; browser HTML requests redirect to the
+themed `/health` page. `?deep=true` is preserved on that redirect and adds Web SDK
+and hospital Storage configuration checks. It does not connect to SMTP/Storage
+or verify deployed rules, authorized Auth domains, passwords or real delivery.
+The page and endpoint share the same checks and identify configuration mode.
 
-Each API also supports its own lightweight `GET` readiness check:
+Some APIs also support their own lightweight `GET` readiness check:
 
 - `/api/contact`
 - `/api/admin/audits`
@@ -272,6 +279,9 @@ Each API also supports its own lightweight `GET` readiness check:
 
 The checks validate local server configuration and SDK initialization only.
 They intentionally avoid billable database reads and external email delivery.
+After each requested successful production build, check the fresh production
+server's JSON and themed expanded health page as specified in AGENTS.md; do not
+validate a new build against an already-running development server.
 
 ## Public API caching
 
@@ -288,7 +298,7 @@ cache. Public updates can take up to about one minute to appear after a save.
 ## Production monitoring and alerts
 
 Use `GET /api/health` as the production availability probe. It reports only
-safe readiness states for Firebase Admin and contact email configuration; it
+safe readiness states for Firebase Admin, contact and auth-email configuration; it
 does not read Firestore, send email, or reveal credentials. Server failures in
 public discovery, contact submission, and booking creation are emitted as
 structured JSON logs so they can be filtered by `event=api_error` and `route`
