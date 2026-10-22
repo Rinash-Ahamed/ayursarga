@@ -23,19 +23,31 @@ test("persistent inbox cutoff filters old notifications, ignores stale listeners
   assert.equal(subscriptions[0].target.collection, "notificationInboxes");
   subscriptions[0].next({ data: () => undefined });
   const oldListener = subscriptions[1];
-  oldListener.next({ docs: [{ id: "old", data: () => ({ status: "active", recipientId: "partner" }) }] });
+  oldListener.next({ docs: [{ id: "old", data: () => ({ status: "active", recipientId: "partner" }) }], metadata: { fromCache: false } });
   assert.equal(received.at(-1)[0].id, "old");
   const cutoff = { seconds: 100, nanoseconds: 0 };
   subscriptions[0].next({ data: () => ({ clearedThrough: cutoff }) });
   assert.equal(oldListener.stopped, true);
   const current = subscriptions[2];
   assert.ok(current.target.query.some((item) => item.where?.[0] === "createdAt" && item.where[1] === ">" && item.where[2] === cutoff));
-  current.next({ docs: [] });
-  oldListener.next({ docs: [{ id: "stale", data: () => ({ status: "active" }) }] });
+  current.next({ docs: [], metadata: { fromCache: false } });
+  oldListener.next({ docs: [{ id: "stale", data: () => ({ status: "active" }) }], metadata: { fromCache: false } });
   assert.deepEqual(received.at(-1), []);
-  current.next({ docs: [{ id: "new", data: () => ({ status: "active", recipientId: "partner" }) }] });
+  current.next({ docs: [{ id: "new", data: () => ({ status: "active", recipientId: "partner" }) }], metadata: { fromCache: false } });
   assert.equal(received.at(-1)[0].id, "new");
   stop();
   assert.equal(subscriptions[0].stopped, true);
   assert.equal(current.stopped, true);
+});
+
+test("notification sounds ignore initial, cached, read and previously seen records", () => {
+  const { createNotificationSoundTracker, consumeNotificationSnapshot } = loadTypeScript("utils/portalNotificationSound.ts");
+  const tracker = createNotificationSoundTracker();
+  const oldUnread = { id: "old", readAt: null };
+  assert.equal(consumeNotificationSnapshot(tracker, [oldUnread], true), false);
+  assert.equal(consumeNotificationSnapshot(tracker, [oldUnread, { id: "server-old", readAt: null }], false), false);
+  assert.equal(consumeNotificationSnapshot(tracker, [oldUnread, { id: "fresh-read", readAt: {} }], false), false);
+  assert.equal(consumeNotificationSnapshot(tracker, [oldUnread, { id: "fresh", readAt: null }], false), true);
+  assert.equal(consumeNotificationSnapshot(tracker, [{ id: "fresh", readAt: null }], false), false);
+  assert.equal(consumeNotificationSnapshot(tracker, [oldUnread], false), false);
 });

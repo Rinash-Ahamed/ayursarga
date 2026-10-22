@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { APPROVED_ADMIN_EMAIL } from "@/features/auth/constants";
 import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from "@/services/firebase/admin";
 import { authEmailSiteUrl, sendAuthEmail } from "@/services/auth/authEmailService";
 import { isEmailReady } from "@/services/email/emailService";
@@ -27,7 +28,9 @@ export async function POST(request: Request) {
       const auth = getFirebaseAdminAuth();
       const user = await auth.getUserByEmail(email);
       const profile = (await getFirebaseAdminFirestore().collection("users").doc(user.uid).get()).data();
+      const approvedRoleEmail = profile?.role !== "admin" || email === APPROVED_ADMIN_EMAIL;
       if (!user.disabled && profile?.status === "active" && ["admin", "hospital"].includes(profile.role)
+        && approvedRoleEmail
         && String(profile.email ?? "").trim().toLowerCase() === email) {
         await sendAuthEmail(auth, { email, name: String(profile.name ?? ""), role: profile.role });
       }

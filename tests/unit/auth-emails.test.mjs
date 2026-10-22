@@ -39,6 +39,16 @@ test("generated reset links use a fixed configured return URL, stay server-only 
     assert.equal(generated[1][1].url, "https://ayursarga.com/admin/login");
     assert.equal(messages[0].to, "partner@example.com");
     assert.equal(messages[0].subject, "Your Ayursarga Hospital Portal invitation");
+    for (const [index, role, kind] of [[0, "hospital", "invite"], [1, "admin", "reset"]]) {
+      const link = new URL(messages[index].html.match(/href="([^"]+)"/)[1].replaceAll("&amp;", "&"));
+      assert.equal(link.origin, "https://ayursarga.com");
+      assert.equal(link.pathname, "/auth/reset-password");
+      assert.equal(link.search, "");
+      const fragment = new URLSearchParams(link.hash.slice(1));
+      assert.equal(fragment.get("oobCode"), "test-only-code");
+      assert.equal(fragment.get("role"), role);
+      assert.equal(fragment.get("kind"), kind);
+    }
     reject = true;
     await assert.rejects(service.sendAuthEmail(auth, { email: "partner@example.com", name: "Hospital", role: "hospital" }));
     process.env.APP_SITE_URL = "javascript:alert(1)";
@@ -69,9 +79,18 @@ test("public resets send only to eligible portal accounts without returning acti
     const response = await fixture.POST(resetRequest());
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), { ok: true });
-    const eligible = !options.unknown && !options.user?.disabled && !options.missingProfile && !["consumer"].includes(options.profile?.role) && options.profile?.status !== "archived" && options.profile?.email !== "someone-else@example.com";
+    const eligible = !options.unknown && !options.user?.disabled && !options.missingProfile && !["consumer", "admin"].includes(options.profile?.role) && options.profile?.status !== "archived" && options.profile?.email !== "someone-else@example.com";
     assert.equal(fixture.calls.emails.length, eligible ? 1 : 0);
   }
+});
+
+test("Admin reset delivery is restricted to the approved Admin address", async () => {
+  const fixture = resetFixture({ profile: { role: "admin", email: "info@ayursarga.com" } });
+  const response = await fixture.POST(resetRequest({ email: "info@ayursarga.com" }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { ok: true });
+  assert.equal(fixture.calls.emails.length, 1);
+  assert.equal(fixture.calls.emails[0].email, "info@ayursarga.com");
 });
 
 test("reset API rejects cross-site/invalid/oversize requests and rate limits before delivery", async () => {

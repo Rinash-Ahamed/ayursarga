@@ -300,8 +300,8 @@ export function AdminAuditLogs() {
       <p className="portal-audit-filter-note">Date filters search the full audit history. Search, area and activity filters apply to the 20 activities on this page.</p>
     </div>
     <PortalToast message={actionError ?? message} notification={actionError ? actionErrorNotification : messageNotification} tone={actionError ? "error" : "success"} />
-    <PortalFeedback empty={!loadError && !isLoading && items.length === 0 ? "No audit records are available." : undefined} />
-    {!isLoading && rows.length > 0 && filteredRows.length === 0 && <PortalFeedback empty="No activity on this page matches the selected filters." />}
+    <PortalFeedback emptyTitle="No audit activity yet" empty={!loadError && !isLoading && items.length === 0 ? "Recorded platform changes will appear here." : undefined} />
+    {!isLoading && rows.length > 0 && filteredRows.length === 0 && <PortalFeedback emptyTitle="No matching activity" empty="No activity on this page matches the selected filters." />}
     {filteredRows.length > 0 && <div className="portal-table-wrap">
       <table className="portal-audit-table">
         <thead><tr><th>What happened</th><th>Affected record</th><th>Performed by</th><th>When</th></tr></thead>

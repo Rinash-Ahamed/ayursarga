@@ -21,6 +21,7 @@ import { PortalDialog } from "@/components/portal/PortalDialog";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import { withPortalBookingDetails } from "@/services/bookings/portalBookingDetails";
 import { PortalBookingSummary } from "@/components/portal/PortalBookingSummary";
+import { PortalResultCount } from "@/components/portal/PortalResultCount";
 
 const BOOKING_STATUSES: readonly BookingStatus[] = [
   "requested", "confirmed", "reschedule_requested", "completed", "cancelled", "rejected",
@@ -150,7 +151,7 @@ export function HospitalBookings({ bookingId }: { bookingId?: string } = {}) {
 
   return <PortalShell role="hospital" title="Bookings">
     <PortalLoadGuard notification={loadErrorNotification} loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/hospital" loadingMessage="Loading bookings…" />
-    {bookingId && <Link className="portal-button secondary" href="/hospital/bookings">View all bookings</Link>}
+    {bookingId && <nav className="portal-actions portal-booking-navigation" aria-label="Booking navigation"><Link className="portal-button secondary" href="/hospital/bookings">View all bookings</Link></nav>}
     {!bookingId && <section className="portal-card portal-booking-filters" aria-label="Booking search and filters">
       <span className="portal-filter-eyebrow">Filters</span>
       <div className="portal-filter-field">
@@ -169,13 +170,13 @@ export function HospitalBookings({ bookingId }: { bookingId?: string } = {}) {
         <input id="hospital-booking-month" type="month" value={month} onChange={(event) => setMonth(event.target.value)} />
       </div>
       <div className="portal-filter-actions"><button type="button" className="portal-button secondary" disabled={!hasFilters} onClick={clearFilters}>Clear filters</button></div>
+      {visible.length > 0 && <div className="portal-filter-summary"><PortalResultCount count={visible.length} singular="booking" hasMore={hasMore} /></div>}
     </section>}
-    <PortalFeedback notification={loadErrorNotification} error={items.length > 0 ? loadError : null} empty={!loadError && !isLoading && visible.length === 0
+    <PortalFeedback notification={loadErrorNotification} error={items.length > 0 ? loadError : null} emptyTitle={hasFilters ? "No matching bookings" : "No patient bookings yet"} empty={!loadError && !isLoading && visible.length === 0
       ? (hasFilters ? "No bookings match this search or filter. Adjust the selections and try again." : "No bookings yet. New patient bookings will appear here.")
       : undefined} />
     <PortalToast message={actionMessage} notification={actionMessageNotification} />
     <PortalToast message={actionError} notification={actionErrorNotification} tone="error" />
-    {visible.length > 0 && <div className="portal-result-count">Showing <strong>{visible.length}</strong> booking{visible.length !== 1 ? "s" : ""}{hasMore ? " · more available" : ""}</div>}
     {detailsError && <p className="portal-form-error" role="status">Some centre or package names could not be loaded. Booking details are still available. Refresh to retry.</p>}
     <div className="portal-list consumer-booking-list">
       {visible.map((item) => <PortalBookingSummary key={item.id} booking={item}>

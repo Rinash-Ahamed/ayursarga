@@ -19,7 +19,7 @@ const NOTIFICATION_LIMIT = 20;
 
 export function subscribeToNotifications(
   recipientId: string,
-  onChange: (notifications: DocumentRecord<NotificationDocument>[]) => void,
+  onChange: (notifications: DocumentRecord<NotificationDocument>[], metadata: { fromCache: boolean }) => void,
   onError: (error: Error) => void,
 ) {
   let stopNotifications: (() => void) | undefined;
@@ -41,7 +41,7 @@ export function subscribeToNotifications(
       if (version !== generation) return;
       onChange(snapshot.docs
         .map((item) => ({ id: item.id, ...item.data() } as DocumentRecord<NotificationDocument>))
-        .filter((item) => item.status === "active"));
+        .filter((item) => item.status === "active"), { fromCache: snapshot.metadata?.fromCache === true });
     }, (error) => { if (version === generation) onError(error); });
   }, (error) => { if (active) onError(error); });
   return () => { active = false; generation++; stopInbox(); stopNotifications?.(); };

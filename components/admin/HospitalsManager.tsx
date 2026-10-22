@@ -92,7 +92,7 @@ export function HospitalsManager() {
       <input type="search" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Search by hospital name" />
     </label>
 
-    <PortalFeedback error={error} notification={actionError ? actionErrorNotification : loadErrorNotification} empty={!error && !isLoading && items.length === 0 ? "No hospitals yet. Select Add Hospital to create the first one." : undefined} />
+    <PortalFeedback error={error} notification={actionError ? actionErrorNotification : loadErrorNotification} emptyTitle="No hospitals yet" empty={!error && !isLoading && items.length === 0 ? "Select Add Hospital to create the first hospital record." : undefined} />
     <PortalToast message={actionMessage} notification={actionMessageNotification} />
     <div className="portal-list">{items.map((item) => <Link className="portal-card portal-card-link" href={`/admin/hospitals/${encodeURIComponent(item.id)}`} key={item.id}>
       <div className="portal-row-heading"><h3>{item.name}</h3><span className="portal-status" data-status={item.status}>{formatStatus(item.status)}</span></div>

@@ -1,7 +1,7 @@
-import type { ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 import { CONSUMER_PRIVACY_NOTICE_VERSION, CUSTOMER_TERMS_VERSION } from "@/features/consumers/privacyConsent";
 
-export const portalUiState = { screen: "admin-dashboard", calls: 0, bookingRequests: 0, cancelledBookings: 0, navigatedTo: "", unavailablePackage: false, availabilityReviews: [] as string[], holdAvailability: false, failAvailability: false, consultantWrites: [] as unknown[] };
+export const portalUiState = { screen: "admin-dashboard", calls: 0, bookingRequests: 0, cancelledBookings: 0, navigatedTo: "", unavailablePackage: false, availabilityReviews: [] as string[], holdAvailability: false, failAvailability: false, consultantWrites: [] as unknown[], publicConsultantReads: 0 };
 export let finishAvailabilityReview: (() => void) | undefined;
 Object.assign(globalThis, { finishAvailabilityReview: () => finishAvailabilityReview?.() });
 export class Timestamp {
@@ -21,7 +21,33 @@ const consultant = { ...metadata, id: "consultant", employeeId: "AS001", employe
 const user = { ...metadata, id: "actor", uid: "actor", name: hospital.name, email: hospital.email, role: "consumer", status: "active", phone: "9876543210", hospitalId: "centre", privacyConsentAt: now, privacyConsentVersion: CONSUMER_PRIVACY_NOTICE_VERSION, customerTermsAcceptedAt: now, customerTermsVersion: CUSTOMER_TERMS_VERSION };
 const page = (documents: unknown[]) => Promise.resolve({ documents, cursor: null, hasMore: false });
 const firebaseUser = { uid: "patient" };
-export function useAuth() { return { firebaseUser, userProfile: { ...user, role: portalUiState.screen.startsWith("consumer") ? "consumer" : portalUiState.screen.startsWith("hospital") ? "hospital" : "admin" }, isLoading: false, error: null, refreshUserProfile: async () => user, logout: async () => {}, clearError: () => {}, login: async () => {}, resetPassword: async () => { portalUiState.calls++; }, reauthenticate: async () => {}, changePassword: async () => {} }; }
+export async function verifyPasswordAction(code: string) {
+  if (code !== "valid-test-code") throw new Error("Invalid link");
+}
+export async function completePasswordAction() {
+  portalUiState.calls++;
+  await new Promise((resolve) => setTimeout(resolve, 100));
+}
+export function passwordActionError() { return "This password link is invalid, expired or already used. Request a new link to continue."; }
+let authProcessing = false;
+const authListeners = new Set<() => void>();
+function subscribeAuthProcessing(listener: () => void) {
+  authListeners.add(listener);
+  return () => { authListeners.delete(listener); };
+}
+function setAuthProcessing(value: boolean) {
+  authProcessing = value;
+  authListeners.forEach((listener) => listener());
+}
+export function useAuth() {
+  const processing = useSyncExternalStore(subscribeAuthProcessing, () => authProcessing, () => false);
+  return { firebaseUser, userProfile: { ...user, role: portalUiState.screen.startsWith("consumer") ? "consumer" : portalUiState.screen.startsWith("hospital") ? "hospital" : "admin" }, isAuthenticated: false, status: "unauthenticated", isLoading: processing, error: null, refreshUserProfile: async () => user, logout: async () => {}, clearError: () => {}, login: async ({ password }: { password: string }) => { portalUiState.calls++; if (password === "invalid-test-password1") throw new Error("The email address or password is incorrect."); }, resetPassword: async () => {
+    portalUiState.calls++;
+    setAuthProcessing(true);
+    try { await new Promise((resolve) => setTimeout(resolve, 100)); }
+    finally { setAuthProcessing(false); }
+  }, reauthenticate: async () => {}, changePassword: async () => {} };
+}
 export function usePathname() {
   if (portalUiState.screen === "consumer-profile") return "/app/profile";
   if (portalUiState.screen === "consumer-support") return "/app/support";
@@ -29,7 +55,7 @@ export function usePathname() {
   if (portalUiState.screen === "consumer-completion") return "/app/complete-profile";
   if (portalUiState.screen.startsWith("consumer")) return "/app/bookings";
   const paths: Record<string, string> = { "admin-dashboard": "/admin", "admin-hospitals": "/admin/hospitals", "admin-details": "/admin/hospitals/centre", "admin-consultants": "/admin/consultants", "admin-users": "/admin/users", "admin-bookings": "/admin/bookings", "admin-availability": "/admin/availability", "admin-audits": "/admin/audits", "hospital-dashboard": "/hospital", "hospital-profile": "/hospital/profile", "hospital-services": "/hospital/services", "hospital-bookings": "/hospital/bookings", "hospital-availability": "/hospital/availability", "hospital-password": "/hospital/change-password" };
-  return paths[portalUiState.screen] ?? "/admin/login";
+  return paths[portalUiState.screen.replace(/-empty$/, "")] ?? "/admin/login";
 }
 const router = { replace: (path: string) => { portalUiState.navigatedTo = path; }, push: (path: string) => { portalUiState.navigatedTo = path; }, back: () => {} };
 export function useRouter() { return router; }
@@ -39,32 +65,32 @@ export default function MockNextElement({ src, href, children, alt, width, heigh
 }
 export const getHospital = async () => ({ ...hospital, facilities: "Free WiFi\nFree parking" });
 export const getHospitalCapacity = async () => ({ ...metadata, id: "centre", hospitalId: "centre", totalRooms: 10, occupiedRooms: 4, status: "active" });
-export const listAllHospitals = () => page([hospital]);
-export const listHospitalServices = () => page(services);
+export const listAllHospitals = () => page(portalUiState.screen === "admin-hospitals-empty" ? [] : [hospital]);
+export const listHospitalServices = () => page(portalUiState.screen === "hospital-services-empty" ? [] : services);
 const operationalBookings = () => bookings.map((booking, index) => index === 0 ? { ...booking, hospitalName: undefined, serviceName: undefined, serviceId: "package-14" } : booking);
-export const listHospitalBookings = () => page(operationalBookings());
-export const listConsumerBookings = () => page(bookings.map((booking, index) => ({ ...booking, serviceId: "package-14", hospitalName: index === 0 ? undefined : hospital.name, serviceName: index === 0 ? undefined : "14-day package", treatmentStatus: index === 0 ? "not_started" : "started", confirmedDate: index === 1 ? now : null, confirmedTime: index === 1 ? "10:30" : null, consumerNotes: "Please confirm room accessibility.", hospitalNotes: index === 1 ? "Your preferred care dates are available." : null, bystanderCount: 2, additionalBystanderTotal: 500 })));
+export const listHospitalBookings = () => page(portalUiState.screen === "hospital-bookings-empty" ? [] : operationalBookings());
+export const listConsumerBookings = () => page(portalUiState.screen === "consumer-bookings-empty" ? [] : bookings.map((booking, index) => ({ ...booking, serviceId: "package-14", hospitalName: index === 0 ? undefined : hospital.name, serviceName: index === 0 ? undefined : "14-day package", treatmentStatus: index === 0 ? "not_started" : "started", confirmedDate: index === 1 ? now : null, confirmedTime: index === 1 ? "10:30" : null, consumerNotes: "Please confirm room accessibility.", hospitalNotes: index === 1 ? "Your preferred care dates are available." : null, bystanderCount: 2, additionalBystanderTotal: 500 })));
 export const getConsumerBookingDetails = async () => ({ details: { "booking-0": { hospitalName: hospital.name, serviceName: "14-day package", hospitalLocation: "Palakkad, Kerala" } } });
 export const cancelConsumerBooking = async () => { portalUiState.cancelledBookings++; };
 export const createBookingRequest = async () => { portalUiState.bookingRequests++; return { ok: true, bookingId: "booking-0", bookingReference: "AYUR000000" }; };
 export const getPortalBooking = async (id: string) => portalUiState.screen.endsWith("auto-confirmed") && id === autoConfirmedBooking.id ? autoConfirmedBooking : bookings.find((booking) => booking.id === id) ?? null;
 export const getPublicHospital = async () => ({ ...hospital, blockedDateRanges: (globalThis as unknown as { bookingSoldOut?: boolean }).bookingSoldOut ? [{ startDate: Timestamp.fromDate(new Date("2099-10-25T00:00:00+05:30")), endDate: Timestamp.fromDate(new Date("2099-10-25T00:00:00+05:30")) }] : [] });
 export const getPublicHospitalService = async () => portalUiState.unavailablePackage ? null : services[1];
-export const listAdminBookings = () => page(operationalBookings());
+export const listAdminBookings = () => page(portalUiState.screen === "admin-bookings-empty" ? [] : operationalBookings());
 export const readDocumentsByIds = async (collectionPath: string, ids: string[]) => collectionPath === "hospitals" ? [hospital].filter((item) => ids.includes(item.id)) : collectionPath === "services" ? services.filter((item) => ids.includes(item.id)) : [];
-export const listUsers = () => page([user]);
-export const listConsultants = () => page([consultant]);
-export const listHospitalAvailabilityRequests = () => page(availability);
-export const listAdminAvailabilityRequests = () => page(availability);
-export const listAuditLogs = () => page([{ ...metadata, id: "audit", timestamp: now, action: "update", module: "hospitals", recordId: "centre", actorId: "actor", actorRole: "admin", previousValues: { name: "Centre" }, updatedValues: { name: hospital.name }, source: "server" }]);
+export const listUsers = () => page(portalUiState.screen === "admin-users-empty" ? [] : [user]);
+export const listConsultants = () => page(portalUiState.screen === "admin-consultants-empty" ? [] : [consultant]);
+export const listHospitalAvailabilityRequests = () => page(portalUiState.screen === "hospital-availability-empty" ? [] : availability);
+export const listAdminAvailabilityRequests = () => page(portalUiState.screen === "admin-availability-empty" ? [] : availability);
+export const listAuditLogs = () => page(portalUiState.screen === "admin-audits-empty" ? [] : [{ ...metadata, id: "audit", timestamp: now, action: "update", module: "hospitals", recordId: "centre", actorId: "actor", actorRole: "admin", previousValues: { name: "Centre" }, updatedValues: { name: hospital.name }, source: "server" }]);
 export const getUserDisplayNames = async () => new Map([["actor", "Admin"]]);
 export const countDocuments = async () => 12;
 export const sumDocuments = async () => 24000;
 export const readDocument = async () => hospital;
 export const emptyQueryPage = () => ({ documents: [], cursor: null, hasMore: false });
-let notificationReceiver: ((items: unknown[]) => void) | null = null;
-export const subscribeToNotifications = (_id: string, receive: (items: unknown[]) => void) => { notificationReceiver = receive; receive([{ ...metadata, id: "notification", title: "New booking AYUR000000", message: "Patient With a Longer Display Name · 14-day package · Booked, awaiting hospital confirmation", actionHref: `/${portalUiState.screen.startsWith("hospital") ? "hospital" : "admin"}/bookings?booking=booking-0`, readAt: null }]); return () => { notificationReceiver = null; }; };
-export const clearAllNotifications = async () => { portalUiState.calls++; notificationReceiver?.([]); return { ok: true, clearedThrough: { seconds: now.seconds + 1, nanoseconds: 0 } }; };
+let notificationReceiver: ((items: unknown[], snapshot: { fromCache: boolean }) => void) | null = null;
+export const subscribeToNotifications = (_id: string, receive: (items: unknown[], snapshot: { fromCache: boolean }) => void) => { notificationReceiver = receive; receive([{ ...metadata, id: "notification", title: "New booking AYUR000000", message: "Patient With a Longer Display Name · 14-day package · Booked, awaiting hospital confirmation", actionHref: `/${portalUiState.screen.startsWith("hospital") ? "hospital" : "admin"}/bookings?booking=booking-0`, readAt: null }], { fromCache: false }); return () => { notificationReceiver = null; }; };
+export const clearAllNotifications = async () => { portalUiState.calls++; notificationReceiver?.([], { fromCache: false }); return { ok: true, clearedThrough: { seconds: now.seconds + 1, nanoseconds: 0 } }; };
 export const buildHospitalContractPdf = () => ({ html: "<h1>Contract fixture</h1>", filename: "contract.pdf", blob: new Blob() });
 export const authorizedApiRequest = async () => { portalUiState.calls++; return { imageUrls: [] }; };
 export const updateHospital = async () => ({});
@@ -106,8 +132,11 @@ const consultation = { ...metadata, id: "consultation-fixture", bookingReference
   consumerId: "patient", consumerName: "Patient With a Longer Display Name", consumerEmail: "patient@example.com", consumerPhone: "9876543210",
   preferredDate: "2099-10-25", preferredTimeSlot: "morning", slotStartTime: "09:30", slotEndTime: "11:45", status: "requested", confirmedDate: null, confirmedTime: null,
   consumerNotes: "Guidance about pregnancy lifestyle", adminNotes: null };
-export const listPublicConsultants = () => page([consultationProfessional]);
+export const listPublicConsultants = () => {
+  const staleFirstRead = portalUiState.screen === "consumer-consultation-refresh" && portalUiState.publicConsultantReads++ === 0;
+  return page(portalUiState.screen === "consumer-consultation-empty" || staleFirstRead ? [] : [consultationProfessional]);
+};
 export const createConsultationBooking = async (input: unknown) => { portalUiState.consultantWrites.push(input); return { ok: true, bookingId: "consultation-fixture", bookingReference: "AYURCONS01" }; };
-export const listConsultationBookings = () => page([consultation]);
+export const listConsultationBookings = () => page(portalUiState.screen === "consumer-consultations-empty" ? [] : [consultation]);
 export const getConsultationBooking = async () => consultation;
 export const updateConsultationBooking = async (_id: string, input: unknown) => { portalUiState.consultantWrites.push(input); return input; };

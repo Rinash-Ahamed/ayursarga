@@ -53,7 +53,7 @@ export function GuestOnly({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, isLoading, role, userProfile } = useAuth();
+  const { isAuthenticated, isLoading, status, role, userProfile } = useAuth();
   const sameRoleSession = Boolean(isAuthenticated && role && (!targetRole || role === targetRole));
 
   useEffect(() => {
@@ -64,6 +64,7 @@ export function GuestOnly({
     if (pathname !== target) router.replace(target);
   }, [isLoading, pathname, role, router, sameRoleSession, userProfile]);
 
-  if (isLoading || sameRoleSession) return fallback;
+  // Keep forms mounted during login/reset requests so their local state survives.
+  if (status === "loading" || sameRoleSession) return fallback;
   return children;
 }

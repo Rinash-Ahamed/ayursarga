@@ -5,6 +5,9 @@ import { authEmail } from "../../lib/authEmail";
 const styles = ["node_modules/tailwindcss/lib/css/preflight.css", "app/globals.css", "app/portal.css"].map((file) => readFileSync(file, "utf8")).join("\n");
 const screens = ["admin-dashboard", "admin-hospitals", "admin-details", "admin-consultants", "admin-users", "admin-bookings", "admin-availability", "admin-audits", "hospital-dashboard", "hospital-profile", "hospital-services", "hospital-bookings", "hospital-availability", "hospital-password", "admin-login", "hospital-login", "admin-forgot", "hospital-forgot"];
 async function mount(page: Page, screen: string) {
+  const pageErrors: string[] = [];
+  const recordPageError = (error: Error) => pageErrors.push(error.message);
+  page.on("pageerror", recordPageError);
   await page.evaluate(() => window.unmountPortalUi?.());
   await page.setContent('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="fixture-root"></div></body></html>');
   await page.addStyleTag({ content: styles });
@@ -12,7 +15,14 @@ async function mount(page: Page, screen: string) {
   // about:blank lacks the secure-context UUID API provided by production HTTPS.
   await page.evaluate(() => { if (!crypto.randomUUID) Object.defineProperty(crypto, "randomUUID", { value: () => "00000000-0000-4000-8000-000000000001" }); });
   await page.evaluate((name) => window.mountPortalUi(name), screen);
-  await expect(page.locator("h1")).toBeVisible();
+  try {
+    await expect(page.locator("h1")).toBeVisible();
+  } catch (error) {
+    if (pageErrors.length > 0) throw new Error(`Portal fixture ${screen} failed: ${pageErrors.join(" | ")}`, { cause: error });
+    throw error;
+  } finally {
+    page.off("pageerror", recordPageError);
+  }
   await page.waitForTimeout(120);
 }
 test("online consultation form uses assigned charges and custom windows, requires consent and submits once", async ({ page }, testInfo) => {
@@ -43,6 +53,95 @@ test("online consultation form uses assigned charges and custom windows, require
   expect(errors).toEqual([]);
 });
 
+test("online consultation empty state is clear and does not show an unusable form", async ({ page }) => {
+  await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "consumer-consultation-empty");
+  await expect(page.getByRole("heading", { name: "Consultants are not available yet" })).toBeVisible();
+  await expect(page.getByText("No professionals are currently assigned to prenatal doctor consultation.", { exact: false })).toBeVisible();
+  await expect(page.locator("form")).toHaveCount(0);
+  await expect(page.getByRole("textbox", { name: "Preferred appointment date *", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Check availability again" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
+
+test("online consultant availability refreshes when the Consumer returns to the page", async ({ page }) => {
+  await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "consumer-consultation-refresh");
+  await expect(page.getByRole("heading", { name: "Consultants are not available yet" })).toBeVisible();
+  await page.waitForTimeout(1_550);
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(page.getByText("Assigned Consultation Professional", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Consultants are not available yet" })).toHaveCount(0);
+});
+
+test("consumer online consultation history uses the aligned empty-state pattern", async ({ page }) => {
+  await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "consumer-consultations-empty");
+  await expect(page.getByText("Preferred time windows are requests.", { exact: false })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No online consultations yet" })).toBeVisible();
+  await expect(page.getByText("Appointments requested through Wellness Path", { exact: false })).toBeVisible();
+  await expect(page.getByRole("link", { name: "My hospital bookings" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
+
+test("consumer hospital bookings use a meaningful empty-state heading", async ({ page }) => {
+  await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "consumer-bookings-empty");
+  await expect(page.getByRole("heading", { name: "No hospital bookings yet" })).toBeVisible();
+  await expect(page.getByText("Bookings placed through Search hospitals", { exact: false })).toBeVisible();
+  await expect(
+    page
+      .getByRole("navigation", { name: "Consumer booking navigation" })
+      .getByRole("link", { name: "Search hospitals" }),
+  ).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
+
+test("Admin operational lists use clear, aligned empty states", async ({ page }) => {
+  await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
+  const cases = [
+    ["admin-hospitals-empty", "No hospitals yet"],
+    ["admin-consultants-empty", "No consultants yet"],
+    ["admin-users-empty", "No consumer users yet"],
+    ["admin-bookings-empty", "No hospital bookings yet"],
+    ["admin-availability-empty", "No availability activity yet"],
+    ["admin-audits-empty", "No audit activity yet"],
+  ] as const;
+  for (const [screen, heading] of cases) {
+    await mount(page, screen);
+    await expect(page.getByRole("heading", { name: heading })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  }
+});
+
+test("Hospital operational lists use clear, aligned empty states", async ({ page }) => {
+  await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
+  const cases = [
+    ["hospital-services-empty", "No packages yet"],
+    ["hospital-bookings-empty", "No patient bookings yet"],
+    ["hospital-availability-empty", "No availability requests yet"],
+  ] as const;
+  for (const [screen, heading] of cases) {
+    await mount(page, screen);
+    await expect(page.getByRole("heading", { name: heading })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  }
+});
+
+test("booking detail navigation stays separate from booking content", async ({ page }) => {
+  await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
+  for (const screen of ["admin-booking-detail", "hospital-booking-detail"] as const) {
+    await mount(page, screen);
+    const navigation = page.getByRole("navigation", { name: screen.startsWith("admin") ? "Booking categories" : "Booking navigation" });
+    await expect(navigation.getByRole("link", { name: "View all bookings" })).toBeVisible();
+    await expect(page.getByText(/^Showing\s+\d+\s+booking/)).toHaveCount(0);
+    const navigationBox = await navigation.boundingBox();
+    const bookingBox = await page.locator(".consumer-booking-row").first().boundingBox();
+    expect(navigationBox!.y + navigationBox!.height).toBeLessThanOrEqual(bookingBox!.y);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  }
+});
+
 test("online consultation history confirms with a locked shared dialog and Consumer sees no Admin controls", async ({ page }, testInfo) => {
   await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
   await mount(page, "admin-consultations");
@@ -67,6 +166,23 @@ test("online consultation history confirms with a locked shared dialog and Consu
   await expect(page.getByRole("button", { name: "Cancel appointment", exact: true })).toBeVisible();
 });
 
+test("Admin online consultations match booking cards and provide responsive filters", async ({ page }) => {
+  await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "admin-consultations");
+  await expect(page.getByRole("region", { name: "Online consultation filters" })).toBeVisible();
+  await expect(page.locator(".operational-booking-card")).toHaveCount(1);
+  await expect(page.getByRole("region", { name: "Online consultation filters" }).getByRole("status", { name: "Showing 1 online consultation" })).toBeVisible();
+  await expect(page.getByText("Booking ID: AYURCONS01", { exact: true })).toBeVisible();
+  await expect(page.getByText("Consultation charge", { exact: true })).toBeVisible();
+  await page.getByRole("searchbox", { name: "Search consultations" }).fill("no matching person");
+  await expect(page.getByRole("heading", { name: "No matching online consultations" })).toBeVisible();
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect(page.getByText("Booking ID: AYURCONS01", { exact: true })).toBeVisible();
+  await page.getByRole("combobox", { name: "Status" }).selectOption("completed");
+  await expect(page.getByRole("heading", { name: "No matching online consultations" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
+
 test("authentication emails share a responsive Ayursarga theme with readable reset and invitation links", async ({ page }, testInfo) => {
   for (const kind of ["hospital-invitation", "password-reset"] as const) {
     const message = authEmail({ kind, name: "Ayursarga Hospital Partner with a Longer Centre Name", actionUrl: "https://test-project.firebaseapp.com/__/auth/action?mode=resetPassword&oobCode=local-test-placeholder-not-a-real-token" });
@@ -83,11 +199,59 @@ test("authentication emails share a responsive Ayursarga theme with readable res
 test("portal password reset submits once and shows a generic acknowledgement for both roles", async ({ page }) => {
   for (const role of ["admin", "hospital"]) {
     await mount(page, `${role}-forgot`);
-    await page.getByRole("textbox", { name: "Email address" }).fill("partner@example.com");
+    const emailInput = page.getByRole("textbox", { name: "Email address" });
+    if (role === "admin") {
+      await expect(emailInput).toHaveCount(0);
+      await expect(page.getByText("info@ayursarga.com", { exact: true })).toBeVisible();
+    } else {
+      await emailInput.fill("partner@example.com");
+    }
     await page.locator("form").evaluate((form: HTMLFormElement) => { form.requestSubmit(); form.requestSubmit(); });
+    await expect(page.getByRole("status")).toContainText("Reset request accepted");
     await expect(page.getByText("If an eligible account exists, you will receive a password reset email. Check your inbox and spam folder.", { exact: true })).toBeVisible();
     expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { calls: number } }).consumerBookingFixture.calls)).toBe(1);
     await expect(page.getByRole("link", { name: "Return to login" })).toHaveAttribute("href", `/${role}/login`);
+    await expect(page.locator("form")).toHaveCount(0);
+    await page.waitForTimeout(200);
+    await expect(page.locator(".portal-auth-confirmation")).toBeVisible();
+  }
+});
+
+test("branded reset and invitation links validate passwords and return to the correct login", async ({ page }) => {
+  await page.route("**/*", (route) => route.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><html><body></body></html>" }));
+  for (const [role, kind] of [["admin", "reset"], ["hospital", "reset"], ["hospital", "invite"]]) {
+    await page.goto(`https://ayursarga.test/auth/reset-password#oobCode=valid-test-code&role=${role}&kind=${kind}`);
+    await mount(page, "password-action");
+    await expect(page.getByRole("heading", { name: kind === "invite" ? "Set your password" : "Reset your password" })).toBeVisible();
+    await page.getByLabel("New password", { exact: true }).fill("Test-password1");
+    await page.getByLabel("Confirm password", { exact: true }).fill("Mismatch-password1");
+    await page.locator("form").evaluate((form: HTMLFormElement) => form.requestSubmit());
+    await expect(page.getByRole("alert")).toContainText("passwords do not match");
+    await page.getByLabel("Confirm password", { exact: true }).fill("Test-password1");
+    await page.locator("form").evaluate((form: HTMLFormElement) => { form.requestSubmit(); form.requestSubmit(); });
+    await expect(page.getByRole("status")).toContainText("Password saved successfully");
+    await expect(page.locator("form")).toHaveCount(0);
+    expect(await page.evaluate(() => location.hash)).toBe("");
+    expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { calls: number } }).consumerBookingFixture.calls)).toBe(1);
+    await expect(page.getByRole("link", { name: /Return to .* login/ })).toHaveAttribute("href", `/${role}/login`);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  }
+  await page.goto("https://ayursarga.test/auth/reset-password#oobCode=expired&role=hospital");
+  await mount(page, "password-action");
+  await expect(page.getByRole("alert")).toContainText("invalid, expired or already used");
+  await expect(page.locator("form")).toHaveCount(0);
+});
+
+test("portal login prevents duplicate submission and keeps credential errors inline", async ({ page }) => {
+  for (const role of ["hospital", "admin"]) {
+    await mount(page, `${role}-login`);
+    await page.getByRole("textbox", { name: "Email address" }).fill("partner@example.com");
+    await page.getByLabel("Password", { exact: true }).fill("invalid-test-password1");
+    await page.locator("form").evaluate((form: HTMLFormElement) => { form.requestSubmit(); form.requestSubmit(); });
+    await expect(page.locator("form [role='alert']")).toHaveText("The email address or password is incorrect.");
+    expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { calls: number } }).consumerBookingFixture.calls)).toBe(1);
+    await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeEnabled();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   }
 });
 
@@ -225,9 +389,27 @@ test("destructive dialogs stay red, cancel stays neutral, and scroll is restored
     expect(bounds!.x).toBeGreaterThanOrEqual(0);
     expect(bounds!.y).toBeGreaterThanOrEqual(0);
     expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
+    if (screen === "admin-audits") {
+      const password = dialog.getByLabel("Admin password", { exact: true });
+      await expect(password).toHaveAttribute("type", "password");
+      const passwordBounds = await password.boundingBox();
+      expect(passwordBounds!.width).toBeGreaterThan(bounds!.width * 0.75);
+      await password.fill("temporary-test-value");
+      await dialog.getByRole("button", { name: "Show admin password", exact: true }).click();
+      await expect(password).toHaveAttribute("type", "text");
+      await dialog.getByRole("button", { name: "Hide admin password", exact: true }).click();
+      await expect(password).toHaveAttribute("type", "password");
+    }
     await cancel.click();
     await expect(dialog).toHaveCount(0);
     expect(await page.evaluate(() => document.body.style.position)).not.toBe("fixed");
+    if (screen === "admin-audits") {
+      await page.getByRole("button", { name: trigger, exact: true }).first().click();
+      const reopenedPassword = page.getByRole("dialog").getByLabel("Admin password", { exact: true });
+      await expect(reopenedPassword).toHaveAttribute("type", "password");
+      await expect(reopenedPassword).toHaveValue("");
+      await page.getByRole("dialog").getByRole("button", { name: "Cancel", exact: true }).click();
+    }
   }
 });
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useMemo, useRef, useState } from "react";
 import type { ConsultationBookingDocument } from "@/features/firestore/models";
 import type { DocumentRecord, QueryPageOptions } from "@/services/firestore/firestoreService";
 import { emptyQueryPage } from "@/services/firestore/firestoreService";
@@ -13,6 +13,8 @@ import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalDialog } from "@/components/portal/PortalDialog";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { PortalPagination } from "@/components/portal/PortalPagination";
+import { PortalFeedback } from "@/components/portal/PortalFeedback";
+import { PortalResultCount } from "@/components/portal/PortalResultCount";
 import { DateInput } from "@/components/forms/DateInput";
 import { formatDisplayDate, toDateInputValue } from "@/utils/date";
 import { formatCurrency } from "@/utils/currency";
@@ -21,6 +23,7 @@ import { formatConsultantTimeSlot } from "@/features/consultants/validation";
 
 type Appointment = DocumentRecord<ConsultationBookingDocument>;
 type Action = { booking: Appointment; status: "confirmed" | "completed" | "cancelled" | "rejected" };
+const CONSULTATION_STATUSES: readonly ConsultationBookingDocument["status"][] = ["requested", "confirmed", "completed", "cancelled", "rejected"];
 
 export function ConsultationBookings({ role, bookingId }: { role: "admin" | "consumer"; bookingId?: string }) {
   const { firebaseUser } = useAuth();
@@ -40,6 +43,30 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
   const submitting = useRef(false);
   const [error, setError, errorEvent] = useRepeatableMessage();
   const [message, setMessage, messageEvent] = useRepeatableMessage();
+  const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search.trim().toLowerCase());
+  const [status, setStatus] = useState<ConsultationBookingDocument["status"] | "">("");
+  const [month, setMonth] = useState("");
+  const hasFilters = role === "admin" && !bookingId && Boolean(deferredSearch || status || month);
+  const visibleItems = useMemo(() => {
+    if (role !== "admin" || bookingId) return items;
+    return items.filter((booking) => {
+      const searchable = [booking.bookingReference, booking.serviceName, booking.consultantName, booking.consumerName, booking.consumerEmail, booking.consumerPhone]
+        .filter(Boolean).join(" ").toLowerCase();
+      return (!deferredSearch || searchable.includes(deferredSearch))
+        && (!status || booking.status === status)
+        && (!month || booking.preferredDate.startsWith(month));
+    });
+  }, [bookingId, deferredSearch, items, month, role, status]);
+  const guidance = role === "consumer"
+    ? "Preferred time windows are requests. Once coordinated, the confirmed date and time will appear with your appointment."
+    : "Review online consultation requests and record the confirmed appointment date and time after coordination.";
+  const emptyTitle = bookingId ? "Consultation not available" : role === "consumer" ? "No online consultations yet" : "No consultation requests yet";
+  const emptyMessage = bookingId
+    ? "This appointment could not be found in the records available to you."
+    : role === "consumer"
+      ? "Appointments requested through Wellness Path will appear here with their consultant, preferred window and current status."
+      : "New online consultation requests will appear here when they are submitted.";
   function open(booking: Appointment, status: Action["status"]) {
     setError(null); setDate(booking.preferredDate); setTime(booking.slotStartTime); setNotes(booking.adminNotes ?? ""); setAction({ booking, status });
   }
@@ -54,21 +81,47 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
     finally { submitting.current = false; setBusy(false); }
   }
   return <PortalShell role={role} title="Online consultations">
-    <nav className="portal-actions" aria-label="Booking categories"><Link className="portal-button secondary" href={home}>Hospital bookings</Link>
-      {bookingId && <Link className="portal-button secondary" href={`${home}/consultations`}>All online consultations</Link>}
-      {role === "consumer" && <Link className="portal-button" href="/#wellness">Explore wellness services</Link>}
-    </nav>
-    <p>Preferred windows are requests. A confirmed appointment shows its agreed date and time below.</p>
+    <div className="portal-flow-page">
+    <section className="portal-flow-intro" aria-label="Online consultation guidance">
+      <p>{guidance}</p>
+      <nav className="portal-actions portal-flow-navigation" aria-label="Booking categories"><Link className="portal-button secondary" href={home}>{role === "consumer" ? "My hospital bookings" : "Hospital bookings"}</Link>
+        {bookingId && <Link className="portal-button secondary" href={`${home}/consultations`}>All online consultations</Link>}
+        {role === "consumer" && <Link className="portal-button" href="/#wellness">Explore wellness services</Link>}
+      </nav>
+    </section>
     <PortalToast message={loadError} notification={errorNotification} tone="error" />
     <PortalToast message={error} notification={errorEvent} tone="error" />
     <PortalToast message={message} notification={messageEvent} />
-    {loadError && <div className="portal-actions"><p role="alert">{loadError}</p><button className="portal-button secondary" disabled={isLoading} onClick={() => void reload()}>Try again</button></div>}
-    {isLoading && items.length === 0 && <p role="status">Loading appointments...</p>}
-    {!isLoading && !loadError && items.length === 0 && <div className="portal-empty-state"><h3>No online consultations yet</h3><p>Your online appointment requests will appear here.</p></div>}
-    <div className="consultation-history">{items.map((booking) => <article className="portal-card consultation-history-card" key={booking.id}>
-      <header><div><h2>{booking.serviceName}</h2><p>{booking.consultantName}{booking.consultantDesignation ? ` · ${booking.consultantDesignation}` : ""}</p><small>Booking {booking.bookingReference}</small></div><span className="portal-status" data-status={booking.status}>{formatStatus(booking.status)}</span></header>
-      <dl className="consultation-booking-details">
-        <div><dt>Consultation charge</dt><dd>{formatCurrency(booking.consultantCharge)}</dd></div>
+    {role === "admin" && !bookingId && <section className="portal-card portal-booking-filters" aria-label="Online consultation filters">
+      <div className="portal-filter-field portal-hospital-filter">
+        <label htmlFor="consultation-search">Search consultations</label>
+        <input id="consultation-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Booking, consumer, consultant, email or phone" autoComplete="off" />
+      </div>
+      <div className="portal-filter-field">
+        <label htmlFor="consultation-status">Status</label>
+        <select id="consultation-status" value={status} onChange={(event) => setStatus(event.target.value as ConsultationBookingDocument["status"] | "")}>
+          <option value="">All statuses</option>
+          {CONSULTATION_STATUSES.map((value) => <option key={value} value={value}>{formatStatus(value)}</option>)}
+        </select>
+      </div>
+      <div className="portal-filter-field">
+        <label htmlFor="consultation-month">Preferred month</label>
+        <input id="consultation-month" type="month" value={month} onChange={(event) => setMonth(event.target.value)} />
+      </div>
+      <div className="portal-filter-actions"><button type="button" className="portal-button secondary" disabled={!hasFilters} onClick={() => { setSearch(""); setStatus(""); setMonth(""); }}>Clear filters</button></div>
+      <p className="portal-filter-note full">Search and filters apply to the consultations currently loaded on this page.</p>
+      {visibleItems.length > 0 && <div className="portal-filter-summary"><PortalResultCount count={visibleItems.length} singular="online consultation" hasMore={hasMore} /></div>}
+    </section>}
+    {loadError && items.length === 0 && <section className="portal-empty-state portal-state-card" role="alert"><span className="portal-empty-state-leaf" aria-hidden="true" /><h3>Online consultations could not be loaded</h3><p>{loadError}</p><button className="portal-button secondary" type="button" disabled={isLoading} onClick={() => void reload()}>Try again</button></section>}
+    {isLoading && items.length === 0 && <section className="portal-empty-state portal-state-card" role="status"><span className="portal-empty-state-leaf" aria-hidden="true" /><h3>Loading online consultations</h3><p>Please wait while we retrieve your appointment information.</p></section>}
+    {!isLoading && !loadError && items.length === 0 && <section className="portal-empty-state portal-state-card" role="status"><span className="portal-empty-state-leaf" aria-hidden="true" /><h3>{emptyTitle}</h3><p>{emptyMessage}</p></section>}
+    {!isLoading && !loadError && items.length > 0 && visibleItems.length === 0 && <PortalFeedback emptyTitle="No matching online consultations" empty="No consultations currently loaded on this page match the selected search or filters." />}
+    <div className="consultation-history consumer-booking-list">{visibleItems.map((booking) => <article className="portal-row consumer-booking-row operational-booking-card consultation-history-card" data-accent={booking.status} key={booking.id}>
+      <div className="consumer-booking-copy">
+      <span className="consumer-booking-reference">Booking ID: {booking.bookingReference}</span>
+      <h3>{booking.serviceName}</h3>
+      <p className="consumer-booking-package">{booking.consultantName}{booking.consultantDesignation ? ` · ${booking.consultantDesignation}` : ""}</p>
+      <dl className="consumer-booking-facts consultation-booking-details">
         <div><dt>Preferred date</dt><dd>{formatDisplayDate(booking.preferredDate)}</dd></div>
         <div><dt>Preferred window</dt><dd>{formatConsultantTimeSlot(booking.preferredTimeSlot, { [booking.preferredTimeSlot]: { startTime: booking.slotStartTime, endTime: booking.slotEndTime } })}</dd></div>
         {booking.confirmedDate && <div><dt>Confirmed appointment</dt><dd>{formatDisplayDate(booking.confirmedDate)} · {booking.confirmedTime}</dd></div>}
@@ -76,13 +129,16 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
         {booking.consumerNotes && <div><dt>Consumer notes</dt><dd>{booking.consumerNotes}</dd></div>}
         {booking.adminNotes && <div><dt>Appointment notes</dt><dd>{booking.adminNotes}</dd></div>}
       </dl>
-      <div className="portal-actions">
+      </div>
+      <div className="consumer-booking-meta"><span className="portal-status" data-status={booking.status}>{formatStatus(booking.status)}</span><div className="consumer-booking-cost"><span>Consultation charge</span><strong>{formatCurrency(booking.consultantCharge)}</strong></div></div>
+      <div className="operational-booking-actions"><div className="portal-actions">
         {role === "admin" && booking.status === "requested" && <><button className="portal-button" disabled={busy} onClick={() => open(booking, "confirmed")}>Confirm appointment</button><button className="portal-button danger" disabled={busy} onClick={() => open(booking, "rejected")}>Reject</button></>}
         {role === "admin" && booking.status === "confirmed" && <button className="portal-button" disabled={busy} onClick={() => open(booking, "completed")}>Mark completed</button>}
         {["requested", "confirmed"].includes(booking.status) && <button className="portal-button danger" disabled={busy} onClick={() => open(booking, "cancelled")}>Cancel appointment</button>}
-      </div>
+      </div></div>
     </article>)}</div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
+    </div>
     <PortalDialog open={Boolean(action)} title={action ? `${action.status === "confirmed" ? "Confirm" : action.status === "completed" ? "Complete" : action.status === "rejected" ? "Reject" : "Cancel"} appointment?` : "Appointment"}
       message="The status changes only after you confirm." tone={action?.status === "cancelled" || action?.status === "rejected" ? "danger" : "default"}
       busy={busy} onCancel={() => { if (!submitting.current) setAction(null); }} onConfirm={() => void confirm()}>

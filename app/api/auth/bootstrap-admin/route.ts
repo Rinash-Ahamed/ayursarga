@@ -1,4 +1,5 @@
 import { FieldValue } from "firebase-admin/firestore";
+import { APPROVED_ADMIN_EMAIL } from "@/features/auth/constants";
 import { apiHealth, apiJson, logApiError } from "@/services/api/server";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
 import {
@@ -7,8 +8,6 @@ import {
 } from "@/services/firebase/adminAuthorization";
 
 export const runtime = "nodejs";
-
-const APPROVED_ADMIN_EMAIL = "info@ayursarga.com";
 
 export function GET() {
   return apiHealth("/api/auth/bootstrap-admin", [

@@ -17,6 +17,8 @@ import { HospitalAvailability } from "@/components/hospital/HospitalAvailability
 import { HospitalChangePasswordForm } from "@/components/hospital/ChangePasswordForm";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { ForgotPasswordForm } from "@/components/auth/ForgotPasswordForm";
+import { PasswordActionForm } from "@/components/auth/PasswordActionForm";
+import { GuestOnly } from "@/components/auth/RequireRole";
 import { portalUiState } from "./portalUiMocks";
 import { ConsumerBookings } from "@/components/consumer/ConsumerBookings";
 import { BookingRequestForm } from "@/components/consumer/BookingRequestForm";
@@ -27,16 +29,26 @@ import { ConsultationBookings } from "@/components/consultations/ConsultationBoo
 
 declare global { interface Window { mountPortalUi: (screen: string) => void; unmountPortalUi?: () => void; } }
 const screens = {
+  "password-action": <PasswordActionForm />,
   "admin-dashboard": <AdminDashboard />, "admin-hospitals": <HospitalsManager />, "admin-details": <AdminHospitalDetails hospitalId="centre" />,
   "admin-consultants": <ConsultantsManager />, "admin-users": <UsersList />, "admin-bookings": <AdminBookings />,
   "admin-availability": <AdminAvailability />, "admin-audits": <AdminAuditLogs />,
+  "admin-hospitals-empty": <HospitalsManager />, "admin-consultants-empty": <ConsultantsManager />,
+  "admin-users-empty": <UsersList />, "admin-bookings-empty": <AdminBookings />,
+  "admin-availability-empty": <AdminAvailability />, "admin-audits-empty": <AdminAuditLogs />,
   "hospital-dashboard": <HospitalDashboard />, "hospital-profile": <HospitalProfile />, "hospital-services": <ServicesManager />,
   "hospital-bookings": <HospitalBookings />, "hospital-availability": <HospitalAvailability />, "hospital-password": <HospitalChangePasswordForm />,
+  "hospital-services-empty": <ServicesManager />, "hospital-bookings-empty": <HospitalBookings />,
+  "hospital-availability-empty": <HospitalAvailability />,
   "admin-login": <LoginForm role="admin" />, "hospital-login": <LoginForm role="hospital" />,
-  "admin-forgot": <ForgotPasswordForm role="admin" />, "hospital-forgot": <ForgotPasswordForm role="hospital" />,
+  "admin-forgot": <GuestOnly role="admin"><ForgotPasswordForm role="admin" /></GuestOnly>, "hospital-forgot": <GuestOnly role="hospital"><ForgotPasswordForm role="hospital" /></GuestOnly>,
   "consumer-bookings": <ConsumerBookings />,
+  "consumer-bookings-empty": <ConsumerBookings />,
   "consumer-consultation-new": <ConsultationBookingForm serviceId="prenatal-doctor" />,
+  "consumer-consultation-empty": <ConsultationBookingForm serviceId="prenatal-doctor" />,
+  "consumer-consultation-refresh": <ConsultationBookingForm serviceId="prenatal-doctor" />,
   "consumer-consultations": <ConsultationBookings role="consumer" />,
+  "consumer-consultations-empty": <ConsultationBookings role="consumer" />,
   "admin-consultations": <ConsultationBookings role="admin" />,
   "consumer-profile": <ConsumerProfile editing />,
   "consumer-support": <ConsumerSupport />,
@@ -52,6 +64,7 @@ const screens = {
 };
 window.mountPortalUi = (screen) => {
   portalUiState.screen = screen;
+  if (screen === "consumer-consultation-refresh") portalUiState.publicConsultantReads = 0;
   const root = createRoot(document.getElementById("fixture-root")!);
   window.unmountPortalUi = () => root.unmount();
   root.render(<PortalEnvironment area={screen.startsWith("consumer") ? "consumer" : screen.startsWith("hospital") ? "hospital" : "admin"}>{screens[screen as keyof typeof screens]}<PortalToastViewport /></PortalEnvironment>);

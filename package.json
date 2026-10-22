@@ -1,6 +1,6 @@
 {
   "name": "ayursarga",
-  "version": "4.6.5",
+  "version": "4.10.0",
   "private": true,
   "engines": {
     "node": "24.x"

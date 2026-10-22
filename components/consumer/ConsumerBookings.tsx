@@ -88,7 +88,7 @@ export function ConsumerBookings({ bookingId }: { bookingId?: string } = {}) {
     </div>
     {bookingId && <p className="consumer-selected-booking"><Link href="/app/bookings">View all bookings</Link></p>}
     <PortalLoadGuard notification={loadErrorNotification} loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/" loadingMessage="Loading your bookings…" />
-    <PortalFeedback notification={loadErrorNotification} error={items.length > 0 ? loadError : null} empty={!error && !isLoading && items.length === 0 ? "You have no bookings yet." : undefined} />
+    <PortalFeedback notification={loadErrorNotification} error={items.length > 0 ? loadError : null} emptyTitle="No hospital bookings yet" empty={!error && !isLoading && items.length === 0 ? "Bookings placed through Search hospitals will appear here with their centre, package, care dates and current status." : undefined} />
     <PortalToast message={actionMessage} notification={actionMessageNotification} />
     <PortalToast message={actionError} notification={actionErrorNotification} tone="error" />
     {detailsError && <p className="portal-form-error" role="status">Centre and package names could not be loaded. Your booking dates and status are still shown. Refresh to try again.</p>}

@@ -28,7 +28,12 @@ export async function sendAuthEmail(auth: Auth, input: {
 }) {
   const continueUrl = new URL(`/${input.role}/login`, authEmailSiteUrl()).href;
   // No mobile deep links or custom Firebase template/action-URL settings needed.
-  const actionUrl = await auth.generatePasswordResetLink(input.email, { url: continueUrl, handleCodeInApp: false });
-  const template = authEmail({ kind: input.invitation ? "hospital-invitation" : "password-reset", name: input.name, actionUrl });
+  const firebaseActionUrl = new URL(await auth.generatePasswordResetLink(input.email, { url: continueUrl, handleCodeInApp: false }));
+  const code = firebaseActionUrl.searchParams.get("oobCode");
+  if (!code || firebaseActionUrl.searchParams.get("mode") !== "resetPassword") throw new Error("Password action could not be prepared.");
+  const actionUrl = new URL("/auth/reset-password", authEmailSiteUrl());
+  // Fragments are handled in the browser and never sent in HTTP requests.
+  actionUrl.hash = new URLSearchParams({ oobCode: code, role: input.role, kind: input.invitation ? "invite" : "reset" }).toString();
+  const template = authEmail({ kind: input.invitation ? "hospital-invitation" : "password-reset", name: input.name, actionUrl: actionUrl.href });
   await sendEmail({ to: input.email, replyTo: "info@ayursarga.com", ...template });
 }

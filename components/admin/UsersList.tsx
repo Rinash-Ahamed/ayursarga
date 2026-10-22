@@ -60,7 +60,7 @@ export function UsersList() {
       <button type="button" aria-pressed={group === "consumer"} onClick={() => changeGroup("consumer")}>Consumers</button>
       <button type="button" aria-pressed={group === "hospital"} onClick={() => changeGroup("hospital")}>Hospitals</button>
     </div>
-    <PortalFeedback notification={loadErrorNotification} error={items.length > 0 ? error : null} empty={!error && !isLoading && items.length === 0
+    <PortalFeedback notification={loadErrorNotification} error={items.length > 0 ? error : null} emptyTitle={`No ${groupLabel.toLowerCase()} users yet`} empty={!error && !isLoading && items.length === 0
       ? `No ${groupLabel.toLowerCase()} users yet. New ${groupLabel.toLowerCase()} accounts will appear here.`
       : undefined} />
     <PortalToast message={message} notification={messageNotification} />

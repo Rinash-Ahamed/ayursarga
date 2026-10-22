@@ -106,7 +106,7 @@ export function AdminAvailability() {
     </form>
     <PortalToast message={message} notification={messageNotification} />
     <PortalToast message={actionError} notification={actionErrorNotification} tone="error" />
-    <PortalFeedback notification={loadErrorNotification} error={loadError} empty={!loadError && !isLoading && items.length === 0 ? "No availability requests or blocks yet." : undefined} />
+    <PortalFeedback notification={loadErrorNotification} error={loadError} emptyTitle="No availability activity yet" empty={!loadError && !isLoading && items.length === 0 ? "Hospital requests and date blocks recorded by Admin will appear here." : undefined} />
     <div className="portal-list portal-availability-list">
       {items.map((item) => <article className="portal-card portal-availability-record" key={item.id}>
         <div className="portal-availability-record-content">

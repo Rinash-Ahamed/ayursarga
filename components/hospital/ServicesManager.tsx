@@ -244,7 +244,7 @@ export function ServicesManager() {
     <label className="portal-search">Search packages
       <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by package duration" autoComplete="off" />
     </label>
-    <PortalFeedback notification={loadErrorNotification} error={items.length > 0 ? loadError : null} empty={!loadError && !isLoading && items.length === 0 ? (deferredSearch ? "No packages match this search." : "No packages yet. Complete the form above to add your first package.") : undefined} />
+    <PortalFeedback notification={loadErrorNotification} error={items.length > 0 ? loadError : null} emptyTitle={deferredSearch ? "No matching packages" : "No packages yet"} empty={!loadError && !isLoading && items.length === 0 ? (deferredSearch ? "No packages match this search." : "Complete the form above to add your first package.") : undefined} />
     <PortalToast message={actionMessage} notification={actionMessageNotification} />
     <PortalToast message={actionError} notification={actionErrorNotification} tone="error" />
     <div className="portal-list">

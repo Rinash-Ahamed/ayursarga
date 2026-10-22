@@ -32,6 +32,7 @@ export function AdminHospitalPackages({ hospitalId }: { hospitalId: string }) {
     <PortalFeedback
       notification={loadErrorNotification}
       error={error}
+      emptyTitle="No packages yet"
       empty={!error && !isLoading && items.length === 0
         ? "This hospital has not added any packages or services yet."
         : undefined}

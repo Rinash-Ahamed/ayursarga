@@ -12,6 +12,7 @@ import {
 } from "@/services/notifications/notificationService";
 import { PortalDialog } from "@/components/portal/PortalDialog";
 import { formatDisplayDateTime, formatDateMentions } from "@/utils/date";
+import { consumeNotificationSnapshot, createNotificationSoundTracker, playPortalNotificationSound, primePortalNotificationSound } from "@/utils/portalNotificationSound";
 
 function notificationTime(value: NotificationDocument["createdAt"]) {
   return formatDisplayDateTime(value, "Just now");
@@ -27,6 +28,7 @@ export function PortalNotifications({ recipientId }: { recipientId: string }) {
   const [markingRead, setMarkingRead] = useState(false);
   const actionInFlight = useRef(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const soundTracker = useRef(createNotificationSoundTracker());
   const unread = items.filter((item) => !item.readAt);
 
   async function clear() {
@@ -53,14 +55,37 @@ export function PortalNotifications({ recipientId }: { recipientId: string }) {
     finally { actionInFlight.current = false; setMarkingRead(false); }
   }
 
-  useEffect(() => subscribeToNotifications(recipientId, (nextItems) => {
-    setItems(nextItems);
-    setLoading(false);
-    setError("");
-  }, () => {
-    setLoading(false);
-    setError("Notifications are temporarily unavailable.");
-  }), [recipientId]);
+  useEffect(() => {
+    soundTracker.current = createNotificationSoundTracker();
+    return subscribeToNotifications(recipientId, (nextItems, metadata) => {
+      if (consumeNotificationSnapshot(soundTracker.current, nextItems, metadata.fromCache)) playPortalNotificationSound();
+      setItems(nextItems);
+      setLoading(false);
+      setError("");
+    }, () => {
+      setLoading(false);
+      setError("Notifications are temporarily unavailable.");
+    });
+  }, [recipientId]);
+
+  useEffect(() => {
+    let enabled = false;
+    const removeListeners = () => {
+      window.removeEventListener("pointerdown", enableSound, true);
+      window.removeEventListener("keydown", enableSound, true);
+    };
+    const enableSound = () => {
+      if (enabled) return;
+      void primePortalNotificationSound().then((ready) => {
+        if (!ready) return;
+        enabled = true;
+        removeListeners();
+      });
+    };
+    window.addEventListener("pointerdown", enableSound, true);
+    window.addEventListener("keydown", enableSound, true);
+    return removeListeners;
+  }, []);
 
   useEffect(() => {
     if (!open) return;

@@ -127,7 +127,7 @@ export function ConsultantsManager() {
       <input type="search" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Search by name or employee ID" autoComplete="off" />
     </label>
 
-    <PortalFeedback error={error} notification={actionError ? actionErrorNotification : loadErrorNotification} empty={!error && !isLoading && items.length === 0 ? (deferredSearch.trim() ? "No consultants match your search." : "No consultants have been added yet.") : undefined} />
+    <PortalFeedback error={error} notification={actionError ? actionErrorNotification : loadErrorNotification} emptyTitle={deferredSearch.trim() ? "No matching consultants" : "No consultants yet"} empty={!error && !isLoading && items.length === 0 ? (deferredSearch.trim() ? "No consultants match your search." : "Select Add New to create the first consultant record.") : undefined} />
     <PortalToast message={message} notification={messageNotification} />
     <div className="portal-list consultant-list">{items.map((consultant) => <article className="portal-card" key={consultant.id}>
       <div className="portal-row-heading"><div><h3>{consultant.name}</h3>{consultant.designation && <p>{consultant.designation}</p>}<strong className="consultant-employee-id">{consultant.employeeId}</strong></div><span className="portal-status" data-status={consultant.status}>{formatStatus(consultant.status)}</span></div>

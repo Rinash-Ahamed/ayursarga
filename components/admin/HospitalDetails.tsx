@@ -385,7 +385,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   return <PortalShell role="admin" title="Hospital Details">
     <PortalLoadGuard notification={errorNotification} loading={loading} error={error} hasData={Boolean(hospital)} fallbackHref="/admin/hospitals" loadingMessage="Loading hospital details…" />
     <div className="portal-actions portal-page-actions"><Link className="portal-button secondary" href="/admin/hospitals">Back to hospitals</Link></div>
-    <PortalFeedback error={error} notification={errorNotification} empty={!error && !loading && !hospital ? "Return to Hospitals and choose a hospital to continue." : undefined} />
+    <PortalFeedback error={error} notification={errorNotification} emptyTitle="No hospital selected" empty={!error && !loading && !hospital ? "Return to Hospitals and choose a hospital to continue." : undefined} />
     <PortalToast message={message} notification={messageNotification} />
     {hospital && <>
       <article className="portal-card">

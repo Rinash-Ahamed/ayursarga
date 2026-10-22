@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { consultationService } from "@/features/consultations/catalog";
 import type { PublicConsultant } from "@/features/consultations/types";
@@ -31,7 +31,25 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
   const [error, setError, notification] = useRepeatableMessage();
   const submitting = useRef(false);
   const attempt = useRef<{ key: string; id: string } | null>(null);
+  const lastVisibilityRefresh = useRef(0);
   const consultant = items.find((item) => item.id === consultantId);
+  const hasConsultants = items.length > 0;
+  useEffect(() => {
+    const refreshVisibleConsultants = () => {
+      if (document.visibilityState !== "visible" || Date.now() - lastVisibilityRefresh.current < 1_500) return;
+      lastVisibilityRefresh.current = Date.now();
+      void reload();
+    };
+    lastVisibilityRefresh.current = Date.now();
+    window.addEventListener("focus", refreshVisibleConsultants);
+    window.addEventListener("pageshow", refreshVisibleConsultants);
+    document.addEventListener("visibilitychange", refreshVisibleConsultants);
+    return () => {
+      window.removeEventListener("focus", refreshVisibleConsultants);
+      window.removeEventListener("pageshow", refreshVisibleConsultants);
+      document.removeEventListener("visibilitychange", refreshVisibleConsultants);
+    };
+  }, [reload]);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting.current || !service) return;
@@ -53,14 +71,17 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
     } finally { submitting.current = false; setBusy(false); }
   }
   return <PortalShell role="consumer" title={service?.label ?? "Online consultation"}>
-    <nav className="portal-actions" aria-label="Consultation navigation"><Link className="portal-button secondary" href="/#wellness">Choose another service</Link><Link className="portal-button secondary" href="/app/bookings/consultations">My online consultations</Link></nav>
-    {!service ? <p className="portal-form-error">Choose a valid service from Wellness Path.</p> : <>
-      <p>Choose an available professional and preferred time window. Ayursarga will confirm your appointment date and time. This is an appointment request, not an emergency service.</p>
+    <div className="portal-flow-page">
+    {!service ? <><nav className="portal-actions portal-flow-navigation" aria-label="Consultation navigation"><Link className="portal-button secondary" href="/#wellness">Choose another service</Link><Link className="portal-button secondary" href="/app/bookings/consultations">My online consultations</Link></nav><p className="portal-form-error">Choose a valid service from Wellness Path.</p></> : <>
+      <section className="portal-flow-intro" aria-label="Consultation guidance">
+        <p>Choose an available professional and preferred time window. Ayursarga will coordinate and confirm the appointment date and time. Online consultation is not an emergency service.</p>
+        <nav className="portal-actions portal-flow-navigation" aria-label="Consultation navigation"><Link className="portal-button secondary" href="/#wellness">Choose another service</Link><Link className="portal-button secondary" href="/app/bookings/consultations">My online consultations</Link></nav>
+      </section>
       <PortalToast message={loadError} notification={loadNotification} tone="error" />
-      {loadError && <div className="portal-actions"><p role="alert">{loadError}</p><button className="portal-button secondary" onClick={() => void reload()} disabled={isLoading}>Try again</button></div>}
-      {isLoading && items.length === 0 && <p role="status">Loading consultation professionals...</p>}
-      {!isLoading && !loadError && items.length === 0 && <div className="portal-empty-state"><h3>No consultants are available yet</h3><p>Please check again later or <Link href="/contact">contact Ayursarga</Link> for help. No appointment has been created.</p></div>}
-      <form className="portal-form portal-card" onSubmit={submit}>
+      {loadError && !hasConsultants && <section className="portal-empty-state portal-state-card" role="alert"><span className="portal-empty-state-leaf" aria-hidden="true" /><h3>Consultants could not be loaded</h3><p>{loadError}</p><button className="portal-button secondary" type="button" onClick={() => void reload()} disabled={isLoading}>Try again</button></section>}
+      {isLoading && !hasConsultants && <section className="portal-empty-state portal-state-card" role="status"><span className="portal-empty-state-leaf" aria-hidden="true" /><h3>Finding available consultants</h3><p>Please wait while we check the current professionals for this service.</p></section>}
+      {!isLoading && !loadError && !hasConsultants && <section className="portal-empty-state portal-state-card" role="status"><span className="portal-empty-state-leaf" aria-hidden="true" /><h3>Consultants are not available yet</h3><p>No professionals are currently assigned to {service.label.toLowerCase()}. Please check again or <Link href="/contact">contact Ayursarga</Link> for assistance.</p><button className="portal-button secondary" type="button" onClick={() => void reload()} disabled={isLoading}>Check availability again</button></section>}
+      {hasConsultants && <form className="portal-form portal-card consumer-consultation-form" onSubmit={submit}>
         <fieldset className="full consultation-professionals" disabled={busy}>
           <legend>Choose your consultant *</legend>
           <div className="consultation-professional-grid">{items.map((item) => <label className="consultation-professional" key={item.id} data-selected={item.id === consultantId}>
@@ -82,7 +103,8 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
         {error && <p className="portal-form-error full" role="alert">{error}</p>}
         {error && <div className="portal-actions full"><button type="button" className="portal-button secondary" disabled={busy || isLoading} onClick={() => { setConsultantId(""); setSlot(""); setConsent(false); void reload(); }}>Refresh consultants</button></div>}
         <div className="portal-actions full"><button className="portal-button" disabled={busy || !consent || !consultant || !date || !slot}>{busy ? "Submitting..." : "Request appointment"}</button></div>
-      </form>
+      </form>}
     </>}
+    </div>
   </PortalShell>;
 }

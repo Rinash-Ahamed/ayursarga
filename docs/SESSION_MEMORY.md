@@ -7,6 +7,117 @@ the implementation authority; these notes do not authorize deployments or data
 maintenance. Preserve unrelated working-tree changes; the workspace contains
 substantial uncommitted work across multiple tasks.
 
+## Booking filter summary placement (22 October 2026)
+
+- Moved the shared booking/consultation result badge inside each filter card as
+  its final summary row. It no longer floats between the filter panel and first
+  result card. Desktop aligns it right; narrow mobile aligns it left.
+- Applied to Admin Hospital Bookings, Hospital Bookings and Admin Online
+  Consultations without changing filtering or data behavior. Version advanced
+  from 4.8.1 to 4.8.2.
+
+## Portal result-count presentation (22 October 2026)
+
+- Replaced loose `Showing1online consultation`-style text with the shared
+  `PortalResultCount` component. Counts now render as a compact bordered badge
+  with explicit spacing, accessible status labelling and a separated more-results
+  indicator.
+- Applied consistently to Admin Hospital Bookings, Hospital Bookings and Admin
+  Online Consultations. Data, filtering and pagination behavior are unchanged.
+  Version advanced from 4.8.0 to 4.8.1.
+
+## Version 4.8.0 validation (22 October 2026)
+
+- Owner-requested ESLint, TypeScript, production build and API checks completed.
+  ESLint and `tsc --noEmit` passed; Next 16.2.11 production build generated all
+  68 routes successfully.
+- Full local API/unit contract suite passed 96/96. A stale Wellness Path unit
+  harness was updated to recognize Next `Link` elements introduced by route
+  prefetching; production behavior was not reverted.
+- The same production build passed 4/4 read-only HTTP smoke groups: essential
+  and deep health JSON, themed deep-health page and redirect, 11 unauthorized
+  mutation denials, bounded public consultant projection, and Search Center
+  public list/details/packages. Deep health reported five configured
+  dependencies ready. No authenticated mutation, email, deployment or live data
+  change was performed. The temporary port-3187 server was stopped.
+
+## Admin online-consultation booking experience (22 October 2026)
+
+- Admin Online Consultations now uses the same compact operational booking-card
+  hierarchy as Admin Hospital Bookings: booking reference, service/provider,
+  structured facts, status, charge and separated action area.
+- Added Admin-only search across booking reference, service, consultant and
+  Consumer contact fields, plus status and preferred-month filters, clear action,
+  result count and contextual no-match state. Filters operate on the current
+  bounded page and say so explicitly; pagination, update APIs and dialogs are
+  unchanged. Version advanced from 4.7.5 to 4.8.0 for this feature.
+
+## Fresh online-consultant availability (22 October 2026)
+
+- The public consultant endpoint was already `no-store`; local measurements were
+  395 ms cold and 119–159 ms warm. The stale experience came from an already-open
+  Consumer consultation page not requesting the list again after Admin changes.
+- Consumer consultant selection now refreshes when the page becomes visible,
+  regains focus or returns from browser page cache, with a short duplicate-event
+  guard. Its empty state also offers Check availability again.
+- Wellness Path consultation links now use Next navigation so their protected
+  route can be prefetched without changing the flow. No Hospital booking or
+  consultation authorization behavior changed. Version advanced to 4.7.5.
+
+## Booking detail action alignment (22 October 2026)
+
+- Admin booking details now keep Online consultations and View all bookings in
+  one dedicated navigation row. Hospital booking details use the same separated
+  navigation treatment for View all bookings.
+- Removed the redundant Showing 1 booking result count from both role-specific
+  detail views while retaining result counts on their list pages. Booking data,
+  APIs and actions are unchanged. Version advanced from 4.7.3 to 4.7.4.
+
+## Admin and Hospital portal state consistency (22 October 2026)
+
+- Completed the follow-up state-content pass across Admin and Hospital operational
+  lists after the Consumer portal alignment work. Existing forms, filters,
+  actions, APIs and workflow behavior remain unchanged.
+- Admin Hospitals, Consultants, Users, Bookings, Availability, Audit Logs,
+  Hospital Details and package sections now provide contextual empty-state
+  headings instead of the generic fallback.
+- Hospital Services, Bookings and Availability use the same contextual pattern,
+  including distinct headings for empty records and filtered searches.
+- Added responsive fixture coverage for all primary Admin and Hospital list empty
+  states. Application version advanced from 4.7.2 to 4.7.3 for this UI polish.
+
+## Consumer portal state and introduction consistency (22 October 2026)
+
+- Extended the consultation-request alignment pattern to Consumer online
+  consultation history: guidance now precedes aligned actions, and loading,
+  unavailable and failed states use the same themed state card and meaningful
+  wording. The unavailable detail case is distinguished from an empty history.
+- The shared PortalFeedback accepts a contextual empty heading; Consumer My
+  bookings now says `No hospital bookings yet` and explains exactly what will
+  appear. Other role screens retain their existing default heading and behavior.
+  Patch version 4.7.1 to 4.7.2 synchronized in the package files.
+
+## Consumer consultation empty-state alignment (22 October 2026)
+
+- Reorganized the protected consultation-request screen into a dedicated intro,
+  aligned navigation and mutually exclusive loading/error/empty/available states.
+  When no professional is assigned, the unusable consultant/date/consent form is
+  no longer rendered; a concise themed notice explains availability and links to
+  Contact Ayursarga. Existing consultant selection and booking submission remain
+  unchanged when records are available. Patch version 4.7.0 to 4.7.1 synchronized.
+
+## Admin and Hospital notification chime (22 October 2026)
+
+- The shared non-Consumer portal bell now plays a restrained, asset-free Web
+  Audio chime when a genuinely new unread notification arrives after the first
+  authoritative Firestore snapshot. Initial/cached records, read-state changes,
+  listener reconnections and previously seen records remain silent.
+- Audio is primed only after the first normal pointer or keyboard interaction to
+  comply with iOS/Safari/Chrome autoplay rules. The visual bell/count remains the
+  primary signal when audio has not been permitted or supported. No notification
+  delivery, Firestore schema, permission or API behavior changed. Minor version
+  4.6.5 to 4.7.0 synchronized in the package files.
+
 ## Online professional title casing (22 October 2026)
 
 - Standardized the Wellness Path online-professional card titles to `Yoga
@@ -651,6 +762,77 @@ substantial uncommitted work across multiple tasks.
   lint/build/API checks for a documentation-only handoff.
 
 ## Pending deployment and safety reminders
+
+- Owner-requested v4.10.0 validation completed: lint initially found a direct
+  effect state update in PasswordActionForm; moved role/invitation updates into
+  the verification completion callback. Rerun lint passed without warnings;
+  fresh production build passed TypeScript and generated 69 pages. Desktop and
+  WebKit-phone reset/invitation regressions passed again after the correction.
+  That exact build's temporary production server returned HTTP 200 for deep
+  health JSON (deep-configuration, all 5 dependencies ready), themed deep health
+  page and `/auth/reset-password` (branded checking state, no-referrer metadata).
+  Temporary server stopped. Configuration health does not prove live delivery.
+
+- Added `/auth/reset-password` for branded Admin/Hospital resets and Hospital
+  invitations. Shared sendAuthEmail extracts the Firebase-generated reset code
+  and builds the email button/text URL from canonical APP_SITE_URL. Role/kind
+  and the single-use code are in a browser fragment, never HTTP query logs.
+  No Firebase template-editor change is required. Existing emailed Firebase
+  action links remain valid; new custom links require deploying this page.
+- The shared Firebase Auth client verifies and confirms reset codes; the page
+  validates matching strong passwords, guards duplicate submits, handles invalid,
+  expired/used links, clears the fragment after success and links to the selected
+  role's fixed login path. Role/kind affect presentation/navigation only. No Auth
+  profile/Firestore writes, auto-login, custom tokens or new permissions added.
+- Validation: 14 focused reset/invitation API/service tests passed and 2 browser
+  regressions passed (desktop, WebKit phone), each covering Admin reset, Hospital
+  reset, Hospital invitation and an invalid link. Browser tests use isolated
+  Firebase mocks; no live code was consumed and no email sent. Build/lint were
+  not requested for this task. Version 4.10.0.
+
+- Fixed reset confirmation loss in both Admin and Hospital pages: GuestOnly
+  previously replaced its children whenever AuthContext.processing set isLoading
+  during the request, unmounting ForgotPasswordForm and discarding its sent state.
+  It now shows the initial fallback for status=loading or a same-role session,
+  keeping guest forms mounted during operations. Redirect checks remain guarded.
+  Reset fixtures now include the actual GuestOnly boundary and shared processing
+  notifications; both role flows passed desktop and WebKit-phone regression
+  tests with persistent confirmation and single submission. Earlier isolated
+  form tests did not exercise this parent lifecycle. Version 4.9.2. No new
+  build/lint or live email request was run for this fix.
+
+- Reviewed Hospital login/reset alongside Admin: Hospital reset retains the
+  official-email input and persistent generic acknowledgement. Shared login now
+  guards duplicate submissions synchronously and displays persistent inline
+  credential errors; shared reset also retains inline API errors beside its
+  submit button. Four focused desktop/WebKit-phone tests passed for both roles,
+  covering reset acknowledgement, duplicate login requests, inline errors and
+  retry availability. No live authentication/email test or build/lint run.
+  Version 4.9.1.
+
+- Admin Forgot Password no longer asks for an email address. It always submits
+  the shared approved Admin address (`info@ayursarga.com`), which is also reused
+  by the Admin bootstrap guard. The reset API now refuses delivery for any other
+  Admin address while preserving the same generic public response for account
+  enumeration protection. Hospital reset remains email-based. Successful reset
+  requests render a persistent in-page acknowledgement rather than relying on a
+  temporary toast. Validation: 9 focused auth-email/API tests and 8 responsive
+  portal UI projects passed, including WebKit phone. No live email was sent and
+  SMTP inbox delivery was not tested. Version 4.9.0.
+
+- The Ayursarga company GSTIN in generated and previewed partner contracts is
+  now the confirmed `32ABGCA7749G1ZL`; the former company placeholder was
+  removed. Partner Centre GSTINs remain hospital-specific particulars. A focused
+  contract-rendering regression confirms the company value is present and the
+  placeholder is absent. Version 4.8.4.
+
+- Admin audit-clear confirmation now gives the shared `PasswordField` complete
+  dialog-level sizing and positioning instead of falling back to browser-default
+  input layout. The password remains masked by default, the reveal control is
+  centered and keyboard focused, and cancelling/reopening clears the value and
+  restores the masked state. Clear-audit authorization and deletion behavior are
+  unchanged. Focused dialog regression passed on all 8 portal UI projects,
+  including narrow phones, tablets, desktop and WebKit phone. Version 4.8.3.
 
 - Admin availability approvals/rejections now use `PortalDialog` with explicit
   Confirm/Cancel, emerald/red semantics, a synchronous duplicate-submit guard,

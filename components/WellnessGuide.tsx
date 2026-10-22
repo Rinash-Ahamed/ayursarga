@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { DateInput } from "@/components/forms/DateInput";
 import { formatDisplayDate, toDateInputValue } from "@/utils/date";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -256,7 +257,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
                   <span className="consultation-option-icon"><ConsultationIcon name={id} /></span>
                   <strong>{title}</strong>
                   <span>{description}</span>
-                  <a className="consultation-booking-button" href={`/app/bookings/consultation?service=${serviceId}`}>Book an appointment</a>
+                  <Link className="consultation-booking-button" href={`/app/bookings/consultation?service=${serviceId}`}>Book an appointment</Link>
                 </article>)}
               </div>
               <p className="prenatal-booking-note">Choose an active consultant, view their charge, and request your preferred date and time window.</p>
@@ -273,7 +274,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
                   <span>Feeding, latching, and lactation guidance</span>
                 </article>
               </div>
-              <a className="quiz-next" href="/app/bookings/consultation?service=lactation">Book an appointment <span aria-hidden="true">→</span></a>
+              <Link className="quiz-next" href="/app/bookings/consultation?service=lactation">Book an appointment <span aria-hidden="true">→</span></Link>
               <p className="prenatal-booking-note">Choose an active consultant and request a preferred appointment window.</p>
             </motion.div>}
 
@@ -286,7 +287,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
                   <span className="consultation-option-icon"><ConsultationIcon name="doctor" /></span>
                   <strong>Women&apos;s Wellness Consultant</strong>
                   <span>Personalised guidance from an assigned professional</span>
-                  <a className="consultation-booking-button" href="/app/bookings/consultation?service=womens-wellness">Book an appointment</a>
+                  <Link className="consultation-booking-button" href="/app/bookings/consultation?service=womens-wellness">Book an appointment</Link>
                 </article>
               </div>
               <p className="prenatal-booking-note">Choose an active consultant, view their charge, and request a preferred appointment window.</p>

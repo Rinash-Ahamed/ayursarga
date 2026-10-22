@@ -15,6 +15,7 @@ import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 import { withPortalBookingDetails } from "@/services/bookings/portalBookingDetails";
 import { PortalBookingSummary } from "@/components/portal/PortalBookingSummary";
+import { PortalResultCount } from "@/components/portal/PortalResultCount";
 
 const BOOKING_STATUSES: readonly BookingStatus[] = [
   "requested", "confirmed", "reschedule_requested", "completed", "cancelled", "rejected",
@@ -92,9 +93,11 @@ export function AdminBookings({ bookingId }: { bookingId?: string } = {}) {
   }
 
   return <PortalShell role="admin" title="Bookings">
-    <nav className="portal-actions" aria-label="Booking categories"><Link className="portal-button secondary" href="/admin/bookings/consultations">Online consultations</Link></nav>
+    <nav className="portal-actions portal-booking-navigation" aria-label="Booking categories">
+      <Link className="portal-button secondary" href="/admin/bookings/consultations">Online consultations</Link>
+      {bookingId && <Link className="portal-button secondary" href="/admin/bookings">View all bookings</Link>}
+    </nav>
     <PortalLoadGuard notification={loadErrorNotification} loading={isLoading} error={error} hasData={items.length > 0} fallbackHref="/admin" loadingMessage="Loading bookings…" />
-    {bookingId && <Link className="portal-button secondary" href="/admin/bookings">View all bookings</Link>}
     {!bookingId && <section className="portal-card portal-booking-filters" aria-label="Booking filters">
       <div className="portal-filter-field portal-hospital-filter">
         <label htmlFor="booking-hospital-search">Hospital</label>
@@ -130,11 +133,11 @@ export function AdminBookings({ bookingId }: { bookingId?: string } = {}) {
       <div className="portal-filter-actions">
         <button type="button" className="portal-button secondary" disabled={!hasFilters} onClick={clearFilters}>Clear filters</button>
       </div>
+      {items.length > 0 && <div className="portal-filter-summary"><PortalResultCount count={items.length} singular="booking" hasMore={hasMore} /></div>}
     </section>}
-    <PortalFeedback notification={loadErrorNotification} error={items.length > 0 ? error : null} empty={!error && !isLoading && items.length === 0
+    <PortalFeedback notification={loadErrorNotification} error={items.length > 0 ? error : null} emptyTitle={hasFilters ? "No matching bookings" : "No hospital bookings yet"} empty={!error && !isLoading && items.length === 0
       ? (hasFilters ? "No bookings match these filters. Adjust or clear the filters and try again." : "No bookings yet. New appointments will appear here.")
       : undefined} />
-    {items.length > 0 && <div className="portal-result-count">Showing <strong>{items.length}</strong> booking{items.length !== 1 ? "s" : ""}{hasMore ? " · more available" : ""}</div>}
     {detailsError && <p className="portal-form-error" role="status">Some centre or package names could not be loaded. Booking details are still available. Refresh to retry.</p>}
     <div className="portal-list consumer-booking-list">{items.map((item) => <PortalBookingSummary key={item.id} booking={item} showCommission />)}</div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />

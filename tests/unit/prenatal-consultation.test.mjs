@@ -14,6 +14,7 @@ function wellnessFlow(pathName) {
       return [state[index], (value) => { state[index] = typeof value === "function" ? value(state[index]) : value; }];
     } },
     "next/image": { default: () => null },
+    "next/link": { __esModule: true, default: ({ children, ...props }) => React.createElement("a", props, children) },
     "framer-motion": { motion: { div: "div", button: "button" }, AnimatePresence: React.Fragment, useReducedMotion: () => true },
   });
   function render() {
@@ -58,7 +59,7 @@ for (const [preference, provider] of [["Pregnancy yoga", "Yoga Instructor"], ["D
     assert.equal(cards.length, 1);
     const content = React.Children.toArray(cards[0].props.children);
     assert.equal(content.find((node) => node.type === "strong").props.children, provider);
-    const booking = content.find((node) => node.type === "a");
+    const booking = content.find((node) => React.isValidElement(node) && node.props.href);
     assert.equal(booking.props.children, "Book an appointment");
     assert.equal(booking.props.disabled, undefined);
     assert.match(booking.props.href, /^\/app\/bookings\/consultation\?service=prenatal-/);
@@ -81,7 +82,7 @@ test("Cosmetologist opens one online provider card instead of location/date fiel
   const cards = React.Children.toArray(grid.props.children);
   assert.equal(cards.length, 1);
   assert.match(text(cards[0]), /Cosmetologist/);
-  const booking = React.Children.toArray(cards[0].props.children).find((node) => node.type === "a");
+  const booking = React.Children.toArray(cards[0].props.children).find((node) => React.isValidElement(node) && node.props.href);
   assert.equal(booking.props.href, "/app/bookings/consultation?service=cosmetologist");
   const flow = wellnessFlow("Rejuvenation");
   flow.choose("Cosmetologist consultation");
@@ -108,7 +109,7 @@ test("Psychologist opens a single consultation card without location or date fie
   const cards = React.Children.toArray(grid.props.children);
   assert.equal(cards.length, 1);
   assert.equal(React.Children.toArray(cards[0].props.children).find((node) => node.type === "strong").props.children, "Psychologist");
-  assert.equal(React.Children.toArray(cards[0].props.children).find((node) => node.type === "a").props.href, "/app/bookings/consultation?service=psychologist");
+  assert.equal(React.Children.toArray(cards[0].props.children).find((node) => React.isValidElement(node) && node.props.href).props.href, "/app/bookings/consultation?service=psychologist");
   const flow = wellnessFlow("Stress management");
   flow.choose("Psychologist consultation");
   flow.choose("Continue →");
@@ -129,7 +130,7 @@ test("Lactation concerns retain multiselect behavior", () => {
 test("lactation and women's wellness link to real assigned-consultant booking rather than placeholders", () => {
   for (const [path, preference, service, title] of [["Lactation support", "Low milk supply", "lactation", "Lactation Consultant"], ["Women", "PCOD / PCOS", "womens-wellness", "Women's Wellness Consultant"]]) {
     const flow = wellnessFlow(path); flow.choose(preference); flow.choose("Continue →");
-    assert.ok(flow.render().some((node) => node.type === "a" && node.props.href === `/app/bookings/consultation?service=${service}`));
+    assert.ok(flow.render().some((node) => node.props.href === `/app/bookings/consultation?service=${service}`));
     assert.ok(flow.render().some((node) => node.type === "strong" && text(node) === title));
     assert.equal(flow.render().some((node) => text(node).includes("Dr. Shafna") || text(node).includes("Dr. Mizreen")), false);
   }
