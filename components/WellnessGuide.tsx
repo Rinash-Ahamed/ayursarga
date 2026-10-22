@@ -71,7 +71,7 @@ type GuideStep = 0 | 1 | 2;
 const ONLINE_CONSULTATIONS = [
   ["doctor", "Doctor", "Ayurvedic physician consultation", "Doctor consultation", "prenatal-doctor"],
   ["dietitian", "Dietitian", "Pregnancy nutrition guidance", "Dietary advice", "prenatal-dietitian"],
-  ["yoga", "Yoga instructor", "Prenatal yoga guidance", "Pregnancy yoga", "prenatal-yoga"],
+  ["yoga", "Yoga Instructor", "Prenatal yoga guidance", "Pregnancy yoga", "prenatal-yoga"],
   ["cosmetologist", "Cosmetologist", "Skin and beauty consultation", "Cosmetologist consultation", "cosmetologist"],
   ["psychologist", "Psychologist", "Stress and emotional wellbeing consultation", "Psychologist consultation", "psychologist"],
 ] as const;
@@ -269,7 +269,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
               <div className="consultation-options consultation-options-single" aria-label="Online lactation consultation">
                 <article>
                   <span className="consultation-option-icon"><ConsultationIcon name="lactation" /></span>
-                  <strong>Lactation consultant</strong>
+                  <strong>Lactation Consultant</strong>
                   <span>Feeding, latching, and lactation guidance</span>
                 </article>
               </div>
@@ -284,7 +284,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
               <div className="consultation-options consultation-options-single" aria-label="Women's wellness online consultation">
                 <article className="consultation-provider-card">
                   <span className="consultation-option-icon"><ConsultationIcon name="doctor" /></span>
-                  <strong>Women&apos;s wellness consultant</strong>
+                  <strong>Women&apos;s Wellness Consultant</strong>
                   <span>Personalised guidance from an assigned professional</span>
                   <a className="consultation-booking-button" href="/app/bookings/consultation?service=womens-wellness">Book an appointment</a>
                 </article>

@@ -51,7 +51,7 @@ function consultationFor(preference, pathName = "Prenatal care") {
   return nodes.find((node) => node.props.className === "consultation-options consultation-options-single");
 }
 
-for (const [preference, provider] of [["Pregnancy yoga", "Yoga instructor"], ["Dietary advice", "Dietitian"], ["Doctor consultation", "Doctor"]]) {
+for (const [preference, provider] of [["Pregnancy yoga", "Yoga Instructor"], ["Dietary advice", "Dietitian"], ["Doctor consultation", "Doctor"]]) {
   test(`${preference} displays only ${provider} and preserves the existing booking button`, () => {
     const grid = consultationFor(preference);
     const cards = React.Children.toArray(grid.props.children);
@@ -127,9 +127,10 @@ test("Lactation concerns retain multiselect behavior", () => {
 });
 
 test("lactation and women's wellness link to real assigned-consultant booking rather than placeholders", () => {
-  for (const [path, preference, service] of [["Lactation support", "Low milk supply", "lactation"], ["Women", "PCOD / PCOS", "womens-wellness"]]) {
+  for (const [path, preference, service, title] of [["Lactation support", "Low milk supply", "lactation", "Lactation Consultant"], ["Women", "PCOD / PCOS", "womens-wellness", "Women's Wellness Consultant"]]) {
     const flow = wellnessFlow(path); flow.choose(preference); flow.choose("Continue →");
     assert.ok(flow.render().some((node) => node.type === "a" && node.props.href === `/app/bookings/consultation?service=${service}`));
+    assert.ok(flow.render().some((node) => node.type === "strong" && text(node) === title));
     assert.equal(flow.render().some((node) => text(node).includes("Dr. Shafna") || text(node).includes("Dr. Mizreen")), false);
   }
 });

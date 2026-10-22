@@ -7,6 +7,31 @@ the implementation authority; these notes do not authorize deployments or data
 maintenance. Preserve unrelated working-tree changes; the workspace contains
 substantial uncommitted work across multiple tasks.
 
+## Online professional title casing (22 October 2026)
+
+- Standardized the Wellness Path online-professional card titles to `Yoga
+  Instructor`, `Lactation Consultant`, and `Women's Wellness Consultant`.
+  Service IDs, routes and booking behavior are unchanged. The focused Wellness
+  Path regression suite covers the provider label. Patch version 4.6.4 to 4.6.5
+  synchronized in the package files.
+
+## Wellness Path CTA clarity (22 October 2026)
+
+- Strengthened the public Wellness Path `Book an appointment` links from small,
+  translucent controls to brighter solid-gold primary actions with larger forest
+  text. Applied the same clarity treatment to `Prepare my request` and related
+  step actions, with clear cream hover/focus feedback and no positional hover
+  movement. Routes and booking behavior are unchanged. Patch version 4.6.3 to
+  4.6.4 synchronized.
+
+## Wellness Path calendar-icon clarity (22 October 2026)
+
+- Scoped the shared DateInput presentation inside Wellness Path labels so its
+  unboxed calendar icon is aligned directly to the 50px input field and uses a
+  clearer cream-gold stroke with restrained hover and focus states.
+  Shared date behavior and date controls outside the public Wellness Path were
+  unchanged. Patch version 4.6.2 to 4.6.3 synchronized in the package files.
+
 ## Wellness-card LCP loading hint (22 October 2026)
 
 - Removed the forced lazy-loading behavior from the first visible Wellness Path
