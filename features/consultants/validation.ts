@@ -1,5 +1,6 @@
 import { isValidEmail, toTrimmedString } from "@/utils/text";
 import { isValidPhoneNumber } from "@/utils/phone";
+import { CONSULTATION_SERVICES, consultationService, type ConsultationServiceId } from "@/features/consultations/catalog";
 
 export const CONSULTANT_TIME_SLOTS = ["morning", "noon", "evening"] as const;
 export type ConsultantTimeSlot = typeof CONSULTANT_TIME_SLOTS[number];
@@ -24,6 +25,7 @@ export type ConsultantFields = {
   name: string;
   designation: string;
   consultantCharge: number | null;
+  consultationServices: ConsultationServiceId[];
   preferredTimeSlots: ConsultantTimeSlot[];
   preferredSlotTimings: ConsultantSlotTimings;
   email: string;
@@ -43,6 +45,7 @@ export function validateConsultantFields(input: Record<string, unknown>) {
   const data: ConsultantFields = {
     name: toTrimmedString(input.name, 120),
     designation: toTrimmedString(input.designation, 120),
+    consultationServices: CONSULTATION_SERVICES.filter((service) => Array.isArray(input.consultationServices) && input.consultationServices.includes(service.id)).map((service) => service.id),
     consultantCharge: input.consultantCharge == null || (typeof input.consultantCharge === "string" && !input.consultantCharge.trim()) ? null : Number(input.consultantCharge),
     preferredTimeSlots: CONSULTANT_TIME_SLOTS.filter((slot) => Array.isArray(input.preferredTimeSlots) && input.preferredTimeSlots.includes(slot)),
     preferredSlotTimings: {},
@@ -56,6 +59,10 @@ export function validateConsultantFields(input: Record<string, unknown>) {
     emergencyContactNo: toTrimmedString(input.emergencyContactNo, 25),
   };
   const errors: ConsultantValidationErrors = {};
+  if (input.consultationServices != null && (!Array.isArray(input.consultationServices)
+    || input.consultationServices.length > CONSULTATION_SERVICES.length
+    || input.consultationServices.some((value: unknown) => !consultationService(value))
+    || new Set(input.consultationServices).size !== input.consultationServices.length)) errors.consultationServices = "Select valid consultation services without duplicates.";
   if (data.consultantCharge !== null && (
     !["string", "number"].includes(typeof input.consultantCharge) ||
     !/^\d+(\.\d{1,2})?$/.test(String(input.consultantCharge).trim()) ||
@@ -99,6 +106,7 @@ export function consultantFormValues(form: FormData): Record<string, unknown> {
     name: form.get("name"),
     designation: form.get("designation"),
     consultantCharge: form.get("consultantCharge"),
+    consultationServices: form.getAll("consultationServices"),
     preferredTimeSlots: form.getAll("preferredTimeSlots"),
     preferredSlotTimings: Object.fromEntries(CONSULTANT_TIME_SLOTS.filter((slot) => form.getAll("preferredTimeSlots").includes(slot)).map((slot) => [slot, {
       startTime: form.get(`${slot}StartTime`) ?? CONSULTANT_TIME_SLOT_CONFIG[slot].startTime,

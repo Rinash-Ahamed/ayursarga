@@ -1,11 +1,139 @@
 # Session handoff
 
-Updated: 21 October 2026 (Asia/Calcutta).
+Updated: 22 October 2026 (Asia/Calcutta).
 
 This file records completed work and verification limits. `AGENTS.md` remains
 the implementation authority; these notes do not authorize deployments or data
 maintenance. Preserve unrelated working-tree changes; the workspace contains
 substantial uncommitted work across multiple tasks.
+
+## Wellness-card LCP loading hint (22 October 2026)
+
+- Removed the forced lazy-loading behavior from the first visible Wellness Path
+  card row. Its first three images, including postnatal care, now load eagerly;
+  later cards remain lazy so below-the-fold media does not compete for the
+  initial connection. No layout, image quality, content, or interaction changed.
+- Added a focused source contract and ran the Wellness Path unit suite: 11/11
+  passed. Broader lint/build checks were not requested. Patch version 4.6.1 to
+  4.6.2 synchronized in the package files.
+
+## Booking preservation, deployment and final validation (22 October 2026)
+
+- Owner requested regression verification, scoped Firestore deployment, build,
+  lint and affected API checks. Compared the Search Center booking form/service,
+  creation/reference endpoints, Hospital mutation endpoint and original booking
+  rules against Git: no business-logic changes. Hospital bookings still confirm
+  immediately; online consultations remain a separate requested workflow.
+- Found one lint error introduced in the public women's consultant label. Escaped
+  its apostrophe with &apos;, preserving the rendered text. No booking/security
+  workaround or suppressed lint rule. Patch version 4.6.0 to 4.6.1 synchronized.
+- Deployed only firestore:rules,firestore:indexes to ayursarga-connect using a
+  non-interactive CLI command; compilation and release succeeded. Independently
+  fetched the active rules release and compared its source exactly to the local
+  file: match true. Read-only Google API verification confirmed both new indexes
+  READY: consultants(status, consultationServices array, employeeSequence) and
+  consultationBookings(consumerId, createdAt). No hosting or Storage deploy.
+- Final production build v4.6.1 passed compilation, built-in TypeScript checks,
+  generation of all 68 pages and optimization. Full ESLint passed with zero
+  warnings/errors after the markup correction and addition of regression tests.
+- Seventy-three focused unit/actual-route-with-fake-cloud checks passed across
+  original and online booking creation, validation, ownership, historical data,
+  snapshot prices, consent, idempotency, atomic failure, notifications, treatment,
+  public search/projections, comparison, sold-out periods and health contracts.
+- Added tests/emulator/bookings.rules.test.mjs with a hard-coded demo project and
+  loopback-only host. Seven real Firestore emulator tests passed: scoped reads,
+  permanent-delete/direct-create denial, audited Consumer cancellation, unchanged
+  price protection, started-care cancellation denial, audited treatment/legacy
+  confirmation, consultation isolation, valid Admin consultant assignment edits
+  and denied invalid/cross-role edits. Fixtures include exact previous/updated
+  audit snapshots and matching server timestamps, like the actual shared batch.
+  Initial incomplete test audit fixtures were corrected; application/rules were
+  not weakened to make tests pass. Default Java is 8; used installed PyCharm JBR
+  25 for the cached Firestore emulator. Emulator shut down after its suite.
+- Browser fixtures: 40 original Consumer/Admin/Hospital booking tests passed at
+  phone, tablet, desktop and WebKit phone; 21 Search Center/details tests passed
+  at phone, desktop and WebKit phone; 9 consultation/consultant tests passed at
+  narrow phone, desktop and WebKit phone. Covered actual components, date prefill,
+  consent, sold-out/available care, automatic confirmation, legacy records,
+  package links, notification clear, navigation, lazy images and responsive grids.
+- Added tests/integration/booking-api.smoke.test.mjs, restricted to loopback and
+  no authenticated writes. Against a fresh production Next server on port 3187,
+  all four groups passed: essential/deep JSON and themed expanded health (HTTP
+  200; 3/5 configured dependencies; correct HTML redirect), eleven missing/invalid
+  token denials (401), public consultant validation/indexed read (400/200), and
+  real public hospital list/detail/packages plus /centers (200). Public responses
+  excluded checked private management fields. Two active public centres checked;
+  zero eligible online consultants returned, so Admin assignment/charge/windows
+  configuration is still required before online providers appear. Health remains
+  configuration-only, not SMTP delivery or a substitute for these API/rules tests.
+- No authenticated production test bookings/status changes, live profile edits,
+  emails or database maintenance performed. Successful mutations were exercised
+  in local fixtures/emulator, not a fully signed-in production browser journey.
+  App code is built locally, not deployed by this task. Public HTTP smoke tests
+  read existing data only. Both new Firestore indexes and rules ARE deployed.
+- Stopped only the temporary production server; restored the build-generated
+  next-env.d.ts route import to its pre-check value and removed the generated
+  emulator debug log. Existing dev server and unrelated changes preserved.
+
+## Wellness Path bookings and consultant assignments (22 October 2026)
+
+- Owner approved connecting online Wellness Path services to Admin-managed Our
+  Consultants using explicit service assignments, charges and custom preferred
+  windows. Added seven service IDs: prenatal doctor, dietitian and yoga,
+  lactation, women's wellness, cosmetologist and psychologist. Admin creates and
+  edits assigned services through existing audited consultant forms/services;
+  both Firestore document and changed-field allowlists include the validated
+  list. Legacy records default to no assignments and remain unavailable publicly
+  until Admin configures services, a non-null charge and preferred windows.
+- Public Wellness Path CTAs now open protected online booking for their selected
+  service. Removed disabled booking placeholders, hardcoded women's doctor names
+  and invented exact times. Existing in-person preferences instead continue to
+  public centre/package selection with the selected date and district search.
+  Hospital packages are not falsely filtered by unsupported care categories.
+  Public design skill preserved existing card/CTA styling and scroll behavior;
+  no portal modules were imported into public WellnessGuide.
+- Added bounded sanitized GET /api/public/consultants (12 + lookahead, numeric
+  cursor). Whitelist includes professional name/designation/qualification,
+  experience, charge and preferred windows only; operational contact/address,
+  emergency and audit fields are excluded. Raw consultant reads stay Admin-only.
+- Added separate consultationBookings records, authenticated Consumer creation
+  and Admin/Consumer status endpoints. Consumer creation requires current profile
+  and booking consents, snapshots actual charge/provider/contacts/window and
+  reserves a canonical booking reference. Stable request IDs make simultaneous
+  retries/lost responses idempotent. Changed charges or window timings require
+  refresh/review rather than silently changing the Consumer's chosen terms.
+- Online requests begin requested: preferred windows do not reserve exact
+  appointment times. Admin coordinates and confirms a date/time inside the
+  snapshotted window, can reject/cancel, then mark confirmed appointments complete.
+  Consumers may cancel only their own requested/confirmed consultations; Hospital
+  users have no access. Repeated status retries do not duplicate audits/bells.
+  Hospital package bookings remain immediately confirmed, with existing treatment
+  progress unchanged. No payments, meeting links or consultant Auth accounts added.
+- Creation/status changes, audit entries and addressed bell notifications commit
+  in the same transaction. Admin receives new requests and Consumer cancellations;
+  Consumers receive Admin status changes. Shared confirmation dialog, scroll lock,
+  same-tick submission guards, event-identity toasts, DD/MM/YYYY DateInput and
+  bounded pagination reused. Added online history under both booking areas and
+  readable audit labels/filter; price and consent snapshots remain immutable.
+- Local verification: 43 focused unit/real-route-with-in-memory-cloud-fixture
+  checks passed, including existing immediate-confirmation hospital booking
+  regressions, authorization denials, assignment validation, atomic commit
+  failures, retry protection, privacy projection and rules/index source contracts.
+  Fifteen focused browser-fixture checks passed across Chromium 320px phone,
+  landscape, tablet, desktop and WebKit phone. Covered form consent/duplicate
+  submission, custom windows, consultant edit persistence, confirmation/cancel,
+  body scroll lock, consumer control isolation and compact readable radio cards.
+  Screenshot review found/fixed inherited 100%-width radio styling; assertions now
+  check card height and text/control width, not only horizontal overflow.
+- These fixtures do NOT prove deployed Firestore permissions or actual production
+  requests. No emulator/live booking mutations, lint, typecheck, build, broad API
+  checks or deployment were run. Required before live use: deploy app plus
+  firestore.rules and firestore.indexes.json to ayursarga-connect; wait for the
+  new consultant service/sequence and Consumer consultation-history indexes to
+  finish initializing; then configure consultant assignments/charges/windows.
+  No database migration, historical changes or live notifications performed.
+- Minor version 4.5.1 to 4.6.0 synchronized in package and both lockfile entries.
+  AGENTS.md records the new projection, consent/permission and request semantics.
 
 ## Health coverage and post-build validation rule (21 October 2026)
 

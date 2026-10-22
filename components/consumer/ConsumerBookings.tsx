@@ -81,6 +81,7 @@ export function ConsumerBookings({ bookingId }: { bookingId?: string } = {}) {
         <p>Review your booking details and follow your care journey.</p>
       </div>
       <nav className="consumer-booking-nav" aria-label="Consumer booking navigation">
+        <Link className="portal-button secondary" href="/app/bookings/consultations">Online consultations</Link>
         <Link className="portal-button" href={ROUTES.public.centers}>Search hospitals</Link>
         <Link className="portal-button secondary" href={ROUTES.public.home}>Back to home</Link>
       </nav>

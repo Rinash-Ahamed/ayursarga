@@ -169,6 +169,7 @@ export type HospitalCapacityDocument = AuditedDocument & {
 };
 
 export type ConsultantDocument = AuditedDocument & {
+  consultationServices?: import("@/features/consultations/catalog").ConsultationServiceId[];
   designation?: string;
   consultantCharge?: number | null;
   preferredTimeSlots?: import("@/features/consultants/validation").ConsultantTimeSlot[];
@@ -185,6 +186,20 @@ export type ConsultantDocument = AuditedDocument & {
   address: string;
   emergencyContactNo: string;
   status: "active" | "inactive";
+};
+
+export type ConsultationBookingDocument = AuditedDocument & {
+  bookingReference: string; consumerId: string; consumerName: string; consumerEmail: string;
+  consumerPhone: string; consumerAddress: string | null;
+  consultantId: string; consultantName: string; consultantDesignation: string;
+  serviceId: import("@/features/consultations/catalog").ConsultationServiceId; serviceName: string;
+  consultantCharge: number; preferredDate: string;
+  preferredTimeSlot: import("@/features/consultants/validation").ConsultantTimeSlot;
+  slotStartTime: string; slotEndTime: string; consumerNotes: string | null; adminNotes: string | null;
+  status: "requested" | "confirmed" | "completed" | "cancelled" | "rejected";
+  confirmedDate: string | null; confirmedTime: string | null;
+  confirmedAt: Timestamp | null; completedAt: Timestamp | null;
+  bookingTermsAcceptedAt: Timestamp; bookingTermsVersion: string;
 };
 
 export type HospitalStaffDocument = AuditedDocument & {
@@ -227,7 +242,7 @@ export type PaymentDocument = AuditedDocument & {
 export type NotificationDocument = AuditedDocument & {
   recipientId: string;
   recipientRole: "admin" | "hospital" | "consumer";
-  type: "availability_requested" | "availability_approved" | "availability_rejected" | "availability_cancelled" | "booking_created";
+  type: "availability_requested" | "availability_approved" | "availability_rejected" | "availability_cancelled" | "booking_created" | "consultation_updated";
   bookingReference?: string;
   title: string;
   message: string;

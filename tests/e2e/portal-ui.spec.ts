@@ -9,10 +9,64 @@ async function mount(page: Page, screen: string) {
   await page.setContent('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="fixture-root"></div></body></html>');
   await page.addStyleTag({ content: styles });
   await page.addScriptTag({ content: portalUiBundle });
+  // about:blank lacks the secure-context UUID API provided by production HTTPS.
+  await page.evaluate(() => { if (!crypto.randomUUID) Object.defineProperty(crypto, "randomUUID", { value: () => "00000000-0000-4000-8000-000000000001" }); });
   await page.evaluate((name) => window.mountPortalUi(name), screen);
   await expect(page.locator("h1")).toBeVisible();
   await page.waitForTimeout(120);
 }
+test("online consultation form uses assigned charges and custom windows, requires consent and submits once", async ({ page }, testInfo) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "consumer-consultation-new");
+  const submit = page.getByRole("button", { name: "Request appointment", exact: true });
+  await expect(submit).toBeDisabled();
+  await page.getByRole("radio", { name: /Assigned Consultation Professional/ }).check();
+  const providerCard = await page.locator(".consultation-professional").boundingBox();
+  expect(providerCard!.height).toBeLessThan(350);
+  expect((await page.locator(".consultation-professional>span").boundingBox())!.width).toBeGreaterThan(90);
+  expect((await page.getByRole("radio", { name: /Assigned Consultation Professional/ }).boundingBox())!.width).toBeLessThan(25);
+  await page.getByRole("textbox", { name: "Preferred appointment date *", exact: true }).fill("25/10/2099");
+  await expect(page.getByRole("option", { name: /Morning: 9:30 AM/ })).toContainText("11:45 AM");
+  await page.getByRole("combobox", { name: "Preferred time window *", exact: true }).selectOption("morning");
+  await expect(submit).toBeDisabled();
+  await page.getByRole("checkbox", { name: "I have read and agree to the applicable terms and policies.", exact: true }).check();
+  await expect(submit).toBeEnabled();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("online-consultation-form.png"), fullPage: true });
+  await page.locator("form").evaluate((form: HTMLFormElement) => { form.requestSubmit(); form.requestSubmit(); });
+  const writes = await page.evaluate(() => (window as unknown as { consumerBookingFixture: { consultantWrites: object[]; navigatedTo: string } }).consumerBookingFixture);
+  expect(writes.consultantWrites).toHaveLength(1);
+  expect(writes.consultantWrites[0]).toMatchObject({ consultantId: "AS001", serviceId: "prenatal-doctor", preferredDate: "2099-10-25", preferredTimeSlot: "morning", bookingTermsAccepted: true });
+  expect(writes.navigatedTo).toBe("/app/bookings/consultations?booking=consultation-fixture");
+  expect(errors).toEqual([]);
+});
+
+test("online consultation history confirms with a locked shared dialog and Consumer sees no Admin controls", async ({ page }, testInfo) => {
+  await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "admin-consultations");
+  await expect(page.getByText("Assigned Consultation Professional", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Confirm appointment", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  expect(await page.evaluate(() => document.body.style.position)).toBe("fixed");
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { consultantWrites: object[] } }).consumerBookingFixture.consultantWrites.length)).toBe(0);
+  await page.getByRole("button", { name: "Confirm appointment", exact: true }).click();
+  await dialog.locator('input[type="time"]').fill("10:15");
+  await dialog.getByRole("button", { name: "Confirm", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText("25/10/2099 · 10:15", { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.body.style.position)).not.toBe("fixed");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("online-consultation-history.png"), fullPage: true });
+  await mount(page, "consumer-consultations");
+  await expect(page.getByRole("button", { name: "Confirm appointment", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Reject", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Cancel appointment", exact: true })).toBeVisible();
+});
+
 test("authentication emails share a responsive Ayursarga theme with readable reset and invitation links", async ({ page }, testInfo) => {
   for (const kind of ["hospital-invitation", "password-reset"] as const) {
     const message = authEmail({ kind, name: "Ayursarga Hospital Partner with a Longer Centre Name", actionUrl: "https://test-project.firebaseapp.com/__/auth/action?mode=resetPassword&oobCode=local-test-placeholder-not-a-real-token" });
@@ -101,6 +155,7 @@ test("consultant designation and preferred availability edit legacy records safe
   await expect(charge).toHaveAttribute("aria-invalid", "true");
   await expect(page.getByText("Enter a valid non-negative charge with up to 2 decimal places.", { exact: true })).toBeVisible();
   await charge.fill("900.50");
+  await page.getByRole("checkbox", { name: "Prenatal doctor consultation", exact: true }).check();
   await page.getByRole("checkbox", { name: "Morning", exact: true }).check();
   await page.getByRole("checkbox", { name: "Evening", exact: true }).check();
   await page.locator('input[name="morningStartTime"]').fill("09:30");
@@ -112,9 +167,10 @@ test("consultant designation and preferred availability edit legacy records safe
   await expect(page.getByText("Evening: 3:00 PM – 6:00 PM", { exact: true })).toBeVisible();
   const writes = await page.evaluate(() => (window as unknown as { consumerBookingFixture: { consultantWrites: { designation: string; preferredTimeSlots: string[] }[] } }).consumerBookingFixture.consultantWrites);
   expect(writes).toHaveLength(1);
-  expect(writes[0]).toMatchObject({ designation: "Ayurvedic Doctor", consultantCharge: 900.5, preferredTimeSlots: ["morning", "evening"], preferredSlotTimings: { morning: { startTime: "09:30", endTime: "11:45" }, evening: { startTime: "15:00", endTime: "18:00" } } });
+  expect(writes[0]).toMatchObject({ designation: "Ayurvedic Doctor", consultantCharge: 900.5, consultationServices: ["prenatal-doctor"], preferredTimeSlots: ["morning", "evening"], preferredSlotTimings: { morning: { startTime: "09:30", endTime: "11:45" }, evening: { startTime: "15:00", endTime: "18:00" } } });
   await page.getByRole("button", { name: "Edit", exact: true }).click();
   await expect(page.getByRole("spinbutton", { name: /Consultant Charge/ })).toHaveValue("900.5");
+  await expect(page.getByRole("checkbox", { name: "Prenatal doctor consultation", exact: true })).toBeChecked();
   await expect(page.getByRole("checkbox", { name: "Morning", exact: true })).toBeChecked();
   await expect(page.locator('input[name="morningStartTime"]')).toHaveValue("09:30");
   await expect(page.getByRole("checkbox", { name: "Noon", exact: true })).not.toBeChecked();

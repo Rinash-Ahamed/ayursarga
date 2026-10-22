@@ -1,0 +1,125 @@
+import { before, test } from "node:test";
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+
+// Hard safety boundary: this suite cannot target a real Firebase project/server.
+const project = "demo-ayursarga";
+const host = process.env.FIRESTORE_EMULATOR_HOST;
+if (host !== "127.0.0.1:8080") throw new Error("Run only against the local demo-ayursarga Firestore emulator on 127.0.0.1:8080.");
+const base = `http://${host}/v1/projects/${project}/databases/(default)/documents`;
+const suffix = randomUUID().slice(0, 8);
+const ids = Object.fromEntries(["admin", "consumer", "other", "hospital", "otherHospital", "inactive"].map((role) => [role, `${role}-${suffix}`]));
+const centre = `centre-${suffix}`;
+const timestamp = { timestampValue: "2026-10-01T00:00:00Z" };
+const encode = (value) => value === null ? { nullValue: null } : typeof value === "string" ? { stringValue: value }
+  : typeof value === "number" ? Number.isInteger(value) ? { integerValue: String(value) } : { doubleValue: value }
+  : typeof value === "boolean" ? { booleanValue: value } : Array.isArray(value) ? { arrayValue: { values: value.map(encode) } }
+  : { mapValue: { fields: Object.fromEntries(Object.entries(value).map(([key, item]) => [key, encode(item)])) } };
+const fields = (data) => Object.fromEntries(Object.entries(data).map(([key, value]) => [key, encode(value)]));
+function token(role) {
+  const uid = ids[role];
+  const now = Math.floor(Date.now() / 1000);
+  return [Buffer.from(JSON.stringify({ alg: "none", typ: "JWT" })).toString("base64url"), Buffer.from(JSON.stringify({
+    sub: uid, user_id: uid, aud: project, iss: `https://securetoken.google.com/${project}`, iat: now, exp: now + 3600,
+    firebase: { sign_in_provider: role === "consumer" || role === "other" ? "google.com" : "password" },
+  })).toString("base64url"), ""].join(".");
+}
+async function call(path, { role, owner = false, method = "GET", body } = {}) {
+  return fetch(`${base}${path}`, { method, headers: { "Content-Type": "application/json", ...(owner || role ? { Authorization: `Bearer ${owner ? "owner" : token(role)}` } : {}) },
+    ...(body ? { body: JSON.stringify(body) } : {}) });
+}
+async function seed(path, data) {
+  const response = await call(`/${path}`, { owner: true, method: "PATCH", body: { fields: data } });
+  assert.equal(response.status, 200, `Could not seed local fixture ${path}`);
+}
+const metadata = { ...fields({ createdBy: ids.admin, updatedBy: ids.admin, archivedAt: null, archivedBy: null, lastAuditId: "seed" }), createdAt: timestamp, updatedAt: timestamp };
+async function booking(name, overrides = {}) {
+  const path = `bookings/${name}-${suffix}`;
+  const data = { ...metadata, ...fields({ consumerId: ids.consumer, hospitalId: centre, status: "confirmed", treatmentStatus: "not_started", servicePrice: 12000,
+    bookingReference: "AYURLOCAL1", bookingTermsVersion: "2026-09-23", ...overrides }), bookingTermsAcceptedAt: timestamp };
+  await seed(path, data); return { path, data };
+}
+async function auditedUpdate(path, previous, changes, role, module = "bookings", action = "status_change", transforms = []) {
+  const auditId = `audit-${randomUUID()}`;
+  const updated = { ...previous, ...fields(changes), ...fields({ updatedBy: ids[role], lastAuditId: auditId }) };
+  const name = (record) => `projects/${project}/databases/(default)/documents/${record}`;
+  const stamp = (fieldPath) => ({ fieldPath, setToServerValue: "REQUEST_TIME" });
+  return call(":commit", { role, method: "POST", body: { writes: [
+    { update: { name: name(path), fields: updated }, updateTransforms: [stamp("updatedAt"), ...transforms.map(stamp)] },
+    { update: { name: name(`auditLogs/${auditId}`), fields: {
+      ...fields({ action, module, recordId: path.split("/")[1], actorId: ids[role], actorRole: role === "other" ? "consumer" : role,
+        source: "web", device: { ipAddress: null } }), previousValues: { mapValue: { fields: previous } }, updatedValues: { mapValue: { fields: updated } },
+    } }, updateTransforms: [stamp("timestamp"), stamp("updatedValues.updatedAt"), ...transforms.map((key) => stamp(`updatedValues.${key}`))] },
+  ] } });
+}
+
+before(async () => {
+  for (const [name, uid] of Object.entries(ids)) await seed(`users/${uid}`, fields({ uid, role: name === "other" ? "consumer" : name === "otherHospital" ? "hospital" : name === "inactive" ? "consumer" : name,
+    status: name === "inactive" ? "inactive" : "active", hospitalId: name === "hospital" ? centre : name === "otherHospital" ? `other-${centre}` : null }));
+  await seed(`hospitals/${centre}`, fields({ status: "active" }));
+  await seed(`hospitals/other-${centre}`, fields({ status: "active" }));
+});
+
+test("existing hospital bookings: scoped Consumer/Hospital/Admin reads and no anonymous/other-account access", async () => {
+  const { path } = await booking("reads");
+  for (const role of ["admin", "consumer", "hospital"]) assert.equal((await call(`/${path}`, { role })).status, 200, role);
+  for (const role of [undefined, "other", "otherHospital", "inactive"]) assert.equal((await call(`/${path}`, { role })).status, 403, String(role));
+});
+
+test("existing hospital bookings: direct creation and permanent deletion stay denied for all roles", async () => {
+  const { path } = await booking("immutable");
+  for (const role of ["admin", "consumer", "hospital"]) {
+    assert.equal((await call(`/bookings/new-${role}-${suffix}`, { role, method: "PATCH", body: { fields: fields({ consumerId: ids.consumer, hospitalId: centre }) } })).status, 403);
+    assert.equal((await call(`/${path}`, { role, method: "DELETE" })).status, 403);
+  }
+});
+
+test("Consumer cancellation remains audited and cannot alter price or cancel another Consumer's care", async () => {
+  const own = await booking("cancel");
+  assert.equal((await auditedUpdate(own.path, own.data, { status: "cancelled" }, "consumer")).status, 200);
+  const other = await booking("other-cancel");
+  assert.equal((await auditedUpdate(other.path, other.data, { status: "cancelled" }, "other")).status, 403);
+  assert.equal((await auditedUpdate(other.path, other.data, { status: "cancelled", servicePrice: 1 }, "consumer")).status, 403);
+  assert.equal((await call(`/${other.path}`, { role: "consumer", method: "PATCH", body: { fields: { ...other.data, ...fields({ status: "cancelled" }) } } })).status, 403);
+});
+
+test("started care cannot be cancelled by Consumer; Hospital treatment changes keep audited transitions", async () => {
+  const started = await booking("started", { treatmentStatus: "started" });
+  assert.equal((await auditedUpdate(started.path, started.data, { status: "cancelled" }, "consumer")).status, 403);
+  const fresh = await booking("treatment");
+  assert.equal((await auditedUpdate(fresh.path, fresh.data, { treatmentStatus: "started" }, "hospital", "bookings", "status_change", ["treatmentStartedAt"])).status, 200);
+  const invalid = await booking("skipped");
+  assert.equal((await auditedUpdate(invalid.path, invalid.data, { status: "completed", treatmentStatus: "completed" }, "hospital", "bookings", "status_change", ["completedAt", "treatmentCompletedAt"])).status, 403);
+});
+
+test("legacy requested booking can still be confirmed by its Hospital with an atomic audit", async () => {
+  const legacy = await booking("legacy", { status: "requested" });
+  assert.equal((await auditedUpdate(legacy.path, legacy.data, { status: "confirmed", confirmedDate: "2099-10-25", confirmedTime: "10:15" }, "hospital", "bookings", "status_change", ["confirmedAt"])).status, 200);
+});
+
+test("consultations remain separate: Admin/own Consumer reads only and no client writes", async () => {
+  const path = `consultationBookings/online-${suffix}`;
+  await seed(path, { ...metadata, ...fields({ consumerId: ids.consumer, status: "requested", consultantCharge: 900 }) });
+  for (const role of ["admin", "consumer"]) assert.equal((await call(`/${path}`, { role })).status, 200);
+  for (const role of [undefined, "hospital", "other", "inactive"]) assert.equal((await call(`/${path}`, { role })).status, 403);
+  for (const role of ["admin", "consumer", "hospital"]) {
+    assert.equal((await call(`/${path}`, { role, method: "PATCH", body: { fields: fields({ consumerId: ids.consumer, status: "confirmed" }) } })).status, 403);
+    assert.equal((await call(`/${path}`, { role, method: "DELETE" })).status, 403);
+  }
+});
+
+test("consultant assignments: valid audited Admin edits succeed; unknown/duplicate services and cross-role writes fail", async () => {
+  const path = `consultants/AS${Date.now()}`;
+  const data = { ...metadata, ...fields({ employeeId: path.split("/")[1], employeeSequence: 1, name: "Local consultant", email: "local@example.test",
+    contactNo: "9876543210", whatsappNo: "9876543210", qualification: "BAMS", yearsExperience: 3.5, lastWorkedCompany: "", address: "", emergencyContactNo: "",
+    status: "active", consultantCharge: 900, preferredTimeSlots: ["morning"], preferredSlotTimings: { morning: { startTime: "09:30", endTime: "11:45" } } }) };
+  await seed(path, data);
+  const response = await auditedUpdate(path, data, { consultationServices: ["prenatal-doctor", "lactation"] }, "admin", "consultants", "update");
+  assert.equal(response.status, 200, await response.text());
+  const saved = (await (await call(`/${path}`, { role: "admin" })).json()).fields;
+  for (const consultationServices of [["invented"], ["lactation", "lactation"]]) assert.equal((await auditedUpdate(path, saved, { consultationServices }, "admin", "consultants", "update")).status, 403);
+  for (const role of ["consumer", "hospital"]) {
+    assert.equal((await call(`/${path}`, { role })).status, 403);
+    assert.equal((await auditedUpdate(path, saved, { consultationServices: [] }, role, "consultants", "update")).status, 403);
+  }
+});

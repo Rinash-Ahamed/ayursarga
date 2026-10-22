@@ -92,6 +92,7 @@ export function AdminBookings({ bookingId }: { bookingId?: string } = {}) {
   }
 
   return <PortalShell role="admin" title="Bookings">
+    <nav className="portal-actions" aria-label="Booking categories"><Link className="portal-button secondary" href="/admin/bookings/consultations">Online consultations</Link></nav>
     <PortalLoadGuard notification={loadErrorNotification} loading={isLoading} error={error} hasData={items.length > 0} fallbackHref="/admin" loadingMessage="Loading bookings…" />
     {bookingId && <Link className="portal-button secondary" href="/admin/bookings">View all bookings</Link>}
     {!bookingId && <section className="portal-card portal-booking-filters" aria-label="Booking filters">

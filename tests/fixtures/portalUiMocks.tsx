@@ -31,7 +31,7 @@ export function usePathname() {
   const paths: Record<string, string> = { "admin-dashboard": "/admin", "admin-hospitals": "/admin/hospitals", "admin-details": "/admin/hospitals/centre", "admin-consultants": "/admin/consultants", "admin-users": "/admin/users", "admin-bookings": "/admin/bookings", "admin-availability": "/admin/availability", "admin-audits": "/admin/audits", "hospital-dashboard": "/hospital", "hospital-profile": "/hospital/profile", "hospital-services": "/hospital/services", "hospital-bookings": "/hospital/bookings", "hospital-availability": "/hospital/availability", "hospital-password": "/hospital/change-password" };
   return paths[portalUiState.screen] ?? "/admin/login";
 }
-const router = { replace: (path: string) => { portalUiState.navigatedTo = path; }, push: () => {}, back: () => {} };
+const router = { replace: (path: string) => { portalUiState.navigatedTo = path; }, push: (path: string) => { portalUiState.navigatedTo = path; }, back: () => {} };
 export function useRouter() { return router; }
 export default function MockNextElement({ src, href, children, alt, width, height, ...props }: { src?: string; href?: string; children?: ReactNode; alt?: string; width?: number; height?: number; [key: string]: unknown }) {
   // eslint-disable-next-line @next/next/no-img-element
@@ -98,3 +98,16 @@ export const setConsultantStatus = async () => ({});
 export const clearAllAuditLogs = async () => 0;
 export const markAllNotificationsRead = async () => {};
 export const markNotificationRead = async () => {};
+
+const consultationProfessional = { id: "AS001", name: "Assigned Consultation Professional", designation: "Ayurvedic physician", qualification: "BAMS, MD", yearsExperience: 3.5,
+  consultantCharge: 900.5, preferredTimeSlots: ["morning"], preferredSlotTimings: { morning: { startTime: "09:30", endTime: "11:45" } } };
+const consultation = { ...metadata, id: "consultation-fixture", bookingReference: "AYURCONS01", serviceId: "prenatal-doctor", serviceName: "Prenatal doctor consultation",
+  consultantId: "AS001", consultantName: consultationProfessional.name, consultantDesignation: consultationProfessional.designation, consultantCharge: 900.5,
+  consumerId: "patient", consumerName: "Patient With a Longer Display Name", consumerEmail: "patient@example.com", consumerPhone: "9876543210",
+  preferredDate: "2099-10-25", preferredTimeSlot: "morning", slotStartTime: "09:30", slotEndTime: "11:45", status: "requested", confirmedDate: null, confirmedTime: null,
+  consumerNotes: "Guidance about pregnancy lifestyle", adminNotes: null };
+export const listPublicConsultants = () => page([consultationProfessional]);
+export const createConsultationBooking = async (input: unknown) => { portalUiState.consultantWrites.push(input); return { ok: true, bookingId: "consultation-fixture", bookingReference: "AYURCONS01" }; };
+export const listConsultationBookings = () => page([consultation]);
+export const getConsultationBooking = async () => consultation;
+export const updateConsultationBooking = async (_id: string, input: unknown) => { portalUiState.consultantWrites.push(input); return input; };

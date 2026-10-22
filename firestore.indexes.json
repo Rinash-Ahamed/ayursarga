@@ -1,6 +1,23 @@
 {
   "indexes": [
     {
+      "collectionGroup": "consultants",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "consultationServices", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "employeeSequence", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "consultationBookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "consumerId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "hospitals",
       "queryScope": "COLLECTION",
       "fields": [

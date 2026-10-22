@@ -69,11 +69,11 @@ type WellnessPath = (typeof WELLNESS_PATHS)[number];
 type GuideStep = 0 | 1 | 2;
 
 const ONLINE_CONSULTATIONS = [
-  ["doctor", "Doctor", "Ayurvedic physician consultation", "Doctor consultation"],
-  ["dietitian", "Dietitian", "Pregnancy nutrition guidance", "Dietary advice"],
-  ["yoga", "Yoga instructor", "Prenatal yoga guidance", "Pregnancy yoga"],
-  ["cosmetologist", "Cosmetologist", "Skin and beauty consultation", "Cosmetologist consultation"],
-  ["psychologist", "Psychologist", "Stress and emotional wellbeing consultation", "Psychologist consultation"],
+  ["doctor", "Doctor", "Ayurvedic physician consultation", "Doctor consultation", "prenatal-doctor"],
+  ["dietitian", "Dietitian", "Pregnancy nutrition guidance", "Dietary advice", "prenatal-dietitian"],
+  ["yoga", "Yoga instructor", "Prenatal yoga guidance", "Pregnancy yoga", "prenatal-yoga"],
+  ["cosmetologist", "Cosmetologist", "Skin and beauty consultation", "Cosmetologist consultation", "cosmetologist"],
+  ["psychologist", "Psychologist", "Stress and emotional wellbeing consultation", "Psychologist consultation", "psychologist"],
 ] as const;
 
 type ConsultationIconName = (typeof ONLINE_CONSULTATIONS)[number][0] | "lactation";
@@ -96,14 +96,12 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
   const [selectedPath, setSelectedPath] = useState<WellnessPath | null>(null);
   const [step, setStep] = useState<GuideStep>(0);
   const [preferences, setPreferences] = useState<string[]>([]);
-  const [consultationType, setConsultationType] = useState("");
   const [otherConcern, setOtherConcern] = useState("");
   const [district, setDistrict] = useState("Any district");
   const [otherDistrict, setOtherDistrict] = useState("");
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState("");
   const [lastMenstrualPeriod, setLastMenstrualPeriod] = useState("");
   const [preferredAppointmentDate, setPreferredAppointmentDate] = useState("");
-  const [preferredTimeSlot, setPreferredTimeSlot] = useState("");
   const reduceMotion = useReducedMotion();
   const selectedDistrict = district === "Other" ? otherDistrict.trim() : district;
   const resolvedPreferences = selectedPath?.id === "postnatal-care"
@@ -120,8 +118,6 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
   const needsPreferredAppointmentDate = !hasOnlineConsultation
     && (selectedPath?.id === "rejuvenation" || selectedPath?.id === "stress-management");
   const hasValidPreferredAppointmentDate = !needsPreferredAppointmentDate || Boolean(preferredAppointmentDate);
-  const hasValidWomensAppointment = selectedPath?.id !== "womens-wellness"
-    || Boolean(consultationType && preferredAppointmentDate && preferredTimeSlot);
   const earliestAppointmentDate = toDateInputValue();
 
   useEffect(() => () => {
@@ -152,14 +148,12 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
   function resetAnswers() {
     setStep(0);
     setPreferences([]);
-    setConsultationType("");
     setOtherConcern("");
     setDistrict("Any district");
     setOtherDistrict("");
     setExpectedDeliveryDate("");
     setLastMenstrualPeriod("");
     setPreferredAppointmentDate("");
-    setPreferredTimeSlot("");
     clearGuidanceProfile();
     onProfileChange?.(null);
   }
@@ -181,7 +175,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
 
   function complete() {
     if (!selectedPath) return;
-    if (!hasValidPostnatalDetails || !hasValidPreferredAppointmentDate || !hasValidWomensAppointment) return;
+    if (!hasValidPostnatalDetails || !hasValidPreferredAppointmentDate) return;
     if (district === "Other" && !otherDistrict.trim()) return;
     const profile: GuidanceProfile = {
       wellnessPath: selectedPath.name,
@@ -189,11 +183,9 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
       district: selectedDistrict,
       expectedDeliveryDate: selectedPath.id === "postnatal-care" ? expectedDeliveryDate : undefined,
       lastMenstrualPeriod: selectedPath.id === "postnatal-care" ? lastMenstrualPeriod : undefined,
-      consultationProvider: selectedPath.id === "womens-wellness" ? consultationType : undefined,
-      preferredAppointmentDate: selectedPath.id === "womens-wellness" || needsPreferredAppointmentDate
+      preferredAppointmentDate: needsPreferredAppointmentDate
         ? preferredAppointmentDate
         : undefined,
-      preferredTimeSlot: selectedPath.id === "womens-wellness" ? preferredTimeSlot : undefined,
     };
     saveGuidanceProfile(profile);
     onProfileChange?.(profile);
@@ -258,17 +250,16 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
               <span className="quiz-kicker">Step 2 of 2</span>
               <h3>Online consultation</h3>
               <div className="consultation-options consultation-options-single" aria-label="Choose an online consultation professional">
-                {ONLINE_CONSULTATIONS.filter(([, , , preference]) => preferences.includes(preference)).map(([id, title, description]) => <article
-                  className={consultationType === id ? "selected" : ""}
+                {ONLINE_CONSULTATIONS.filter(([, , , preference]) => preferences.includes(preference)).map(([id, title, description, , serviceId]) => <article
                   key={id}
                 >
                   <span className="consultation-option-icon"><ConsultationIcon name={id} /></span>
                   <strong>{title}</strong>
                   <span>{description}</span>
-                  <button type="button" className="consultation-booking-button" disabled onClick={() => setConsultationType(id)}>Book an appointment</button>
+                  <a className="consultation-booking-button" href={`/app/bookings/consultation?service=${serviceId}`}>Book an appointment</a>
                 </article>)}
               </div>
-              <p className="prenatal-booking-note">Verified online providers will appear here when consultation booking is activated.</p>
+              <p className="prenatal-booking-note">Choose an active consultant, view their charge, and request your preferred date and time window.</p>
             </motion.div>}
 
             {step === 1 && selectedPath.id === "lactation-support" && <motion.div className="wellness-guide-step prenatal-consultation-step" key="lactation-consultation" initial={reduceMotion ? false : { opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: -18 }} transition={transition}>
@@ -276,53 +267,29 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
               <span className="quiz-kicker">Step 2 of 2</span>
               <h3>Online consultation</h3>
               <div className="consultation-options consultation-options-single" aria-label="Online lactation consultation">
-                <button
-                  type="button"
-                  className={consultationType === "lactation" ? "selected" : ""}
-                  aria-pressed={consultationType === "lactation"}
-                  onClick={() => setConsultationType("lactation")}
-                >
+                <article>
                   <span className="consultation-option-icon"><ConsultationIcon name="lactation" /></span>
                   <strong>Lactation consultant</strong>
                   <span>Feeding, latching, and lactation guidance</span>
-                </button>
+                </article>
               </div>
-              <button type="button" className="quiz-next prenatal-booking-placeholder" disabled>
-                Book an appointment <span aria-hidden="true">→</span>
-              </button>
-              <p className="prenatal-booking-note">Verified lactation consultants will appear here when online booking is activated.</p>
+              <a className="quiz-next" href="/app/bookings/consultation?service=lactation">Book an appointment <span aria-hidden="true">→</span></a>
+              <p className="prenatal-booking-note">Choose an active consultant and request a preferred appointment window.</p>
             </motion.div>}
 
             {step === 1 && selectedPath.id === "womens-wellness" && <motion.div className="wellness-guide-step prenatal-consultation-step" key="womens-wellness-consultation" initial={reduceMotion ? false : { opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: -18 }} transition={transition}>
               <button type="button" className="quiz-back" onClick={() => setStep(0)}>← Back</button>
               <span className="quiz-kicker">Step 2 of 2</span>
               <h3>Online consultation</h3>
-              <div className="consultation-provider-grid" aria-label="Women’s wellness online consultation doctors">
-                {["Dr. Shafna", "Dr. Mizreen"].map((doctor) => <article className={`consultation-provider-card${consultationType === doctor ? " selected" : ""}`} key={doctor}>
+              <div className="consultation-options consultation-options-single" aria-label="Women's wellness online consultation">
+                <article className="consultation-provider-card">
                   <span className="consultation-option-icon"><ConsultationIcon name="doctor" /></span>
-                  <strong>{doctor}</strong>
-                  <span>Women’s wellness consultation</span>
-                  <button type="button" aria-pressed={consultationType === doctor} onClick={() => setConsultationType(doctor)}>
-                    {consultationType === doctor ? "Selected" : "Book an appointment"}
-                  </button>
-                </article>)}
+                  <strong>Women&apos;s wellness consultant</strong>
+                  <span>Personalised guidance from an assigned professional</span>
+                  <a className="consultation-booking-button" href="/app/bookings/consultation?service=womens-wellness">Book an appointment</a>
+                </article>
               </div>
-              {consultationType && <div className="quiz-location-grid consultation-preference-fields">
-                <label className="quiz-label">Preferred appointment date *
-                  <DateInput min={earliestAppointmentDate} value={preferredAppointmentDate} onChange={(event) => setPreferredAppointmentDate(event.target.value)} required />
-                </label>
-                <label className="quiz-label">Preferred time slot *
-                  <select value={preferredTimeSlot} onChange={(event) => setPreferredTimeSlot(event.target.value)} required>
-                    <option value="" disabled>Select a time slot</option>
-                    <option>9:00 AM - 10:00 AM</option>
-                    <option>10:30 AM - 11:30 AM</option>
-                    <option>2:00 PM - 3:00 PM</option>
-                    <option>4:00 PM - 5:00 PM</option>
-                  </select>
-                </label>
-              </div>}
-              <button type="button" className="quiz-next" disabled={!hasValidWomensAppointment} onClick={complete}>Prepare appointment request <span aria-hidden="true">→</span></button>
-              <p className="prenatal-booking-note">Your preferred doctor, date, and time will be included in the request. Ayursarga will confirm final availability.</p>
+              <p className="prenatal-booking-note">Choose an active consultant, view their charge, and request a preferred appointment window.</p>
             </motion.div>}
 
             {step === 1 && !hasOnlineConsultation && selectedPath.id !== "lactation-support" && selectedPath.id !== "womens-wellness" && <motion.div className="wellness-guide-step" key="location" initial={reduceMotion ? false : { opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: -18 }} transition={transition}>
@@ -358,14 +325,13 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
 
             {step === 2 && <motion.div className="quiz-result wellness-guide-result" key="result" initial={reduceMotion ? false : { opacity: 0, scale: .98 }} animate={{ opacity: 1, scale: 1 }} transition={transition}>
               <span className="result-mark" aria-hidden="true">✓</span>
-              <span className="quiz-kicker">Your guidance request is ready</span>
-              <h3>Share your preferences with Ayursarga.</h3>
+              <span className="quiz-kicker">Your care preferences are ready</span>
+              <h3>Explore centres and choose a package.</h3>
               <strong>{selectedPath.name}</strong>
               {selectedPath.id === "postnatal-care" && <p>Expected delivery date: {formatDisplayDate(expectedDeliveryDate)} &middot; Last menstrual period: {formatDisplayDate(lastMenstrualPeriod)}</p>}
-              {selectedPath.id === "womens-wellness" && <p>Preferred consultant: {consultationType} &middot; {formatDisplayDate(preferredAppointmentDate)} &middot; {preferredTimeSlot}</p>}
               {needsPreferredAppointmentDate && <p>Preferred date: {formatDisplayDate(preferredAppointmentDate)}</p>}
               <p>{resolvedPreferences.join(" / ")} · {selectedDistrict}</p>
-              <a href="/contact" className="quiz-next">Continue to contact form <span aria-hidden="true">→</span></a>
+              <a href={`/centers?${new URLSearchParams({ ...(expectedDeliveryDate || preferredAppointmentDate ? { startDate: expectedDeliveryDate || preferredAppointmentDate } : {}), ...(selectedDistrict !== "Any district" ? { q: selectedDistrict } : {}) })}`} className="quiz-next">Browse centres and packages <span aria-hidden="true">→</span></a>
             </motion.div>}
           </AnimatePresence>
         </motion.div>}
@@ -398,7 +364,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
                   fill
                   sizes="(max-width: 600px) calc(50vw - 28px), (max-width: 900px) 50vw, 33vw"
                   quality={82}
-                  loading="lazy"
+                  loading={index < 3 ? "eager" : "lazy"}
                 />
               </span>
               <span className="path-card-copy">

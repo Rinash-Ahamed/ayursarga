@@ -25,6 +25,19 @@ test("legacy consultants default to optional empty preferences", () => {
   assert.equal(result.data.designation, "");
   assert.equal(result.data.consultantCharge, null);
   assert.deepEqual(result.data.preferredTimeSlots, []);
+  assert.deepEqual(result.data.consultationServices, []);
+});
+
+test("explicit consultant service assignments survive form parsing and reject invalid or duplicate values", () => {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(legacy)) form.set(key, String(value));
+  form.append("consultationServices", "psychologist"); form.append("consultationServices", "prenatal-yoga");
+  const result = validateConsultantFields(consultantFormValues(form));
+  assert.equal(result.isValid, true);
+  assert.deepEqual(result.data.consultationServices, ["prenatal-yoga", "psychologist"]);
+  for (const consultationServices of ["lactation", ["invented"], ["lactation", "lactation"], [null], {}]) {
+    assert.equal(validateConsultantFields({ ...legacy, consultationServices }).isValid, false);
+  }
 });
 
 test("consultant charges preserve blank, zero and decimal amounts through form validation", () => {
@@ -89,14 +102,16 @@ test("creation API checks Admin access and charge validation before its atomic c
       "@/services/firebase/adminAuthorization": { AdminAuthorizationError: AuthorizationError, requireActiveAdmin: async () => { if (scenario === "denied") throw new AuthorizationError(); return { uid: "admin", firestore }; } },
       "@/services/api/server": { apiJson: (body, status = 200) => Response.json(body, { status }) },
     });
-    const response = await POST(new Request("https://test.local/api/admin/consultants", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...legacy, consultantCharge: scenario === "invalid" ? -1 : 900.5 }) }));
+    const response = await POST(new Request("https://test.local/api/admin/consultants", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...legacy, consultationServices: ["lactation"], consultantCharge: scenario === "invalid" ? -1 : 900.5 }) }));
     assert.equal(response.status, scenario === "allowed" ? 201 : scenario === "denied" ? 403 : 400);
     assert.equal(commits, scenario === "allowed" ? 1 : 0);
     if (scenario === "allowed") {
       const consultant = writes.find((write) => write.path === "consultants/AS001");
       const audit = writes.find((write) => write.path === "auditLogs/audit");
       assert.equal(consultant.data.consultantCharge, 900.5);
+      assert.deepEqual(consultant.data.consultationServices, ["lactation"]);
       assert.equal(audit.data.updatedValues.consultantCharge, 900.5);
+      assert.deepEqual(audit.data.updatedValues.consultationServices, ["lactation"]);
       assert.equal(audit.data.actorRole, "admin");
     } else assert.equal(writes.length, 0);
   }

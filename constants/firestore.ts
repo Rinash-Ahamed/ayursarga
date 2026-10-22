@@ -2,6 +2,7 @@ export const COLLECTIONS = {
   users: "users",
   hospitals: "hospitals",
   consultants: "consultants",
+  consultationBookings: "consultationBookings",
   hospitalCapacity: "hospitalCapacity",
   hospitalStaff: "hospitalStaff",
   doctors: "doctors",

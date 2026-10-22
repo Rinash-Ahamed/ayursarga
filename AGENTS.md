@@ -142,6 +142,13 @@ to deploy, rerun maintenance scripts, or modify live data.
 - Our Consultants is an Admin-only operational collection. Consultant records
   do not create authentication accounts. Their IDs use the sequential `AS001`
   format, and creates, profile edits, and Active/Inactive changes are audited.
+  Admin explicitly assigns online service categories; never infer assignments
+  from names or designations. Public consultant discovery uses only the bounded
+  `/api/public/consultants` whitelist (professional identity, charge and preferred
+  windows), never anonymous reads of operational consultant documents or contacts.
+  A bookable consultant must be active, non-archived, assigned to the service and
+  have a configured charge and at least one preferred window. Legacy consultants
+  without assignments remain private and unavailable for online booking.
 - Public centre discovery uses the bounded `/api/public/hospitals` server
   projection. Do not restore anonymous SDK reads of full `hospitals` or
   `services` documents: those records contain contract, commission, actor, and
@@ -176,6 +183,17 @@ to deploy, rerun maintenance scripts, or modify live data.
 - Keep appointment status separate from treatment progress. Hospital treatment
   progress follows `not_started` → `started` → `ongoing` → `completed` (with a
   direct `started` → `completed` option), and every transition is audited.
+- Online Wellness Path appointments use the separate `consultationBookings`
+  collection and authenticated server endpoints, not hospital `bookings` or
+  invented hospital/service IDs. Creation snapshots consultant/service, charge,
+  preferred India care date/window, Consumer contacts and mandatory versioned
+  booking consent; requests, audits and addressed bell notifications commit
+  atomically. Stable request IDs prevent retries from duplicating appointments.
+  Preferred windows are not reserved exact appointments: these requests start
+  `requested`, Admin confirms an exact date/time after coordination, and hospital
+  package bookings remain immediately confirmed. Consumer reads/cancellation are
+  own-record only; Hospitals cannot access these appointments. No client writes,
+  automatic payments, meeting links or consultant Auth accounts are implied.
 - Hospital room occupancy belongs in the single audited
   `hospitalCapacity/{hospitalId}` document. It is internal to Admin and the
   assigned Hospital, and either role may update its room totals from its own

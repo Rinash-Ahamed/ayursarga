@@ -22,6 +22,8 @@ import { ConsumerBookings } from "@/components/consumer/ConsumerBookings";
 import { BookingRequestForm } from "@/components/consumer/BookingRequestForm";
 import { ConsumerProfile } from "@/components/consumer/ConsumerProfile";
 import { ConsumerSupport } from "@/components/consumer/ConsumerSupport";
+import { ConsultationBookingForm } from "@/components/consumer/ConsultationBookingForm";
+import { ConsultationBookings } from "@/components/consultations/ConsultationBookings";
 
 declare global { interface Window { mountPortalUi: (screen: string) => void; unmountPortalUi?: () => void; } }
 const screens = {
@@ -33,6 +35,9 @@ const screens = {
   "admin-login": <LoginForm role="admin" />, "hospital-login": <LoginForm role="hospital" />,
   "admin-forgot": <ForgotPasswordForm role="admin" />, "hospital-forgot": <ForgotPasswordForm role="hospital" />,
   "consumer-bookings": <ConsumerBookings />,
+  "consumer-consultation-new": <ConsultationBookingForm serviceId="prenatal-doctor" />,
+  "consumer-consultations": <ConsultationBookings role="consumer" />,
+  "admin-consultations": <ConsultationBookings role="admin" />,
   "consumer-profile": <ConsumerProfile editing />,
   "consumer-support": <ConsumerSupport />,
   "consumer-completion": <ConsumerProfile />,

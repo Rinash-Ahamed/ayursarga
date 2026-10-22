@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import * as React from "react";
 import { loadTypeScript } from "../helpers/loadTypeScript.mjs";
 
@@ -30,6 +31,13 @@ function wellnessFlow(pathName) {
   render().find((node) => node.type === "button" && node.props.className?.includes("wellness-path-card") && text(node).includes(pathName)).props.onClick();
   return { render, choose: (label) => render().find((node) => node.type === "button" && text(node) === label).props.onClick() };
 }
+
+test("the visible wellness-card row loads eagerly while later images remain lazy", () => {
+  const source = readFileSync(new URL("../../components/WellnessGuide.tsx", import.meta.url), "utf8");
+  assert.match(source, /loading=\{index < 3 \? "eager" : "lazy"\}/);
+  assert.match(source, /image: "\/wellness\/postnatal-care\.jpeg"/);
+});
+
 function text(node) {
   if (typeof node === "string" || typeof node === "number") return String(node);
   if (Array.isArray(node)) return node.map(text).join("");
@@ -50,10 +58,10 @@ for (const [preference, provider] of [["Pregnancy yoga", "Yoga instructor"], ["D
     assert.equal(cards.length, 1);
     const content = React.Children.toArray(cards[0].props.children);
     assert.equal(content.find((node) => node.type === "strong").props.children, provider);
-    const booking = content.find((node) => node.type === "button");
+    const booking = content.find((node) => node.type === "a");
     assert.equal(booking.props.children, "Book an appointment");
-    assert.equal(booking.props.disabled, true);
-    assert.equal(typeof booking.props.onClick, "function");
+    assert.equal(booking.props.disabled, undefined);
+    assert.match(booking.props.href, /^\/app\/bookings\/consultation\?service=prenatal-/);
   });
 }
 
@@ -73,8 +81,8 @@ test("Cosmetologist opens one online provider card instead of location/date fiel
   const cards = React.Children.toArray(grid.props.children);
   assert.equal(cards.length, 1);
   assert.match(text(cards[0]), /Cosmetologist/);
-  const booking = React.Children.toArray(cards[0].props.children).find((node) => node.type === "button");
-  assert.equal(booking.props.disabled, true);
+  const booking = React.Children.toArray(cards[0].props.children).find((node) => node.type === "a");
+  assert.equal(booking.props.href, "/app/bookings/consultation?service=cosmetologist");
   const flow = wellnessFlow("Rejuvenation");
   flow.choose("Cosmetologist consultation");
   flow.choose("Continue →");
@@ -100,7 +108,7 @@ test("Psychologist opens a single consultation card without location or date fie
   const cards = React.Children.toArray(grid.props.children);
   assert.equal(cards.length, 1);
   assert.equal(React.Children.toArray(cards[0].props.children).find((node) => node.type === "strong").props.children, "Psychologist");
-  assert.equal(React.Children.toArray(cards[0].props.children).find((node) => node.type === "button").props.disabled, true);
+  assert.equal(React.Children.toArray(cards[0].props.children).find((node) => node.type === "a").props.href, "/app/bookings/consultation?service=psychologist");
   const flow = wellnessFlow("Stress management");
   flow.choose("Psychologist consultation");
   flow.choose("Continue →");
@@ -116,4 +124,21 @@ test("Lactation concerns retain multiselect behavior", () => {
   flow.choose("Low milk supply");
   flow.choose("Latching difficulty");
   assert.deepEqual(flow.render().filter((node) => node.type === "button" && node.props["aria-pressed"] === true).map(text), ["Low milk supply", "Latching difficulty"]);
+});
+
+test("lactation and women's wellness link to real assigned-consultant booking rather than placeholders", () => {
+  for (const [path, preference, service] of [["Lactation support", "Low milk supply", "lactation"], ["Women", "PCOD / PCOS", "womens-wellness"]]) {
+    const flow = wellnessFlow(path); flow.choose(preference); flow.choose("Continue →");
+    assert.ok(flow.render().some((node) => node.type === "a" && node.props.href === `/app/bookings/consultation?service=${service}`));
+    assert.equal(flow.render().some((node) => text(node).includes("Dr. Shafna") || text(node).includes("Dr. Mizreen")), false);
+  }
+});
+
+test("in-person wellness paths lead to centre/package booking with their preferred care date", () => {
+  const flow = wellnessFlow("Rejuvenation"); flow.choose("Detox & Panchakarma"); flow.choose("Continue →");
+  flow.render().find((node) => node.type.name === "DateInput").props.onChange({ target: { value: "2099-10-25" } });
+  flow.choose("Prepare my request →");
+  const link = flow.render().find((node) => node.type === "a" && text(node).includes("Browse centres and packages"));
+  assert.equal(new URL(link.props.href, "https://test.local").searchParams.get("startDate"), "2099-10-25");
+  assert.equal(flow.render().some((node) => node.type === "a" && node.props.href === "/contact"), false);
 });

@@ -7,5 +7,6 @@ const modules = [
   "@/services/audit/adminAuditService", "@/services/auth/hospitalAccountService", "@/services/api/client",
   "@/services/notifications/notificationService", "@/features/hospitals/contractPdf",
   "@/services/hospitals/publicHospitalService",
+  "@/services/consultations/consultationService",
 ];
 export const portalUiBundle = bundleDialogHarness("tests/fixtures/portalUiHarness.tsx", Object.fromEntries(modules.map((name) => [name, "tests/fixtures/portalUiMocks.tsx"])));
