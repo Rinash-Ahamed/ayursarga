@@ -36,6 +36,8 @@ test("generated reset links use a fixed configured return URL, stay server-only 
     await service.sendAuthEmail(auth, { email: "partner@example.com", name: "Hospital", role: "hospital", invitation: true });
     await service.sendAuthEmail(auth, { email: "admin@example.com", name: "Admin", role: "admin" });
     assert.deepEqual(generated[0][1], { url: "https://ayursarga.com/hospital/login", handleCodeInApp: false });
+    assert.equal(generated[0][0], "partner@example.com");
+    assert.equal(generated[1][0], "admin@example.com");
     assert.equal(generated[1][1].url, "https://ayursarga.com/admin/login");
     assert.equal(messages[0].to, "partner@example.com");
     assert.equal(messages[0].subject, "Your Ayursarga Hospital Portal invitation");
@@ -91,6 +93,16 @@ test("Admin reset delivery is restricted to the approved Admin address", async (
   assert.deepEqual(await response.json(), { ok: true });
   assert.equal(fixture.calls.emails.length, 1);
   assert.equal(fixture.calls.emails[0].email, "info@ayursarga.com");
+});
+
+test("Hospital reset cannot override its recipient or role through submitted metadata", async () => {
+  const fixture = resetFixture();
+  const response = await fixture.POST(resetRequest({
+    email: "partner@example.com", role: "admin", uid: "admin", to: "info@ayursarga.com",
+    continueUrl: "https://untrusted.example/admin",
+  }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(fixture.calls.emails, [{ email: "partner@example.com", name: "Hospital", role: "hospital" }]);
 });
 
 test("reset API rejects cross-site/invalid/oversize requests and rate limits before delivery", async () => {

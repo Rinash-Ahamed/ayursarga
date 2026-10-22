@@ -763,6 +763,27 @@ substantial uncommitted work across multiple tasks.
 
 ## Pending deployment and safety reminders
 
+- v4.10.2: Admin/Hospital reset forms now show an immediate local sending state,
+  full-contrast disabled submit button with spinner, aria-busy and a persistent
+  wait message explaining that confirmation may take seconds. Hospital email is
+  read-only during submission. Pending state clears on success/failure; the
+  existing final confirmation, errors and duplicate-submit guard are preserved.
+  Spinner respects reduced motion. No API or email delivery behavior changed.
+  Existing reset regression passed on desktop/WebKit phone for both roles;
+  no build/lint or live email request was run for this UI adjustment.
+
+- v4.10.1: reviewed reset account isolation and email workflow latency. Hospital
+  request metadata cannot override the server-derived recipient/role; Firebase
+  generates codes for the selected account's email. URL role/kind only control
+  page copy and fixed return links, not the account updated by Firebase.
+- Shared concurrent verification for identical codes now uses one in-flight
+  request, removed on success/failure. Isolated before/after measurement of two
+  simultaneous checks: 2 Firebase SDK calls before, 1 after. No completed result
+  or reset code is persisted/cached. Different codes and later retries stay fresh.
+  SMTP pooling already exists; no speculative server latency gains claimed.
+  Sixteen focused reset/invitation/account-isolation/service tests passed.
+  No live reset/email or production latency test, build/lint, or deployment.
+
 - Owner-requested v4.10.0 validation completed: lint initially found a direct
   effect state update in PasswordActionForm; moved role/invitation updates into
   the verification completion callback. Rerun lint passed without warnings;
