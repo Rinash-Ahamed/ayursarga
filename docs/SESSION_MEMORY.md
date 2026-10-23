@@ -9,6 +9,17 @@ substantial uncommitted work across multiple tasks.
 
 ## Consultant preferred weekdays (23 October 2026)
 
+- Follow-up v4.11.1: weekday choices now use seven equal desktop columns with
+  centered labels spanning the full row; wrap to four/three columns for smaller
+  viewports. Consultant save/reopen tests passed on phone-320, landscape, desktop
+  and WebKit phone after the spacing adjustment.
+- Owner authorized deployment after reauthentication. Firebase CLI compiled and
+  released current `firestore.rules` to `ayursarga-connect` successfully on
+  23 October 2026 using `--only firestore:rules --non-interactive`. No indexes,
+  Storage rules, application hosting or operational records were changed. The
+  generated Firebase CLI debug log was removed. Live authenticated saving has
+  not been tested; alignment requires an application release to reach hosting.
+
 - Version 4.11.0: Admin Our Consultants now includes optional Mon–Sun checkboxes
   above Morning/Noon/Evening. Multiple days are stored in canonical Monday-first
   `preferredDays` arrays; saved days display on the consultant card and populate
