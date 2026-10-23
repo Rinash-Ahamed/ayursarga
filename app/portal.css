@@ -337,6 +337,9 @@ html[data-theme="dark"] .portal-toast[data-tone="error"],body[data-theme="dark"]
 .consultant-slot{ display:block; }
 .consultant-detail-wide>dd:has(.consultant-slot){ display:flex; flex-wrap:wrap; gap:4px 16px; }
 .consultant-slot-options{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr)); gap:12px; }
+.consultant-day-options{ display:flex; flex-wrap:wrap; gap:6px; padding-bottom:12px; margin-bottom:12px; border-bottom:1px solid rgba(31,61,43,.14); }
+.portal-form .consultant-day-options .portal-inline-check{ margin:0; padding:8px 10px; border:1px solid rgba(31,61,43,.2); border-radius:10px; }
+.consultant-day-options .portal-inline-check:has(input:checked){ border-color:var(--forest); background:rgba(31,61,43,.07); }
 .consultant-slot-option{ min-width:0; }
 .consultant-slot-times:not([hidden]){ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
 .consultant-details dt{ margin-bottom:2px; color:var(--clay-dark); font-size:8px; font-weight:850; letter-spacing:.11em; text-transform:uppercase; }

@@ -225,7 +225,7 @@ service cloud.firestore {
     function hasValidConsultantFields() {
       return request.resource.data.keys().hasOnly([
           'employeeId', 'employeeSequence', 'name', 'email', 'contactNo', 'whatsappNo',
-          'qualification', 'yearsExperience', 'lastWorkedCompany', 'address', 'designation', 'consultantCharge', 'preferredTimeSlots', 'preferredSlotTimings', 'consultationServices',
+          'qualification', 'yearsExperience', 'lastWorkedCompany', 'address', 'designation', 'consultantCharge', 'preferredTimeSlots', 'preferredSlotTimings', 'preferredDays', 'consultationServices',
           'emergencyContactNo', 'status', 'createdAt', 'createdBy', 'updatedAt',
           'updatedBy', 'archivedAt', 'archivedBy', 'lastAuditId'
         ])
@@ -241,6 +241,10 @@ service cloud.firestore {
           && request.resource.data.consultantCharge >= 0
           && request.resource.data.consultantCharge <= 90071992547409.9
         ))
+        && request.resource.data.get('preferredDays', []) is list
+        && request.resource.data.get('preferredDays', []).size() <= 7
+        && request.resource.data.get('preferredDays', []).hasOnly(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'])
+        && request.resource.data.get('preferredDays', []).toSet().size() == request.resource.data.get('preferredDays', []).size()
         && request.resource.data.get('preferredTimeSlots', []) is list
         && request.resource.data.get('preferredTimeSlots', []).size() <= 3
         && request.resource.data.get('preferredTimeSlots', []).hasOnly(['morning', 'noon', 'evening'])
@@ -665,7 +669,7 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name', 'email', 'contactNo', 'whatsappNo', 'qualification',
             'yearsExperience', 'lastWorkedCompany', 'address', 'emergencyContactNo',
-            'designation', 'consultantCharge', 'preferredTimeSlots', 'preferredSlotTimings', 'consultationServices',
+            'designation', 'consultantCharge', 'preferredTimeSlots', 'preferredSlotTimings', 'preferredDays', 'consultationServices',
             'updatedAt', 'updatedBy', 'lastAuditId'
           ])) || (linkedAuditAction() == 'status_change'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([

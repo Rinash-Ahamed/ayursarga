@@ -320,6 +320,10 @@ test("consultant designation and preferred availability edit legacy records safe
   await expect(page.getByText("Enter a valid non-negative charge with up to 2 decimal places.", { exact: true })).toBeVisible();
   await charge.fill("900.50");
   await page.getByRole("checkbox", { name: "Prenatal doctor consultation", exact: true }).check();
+  await expect(page.getByRole("group", { name: "Preferred days", exact: true }).getByRole("checkbox")).toHaveCount(7);
+  await page.getByRole("checkbox", { name: "Mon", exact: true }).check();
+  await page.getByRole("checkbox", { name: "Wed", exact: true }).check();
+  await page.getByRole("checkbox", { name: "Sun", exact: true }).check();
   await page.getByRole("checkbox", { name: "Morning", exact: true }).check();
   await page.getByRole("checkbox", { name: "Evening", exact: true }).check();
   await page.locator('input[name="morningStartTime"]').fill("09:30");
@@ -332,10 +336,15 @@ test("consultant designation and preferred availability edit legacy records safe
   const writes = await page.evaluate(() => (window as unknown as { consumerBookingFixture: { consultantWrites: { designation: string; preferredTimeSlots: string[] }[] } }).consumerBookingFixture.consultantWrites);
   expect(writes).toHaveLength(1);
   expect(writes[0]).toMatchObject({ designation: "Ayurvedic Doctor", consultantCharge: 900.5, consultationServices: ["prenatal-doctor"], preferredTimeSlots: ["morning", "evening"], preferredSlotTimings: { morning: { startTime: "09:30", endTime: "11:45" }, evening: { startTime: "15:00", endTime: "18:00" } } });
+  expect(writes[0]).toMatchObject({ preferredDays: ["mon", "wed", "sun"] });
+  await expect(page.locator(".consultant-details")).toContainText("Mon · Wed · Sun");
   await page.getByRole("button", { name: "Edit", exact: true }).click();
   await expect(page.getByRole("spinbutton", { name: /Consultant Charge/ })).toHaveValue("900.5");
   await expect(page.getByRole("checkbox", { name: "Prenatal doctor consultation", exact: true })).toBeChecked();
   await expect(page.getByRole("checkbox", { name: "Morning", exact: true })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "Mon", exact: true })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "Sun", exact: true })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "Tue", exact: true })).not.toBeChecked();
   await expect(page.locator('input[name="morningStartTime"]')).toHaveValue("09:30");
   await expect(page.getByRole("checkbox", { name: "Noon", exact: true })).not.toBeChecked();
   await page.getByRole("checkbox", { name: "Noon", exact: true }).check();

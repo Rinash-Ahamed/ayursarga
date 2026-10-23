@@ -173,6 +173,7 @@ export type ConsultantDocument = AuditedDocument & {
   designation?: string;
   consultantCharge?: number | null;
   preferredTimeSlots?: import("@/features/consultants/validation").ConsultantTimeSlot[];
+  preferredDays?: import("@/features/consultants/validation").ConsultantWeekDay[];
   preferredSlotTimings?: import("@/features/consultants/validation").ConsultantSlotTimings;
   employeeId: string;
   employeeSequence: number;

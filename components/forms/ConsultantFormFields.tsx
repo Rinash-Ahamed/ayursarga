@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { ConsultantDocument } from "@/features/firestore/models";
 import type { ConsultantField, ConsultantValidationErrors } from "@/features/consultants/validation";
-import { CONSULTANT_TIME_SLOTS, CONSULTANT_TIME_SLOT_CONFIG, type ConsultantTimeSlot } from "@/features/consultants/validation";
+import { CONSULTANT_WEEK_DAYS, CONSULTANT_DAY_LABELS, CONSULTANT_TIME_SLOTS, CONSULTANT_TIME_SLOT_CONFIG, type ConsultantTimeSlot } from "@/features/consultants/validation";
 import { PhoneInput } from "@/components/forms/PhoneInput";
 import { CONSULTATION_SERVICES } from "@/features/consultations/catalog";
 
@@ -36,8 +36,14 @@ export function ConsultantFormFields({ defaultValues = {}, errors }: {
       </label>)}</div>
       <FieldError field="consultationServices" errors={errors} />
     </fieldset>
-    <fieldset className="full consultant-preferences" aria-invalid={Boolean(errors.preferredTimeSlots)}>
+    <fieldset className="full consultant-preferences" aria-invalid={Boolean(errors.preferredTimeSlots || errors.preferredDays)}>
       <legend>Preferred availability <small>Optional · select one or more</small></legend>
+      <div className="consultant-day-options" role="group" aria-label="Preferred days">
+        {CONSULTANT_WEEK_DAYS.map((day) => <label className="portal-inline-check" key={day}>
+          <input type="checkbox" name="preferredDays" value={day} defaultChecked={defaultValues.preferredDays?.includes(day)} aria-invalid={Boolean(errors.preferredDays)} />{CONSULTANT_DAY_LABELS[day]}
+        </label>)}
+      </div>
+      <FieldError field="preferredDays" errors={errors} />
       <div className="consultant-slot-options">{CONSULTANT_TIME_SLOTS.map((slot) => {
         const config = CONSULTANT_TIME_SLOT_CONFIG[slot];
         const timing = defaultValues.preferredSlotTimings?.[slot] ?? config;

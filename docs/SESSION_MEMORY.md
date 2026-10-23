@@ -1,11 +1,32 @@
 # Session handoff
 
-Updated: 22 October 2026 (Asia/Calcutta).
+Updated: 23 October 2026 (Asia/Calcutta).
 
 This file records completed work and verification limits. `AGENTS.md` remains
 the implementation authority; these notes do not authorize deployments or data
 maintenance. Preserve unrelated working-tree changes; the workspace contains
 substantial uncommitted work across multiple tasks.
+
+## Consultant preferred weekdays (23 October 2026)
+
+- Version 4.11.0: Admin Our Consultants now includes optional Mon–Sun checkboxes
+  above Morning/Noon/Evening. Multiple days are stored in canonical Monday-first
+  `preferredDays` arrays; saved days display on the consultant card and populate
+  edit forms. Missing legacy values remain empty/Days not specified. These are
+  Admin availability preferences, not new Consumer date restrictions; public
+  consultant projection and existing booking eligibility remain unchanged.
+- Traced create through the Admin-only API/shared validation/atomic audit and
+  edit through the shared validated direct SDK/audit batch. Updated both rule
+  document/changed-field allowlists, day membership/uniqueness checks and legacy
+  defaults. No new read permission, index, or automatic data migration.
+- Validation: 26 focused consultant/consultation API-service-unit/source-contract
+  checks passed; 4 edit/save/reopen browser regressions passed on narrow phone,
+  landscape, desktop and WebKit phone. Emulator cases also cover valid weekday
+  edits, clearing, invalid/duplicate values and denied Hospital/Consumer writes,
+  but were not executed (only Java 8 found; no local Firestore emulator running).
+  Mock/source checks do not establish deployed permissions. Firestore rules must
+  be deployed before production direct consultant edits can save preferredDays.
+  No deployment, build/lint, live database write or physical-device test.
 
 ## Booking filter summary placement (22 October 2026)
 

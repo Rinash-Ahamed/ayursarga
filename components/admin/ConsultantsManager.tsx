@@ -3,7 +3,7 @@
 import { useCallback, useDeferredValue, useState, type FormEvent } from "react";
 import type { ConsultantDocument } from "@/features/firestore/models";
 import type { QueryPageOptions } from "@/services/firestore/firestoreService";
-import { consultantFormValues, validateConsultantFields, formatConsultantTimeSlot, type ConsultantValidationErrors } from "@/features/consultants/validation";
+import { CONSULTANT_WEEK_DAYS, CONSULTANT_DAY_LABELS, consultantFormValues, validateConsultantFields, formatConsultantTimeSlot, type ConsultantValidationErrors } from "@/features/consultants/validation";
 import { createConsultant, listConsultants, setConsultantStatus, updateConsultant } from "@/services/consultants/consultantService";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
@@ -136,6 +136,7 @@ export function ConsultantsManager() {
         <div className="portal-actions full"><button className="portal-button" disabled={busyId === consultant.id}>{busyId === consultant.id ? "Saving..." : "Save changes"}</button><button className="portal-button secondary" type="button" disabled={busyId === consultant.id} onClick={resetEditor}>Cancel</button></div>
       </form> : <>
         <dl className="consultant-details">
+          <div className="consultant-detail-wide"><dt>Preferred days</dt><dd>{consultant.preferredDays?.length ? CONSULTANT_WEEK_DAYS.filter((day) => consultant.preferredDays?.includes(day)).map((day) => CONSULTANT_DAY_LABELS[day]).join(" · ") : "Days not specified"}</dd></div>
           <div className="consultant-detail-wide"><dt>Preferred availability</dt><dd>{consultant.preferredTimeSlots?.length ? consultant.preferredTimeSlots.map((slot) => <span className="consultant-slot" key={slot}>{formatConsultantTimeSlot(slot, consultant.preferredSlotTimings)}</span>) : "Not specified"}</dd></div>
           <div><dt>Email</dt><dd>{consultant.email}</dd></div>
           <div><dt>Contact number</dt><dd>{consultant.contactNo}</dd></div>

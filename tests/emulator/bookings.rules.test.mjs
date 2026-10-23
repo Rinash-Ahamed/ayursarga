@@ -114,12 +114,15 @@ test("consultant assignments: valid audited Admin edits succeed; unknown/duplica
     contactNo: "9876543210", whatsappNo: "9876543210", qualification: "BAMS", yearsExperience: 3.5, lastWorkedCompany: "", address: "", emergencyContactNo: "",
     status: "active", consultantCharge: 900, preferredTimeSlots: ["morning"], preferredSlotTimings: { morning: { startTime: "09:30", endTime: "11:45" } } }) };
   await seed(path, data);
-  const response = await auditedUpdate(path, data, { consultationServices: ["prenatal-doctor", "lactation"] }, "admin", "consultants", "update");
+  const response = await auditedUpdate(path, data, { consultationServices: ["prenatal-doctor", "lactation"], preferredDays: ["mon", "wed", "sun"] }, "admin", "consultants", "update");
   assert.equal(response.status, 200, await response.text());
   const saved = (await (await call(`/${path}`, { role: "admin" })).json()).fields;
+  assert.deepEqual(saved.preferredDays.arrayValue.values.map((value) => value.stringValue), ["mon", "wed", "sun"]);
+  for (const preferredDays of [["invented"], ["mon", "mon"], "mon", [1]]) assert.equal((await auditedUpdate(path, saved, { preferredDays }, "admin", "consultants", "update")).status, 403);
+  assert.equal((await auditedUpdate(path, saved, { preferredDays: [] }, "admin", "consultants", "update")).status, 200);
   for (const consultationServices of [["invented"], ["lactation", "lactation"]]) assert.equal((await auditedUpdate(path, saved, { consultationServices }, "admin", "consultants", "update")).status, 403);
   for (const role of ["consumer", "hospital"]) {
     assert.equal((await call(`/${path}`, { role })).status, 403);
-    assert.equal((await auditedUpdate(path, saved, { consultationServices: [] }, role, "consultants", "update")).status, 403);
+    assert.equal((await auditedUpdate(path, saved, { consultationServices: [], preferredDays: ["fri"] }, role, "consultants", "update")).status, 403);
   }
 });

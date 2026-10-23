@@ -3,6 +3,11 @@ import { isValidPhoneNumber } from "@/utils/phone";
 import { CONSULTATION_SERVICES, consultationService, type ConsultationServiceId } from "@/features/consultations/catalog";
 
 export const CONSULTANT_TIME_SLOTS = ["morning", "noon", "evening"] as const;
+export const CONSULTANT_WEEK_DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+export type ConsultantWeekDay = typeof CONSULTANT_WEEK_DAYS[number];
+export const CONSULTANT_DAY_LABELS: Record<ConsultantWeekDay, string> = {
+  mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun",
+};
 export type ConsultantTimeSlot = typeof CONSULTANT_TIME_SLOTS[number];
 export type ConsultantSlotTimings = Partial<Record<ConsultantTimeSlot, { startTime: string; endTime: string }>>;
 // Defaults for new selections; admins can override times per consultant.
@@ -26,6 +31,7 @@ export type ConsultantFields = {
   designation: string;
   consultantCharge: number | null;
   consultationServices: ConsultationServiceId[];
+  preferredDays: ConsultantWeekDay[];
   preferredTimeSlots: ConsultantTimeSlot[];
   preferredSlotTimings: ConsultantSlotTimings;
   email: string;
@@ -48,6 +54,7 @@ export function validateConsultantFields(input: Record<string, unknown>) {
     consultationServices: CONSULTATION_SERVICES.filter((service) => Array.isArray(input.consultationServices) && input.consultationServices.includes(service.id)).map((service) => service.id),
     consultantCharge: input.consultantCharge == null || (typeof input.consultantCharge === "string" && !input.consultantCharge.trim()) ? null : Number(input.consultantCharge),
     preferredTimeSlots: CONSULTANT_TIME_SLOTS.filter((slot) => Array.isArray(input.preferredTimeSlots) && input.preferredTimeSlots.includes(slot)),
+    preferredDays: CONSULTANT_WEEK_DAYS.filter((day) => Array.isArray(input.preferredDays) && input.preferredDays.includes(day)),
     preferredSlotTimings: {},
     email: toTrimmedString(input.email, 160).toLowerCase(),
     contactNo: toTrimmedString(input.contactNo, 25),
@@ -59,6 +66,12 @@ export function validateConsultantFields(input: Record<string, unknown>) {
     emergencyContactNo: toTrimmedString(input.emergencyContactNo, 25),
   };
   const errors: ConsultantValidationErrors = {};
+  if (input.preferredDays != null && (!Array.isArray(input.preferredDays)
+    || input.preferredDays.length > CONSULTANT_WEEK_DAYS.length
+    || input.preferredDays.some((day: unknown) => !CONSULTANT_WEEK_DAYS.includes(day as ConsultantWeekDay))
+    || new Set(input.preferredDays).size !== input.preferredDays.length)) {
+    errors.preferredDays = "Select valid days from Mon to Sun, without duplicates.";
+  }
   if (input.consultationServices != null && (!Array.isArray(input.consultationServices)
     || input.consultationServices.length > CONSULTATION_SERVICES.length
     || input.consultationServices.some((value: unknown) => !consultationService(value))
@@ -107,6 +120,7 @@ export function consultantFormValues(form: FormData): Record<string, unknown> {
     designation: form.get("designation"),
     consultantCharge: form.get("consultantCharge"),
     consultationServices: form.getAll("consultationServices"),
+    preferredDays: form.getAll("preferredDays"),
     preferredTimeSlots: form.getAll("preferredTimeSlots"),
     preferredSlotTimings: Object.fromEntries(CONSULTANT_TIME_SLOTS.filter((slot) => form.getAll("preferredTimeSlots").includes(slot)).map((slot) => [slot, {
       startTime: form.get(`${slot}StartTime`) ?? CONSULTANT_TIME_SLOT_CONFIG[slot].startTime,
