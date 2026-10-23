@@ -5,7 +5,7 @@ import { loadTypeScript } from "../helpers/loadTypeScript.mjs";
 
 class AuthorizationError extends Error { constructor(message, status) { super(message); this.status = status; } }
 function fixture(records = {}, options = {}) {
-  const calls = { singles: 0, batches: 0, writes: [], commits: 0, auth: 0 };
+  const calls = { singles: 0, batches: 0, writes: [], commits: 0, auth: 0, emails: [] };
   let auditId = 0;
   const snapshot = (reference) => ({
     ref: reference, exists: Object.hasOwn(records, reference.path),
@@ -41,6 +41,7 @@ function fixture(records = {}, options = {}) {
   return {
     calls,
     load: (file) => loadTypeScript(file, {
+      "@/services/email/bookingEmailService": { scheduleBookingConfirmation: (...args) => { assert.ok(calls.writes.length > 0); calls.emails.push(args); } },
       "@/services/firebase/adminAuthorization": { requireActiveUser: authorize, requireActiveAdmin: authorize, AdminAuthorizationError: AuthorizationError },
       "@/services/firebase/admin": { isFirebaseAdminReady: () => true },
       "@/services/api/server": { apiJson: (body, status = 200) => Response.json(body, { status, headers: { "cache-control": "no-store" } }), apiHealth: () => Response.json({}), logApiError: () => {} },
@@ -113,6 +114,20 @@ test("hospital can start automatically confirmed treatment without an exact appo
   assert.ok(body.changes.treatmentStartedAt.__ayursargaTimestamp);
   assert.equal(f.calls.commits, 1);
   assert.equal(f.calls.writes.length, 2);
+});
+
+test("legacy Hospital confirmation emails follow successful commits, never failed updates or treatment changes", async () => {
+  for (const failCommit of [false, true]) {
+    const f = fixture({ "hospitals/centre": { status: "active" }, "bookings/booking": {
+      hospitalId: "centre", status: "requested", consumerEmail: "patient@example.com", serviceName: "7-day package",
+    } }, { failCommit });
+    const response = await f.load("app/api/hospital/bookings/[bookingId]/route.ts").PATCH(request({
+      action: "booking", status: "confirmed", confirmedDate: "2099-10-25", confirmedTime: "10:30",
+    }), context("bookingId", "booking"));
+    assert.equal(response.status, failCommit ? 503 : 200);
+    assert.equal(f.calls.emails.length, failCommit ? 0 : 1);
+    if (!failCommit) assert.equal(f.calls.emails[0][2].consumerEmail, "patient@example.com");
+  }
 });
 test("inactive hospitals and denied roles cannot write optimized routes", async () => {
   for (const denied of [false, true]) {

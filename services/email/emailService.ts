@@ -15,7 +15,7 @@ export function isEmailReady() {
   return emailConfiguration() !== null;
 }
 
-/** Shared server-only delivery for contact, invitations and password resets. */
+/** Shared server-only delivery for contact, authentication and booking emails. */
 export async function sendEmail(message: {
   to: string; subject: string; html: string; text: string; replyTo?: string; senderName?: string;
 }) {

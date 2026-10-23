@@ -12,8 +12,10 @@ import { ensureBookingReference, reserveBookingReference } from "@/services/book
 import { addBookingNotifications, bookingNotificationRecipients } from "@/services/notifications/bookingNotificationsAdmin";
 import { requestAuditDevice } from "@/services/api/audit";
 import { parseDateInputValue } from "@/utils/date";
+import { scheduleBookingConfirmation } from "@/services/email/bookingEmailService";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 class BookingFlowError extends Error {
   constructor(message: string, public readonly status: 400 | 409) { super(message); }
@@ -215,9 +217,10 @@ export async function POST(request: Request) {
         serviceName: bookingData.serviceName, preferredDate, preferredEndDate, bystanderCount,
         actorId: uid, auditId: auditReference.id, now,
       });
-      return { duplicate: false, bookingReference };
+      return { duplicate: false, bookingReference, confirmation: bookingData };
     });
     const canonical = result.bookingReference || await ensureBookingReference(firestore, bookingId, { uid, role: "consumer" }, request);
+    if (!result.duplicate && result.confirmation) scheduleBookingConfirmation("hospital", bookingId, result.confirmation);
     return apiJson({ ok: true, bookingId, bookingReference: canonical, duplicate: result.duplicate }, result.duplicate ? 200 : 201);
   } catch (error) {
     if (error instanceof BookingFlowError) return apiJson({ error: error.message }, error.status);

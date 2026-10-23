@@ -26,7 +26,7 @@ export function bookingFlowFixture(options = {}) {
   let sequence = 0;
   let queue = Promise.resolve();
   let throwAfterCommit = options.throwAfterCommit ?? false;
-  const calls = { commits: 0, writes: [], fields: [] };
+  const calls = { commits: 0, writes: [], fields: [], emails: [] };
   const snapshot = (ref) => ({ id: ref.id, ref, exists: records.has(ref.path), data: () => records.get(ref.path), updateTime: Timestamp.now() });
   const firestore = {
     collection: (collection) => {
@@ -76,6 +76,10 @@ export function bookingFlowFixture(options = {}) {
     },
   };
   const overrides = {
+    "@/services/email/bookingEmailService": { scheduleBookingConfirmation: (kind, bookingId, booking) => {
+      if (!calls.commits || records.get(`${kind === "hospital" ? "bookings" : "consultationBookings"}/${bookingId}`)?.status !== "confirmed") throw new Error("Email must follow a committed confirmation");
+      calls.emails.push({ kind, bookingId, booking });
+    } },
     "node:crypto": { ...crypto, randomInt: options.randomInt ?? crypto.randomInt },
     "@/services/firebase/adminAuthorization": {
       AdminAuthorizationError: BookingTestAuthorizationError,

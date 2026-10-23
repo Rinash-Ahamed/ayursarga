@@ -6,8 +6,10 @@ import { apiHealth, apiJson, logApiError } from "@/services/api/server";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
 import { requestAuditDevice } from "@/services/api/audit";
+import { scheduleBookingConfirmation } from "@/services/email/bookingEmailService";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const BOOKING_TRANSITIONS: Record<string, readonly string[]> = {
   requested: ["confirmed", "reschedule_requested", "rejected"],
@@ -104,6 +106,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
       timestamp: now, source: "server", device: requestAuditDevice(request),
     });
     await batch.commit();
+    if (body.action === "booking" && changes.status === "confirmed") scheduleBookingConfirmation("hospital", bookingId, updatedValues);
     return mutationJson({ ...changes, ...metadata });
   } catch (error) {
     if (error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);

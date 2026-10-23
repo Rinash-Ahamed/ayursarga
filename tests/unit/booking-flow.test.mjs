@@ -25,6 +25,9 @@ test("confirmed booking, canonical reference, audit and correctly addressed bell
   assert.equal(booking.confirmedDate.toMillis(), booking.preferredDate.toMillis());
   assert.equal(booking.confirmedTime, null);
   assert.equal(booking.treatmentStatus, "not_started");
+  assert.equal(f.calls.emails.length, 1);
+  assert.equal(f.calls.emails[0].booking.consumerEmail, "patient@example.com");
+  assert.equal(f.calls.emails[0].booking.hospitalName, "Trusted centre");
   assert.deepEqual(booking.confirmedAt, booking.createdAt);
   assert.ok(booking.confirmedAt);
   assert.equal(f.values("auditLogs")[0].updatedValues.status, "confirmed");
@@ -45,6 +48,7 @@ test("confirmed booking, canonical reference, audit and correctly addressed bell
   assert.equal((await retry.json()).bookingReference, body.bookingReference);
   assert.equal(f.values("notifications").length, 2);
   assert.equal(f.values("bookings").length, 1);
+  assert.equal(f.calls.emails.length, 1);
 });
 
 test("automatic confirmation rejects blocked dates, invalid calendar dates and unauthorized callers", async () => {
@@ -62,6 +66,7 @@ test("automatic confirmation rejects blocked dates, invalid calendar dates and u
     assert.equal(f.values("bookings").length, 0);
     assert.equal(f.values("notifications").length, 0);
     assert.equal(f.values("auditLogs").length, 0);
+    assert.equal(f.calls.emails.length, 0);
   }
 });
 
@@ -73,6 +78,7 @@ test("simultaneous retries and a lost successful response do not duplicate booki
   assert.equal(new Set(bodies.map((body) => body.bookingReference)).size, 1);
   assert.equal(f.values("bookings").length, 1);
   assert.equal(f.values("notifications").length, 2);
+  assert.equal(f.calls.emails.length, 1);
   const ambiguous = bookingFlowFixture({ throwAfterCommit: true });
   const route = ambiguous.load(createPath);
   assert.equal((await route.POST(createRequest())).status, 503);
@@ -89,6 +95,7 @@ test("retrying a historical requested booking preserves its original status and 
   assert.equal(response.status, 200);
   assert.equal((await response.json()).duplicate, true);
   assert.deepEqual(f.records.get(`bookings/${id}`), legacy);
+  assert.equal(f.calls.emails.length, 0);
   assert.equal(f.values("notifications").length, 0);
 });
 
@@ -108,6 +115,7 @@ test("invalid care, missing consent and failed commits never send a notification
     assert.equal(f.values("bookings").length, 0);
     assert.equal(f.values("notifications").length, 0);
     assert.equal(f.values("bookingReferences").length, 0);
+    assert.equal(f.calls.emails.length, 0);
   }
   const f = bookingFlowFixture();
   assert.equal((await f.load(createPath).POST(createRequest({ bookingTermsAccepted: false }))).status, 400);

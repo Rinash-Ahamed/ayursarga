@@ -24,6 +24,7 @@ test("consultation creation snapshots actual charge, provider, Consumer and cons
   const record = f.records.get(`consultationBookings/${bookingId}`);
   assert.equal(record.consumerId, "patient"); assert.equal(record.consultantName, consultant.name);
   assert.equal(record.consultantCharge, 900.5); assert.equal(record.status, "requested");
+  assert.equal(f.calls.emails.length, 0);
   assert.equal(record.slotStartTime, "09:30"); assert.equal(record.consumerPhone, "9876543210");
   assert.ok(record.bookingTermsAcceptedAt); assert.ok(record.bookingTermsVersion);
   assert.ok(f.records.get(`auditLogs/${record.lastAuditId}`));
@@ -97,9 +98,14 @@ test("Admin confirmation and completion preserve price, consent and provider sna
   assert.equal((await update(f, id, body)).status, 200);
   const saved = f.records.get(`consultationBookings/${id}`);
   assert.equal(saved.status, "confirmed"); assert.equal(saved.confirmedTime, "10:15"); assert.equal(saved.consultantCharge, 900.5);
+  assert.equal(f.calls.emails.length, 1);
+  assert.equal(f.calls.emails[0].kind, "consultation");
+  assert.equal(f.calls.emails[0].booking.consumerEmail, "patient@example.com");
+  assert.equal(f.calls.emails[0].booking.confirmedTime, "10:15");
   assert.equal(f.values("notifications").filter((item) => item.recipientId === "patient").length, 1);
   assert.equal(f.values("auditLogs").length, 2);
   assert.equal((await update(f, id, { status: "completed" })).status, 200);
+  assert.equal(f.calls.emails.length, 1);
   assert.equal((await update(f, id, body)).status, 409);
   assert.ok(f.records.get(`consultationBookings/${id}`).completedAt);
 });
