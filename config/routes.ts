@@ -44,6 +44,7 @@ export const ROUTES = {
     bookings: "/admin/bookings",
     availability: "/admin/availability",
     audits: "/admin/audits",
+    billing: "/admin/billing",
     login: "/admin/login",
     forgotPassword: "/admin/forgot-password",
   },

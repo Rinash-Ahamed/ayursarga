@@ -1,5 +1,7 @@
 import { useSyncExternalStore, type ReactNode } from "react";
 import { CONSUMER_PRIVACY_NOTICE_VERSION, CUSTOMER_TERMS_VERSION } from "@/features/consumers/privacyConsent";
+import { validateInvoiceInput, INVOICE_ISSUER, invoiceParty, type InvoiceInput } from "@/features/billing/invoices";
+export { buildBrandedDocumentPdf } from "../../features/hospitals/contractPdf";
 
 export const portalUiState = { screen: "admin-dashboard", calls: 0, bookingRequests: 0, cancelledBookings: 0, navigatedTo: "", unavailablePackage: false, availabilityReviews: [] as string[], holdAvailability: false, failAvailability: false, consultantWrites: [] as unknown[], publicConsultantReads: 0 };
 export let finishAvailabilityReview: (() => void) | undefined;
@@ -21,6 +23,12 @@ const consultant = { ...metadata, id: "consultant", employeeId: "AS001", employe
 const user = { ...metadata, id: "actor", uid: "actor", name: hospital.name, email: hospital.email, role: "consumer", status: "active", phone: "9876543210", hospitalId: "centre", privacyConsentAt: now, privacyConsentVersion: CONSUMER_PRIVACY_NOTICE_VERSION, customerTermsAcceptedAt: now, customerTermsVersion: CUSTOMER_TERMS_VERSION };
 const page = (documents: unknown[]) => Promise.resolve({ documents, cursor: null, hasMore: false });
 const firebaseUser = { uid: "patient" };
+export const listInvoices = async () => ({ documents: [], cursor: null, hasMore: false });
+export const createInvoice = async (input: InvoiceInput) => {
+  portalUiState.calls++;
+  return { invoice: { ...input, ...validateInvoiceInput(input).totals, id: "invoice-fixture", invoiceNumber: "AS/2026/00001", status: "issued",
+    issuer: INVOICE_ISSUER, billTo: invoiceParty(hospital) } };
+};
 export async function verifyPasswordAction(code: string) {
   if (code !== "valid-test-code") throw new Error("Invalid link");
 }

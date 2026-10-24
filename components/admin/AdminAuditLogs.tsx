@@ -47,6 +47,7 @@ const RECORD_LABELS: Record<string, string> = {
   services: "Service package",
   bookings: "Booking",
   consultationBookings: "Online consultation",
+  invoices: "Invoice",
   notificationInboxes: "Notification inbox",
 };
 
@@ -73,6 +74,7 @@ function areaLabel(module: string) {
     services: "Services",
     bookings: "Bookings",
     consultationBookings: "Online consultations",
+    invoices: "Invoices & Billing",
     notificationInboxes: "Notifications",
   };
   return labels[module] ?? formatStatus(module);
@@ -92,7 +94,7 @@ function textValue(values: Record<string, unknown> | null | undefined, key: stri
 
 function auditRecordLabel(item: DocumentRecord<AuditLogDocument>) {
   for (const source of [item.updatedValues, item.previousValues]) {
-    for (const key of ["name", "hospitalName", "consumerName", "title", "email"]) {
+    for (const key of ["invoiceNumber", "name", "hospitalName", "consumerName", "title", "email"]) {
       const label = textValue(source, key);
       if (label) return label;
     }
@@ -289,7 +291,7 @@ export function AdminAuditLogs() {
     </div>
     <div className="portal-card portal-audit-filters" aria-label="Filter audit activity">
       <label className="portal-filter-field portal-audit-search"><span>Search this page</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Hospital, person or activity" /></label>
-      <label className="portal-filter-field"><span>Area</span><select value={area} onChange={(event) => setArea(event.target.value)}><option value="">All areas</option><option value="hospitals">Hospitals</option><option value="availability">Availability</option><option value="services">Services</option><option value="bookings">Bookings</option><option value="consultationBookings">Online consultations</option><option value="users">Users</option><option value="consultants">Our Consultants</option></select></label>
+      <label className="portal-filter-field"><span>Area</span><select value={area} onChange={(event) => setArea(event.target.value)}><option value="">All areas</option><option value="hospitals">Hospitals</option><option value="availability">Availability</option><option value="services">Services</option><option value="bookings">Bookings</option><option value="consultationBookings">Online consultations</option><option value="users">Users</option><option value="consultants">Our Consultants</option><option value="invoices">Invoices &amp; Billing</option></select></label>
       <label className="portal-filter-field"><span>Activity</span><select value={activity} onChange={(event) => setActivity(event.target.value)}><option value="">All activities</option>{Object.entries(ACTION_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
       <label className="portal-filter-field"><span>When</span><select value={dateRange} onChange={(event) => changeDateRange(event.target.value as DateRange)}><option value="">Any date</option><option value="today">Today</option><option value="7days">Last 7 days</option><option value="30days">Last 30 days</option><option value="custom">Custom date range</option></select></label>
       <div className="portal-filter-actions"><button className="portal-button secondary" type="button" disabled={!hasFilters} onClick={clearFilters}>Clear filters</button></div>

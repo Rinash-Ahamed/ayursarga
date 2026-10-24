@@ -108,6 +108,20 @@ test("consultations remain separate: Admin/own Consumer reads only and no client
   }
 });
 
+test("invoice records are Admin-readable and deny all direct client writes", async () => {
+  const path = `invoices/local-invoice-${suffix}`;
+  await seed(path, { ...metadata, ...fields({ invoiceNumber: "AS/2026/00001", hospitalId: centre, totalPaise: 118000, status: "issued" }) });
+  assert.equal((await call(`/${path}`, { role: "admin" })).status, 200);
+  for (const role of [undefined, "consumer", "hospital", "otherHospital", "inactive"]) {
+    assert.equal((await call(`/${path}`, { role })).status, 403);
+  }
+  for (const role of ["admin", "consumer", "hospital"]) {
+    assert.equal((await call(`/${path}`, { role, method: "PATCH", body: { fields: fields({ status: "paid" }) } })).status, 403);
+    assert.equal((await call(`/invoices/new-${role}-${suffix}`, { role, method: "PATCH", body: { fields: fields({ status: "issued" }) } })).status, 403);
+    assert.equal((await call(`/${path}`, { role, method: "DELETE" })).status, 403);
+  }
+});
+
 test("consultant assignments: valid audited Admin edits succeed; unknown/duplicate services and cross-role writes fail", async () => {
   const path = `consultants/AS${Date.now()}`;
   const data = { ...metadata, ...fields({ employeeId: path.split("/")[1], employeeSequence: 1, name: "Local consultant", email: "local@example.test",

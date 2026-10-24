@@ -10,6 +10,7 @@ export const COLLECTIONS = {
   availability: "availability",
   bookings: "bookings",
   payments: "payments",
+  invoices: "invoices",
   notifications: "notifications",
   auditLogs: "auditLogs",
   systemSettings: "systemSettings",

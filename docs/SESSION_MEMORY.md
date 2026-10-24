@@ -1,6 +1,62 @@
 # Session handoff
 
-Updated: 23 October 2026 (Asia/Calcutta).
+Updated: 24 October 2026 (Asia/Calcutta).
+
+## Admin Hospital commission invoices (24 October 2026)
+
+- v4.13.0: owner selected Hospital commission invoices. Added Admin-only
+  `/admin/billing` and sidebar navigation, bounded hospital search, manual
+  commission/description, invoice/due dates, chosen GST treatment/rate, place of
+  supply, optional SAC and notes/payment instructions. No tax rate or bank details
+  are invented. Existing Hospital/Consumer navigation and booking data unchanged.
+- Preview precedes Generate invoice. The Admin-only `/api/admin/invoices`
+  recalculates exact paise totals, snapshots issuer/hospital billing details,
+  reserves an annual `AS/YYYY/00001` number and creates the invoice/audit/counter
+  in one transaction. Stable request IDs return the same issued invoice after
+  retries; changed payload reuse is rejected. Issued records are immutable in
+  this first release; it does not add paid status, invoice email, booking-linked
+  reconciliation, cancellation/credit notes, or automatic commission collection.
+- Bounded invoice list and read endpoint require active Admin authorization.
+  New Firestore invoice rule allows Admin reads only and denies all client writes
+  and deletion. API writes use verified Admin SDK access; UI uses that API rather
+  than relying on client invoice reads. Rule change has not been deployed; no
+  composite index is needed. Admin audit views identify invoice numbers/area.
+- The existing contract preview and native PDF renderer now accept optional
+  document branding, preserving their contract defaults. Invoices use Ayursarga
+  emerald/gold, issuer GSTIN 32ABGCA7749G1ZL, DD/MM/YYYY dates and dated PDF names.
+  Fixed native PDF line-break whitespace so party/address text does not join.
+- Validation: 5 invoice unit/API/source-rule tests and 1 contract-template
+  regression passed. Invoice preview/issue/download passed on desktop, phone-320
+  and WebKit phone; verified downloaded PDF signature, GSTIN and total. Initial
+  parallel Chromium runs timed out during a workspace stall; both passed on a
+  sequential rerun without increased timeouts. Added emulator role/read/write
+  denial cases, not executed (local Java 8/no running emulator). No deployed-rule
+  permission claim, live invoice creation, email, deployment, build or lint run.
+
+## Consumer booking confirmation emails (23 October 2026)
+
+- Version 4.12.0 adds branded HTML/plain-text Consumer confirmation emails for
+  new immediately confirmed Hospital bookings, legacy/rescheduled bookings when
+  Hospital confirms, and online consultations when Admin confirms. Requested
+  consultations, cancellations and treatment progress do not send confirmation.
+- Recipient comes from the committed booking's Consumer email snapshot, never
+  request-controlled recipient fields. Templates include reference, provider,
+  service/package, DD/MM/YYYY care date, exact time only when set (IST), price,
+  relevant bystanders and a canonical APP_SITE_URL My Bookings link. Private
+  notes, commission and unrelated management data are excluded. Email does not
+  imply payment receipt or invent an exact Hospital appointment time.
+- Shared server-only SMTP runs via Next `after()` after a successful commit;
+  normal duplicate/retried requests don't reschedule delivery. Existing booking
+  validation, atomic audits/bell notifications and response contracts are intact.
+  SMTP/scheduling errors are logged generically and do not undo confirmation.
+  This is best-effort post-response delivery, with no durable outbox or automatic
+  resend. A process failure/lost commit acknowledgement can leave a confirmed
+  booking without email; don't claim exactly-once or guaranteed inbox delivery.
+- No new persisted fields/collections, indexes or Firestore rules changes.
+  Focused regression passed 34 tests across templates/deferred SMTP, booking
+  transactions/retries, consultation transitions and Hospital mutation handling.
+  Tests use isolated SDK/SMTP mocks. No live email/database mutation, build/lint,
+  production after-hook test or deployment was performed for this update.
 
 This file records completed work and verification limits. `AGENTS.md` remains
 the implementation authority; these notes do not authorize deployments or data

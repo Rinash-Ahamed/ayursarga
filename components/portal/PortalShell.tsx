@@ -11,7 +11,7 @@ import { PortalNotifications } from "@/components/portal/PortalNotifications";
 import { lockDocumentScroll } from "@/utils/documentScrollLock";
 import { ConsumerPortalFooter } from "@/components/consumer/ConsumerPortalFooter";
 
-type PortalNavigationIcon = "dashboard" | "hospitals" | "consultants" | "users" | "bookings" | "availability" | "audit" | "profile" | "services" | "password" | "search" | "person" | "support";
+type PortalNavigationIcon = "dashboard" | "hospitals" | "consultants" | "users" | "bookings" | "availability" | "audit" | "profile" | "services" | "password" | "search" | "person" | "support" | "billing";
 type NavigationItem = readonly [label: string, href: string, icon: PortalNavigationIcon, nested?: boolean];
 const SIDEBAR_STORAGE_KEY = "ayursarga-portal-sidebar-collapsed";
 const SIDEBAR_CHANGE_EVENT = "ayursarga-sidebar-change";
@@ -40,6 +40,7 @@ const NAVIGATION: Record<PortalRole, readonly NavigationItem[]> = {
     ["Our Consultants", ROUTES.admin.consultants, "consultants", true],
     ["Users", ROUTES.admin.users, "users"], ["Bookings", ROUTES.admin.bookings, "bookings"],
     ["Availability", ROUTES.admin.availability, "availability"],
+    ["Invoices & Billing", ROUTES.admin.billing, "billing"],
     ["Audit Logs", ROUTES.admin.audits, "audit"],
   ],
   hospital: [
@@ -65,6 +66,7 @@ function PortalNavigationIcon({ name }: { name: PortalNavigationIcon }) {
     bookings: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M7 3v4m10-4v4M3 10h18m-13 4h3m2 0h3m-8 3h3" /></>,
     availability: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2M7 3l-2 2m12-2 2 2" /></>,
     audit: <><path d="M7 3h10v4H7zM5 5H3v16h18V5h-2M8 12h8m-8 4h5" /><path d="m16 17 1.5 1.5L21 15" /></>,
+    billing: <><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z" /><path d="M9 7h6M9 11h6M9 15h4" /></>,
     profile: <><path d="M4 21V6h16v15M8 6V3h8v3M3 21h18M9 10h6M12 7v6" /><circle cx="12" cy="17" r="2" /></>,
     services: <><path d="M4 6h16M4 12h16M4 18h16" /><circle cx="8" cy="6" r="2" /><circle cx="16" cy="12" r="2" /><circle cx="10" cy="18" r="2" /></>,
     password: <><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3" /></>,

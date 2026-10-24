@@ -255,6 +255,42 @@ test("portal login prevents duplicate submission and keeps credential errors inl
   }
 });
 
+test("Admin billing previews and issues a branded commission invoice with a working PDF download", async ({ page }, testInfo) => {
+  await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "admin-billing");
+  await page.getByRole("button", { name: "New commission invoice", exact: true }).click();
+  await page.getByRole("searchbox", { name: "Hospital *", exact: true }).fill("Ayursarga");
+  await page.locator(".billing-hospital-results button").first().click();
+  await page.getByRole("spinbutton", { name: "Commission amount (₹) *", exact: true }).fill("1000");
+  await page.getByRole("spinbutton", { name: "GST rate (%) *", exact: true }).fill("18");
+  await page.getByRole("button", { name: "Preview invoice", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  expect(await page.evaluate(() => document.body.style.position)).toBe("fixed");
+  const invoice = page.frameLocator('iframe[title="Ayursarga commission invoice preview"]');
+  await expect(invoice.getByRole("heading", { name: "Commission Invoice", exact: true })).toBeVisible();
+  await expect(invoice.locator(".invoice-total")).toContainText("1,180.00");
+  expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { calls: number } }).consumerBookingFixture.calls)).toBe(0);
+  await dialog.getByRole("button", { name: "Generate invoice", exact: true }).click();
+  await expect(dialog.getByRole("button", { name: "Download PDF", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { calls: number } }).consumerBookingFixture.calls)).toBe(1);
+  await page.screenshot({ path: testInfo.outputPath("commission-invoice.png") });
+  const download = page.waitForEvent("download");
+  await dialog.getByRole("button", { name: "Download PDF", exact: true }).click();
+  const pdf = await download;
+  expect(pdf.suggestedFilename()).toMatch(/^AS-2026-00001-\d{4}-\d{2}-\d{2}\.pdf$/);
+  const pdfPath = await pdf.path();
+  const contents = readFileSync(pdfPath!, "utf8");
+  expect(contents.startsWith("%PDF-1.4")).toBe(true);
+  expect(contents).toContain("COMMISSION INVOICE");
+  expect(contents).toContain("32ABGCA7749G1ZL");
+  expect(contents).toContain("1,180.00");
+  await dialog.getByRole("button", { name: "Close invoice preview", exact: true }).click();
+  expect(await page.evaluate(() => document.body.style.position)).not.toBe("fixed");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await expect(page.locator(".billing-invoice-card")).toContainText("AS/2026/00001");
+});
+
 test("availability review requires confirmation and prevents duplicate submissions", async ({ page }) => {
   await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
   await mount(page, "admin-availability");

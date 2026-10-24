@@ -23,6 +23,7 @@ type PdfBlock =
 function safePdfText(value: unknown) {
   return String(value ?? "")
     .normalize("NFKD")
+    .replace(/[\r\n]+/g, " ")
     .replace(/[‘’]/g, "'")
     .replace(/[“”]/g, '"')
     .replace(/[–—]/g, "-")
@@ -71,9 +72,9 @@ function nodeText(node: Node): string {
   return [...node.childNodes].map(nodeText).join("");
 }
 
-function contractBlocks(html: string): PdfBlock[] {
+function contractBlocks(html: string, selector = ".contract-document"): PdfBlock[] {
   const document = new DOMParser().parseFromString(html, "text/html");
-  const main = document.querySelector(".contract-document");
+  const main = document.querySelector(selector);
   if (!main) throw new Error("The contract template could not be prepared.");
   const blocks: PdfBlock[] = [];
   for (const element of [...main.children]) {
@@ -90,27 +91,27 @@ function contractBlocks(html: string): PdfBlock[] {
   return blocks;
 }
 
-function pageHeader(pageNumber: number) {
+function pageHeader(pageNumber: number, heading = "PARTNER CENTRE AGREEMENT", footer = "Ayursarga Partner Network") {
   return [
     rectangle(0, 0, PAGE_WIDTH, 68, FOREST),
     rectangle(0, 68, PAGE_WIDTH, 4, GOLD),
     textLine("AYURSARGA", MARGIN_X, 43, 12, "F2", GOLD),
-    textLine("PARTNER CENTRE AGREEMENT", PAGE_WIDTH - 190, 43, 8, "F2", "0.88 0.92 0.89"),
+    textLine(heading, PAGE_WIDTH - 190, 43, 8, "F2", "0.88 0.92 0.89"),
     rectangle(0, 790, PAGE_WIDTH, 52, FOREST),
     rectangle(0, 790, PAGE_WIDTH, 3, GOLD),
     textLine("PRIVATE & CONFIDENTIAL", MARGIN_X, 817, 7.2, "F2", GOLD),
-    textLine("Ayursarga Partner Network", MARGIN_X + 112, 817, 7.2, "F1", "0.88 0.92 0.89"),
+    textLine(footer, MARGIN_X + 112, 817, 7.2, "F1", "0.88 0.92 0.89"),
     textLine(`Page ${pageNumber}`, PAGE_WIDTH - 82, 817, 7.2, "F1", "0.88 0.92 0.89"),
   ];
 }
 
-function renderContract(blocks: PdfBlock[]) {
+function renderContract(blocks: PdfBlock[], heading?: string, footer?: string) {
   const pages: string[][] = [];
   let commands: string[] = [];
   let top = CONTENT_TOP;
 
   function newPage() {
-    commands = pageHeader(pages.length + 1);
+    commands = pageHeader(pages.length + 1, heading, footer);
     pages.push(commands);
     top = CONTENT_TOP;
   }
@@ -229,6 +230,10 @@ function createPdf(pageContents: string[]) {
   for (let index = 1; index < objects.length; index += 1) output += `${String(offsets[index]).padStart(10, "0")} 00000 n \n`;
   output += `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
   return new Blob([output], { type: "application/pdf" });
+}
+
+export function buildBrandedDocumentPdf(html: string, selector: string, heading: string, footer: string) {
+  return createPdf(renderContract(contractBlocks(html, selector), heading, footer));
 }
 
 export function buildHospitalContractPdf(hospital: DocumentRecord<HospitalDocument>) {

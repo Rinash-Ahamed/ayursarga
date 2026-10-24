@@ -874,6 +874,11 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    match /invoices/{invoiceId} {
+      allow read: if isAdmin();
+      allow create, update, delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

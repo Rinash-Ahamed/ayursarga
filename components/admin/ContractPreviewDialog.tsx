@@ -10,6 +10,12 @@ export function ContractPreviewDialog({
   busy,
   onDownload,
   onClose,
+  heading = "Preview partner contract",
+  documentTitle = "Ayursarga partner contract preview",
+  description = "Review the populated hospital details before downloading the final PDF.",
+  actionLabel = "Download PDF",
+  busyLabel = "Preparing PDF...",
+  closeLabel = "Close contract preview",
 }: {
   open: boolean;
   html: string;
@@ -17,6 +23,12 @@ export function ContractPreviewDialog({
   busy: boolean;
   onDownload: () => void;
   onClose: () => void;
+  heading?: string;
+  documentTitle?: string;
+  description?: string;
+  actionLabel?: string;
+  busyLabel?: string;
+  closeLabel?: string;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -24,17 +36,17 @@ export function ContractPreviewDialog({
     <section className="portal-contract-preview" role="dialog" aria-modal="true" aria-labelledby="contract-preview-title">
       <header className="portal-contract-preview-header">
         <div>
-          <h2 id="contract-preview-title">Preview partner contract</h2>
+          <h2 id="contract-preview-title">{heading}</h2>
           <p>{filename}</p>
         </div>
-        <button ref={closeRef} type="button" className="portal-contract-preview-close" aria-label="Close contract preview" disabled={busy} onClick={onClose}>&times;</button>
+        <button ref={closeRef} type="button" className="portal-contract-preview-close" aria-label={closeLabel} disabled={busy} onClick={onClose}>&times;</button>
       </header>
-      <iframe className="portal-contract-preview-frame" title="Ayursarga partner contract preview" srcDoc={html} sandbox="" />
+      <iframe className="portal-contract-preview-frame" title={documentTitle} srcDoc={html} sandbox="" />
       <footer className="portal-contract-preview-actions">
-        <p>Review the populated hospital details before downloading the final PDF.</p>
+        <p>{description}</p>
         <div className="portal-actions">
           <button type="button" className="portal-button secondary" disabled={busy} onClick={onClose}>Close preview</button>
-          <button type="button" className="portal-button" disabled={busy} onClick={onDownload}>{busy ? "Preparing PDF..." : "Download PDF"}</button>
+          <button type="button" className="portal-button" disabled={busy} onClick={onDownload}>{busy ? busyLabel : actionLabel}</button>
         </div>
       </footer>
     </section>

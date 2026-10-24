@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import { PortalEnvironment } from "@/components/auth/PortalEnvironment";
 import { PortalToastViewport } from "@/components/portal/PortalToast";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
+import { AdminBilling } from "@/components/admin/AdminBilling";
 import { HospitalsManager } from "@/components/admin/HospitalsManager";
 import { AdminHospitalDetails } from "@/components/admin/HospitalDetails";
 import { ConsultantsManager } from "@/components/admin/ConsultantsManager";
@@ -29,6 +30,7 @@ import { ConsultationBookings } from "@/components/consultations/ConsultationBoo
 
 declare global { interface Window { mountPortalUi: (screen: string) => void; unmountPortalUi?: () => void; } }
 const screens = {
+  "admin-billing": <AdminBilling />,
   "password-action": <PasswordActionForm />,
   "admin-dashboard": <AdminDashboard />, "admin-hospitals": <HospitalsManager />, "admin-details": <AdminHospitalDetails hospitalId="centre" />,
   "admin-consultants": <ConsultantsManager />, "admin-users": <UsersList />, "admin-bookings": <AdminBookings />,
