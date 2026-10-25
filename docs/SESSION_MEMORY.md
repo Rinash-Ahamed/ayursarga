@@ -2,6 +2,23 @@
 
 Updated: 25 October 2026 (Asia/Calcutta).
 
+## Silent portal notification alerts (25 October 2026)
+
+- v4.13.2 removes the shared Web Audio chime/helper and gesture-priming
+  listeners. Admin and Hospital share a subtle 2.4-second bell/count opacity
+  pulse only for newly observed unread records after the initial server baseline.
+  Viewing the inbox acknowledges attention without changing read status/counts;
+  arrivals while it is open are already viewed. Later snapshots do not replay
+  acknowledged alerts. Reading/removing all pending alert records also stops it.
+- Reduced-motion users receive a static gold outline instead of animation.
+  Notification subscription, count, API actions, authorization and persistence
+  remain unchanged. No build, lint, deployment or live notification mutations.
+- Validation: 2 focused inbox/tracker tests and all 3 browser cases passed
+  (desktop, 320px Chromium phone, WebKit phone), exercising both portals,
+  new/replayed arrivals, viewing, arrivals while open, unread counts and reduced
+  motion. Initial browser run correctly suppressed animation under the harness's
+  default reduced-motion setting; test now explicitly switches motion modes.
+
 ## Inline optional field labels (25 October 2026)
 
 - v4.13.1 groups field text and `(Optional)` into a single label-heading span

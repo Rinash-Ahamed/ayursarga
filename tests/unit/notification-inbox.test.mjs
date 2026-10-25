@@ -40,14 +40,20 @@ test("persistent inbox cutoff filters old notifications, ignores stale listeners
   assert.equal(current.stopped, true);
 });
 
-test("notification sounds ignore initial, cached, read and previously seen records", () => {
-  const { createNotificationSoundTracker, consumeNotificationSnapshot } = loadTypeScript("utils/portalNotificationSound.ts");
-  const tracker = createNotificationSoundTracker();
+test("visual notification alerts ignore history, remain until viewed, and do not replay", () => {
+  const { createNotificationTracker, consumeNotificationSnapshot } = loadTypeScript("utils/portalNotificationAlerts.ts");
+  const tracker = createNotificationTracker();
   const oldUnread = { id: "old", readAt: null };
   assert.equal(consumeNotificationSnapshot(tracker, [oldUnread], true), false);
   assert.equal(consumeNotificationSnapshot(tracker, [oldUnread, { id: "server-old", readAt: null }], false), false);
   assert.equal(consumeNotificationSnapshot(tracker, [oldUnread, { id: "fresh-read", readAt: {} }], false), false);
   assert.equal(consumeNotificationSnapshot(tracker, [oldUnread, { id: "fresh", readAt: null }], false), true);
+  assert.equal(consumeNotificationSnapshot(tracker, [{ id: "fresh", readAt: null }], false), true);
+  tracker.pendingIds.clear(); // Viewing acknowledges attention, not the unread record.
   assert.equal(consumeNotificationSnapshot(tracker, [{ id: "fresh", readAt: null }], false), false);
   assert.equal(consumeNotificationSnapshot(tracker, [oldUnread], false), false);
+  assert.equal(consumeNotificationSnapshot(tracker, [{ id: "another", readAt: null }], false), true);
+  assert.equal(consumeNotificationSnapshot(tracker, [{ id: "another", readAt: {} }], false), false);
+  assert.equal(consumeNotificationSnapshot(tracker, [{ id: "last", readAt: null }], false), true);
+  assert.equal(consumeNotificationSnapshot(tracker, [], false), false);
 });

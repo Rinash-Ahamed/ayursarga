@@ -458,6 +458,41 @@ test("destructive dialogs stay red, cancel stays neutral, and scroll is restored
   }
 });
 
+test("both portals pulse only for new notifications and stop when viewed without changing unread counts", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  for (const screen of ["admin-dashboard", "hospital-dashboard"]) {
+    await mount(page, screen);
+    const bell = page.locator(".portal-notification-trigger");
+    await expect(bell).not.toHaveAttribute("data-attention");
+    const deliver = (ids: string[]) => page.evaluate((ids) => {
+      window.dispatchEvent(new CustomEvent("portal-test-notifications", { detail: ids.map((id) => ({
+        id, readAt: null, title: "New notification", message: "Update", actionHref: "#", createdAt: { seconds: 100, nanoseconds: 0 },
+      })) }));
+    }, ids);
+    await deliver(["notification", "fresh"]);
+    await expect(bell).toHaveAttribute("data-attention", "true");
+    await expect(bell.locator("svg")).toHaveCSS("animation-name", "portal-notification-pulse");
+    await expect(bell.locator(".portal-notification-count")).toHaveText("2");
+    await expect(bell.locator(".portal-notification-count")).toHaveCSS("animation-name", "portal-notification-pulse");
+    await bell.click();
+    await expect(bell).not.toHaveAttribute("data-attention");
+    await expect(bell.locator(".portal-notification-count")).toHaveText("2");
+    await deliver(["notification", "fresh", "viewed-live"]);
+    await expect(bell).not.toHaveAttribute("data-attention");
+    await page.keyboard.press("Escape");
+    await deliver(["notification", "fresh", "viewed-live"]);
+    await expect(bell).not.toHaveAttribute("data-attention");
+    await deliver(["notification", "fresh", "viewed-live", "latest"]);
+    await expect(bell).toHaveAttribute("data-attention", "true");
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect(bell.locator("svg")).toHaveCSS("animation-name", "none");
+    await deliver([]);
+    await expect(bell).not.toHaveAttribute("data-attention");
+    await expect(bell.locator(".portal-notification-count")).toHaveCount(0);
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+  }
+});
+
 test("optional indicators stay inline with their field labels", async ({ page }) => {
   await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
   for (const [screen, action] of [

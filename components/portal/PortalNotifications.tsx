@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { NotificationDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import {
@@ -12,7 +12,7 @@ import {
 } from "@/services/notifications/notificationService";
 import { PortalDialog } from "@/components/portal/PortalDialog";
 import { formatDisplayDateTime, formatDateMentions } from "@/utils/date";
-import { consumeNotificationSnapshot, createNotificationSoundTracker, playPortalNotificationSound, primePortalNotificationSound } from "@/utils/portalNotificationSound";
+import { consumeNotificationSnapshot, createNotificationTracker } from "@/utils/portalNotificationAlerts";
 
 function notificationTime(value: NotificationDocument["createdAt"]) {
   return formatDisplayDateTime(value, "Just now");
@@ -28,8 +28,19 @@ export function PortalNotifications({ recipientId }: { recipientId: string }) {
   const [markingRead, setMarkingRead] = useState(false);
   const actionInFlight = useRef(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const soundTracker = useRef(createNotificationSoundTracker());
+  const alertTracker = useRef(createNotificationTracker());
+  const panelOpen = useRef(false);
+  const [needsAttention, setNeedsAttention] = useState(false);
   const unread = items.filter((item) => !item.readAt);
+
+  const setPanelOpen = useCallback((value: boolean) => {
+    panelOpen.current = value;
+    if (value) {
+      alertTracker.current.pendingIds.clear();
+      setNeedsAttention(false);
+    }
+    setOpen(value);
+  }, []);
 
   async function clear() {
     if (actionInFlight.current) return;
@@ -41,8 +52,8 @@ export function PortalNotifications({ recipientId }: { recipientId: string }) {
       setItems((current) => current.filter((item) => item.createdAt.seconds > clearedThrough.seconds
         || (item.createdAt.seconds === clearedThrough.seconds && item.createdAt.nanoseconds > clearedThrough.nanoseconds)));
       setConfirmClear(false);
-      setOpen(true);
-    } catch { setError("We could not clear notifications. Please try again."); setConfirmClear(false); setOpen(true); }
+      setPanelOpen(true);
+    } catch { setError("We could not clear notifications. Please try again."); setConfirmClear(false); setPanelOpen(true); }
     finally { actionInFlight.current = false; setClearing(false); }
   }
 
@@ -56,9 +67,12 @@ export function PortalNotifications({ recipientId }: { recipientId: string }) {
   }
 
   useEffect(() => {
-    soundTracker.current = createNotificationSoundTracker();
+    const tracker = createNotificationTracker();
+    alertTracker.current = tracker;
     return subscribeToNotifications(recipientId, (nextItems, metadata) => {
-      if (consumeNotificationSnapshot(soundTracker.current, nextItems, metadata.fromCache)) playPortalNotificationSound();
+      const attention = consumeNotificationSnapshot(tracker, nextItems, metadata.fromCache);
+      if (panelOpen.current) tracker.pendingIds.clear();
+      setNeedsAttention(attention && !panelOpen.current);
       setItems(nextItems);
       setLoading(false);
       setError("");
@@ -69,31 +83,12 @@ export function PortalNotifications({ recipientId }: { recipientId: string }) {
   }, [recipientId]);
 
   useEffect(() => {
-    let enabled = false;
-    const removeListeners = () => {
-      window.removeEventListener("pointerdown", enableSound, true);
-      window.removeEventListener("keydown", enableSound, true);
-    };
-    const enableSound = () => {
-      if (enabled) return;
-      void primePortalNotificationSound().then((ready) => {
-        if (!ready) return;
-        enabled = true;
-        removeListeners();
-      });
-    };
-    window.addEventListener("pointerdown", enableSound, true);
-    window.addEventListener("keydown", enableSound, true);
-    return removeListeners;
-  }, []);
-
-  useEffect(() => {
     if (!open) return;
     const closeOutside = (event: PointerEvent) => {
-      if (event.target instanceof Node && !rootRef.current?.contains(event.target)) setOpen(false);
+      if (event.target instanceof Node && !rootRef.current?.contains(event.target)) setPanelOpen(false);
     };
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") setPanelOpen(false);
     };
     document.addEventListener("pointerdown", closeOutside);
     document.addEventListener("keydown", closeOnEscape);
@@ -101,15 +96,16 @@ export function PortalNotifications({ recipientId }: { recipientId: string }) {
       document.removeEventListener("pointerdown", closeOutside);
       document.removeEventListener("keydown", closeOnEscape);
     };
-  }, [open]);
+  }, [open, setPanelOpen]);
 
   return <div className="portal-notifications" ref={rootRef}>
     <button
       className="portal-notification-trigger"
+      data-attention={needsAttention && !open && unread.length > 0 || undefined}
       type="button"
       aria-label={unread.length ? `Notifications, ${unread.length} unread` : "Notifications"}
       aria-expanded={open}
-      onClick={() => setOpen((current) => !current)}
+      onClick={() => setPanelOpen(!open)}
     >
       <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>
       {unread.length > 0 && <span className="portal-notification-count">{Math.min(unread.length, 9)}{unread.length > 9 ? "+" : ""}</span>}
@@ -119,7 +115,7 @@ export function PortalNotifications({ recipientId }: { recipientId: string }) {
         <strong>Notifications</strong>
         <div className="portal-notification-actions">
           {unread.length > 0 && <button type="button" disabled={clearing || markingRead} onClick={() => void markAllRead()}>Mark all read</button>}
-          {items.length > 0 && <button className="portal-notification-clear" type="button" disabled={clearing || markingRead} onClick={() => { setOpen(false); setConfirmClear(true); }}>Clear</button>}
+          {items.length > 0 && <button className="portal-notification-clear" type="button" disabled={clearing || markingRead} onClick={() => { setPanelOpen(false); setConfirmClear(true); }}>Clear</button>}
         </div>
       </div>
       {loading && <p className="portal-notification-state">Loading notifications...</p>}
@@ -132,7 +128,7 @@ export function PortalNotifications({ recipientId }: { recipientId: string }) {
           href={item.actionHref || "#"}
           key={item.id}
           onClick={() => {
-            setOpen(false);
+            setPanelOpen(false);
             if (!item.readAt) void markNotificationRead(item.id)
               .catch(() => setError("We could not mark this notification as read."));
           }}
@@ -143,6 +139,6 @@ export function PortalNotifications({ recipientId }: { recipientId: string }) {
         </Link>)}
       </div>}
     </section>}
-    <PortalDialog open={confirmClear} title="Clear all notifications?" message="Earlier notifications will be dismissed from your list. Bookings, notification records and audit history are kept. New notifications will still appear." tone="danger" confirmLabel="Clear notifications" busy={clearing} onConfirm={() => void clear()} onCancel={() => { if (!clearing) { setConfirmClear(false); setOpen(true); } }} />
+    <PortalDialog open={confirmClear} title="Clear all notifications?" message="Earlier notifications will be dismissed from your list. Bookings, notification records and audit history are kept. New notifications will still appear." tone="danger" confirmLabel="Clear notifications" busy={clearing} onConfirm={() => void clear()} onCancel={() => { if (!clearing) { setConfirmClear(false); setPanelOpen(true); } }} />
   </div>;
 }
