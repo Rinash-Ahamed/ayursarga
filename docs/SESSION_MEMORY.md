@@ -1,6 +1,20 @@
 # Session handoff
 
-Updated: 24 October 2026 (Asia/Calcutta).
+Updated: 25 October 2026 (Asia/Calcutta).
+
+## Inline optional field labels (25 October 2026)
+
+- v4.13.1 groups field text and `(Optional)` into a single label-heading span
+  in consultant, shared hospital, package and Admin invoice forms. Previously,
+  the label's grid placed its separate small element on another row. Shared
+  styling keeps the marker inline without changing controls, validation, field
+  associations or responsive input sizing. Consumer notes labels and the
+  availability legend were already inline and remain unchanged.
+- Added a focused browser regression across these four forms, checking marker
+  alignment and horizontal overflow; all 3 desktop, 320px phone and WebKit phone
+  cases passed. Initial run reached the closed invoice form; fixed the test to
+  open that form before asserting, with no production behavior change.
+  No API, persisted-field or rules changes; no build, lint or deployment.
 
 ## Admin Hospital commission invoices (24 October 2026)
 

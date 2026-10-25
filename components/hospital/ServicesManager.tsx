@@ -110,7 +110,7 @@ function PackageFields({ service, usedIn, onAmountValidityChange }: { service?: 
     <label className="full">Package amount
       <input name="price" type="number" min="0.01" step="0.01" defaultValue={service?.price ?? ""} required placeholder="Enter package amount" onChange={(event) => onAmountValidityChange?.(Number(event.target.value) > 0)} />
     </label>
-    <label className="full">Package notes <small>Optional</small><textarea name="description" defaultValue={service?.description ?? ""} maxLength={2_000} placeholder="Add any helpful information about this package." /></label>
+    <label className="full"><span className="portal-field-label">Package notes <small>(Optional)</small></span><textarea name="description" defaultValue={service?.description ?? ""} maxLength={2_000} placeholder="Add any helpful information about this package." /></label>
   </>;
 }
 

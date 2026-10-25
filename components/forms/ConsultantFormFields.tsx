@@ -26,8 +26,8 @@ export function ConsultantFormFields({ defaultValues = {}, errors }: {
 
   return <>
     <label>Name *<input name="name" defaultValue={defaultValues.name} required minLength={2} maxLength={120} autoComplete="name" aria-invalid={Boolean(errors.name)} /><FieldError field="name" errors={errors} /></label>
-    <label>Designation <small>Optional</small><input name="designation" defaultValue={defaultValues.designation} maxLength={120} aria-invalid={Boolean(errors.designation)} /><FieldError field="designation" errors={errors} /></label>
-    <label>Consultant Charge (₹) <small>Optional</small><input name="consultantCharge" type="number" defaultValue={defaultValues.consultantCharge ?? ""} min="0" step="0.01" inputMode="decimal" aria-invalid={Boolean(errors.consultantCharge)} /><FieldError field="consultantCharge" errors={errors} /></label>
+    <label><span className="portal-field-label">Designation <small>(Optional)</small></span><input name="designation" defaultValue={defaultValues.designation} maxLength={120} aria-invalid={Boolean(errors.designation)} /><FieldError field="designation" errors={errors} /></label>
+    <label><span className="portal-field-label">Consultant Charge (₹) <small>(Optional)</small></span><input name="consultantCharge" type="number" defaultValue={defaultValues.consultantCharge ?? ""} min="0" step="0.01" inputMode="decimal" aria-invalid={Boolean(errors.consultantCharge)} /><FieldError field="consultantCharge" errors={errors} /></label>
     <fieldset className="full consultant-preferences" aria-invalid={Boolean(errors.consultationServices)}>
       <legend>Online consultation services</legend>
       <p>Assign services this consultant can provide. Public booking also requires a charge and preferred availability.</p>
@@ -75,8 +75,8 @@ export function ConsultantFormFields({ defaultValues = {}, errors }: {
     </div>
     <label>Qualification *<input name="qualification" defaultValue={defaultValues.qualification} required minLength={2} maxLength={200} aria-invalid={Boolean(errors.qualification)} /><FieldError field="qualification" errors={errors} /></label>
     <label>Years of experience *<input name="yearsExperience" type="number" defaultValue={defaultValues.yearsExperience ?? 0} required min="0" max="80" step="0.5" inputMode="decimal" aria-invalid={Boolean(errors.yearsExperience)} /><FieldError field="yearsExperience" errors={errors} /></label>
-    <label>Last worked company <small>Optional</small><input name="lastWorkedCompany" defaultValue={defaultValues.lastWorkedCompany} maxLength={160} /></label>
-    <label>Emergency Contact No. <small>Optional</small><PhoneInput name="emergencyContactNo" defaultValue={defaultValues.emergencyContactNo} aria-invalid={Boolean(errors.emergencyContactNo)} /><FieldError field="emergencyContactNo" errors={errors} /></label>
-    <label className="full">Address <small>Optional</small><textarea name="address" defaultValue={defaultValues.address} maxLength={400} autoComplete="street-address" /></label>
+    <label><span className="portal-field-label">Last worked company <small>(Optional)</small></span><input name="lastWorkedCompany" defaultValue={defaultValues.lastWorkedCompany} maxLength={160} /></label>
+    <label><span className="portal-field-label">Emergency Contact No. <small>(Optional)</small></span><PhoneInput name="emergencyContactNo" defaultValue={defaultValues.emergencyContactNo} aria-invalid={Boolean(errors.emergencyContactNo)} /><FieldError field="emergencyContactNo" errors={errors} /></label>
+    <label className="full"><span className="portal-field-label">Address <small>(Optional)</small></span><textarea name="address" defaultValue={defaultValues.address} maxLength={400} autoComplete="street-address" /></label>
   </>;
 }

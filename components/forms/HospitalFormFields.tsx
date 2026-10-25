@@ -69,7 +69,7 @@ export function HospitalFormFields({
     <label>Official email *<input name="email" type="email" defaultValue={defaultValues.email} required maxLength={160} aria-invalid={Boolean(errors.email)} /><FieldError field="email" errors={errors} /></label>
     <label>Owner WhatsApp No. *<PhoneInput name="phone" defaultValue={defaultValues.phone} required autoComplete="tel" aria-invalid={Boolean(errors.phone)} /><FieldError field="phone" errors={errors} /></label>
     <label>Hospital Phone 1 *<PhoneInput name="hospitalPhone1" defaultValue={defaultValues.hospitalPhone1} required autoComplete="tel" aria-invalid={Boolean(errors.hospitalPhone1)} /><FieldError field="hospitalPhone1" errors={errors} /></label>
-    <label>Hospital Phone 2 <small>Optional</small><PhoneInput name="hospitalPhone2" defaultValue={defaultValues.hospitalPhone2 ?? ""} autoComplete="tel" aria-invalid={Boolean(errors.hospitalPhone2)} /><FieldError field="hospitalPhone2" errors={errors} /></label>
+    <label><span className="portal-field-label">Hospital Phone 2 <small>(Optional)</small></span><PhoneInput name="hospitalPhone2" defaultValue={defaultValues.hospitalPhone2 ?? ""} autoComplete="tel" aria-invalid={Boolean(errors.hospitalPhone2)} /><FieldError field="hospitalPhone2" errors={errors} /></label>
     <label>City / locality *<input name="city" defaultValue={defaultValues.city} required minLength={2} maxLength={80} aria-invalid={Boolean(errors.city)} /><FieldError field="city" errors={errors} /></label>
     <IndiaStateDistrictFields
       defaultState={defaultValues.state}

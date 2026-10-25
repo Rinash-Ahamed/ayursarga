@@ -458,6 +458,31 @@ test("destructive dialogs stay red, cancel stays neutral, and scroll is restored
   }
 });
 
+test("optional indicators stay inline with their field labels", async ({ page }) => {
+  await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
+  for (const [screen, action] of [
+    ["admin-hospitals", "Add Hospital"],
+    ["admin-consultants", "Edit"],
+    ["hospital-services", "Edit package"],
+    ["admin-billing", "New commission invoice"],
+  ]) {
+    await mount(page, screen);
+    if (action) await page.getByRole("button", { name: action, exact: true }).first().click();
+    const labels = page.locator(".portal-field-label:visible");
+    await expect(labels.first()).toBeVisible();
+    for (const label of await labels.all()) {
+      expect(await label.evaluate((element) => {
+        const range = document.createRange();
+        range.selectNodeContents(element.firstChild!);
+        const text = range.getBoundingClientRect();
+        const marker = element.querySelector("small")!.getBoundingClientRect();
+        return marker.top < text.bottom && marker.bottom > text.top;
+      })).toBe(true);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+});
+
 test("create and edit forms, validation feedback, and package actions keep their layout", async ({ page }) => {
   await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
   await mount(page, "admin-hospitals");
