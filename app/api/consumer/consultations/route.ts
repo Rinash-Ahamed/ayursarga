@@ -14,7 +14,7 @@ import { BOOKING_TERMS_VERSION, CUSTOMER_TERMS_VERSION, CONSUMER_PRIVACY_NOTICE_
 import { isValidPhoneNumber } from "@/utils/phone";
 import { isIsoDate, toDateInputValue } from "@/utils/date";
 import { validConsultationSchedule } from "@/features/consultations/schedule";
-import { queueConsultationEmail, deliverConsultationEmail } from "@/services/email/consultationEmailService";
+import { queueConsultationEmail, deliverConsultationEmails } from "@/services/email/consultationEmailService";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -74,12 +74,12 @@ export async function POST(request: Request) {
       transaction.create(audit, { action: "create", module: "consultationBookings", recordId: id, actorId: uid, actorRole: "consumer",
         previousValues: null, updatedValues: data, timestamp: now, source: "server", device: requestAuditDevice(request) });
       queueConsultationEmail(transaction, firestore, { eventId: `confirmation-${id}`, bookingId: id, event: "confirmed",
-        booking: data, actorId: uid, actorRole: "consumer", auditId: audit.id, now });
+        booking: data, consultant: consultant.data()!, actorId: uid, actorRole: "consumer", auditId: audit.id, now });
       for (const admin of admins) addConsultationNotification(transaction, firestore, { recipientId: admin, recipientRole: "admin", bookingId: id, bookingReference,
         message: `${provider.name} · ${service.label} · Online appointment confirmed.`, event: "consultation_created", actorId: uid, auditId: audit.id, now });
       return { bookingReference, duplicate: false };
     });
-    const email = await deliverConsultationEmail(firestore, `confirmation-${id}`);
+    const { email } = await deliverConsultationEmails(firestore, `confirmation-${id}`);
     return apiJson({ ok: true, bookingId: id, ...result, email }, result.duplicate ? 200 : 201);
   } catch (error) {
     if (error instanceof AdminAuthorizationError || error instanceof RequestBodyError || error instanceof ConsultationError) return apiJson({ error: error.message }, error.status);

@@ -2,6 +2,39 @@
 
 Updated: 25 October 2026 (Asia/Calcutta).
 
+## Consultant appointment emails, phase 1 only (25 October 2026)
+
+- v4.15.0 emails the assigned consultant for new consultation bookings, Admin
+  reschedules and Admin cancellations. Uses the shared branded booking template
+  and SMTP, with consultant greeting, Consumer name, reference, service and India
+  date/window or exact time. Reschedules include original/updated schedules.
+  Consultant CTA is public Ayursarga contact, not a protected Consumer booking
+  page or invented consultant dashboard. Private notes and unrelated contacts
+  are excluded. Consumer cancellation/completion do not add consultant emails.
+- The trusted operational consultant document supplies the current registered
+  email inside the appointment transaction (existing read reused for creation/
+  rescheduling; cancellation adds one read). Consumer and consultant event records
+  are queued atomically but claimed/delivered independently in parallel. Each
+  recipient has its own stable event ID and outcome, channel, timestamps and
+  categorical failure reason. Retried actions do not resend accepted/failed/
+  ambiguous emails; existing uncertainty/no-background-worker limits remain.
+- Missing/invalid consultant email and SMTP failure create an audited Admin bell
+  alert; Admin action responses also show consultant delivery independently from
+  Consumer delivery. Booking success and Consumer mail do not depend on consultant
+  mail. Consumer API responses never expose consultant contact information.
+  Historical events are not backfilled. No WhatsApp integration, preferences,
+  country-code fields, new Auth accounts or manual retry workflow introduced.
+- Existing server-only consultationEmailEvents rules already deny every client
+  read/write, covering these additional fields; no rule/index change or deployment
+  needed for Admin SDK document access. Application changes are not deployed.
+- Validation: 52 focused lifecycle/email/API/shared-mutation/Hospital booking
+  regressions passed with isolated cloud/SMTP fixtures. Includes independent
+  failures, missing contacts, current assigned address, no duplicate sends and
+  original/updated schedule content. 9 focused desktop/320px Chromium/WebKit phone
+  browser cases passed for rescheduling and separate consultant error feedback.
+  No build, lint, typecheck, emulator or live SMTP run; no production mutations
+  or deployment.
+
 ## Automatic online consultation confirmation and schedule emails (25 October 2026)
 
 - v4.14.0: new consultationBookings are confirmed immediately for the chosen

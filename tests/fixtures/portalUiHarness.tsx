@@ -53,6 +53,7 @@ const screens = {
   "consumer-consultations-empty": <ConsultationBookings role="consumer" />,
   "admin-consultations": <ConsultationBookings role="admin" />,
   "admin-consultations-email-failure": <ConsultationBookings role="admin" />,
+  "admin-consultations-consultant-email-failure": <ConsultationBookings role="admin" />,
   "consumer-profile": <ConsumerProfile editing />,
   "consumer-support": <ConsumerSupport />,
   "consumer-completion": <ConsumerProfile />,

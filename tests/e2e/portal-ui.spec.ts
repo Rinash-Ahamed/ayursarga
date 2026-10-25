@@ -190,6 +190,19 @@ test("consultation rescheduling validates before saving, submits once and report
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
 
+test("Admin sees consultant email failure independently of successful consumer delivery", async ({ page }) => {
+  await mount(page, "admin-consultations-consultant-email-failure");
+  await page.getByRole("button", { name: "Cancel appointment", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: "Confirm", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.locator(".portal-status")).toHaveText("cancelled");
+  await expect(page.locator(".portal-form-error")).toContainText("did not confirm the consultant email");
+  await expect(page.locator('.portal-toast[data-tone="error"]')).toContainText("consultant email");
+  await expect(page.locator('.portal-toast:not([data-tone="error"])')).toContainText("consumer email was accepted");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
+
 test("Admin online consultations match booking cards and provide responsive filters", async ({ page }) => {
   await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
   await mount(page, "admin-consultations");

@@ -5,6 +5,7 @@ import { authEmailSiteUrl } from "@/services/auth/authEmailService";
 import { sendEmail } from "@/services/email/emailService";
 import { isValidEmail } from "@/utils/text";
 import type { ConsultationEmailResult } from "@/features/consultations/email";
+import { consultationAdminRecipients, addConsultationNotification } from "@/services/consultations/consultationNotificationsAdmin";
 
 const COLLECTION = "consultationEmailEvents";
 type AppointmentEmailEvent = "confirmed" | "rescheduled" | "cancelled";
@@ -13,6 +14,7 @@ type AppointmentEmailEvent = "confirmed" | "rescheduled" | "cancelled";
 export function queueConsultationEmail(transaction: Transaction, firestore: Firestore, input: {
   eventId: string; bookingId: string; event: AppointmentEmailEvent; booking: Record<string, unknown>;
   previous?: Record<string, unknown>; actorId: string; actorRole: "admin" | "consumer"; auditId: string; now: unknown; payloadHash?: string;
+  consultant?: Record<string, unknown>;
 }) {
   const { booking, previous = booking } = input;
   const payload = {
@@ -28,10 +30,30 @@ export function queueConsultationEmail(transaction: Transaction, firestore: Fire
   };
   transaction.create(firestore.collection(COLLECTION).doc(input.eventId), {
     bookingId: input.bookingId, event: input.event, payloadHash: input.payloadHash ?? null, actorRole: input.actorRole,
+    audience: "consumer", channel: "email",
     recipient: String(booking.consumerEmail ?? "").trim().toLowerCase(), payload,
     status: "pending", createdAt: input.now, createdBy: input.actorId,
     updatedAt: input.now, updatedBy: input.actorId, archivedAt: null, archivedBy: null, lastAuditId: input.auditId,
   });
+  if (input.consultant !== undefined) {
+    transaction.create(firestore.collection(COLLECTION).doc(`${input.eventId}-consultant`), {
+      bookingId: input.bookingId, consultantId: String(booking.consultantId ?? ""), event: input.event,
+      payloadHash: input.payloadHash ?? null, actorRole: input.actorRole, audience: "consultant", channel: "email",
+      recipient: typeof input.consultant.email === "string" ? input.consultant.email.trim().toLowerCase() : "",
+      payload: { ...payload, providerName: String(input.consultant.name ?? booking.consultantName ?? "") },
+      status: "pending", createdAt: input.now, createdBy: input.actorId, updatedAt: input.now, updatedBy: input.actorId,
+      archivedAt: null, archivedBy: null, lastAuditId: input.auditId,
+    });
+  }
+}
+
+/** Separate claims/outcomes: one recipient's failure never blocks the other. */
+export async function deliverConsultationEmails(firestore: Firestore, eventId: string) {
+  const [email, consultantEmail] = await Promise.all([
+    deliverConsultationEmail(firestore, eventId),
+    deliverConsultationEmail(firestore, `${eventId}-consultant`),
+  ]);
+  return { email, consultantEmail };
 }
 
 /**
@@ -57,26 +79,40 @@ export async function deliverConsultationEmail(firestore: Firestore, eventId: st
     if (!claim.event) return { status: claim.status };
     const event = claim.event;
     let status: "accepted" | "failed" = "failed";
+    let failureReason: string | null = null;
     try {
-      if (!isValidEmail(event.recipient)) throw new Error("Invalid saved recipient");
-      const url = new URL("/app/bookings/consultations", authEmailSiteUrl());
-      url.searchParams.set("booking", event.bookingId);
+      if (!isValidEmail(event.recipient)) {
+        failureReason = event.recipient ? "invalid_email" : "missing_email";
+        throw new Error("Invalid saved recipient");
+      }
+      const url = new URL(event.audience === "consultant" ? "/contact" : "/app/bookings/consultations", authEmailSiteUrl());
+      if (event.audience !== "consultant") url.searchParams.set("booking", event.bookingId);
       const template = bookingEmail({ ...event.payload, amount: event.payload.amount ?? undefined,
-        kind: "consultation", event: event.event, bookingUrl: url.href } as BookingEmailData);
+        kind: "consultation", audience: event.audience ?? "consumer", event: event.event, bookingUrl: url.href } as BookingEmailData);
       await sendEmail({ to: event.recipient, replyTo: "info@ayursarga.com", ...template });
       status = "accepted";
     } catch {
       // Do not expose SMTP details or automatically repeat a potentially accepted message.
       status = "failed";
+      failureReason ??= "email_not_confirmed";
     }
     await firestore.runTransaction(async (transaction) => {
       const current = await transaction.get(reference);
       if (current.data()?.status !== "sending") return;
+      const admins = event.audience === "consultant" && status === "failed"
+        ? await consultationAdminRecipients(transaction, firestore) : [];
       const audit = firestore.collection("auditLogs").doc();
       const now = Timestamp.now();
-      transaction.update(reference, { status, updatedAt: now, updatedBy: event.createdBy, lastAuditId: audit.id });
+      transaction.update(reference, { status, failureReason, updatedAt: now, updatedBy: event.createdBy, lastAuditId: audit.id });
       transaction.create(audit, { action: "update", module: COLLECTION, recordId: eventId, actorId: event.createdBy,
-        actorRole: event.actorRole, previousValues: { status: "sending" }, updatedValues: { status }, timestamp: now, source: "server" });
+        actorRole: event.actorRole, previousValues: { status: "sending" }, updatedValues: { status, failureReason }, timestamp: now, source: "server" });
+      for (const admin of admins) addConsultationNotification(transaction, firestore, {
+        recipientId: admin, recipientRole: "admin", bookingId: event.bookingId, bookingReference: event.payload.bookingReference,
+        message: failureReason === "missing_email" || failureReason === "invalid_email"
+          ? "Consultant email is missing or invalid. Update the consultant contact and coordinate this appointment directly."
+          : "Consultant email could not be confirmed. Contact the consultant directly.",
+        event: `consultant_email_failed_${eventId}`, actorId: event.createdBy, auditId: audit.id, now,
+      });
     });
     return { status };
   } catch {

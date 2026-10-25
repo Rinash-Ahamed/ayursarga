@@ -202,6 +202,13 @@ to deploy, rerun maintenance scripts, or modify live data.
   atomically with the appointment audit. Send only after commit; claim each
   event once and report SMTP acceptance/failure/uncertainty honestly. Never
   automatically resend an event after an ambiguous SMTP result.
+  New consultation bookings, Admin reschedules and Admin cancellations also
+  email the assigned consultant using their server-read registered email.
+  Consultant and Consumer delivery claims/outcomes are independent; missing
+  consultant email and delivery failure must be recorded and surfaced to Admin.
+  Consultants still have no Auth accounts/dashboard. Do not include protected
+  Consumer booking links in their emails. WhatsApp sending is not configured
+  or authorized by this email-only feature.
 - Hospital room occupancy belongs in the single audited
   `hospitalCapacity/{hospitalId}` document. It is internal to Admin and the
   assigned Hospital, and either role may update its room totals from its own

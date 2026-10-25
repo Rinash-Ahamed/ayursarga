@@ -37,10 +37,10 @@ export function getConsultationBooking(id: string) {
 }
 
 export async function updateConsultationBooking(id: string, input: { action: "reschedule" | "completed" | "cancelled"; requestId: string; expectedAuditId: string; confirmedDate?: string; confirmedTime?: string; adminNotes?: string }) {
-  const result = await authorizedApiRequest<{ changes: Record<string, unknown>; email?: ConsultationEmailResult }>(`/api/consultations/${encodeURIComponent(id)}`, {
+  const result = await authorizedApiRequest<{ changes: Record<string, unknown>; email?: ConsultationEmailResult; consultantEmail?: ConsultationEmailResult }>(`/api/consultations/${encodeURIComponent(id)}`, {
     method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
     signedOutMessage: "Sign in again to update this consultation.", failureMessage: "We could not update the consultation. Try again.",
   });
   if (!result.changes || typeof result.changes !== "object" || Array.isArray(result.changes)) throw new Error("The response was incomplete. Refresh to check the saved appointment.");
-  return { changes: decodeMutation(result.changes) as Partial<ConsultationBookingDocument>, email: result.email };
+  return { changes: decodeMutation(result.changes) as Partial<ConsultationBookingDocument>, email: result.email, consultantEmail: result.consultantEmail };
 }

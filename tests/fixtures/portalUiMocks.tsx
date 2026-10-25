@@ -151,5 +151,6 @@ export const updateConsultationBooking = async (_id: string, input: { action: st
   portalUiState.consultantWrites.push(input);
   await Promise.resolve();
   return { changes: { ...input, status: input.action === "reschedule" ? "confirmed" : input.action, lastAuditId: "consultation-updated" },
-    email: input.action !== "completed" ? { status: portalUiState.screen === "admin-consultations-email-failure" ? "failed" : "accepted" } : undefined };
+    email: input.action !== "completed" ? { status: portalUiState.screen === "admin-consultations-email-failure" ? "failed" : "accepted" } : undefined,
+    consultantEmail: input.action !== "completed" ? { status: portalUiState.screen === "admin-consultations-consultant-email-failure" ? "failed" : "accepted" } : undefined };
 };

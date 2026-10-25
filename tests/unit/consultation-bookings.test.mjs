@@ -85,7 +85,8 @@ test("a changed consultant time window cannot silently replace the window chosen
 
 test("failed atomic commits do not leave appointments, reference reservations, audits or notifications", async () => {
   const f = fixture({ failCommit: true }); assert.equal((await create(f)).status, 503);
-  for (const collection of ["consultationBookings", "bookingReferences", "auditLogs", "notifications"]) assert.equal(f.values(collection).length, 0);
+  for (const collection of ["consultationBookings", "bookingReferences", "auditLogs", "notifications", "consultationEmailEvents"]) assert.equal(f.values(collection).length, 0);
+  assert.equal(f.calls.consultantSmtp.length, 0);
 });
 
 async function seeded(options = {}) {
@@ -130,6 +131,7 @@ test("Consumer can cancel only their own pending or confirmed consultation; Hosp
   assert.equal((await update(f, id, { status: "cancelled", adminNotes: "Not allowed" })).status, 200);
   const saved = f.records.get(`consultationBookings/${id}`);
   assert.equal(saved.status, "cancelled"); assert.equal(saved.adminNotes, null);
+  assert.equal(f.calls.consultantSmtp.length, 1); // Only the initial booking; Consumer cancellation is outside this notification scope.
   assert.equal(f.values("notifications").filter((entry) => entry.recipientId === "admin").length, 2);
 });
 
@@ -214,7 +216,7 @@ test("a rejected appointment commit cannot send a reschedule or cancellation ema
     assert.equal((await update(f, id, { action, requestId: "failing-action-00001", confirmedDate: "2099-10-26", confirmedTime: "10:00" })).status, 503);
     assert.equal(f.calls.smtp.length, 0);
     assert.equal(f.records.get(`consultationBookings/${id}`).confirmedDate, "2099-10-25");
-    assert.equal(f.values("consultationEmailEvents").length, 1);
+    assert.equal(f.values("consultationEmailEvents").length, 2);
   }
 });
 
@@ -238,6 +240,81 @@ test("schedule validation uses India care dates, excludes past times and never r
   assert.equal(validConsultationSchedule("2099-10-25", "09:30", "11:45", "10:01", now), true);
   assert.equal(validConsultationSchedule("2099-10-25", "09:30", "11:45", undefined, now), true);
   assert.equal(validConsultationSchedule("25/10/2099", "09:30", "11:45", "10:01", now), false);
+});
+
+test("assigned consultants receive independent branded emails for booking, reschedule and Admin cancellation once per event", async () => {
+  const { f, id } = await seeded();
+  assert.equal(f.calls.consultantSmtp.length, 1);
+  const first = f.calls.consultantSmtp[0];
+  assert.equal(first.to, consultant.email);
+  assert.match(first.text, /Hello Assigned Professional,/);
+  assert.match(first.text, /Consumer: Patient/);
+  assert.match(first.text, /09:30 - 11:45 IST/);
+  assert.match(first.text, /Booking reference:/);
+  assert.doesNotMatch(first.text, /My Bookings|dashboard|Please help with pregnancy lifestyle/);
+  assert.match(first.html, /#1f3d2b/);
+  assert.equal((await create(f)).status, 200);
+  assert.equal(f.calls.consultantSmtp.length, 1);
+  f.actor.role = "admin"; f.actor.uid = "admin";
+  const reschedule = { action: "reschedule", requestId: "consultant-reschedule-001", confirmedDate: "2099-10-26", confirmedTime: "10:15" };
+  const response = await update(f, id, reschedule);
+  assert.equal((await response.json()).consultantEmail.status, "accepted");
+  assert.equal((await update(f, id, reschedule)).status, 200);
+  assert.equal(f.calls.consultantSmtp.length, 2);
+  assert.match(f.calls.consultantSmtp[1].text, /Original appointment date: 25\/10\/2099/);
+  assert.match(f.calls.consultantSmtp[1].text, /Updated appointment date: 26\/10\/2099/);
+  const cancellation = { action: "cancelled", requestId: "consultant-cancellation-001" };
+  assert.equal((await update(f, id, cancellation)).status, 200);
+  assert.equal((await update(f, id, cancellation)).status, 200);
+  assert.equal(f.calls.consultantSmtp.length, 3);
+  assert.match(f.calls.consultantSmtp[2].text, /Original appointment date: 26\/10\/2099/);
+  assert.match(f.calls.consultantSmtp[2].text, /Original appointment time: 10:15 IST/);
+  assert.equal(f.calls.smtp.length, 3);
+});
+
+test("consultant and consumer mail failures do not block each other or replay on retries", async () => {
+  for (const options of [{ failConsultantEmail: true }, { failEmail: true }]) {
+    const { f, id } = await seeded(options);
+    assert.equal(f.calls.smtp.length, 1); assert.equal(f.calls.consultantSmtp.length, 1);
+    f.actor.role = "admin"; f.actor.uid = "admin";
+    const body = { action: "cancelled", requestId: "independent-email-0001" };
+    const response = await update(f, id, body); assert.equal(response.status, 200);
+    const result = await response.json();
+    assert.equal(result.email.status, options.failEmail ? "failed" : "accepted");
+    assert.equal(result.consultantEmail.status, options.failConsultantEmail ? "failed" : "accepted");
+    assert.equal((await update(f, id, body)).status, 200);
+    assert.equal(f.calls.smtp.length, 2); assert.equal(f.calls.consultantSmtp.length, 2);
+    if (options.failConsultantEmail) {
+      assert.ok(f.values("notifications").some((record) => record.recipientId === "admin" && record.message.includes("Consultant email could not be confirmed")));
+      assert.equal(f.values("consultationEmailEvents").filter((record) => record.audience === "consultant" && record.failureReason === "email_not_confirmed").length, 2);
+    }
+  }
+});
+
+test("missing or invalid consultant email is recorded and visible to Admin without blocking the appointment or consumer email", async () => {
+  for (const email of [undefined, "", "invalid"]) {
+    const { f, id } = await seeded({ records: { "consultants/AS001": { ...consultant, email } } });
+    assert.equal(f.records.get(`consultationBookings/${id}`).status, "confirmed");
+    assert.equal(f.calls.smtp.length, 1); assert.equal(f.calls.consultantSmtp.length, 0);
+    const failure = f.values("consultationEmailEvents").find((record) => record.audience === "consultant");
+    assert.equal(failure.status, "failed");
+    assert.equal(failure.channel, "email");
+    assert.equal(failure.failureReason, email ? "invalid_email" : "missing_email");
+    assert.ok(failure.updatedAt);
+    assert.ok(f.values("notifications").some((record) => record.recipientId === "admin" && record.message.includes("email is missing or invalid")));
+    await create(f);
+    assert.equal(f.calls.smtp.length, 1); assert.equal(f.calls.consultantSmtp.length, 0);
+  }
+});
+
+test("cancellation reads the assigned consultant's current email and never targets another provider", async () => {
+  const { f, id } = await seeded();
+  f.records.set("consultants/AS001", { ...consultant, email: "updated.consultant@example.com" });
+  f.records.set("consultants/AS002", { ...consultant, email: "other.consultant@example.com" });
+  f.actor.role = "admin"; f.actor.uid = "admin";
+  assert.equal((await update(f, id, { action: "cancelled", requestId: "updated-contact-0001" })).status, 200);
+  assert.equal(f.calls.consultantSmtp[1].to, "updated.consultant@example.com");
+  assert.ok(f.calls.consultantSmtp.every((message) => message.to !== "other.consultant@example.com"));
 });
 
 test("public consultant projection is an explicit whitelist, excludes private records and supports zero charges", () => {

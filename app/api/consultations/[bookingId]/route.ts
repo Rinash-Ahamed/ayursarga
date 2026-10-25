@@ -10,7 +10,7 @@ import { consultationAdminRecipients, addConsultationNotification } from "@/serv
 import { publicConsultantProjection } from "@/features/consultations/publicProjection";
 import type { ConsultantTimeSlot } from "@/features/consultants/validation";
 import { validConsultationSchedule } from "@/features/consultations/schedule";
-import { queueConsultationEmail, deliverConsultationEmail } from "@/services/email/consultationEmailService";
+import { queueConsultationEmail, deliverConsultationEmails } from "@/services/email/consultationEmailService";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -54,6 +54,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
       if (!allowed) throw new ConsultationError("This appointment has changed. Refresh before trying again.", 409);
       const now = Timestamp.now();
       const update: Record<string, unknown> = { status: action === "reschedule" ? "confirmed" : action, updatedAt: now, updatedBy: uid };
+      let consultantContact: Record<string, unknown> | undefined;
       if (role === "admin" && typeof input.adminNotes === "string") update.adminNotes = input.adminNotes.trim() || null;
       if (action === "reschedule") {
         const date = typeof input.confirmedDate === "string" ? input.confirmedDate : "";
@@ -61,11 +62,16 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
         if (!validConsultationSchedule(date, booking.slotStartTime, booking.slotEndTime, time)) throw new ConsultationError("Choose a future date and a time within the appointment window.", 400);
         if (booking.status === "confirmed" && date === booking.confirmedDate && time === booking.confirmedTime) throw new ConsultationError("Choose a different appointment date or time.", 400);
         const consultant = await transaction.get(firestore.collection("consultants").doc(booking.consultantId));
+        consultantContact = consultant.data() ?? {};
         const provider = consultant.exists ? publicConsultantProjection(consultant.id, consultant.data()!, booking.serviceId) : null;
         const timing = provider?.preferredSlotTimings[booking.preferredTimeSlot as ConsultantTimeSlot];
         if (!provider || !timing || time < timing.startTime || time >= timing.endTime) throw new ConsultationError("The consultant is no longer available in this appointment window.", 409);
         update.confirmedDate = date; update.confirmedTime = time;
         update.confirmedAt = booking.confirmedAt ?? now;
+      }
+      if (role === "admin" && action === "cancelled") {
+        const consultant = await transaction.get(firestore.collection("consultants").doc(booking.consultantId));
+        consultantContact = consultant.data() ?? {};
       }
       if (action === "completed") update.completedAt = now;
       const admins = role === "consumer" ? await consultationAdminRecipients(transaction, firestore) : [];
@@ -86,11 +92,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
       const emailEventId = role === "admin" && action !== "completed" ? eventId : null;
       if (emailEventId) queueConsultationEmail(transaction, firestore, { eventId: emailEventId, bookingId,
         event: action === "reschedule" ? "rescheduled" : "cancelled", booking: { ...booking, ...update }, previous: booking,
-        actorId: uid, actorRole: "admin", auditId: audit.id, now, payloadHash });
+        consultant: consultantContact, actorId: uid, actorRole: "admin", auditId: audit.id, now, payloadHash });
       return { changes: update, emailEventId };
     });
-    const email = result.emailEventId ? await deliverConsultationEmail(firestore, result.emailEventId) : undefined;
-    return mutationJson(result.changes, email ? { email } : undefined);
+    const delivery = result.emailEventId ? await deliverConsultationEmails(firestore, result.emailEventId) : undefined;
+    return mutationJson(result.changes, delivery);
   } catch (error) {
     if (error instanceof AdminAuthorizationError || error instanceof RequestBodyError || error instanceof ConsultationError) return apiJson({ error: error.message }, error.status);
     logApiError("PATCH /api/consultations/[bookingId]", error);
