@@ -31,6 +31,24 @@ test("confirmation email is branded, escaped, day-first and contains only Consum
   assert.throws(() => bookingEmail({ ...record, kind: "hospital", bookingUrl: "javascript:alert(1)" }));
 });
 
+test("consultation update emails preserve branding, exact original/new times and safe dynamic details", () => {
+  const { bookingEmail } = loadTypeScript("lib/bookingEmail.ts");
+  const common = { kind: "consultation", consumerName: "<Patient>", bookingReference: "AYURTEST01", providerName: "<Doctor>",
+    serviceName: "Prenatal doctor consultation", date: "2099-10-27", time: "10:30", previousDate: "2099-10-26", previousTime: "10:15",
+    bookingUrl: "https://ayursarga.com/app/bookings/consultations?booking=test" };
+  const changed = bookingEmail({ ...common, event: "rescheduled" });
+  assert.match(changed.text, /Original appointment date: 26\/10\/2099/);
+  assert.match(changed.text, /Original appointment time: 10:15 IST/);
+  assert.match(changed.text, /Updated appointment date: 27\/10\/2099/);
+  assert.match(changed.text, /Updated appointment time: 10:30 IST/);
+  assert.match(changed.html, /&lt;Doctor&gt;/);
+  const cancelled = bookingEmail({ ...common, event: "cancelled" });
+  assert.match(cancelled.text, /Original appointment date: 27\/10\/2099/);
+  assert.match(cancelled.text, /Original appointment time: 10:30 IST/);
+  assert.match(cancelled.text, /does not confirm a refund/);
+  assert.doesNotMatch(cancelled.subject, /confirmed/);
+});
+
 test("confirmation emails are deferred, use saved recipients, and failures never escape or log personal data", async () => {
   const callbacks = [];
   const sent = [];

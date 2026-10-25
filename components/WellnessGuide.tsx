@@ -62,7 +62,7 @@ const WELLNESS_PATHS = [
     image: "/wellness/stress-management.jpeg",
     question: "What kind of wellness experience are you looking for?",
     hint: "Choose the kind of support you would like included in your request.",
-    options: ["Yoga & relaxation therapies", "Pranayama & meditation", "Body therapies", "Psychologist consultation"],
+    options: ["Wellness Retreats", "Spa & Rejuvenation", "Psychologist consultation"],
   },
 ] as const;
 

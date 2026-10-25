@@ -189,11 +189,19 @@ to deploy, rerun maintenance scripts, or modify live data.
   preferred India care date/window, Consumer contacts and mandatory versioned
   booking consent; requests, audits and addressed bell notifications commit
   atomically. Stable request IDs prevent retries from duplicating appointments.
-  Preferred windows are not reserved exact appointments: these requests start
-  `requested`, Admin confirms an exact date/time after coordination, and hospital
-  package bookings remain immediately confirmed. Consumer reads/cancellation are
+  New online appointments are immediately `confirmed` for the selected date and
+  configured window, without inventing an exact appointment time. Admin can
+  reschedule to a validated date/exact time, complete, or cancel; do not restore
+  Confirm or Reject actions. Preserve legacy requested/rejected records without
+  silently migrating them. Hospital package bookings remain immediately
+  confirmed and unaffected. Consumer reads/cancellation are
   own-record only; Hospitals cannot access these appointments. No client writes,
   automatic payments, meeting links or consultant Auth accounts are implied.
+  Consultation confirmation/reschedule/cancellation emails use the shared
+  branded SMTP service and server-only `consultationEmailEvents` records queued
+  atomically with the appointment audit. Send only after commit; claim each
+  event once and report SMTP acceptance/failure/uncertainty honestly. Never
+  automatically resend an event after an ambiguous SMTP result.
 - Hospital room occupancy belongs in the single audited
   `hospitalCapacity/{hospitalId}` document. It is internal to Admin and the
   assigned Hospital, and either role may update its room totals from its own

@@ -138,7 +138,7 @@ const consultationProfessional = { id: "AS001", name: "Assigned Consultation Pro
 const consultation = { ...metadata, id: "consultation-fixture", bookingReference: "AYURCONS01", serviceId: "prenatal-doctor", serviceName: "Prenatal doctor consultation",
   consultantId: "AS001", consultantName: consultationProfessional.name, consultantDesignation: consultationProfessional.designation, consultantCharge: 900.5,
   consumerId: "patient", consumerName: "Patient With a Longer Display Name", consumerEmail: "patient@example.com", consumerPhone: "9876543210",
-  preferredDate: "2099-10-25", preferredTimeSlot: "morning", slotStartTime: "09:30", slotEndTime: "11:45", status: "requested", confirmedDate: null, confirmedTime: null,
+  preferredDate: "2099-10-25", preferredTimeSlot: "morning", slotStartTime: "09:30", slotEndTime: "11:45", status: "confirmed", confirmedDate: "2099-10-25", confirmedTime: null, confirmedAt: now,
   consumerNotes: "Guidance about pregnancy lifestyle", adminNotes: null };
 export const listPublicConsultants = () => {
   const staleFirstRead = portalUiState.screen === "consumer-consultation-refresh" && portalUiState.publicConsultantReads++ === 0;
@@ -147,4 +147,9 @@ export const listPublicConsultants = () => {
 export const createConsultationBooking = async (input: unknown) => { portalUiState.consultantWrites.push(input); return { ok: true, bookingId: "consultation-fixture", bookingReference: "AYURCONS01" }; };
 export const listConsultationBookings = () => page(portalUiState.screen === "consumer-consultations-empty" ? [] : [consultation]);
 export const getConsultationBooking = async () => consultation;
-export const updateConsultationBooking = async (_id: string, input: unknown) => { portalUiState.consultantWrites.push(input); return input; };
+export const updateConsultationBooking = async (_id: string, input: { action: string; confirmedDate?: string; confirmedTime?: string; adminNotes?: string }) => {
+  portalUiState.consultantWrites.push(input);
+  await Promise.resolve();
+  return { changes: { ...input, status: input.action === "reschedule" ? "confirmed" : input.action, lastAuditId: "consultation-updated" },
+    email: input.action !== "completed" ? { status: portalUiState.screen === "admin-consultations-email-failure" ? "failed" : "accepted" } : undefined };
+};

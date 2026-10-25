@@ -20,9 +20,11 @@ import { formatDisplayDate, toDateInputValue } from "@/utils/date";
 import { formatCurrency } from "@/utils/currency";
 import { formatStatus } from "@/utils/text";
 import { formatConsultantTimeSlot } from "@/features/consultants/validation";
+import { validConsultationSchedule } from "@/features/consultations/schedule";
+import { consultationEmailFeedback } from "@/features/consultations/email";
 
 type Appointment = DocumentRecord<ConsultationBookingDocument>;
-type Action = { booking: Appointment; status: "confirmed" | "completed" | "cancelled" | "rejected" };
+type Action = { booking: Appointment; status: "reschedule" | "completed" | "cancelled"; requestId: string };
 const CONSULTATION_STATUSES: readonly ConsultationBookingDocument["status"][] = ["requested", "confirmed", "completed", "cancelled", "rejected"];
 
 export function ConsultationBookings({ role, bookingId }: { role: "admin" | "consumer"; bookingId?: string }) {
@@ -40,6 +42,7 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
   const [time, setTime] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
+  const [emailWarning, setEmailWarning, emailWarningEvent] = useRepeatableMessage();
   const submitting = useRef(false);
   const [error, setError, errorEvent] = useRepeatableMessage();
   const [message, setMessage, messageEvent] = useRepeatableMessage();
@@ -55,28 +58,35 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
         .filter(Boolean).join(" ").toLowerCase();
       return (!deferredSearch || searchable.includes(deferredSearch))
         && (!status || booking.status === status)
-        && (!month || booking.preferredDate.startsWith(month));
+        && (!month || (booking.confirmedDate ?? booking.preferredDate).startsWith(month));
     });
   }, [bookingId, deferredSearch, items, month, role, status]);
   const guidance = role === "consumer"
-    ? "Preferred time windows are requests. Once coordinated, the confirmed date and time will appear with your appointment."
-    : "Review online consultation requests and record the confirmed appointment date and time after coordination.";
+    ? "Appointments are confirmed when booked for your selected date and time window. Any schedule changes will appear here."
+    : "Appointments are confirmed when booked. Reschedule, cancel or complete consultations here.";
   const emptyTitle = bookingId ? "Consultation not available" : role === "consumer" ? "No online consultations yet" : "No consultation requests yet";
   const emptyMessage = bookingId
     ? "This appointment could not be found in the records available to you."
     : role === "consumer"
-      ? "Appointments requested through Wellness Path will appear here with their consultant, preferred window and current status."
+      ? "Appointments booked through Wellness Path will appear here with their consultant, appointment window and current status."
       : "New online consultation requests will appear here when they are submitted.";
   function open(booking: Appointment, status: Action["status"]) {
-    setError(null); setDate(booking.preferredDate); setTime(booking.slotStartTime); setNotes(booking.adminNotes ?? ""); setAction({ booking, status });
+    setError(null); setDate(booking.confirmedDate ?? booking.preferredDate); setTime(booking.confirmedTime ?? booking.slotStartTime); setNotes(booking.adminNotes ?? ""); setAction({ booking, status, requestId: globalThis.crypto.randomUUID() });
   }
   async function confirm() {
     if (!action || submitting.current) return;
-    submitting.current = true; setBusy(true); setError(null); setMessage(null);
+    if (action.status === "reschedule" && !validConsultationSchedule(date, action.booking.slotStartTime, action.booking.slotEndTime, time)) {
+      setError("Choose a future date and a time within the appointment window."); return;
+    }
+    submitting.current = true; setBusy(true); setError(null); setMessage(null); setEmailWarning(null);
     try {
-      const changes = await updateConsultationBooking(action.booking.id, { status: action.status,
-        ...(action.status === "confirmed" ? { confirmedDate: date, confirmedTime: time } : {}), ...(role === "admin" ? { adminNotes: notes } : {}) });
-      patchItem(action.booking.id, changes); setMessage(`Appointment ${formatStatus(action.status).toLowerCase()}.`); setAction(null);
+      const result = await updateConsultationBooking(action.booking.id, { action: action.status, requestId: action.requestId, expectedAuditId: action.booking.lastAuditId,
+        ...(action.status === "reschedule" ? { confirmedDate: date, confirmedTime: time } : {}), ...(role === "admin" ? { adminNotes: notes } : {}) });
+      patchItem(action.booking.id, result.changes);
+      const feedback = consultationEmailFeedback(result.email);
+      setMessage(`Appointment ${action.status === "reschedule" ? "rescheduled" : formatStatus(action.status).toLowerCase()}.${result.email?.status === "accepted" ? ` ${feedback}` : ""}`);
+      if (result.email && result.email.status !== "accepted") setEmailWarning(feedback);
+      setAction(null);
     } catch (failure) { setError(failure instanceof Error ? failure.message : "We could not update the appointment."); }
     finally { submitting.current = false; setBusy(false); }
   }
@@ -92,6 +102,8 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
     <PortalToast message={loadError} notification={errorNotification} tone="error" />
     <PortalToast message={error} notification={errorEvent} tone="error" />
     <PortalToast message={message} notification={messageEvent} />
+    <PortalToast message={emailWarning} notification={emailWarningEvent} tone="error" />
+    {emailWarning && <p className="portal-form-error" role="alert">{emailWarning}</p>}
     {role === "admin" && !bookingId && <section className="portal-card portal-booking-filters" aria-label="Online consultation filters">
       <div className="portal-filter-field portal-hospital-filter">
         <label htmlFor="consultation-search">Search consultations</label>
@@ -105,7 +117,7 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
         </select>
       </div>
       <div className="portal-filter-field">
-        <label htmlFor="consultation-month">Preferred month</label>
+        <label htmlFor="consultation-month">Appointment month</label>
         <input id="consultation-month" type="month" value={month} onChange={(event) => setMonth(event.target.value)} />
       </div>
       <div className="portal-filter-actions"><button type="button" className="portal-button secondary" disabled={!hasFilters} onClick={() => { setSearch(""); setStatus(""); setMonth(""); }}>Clear filters</button></div>
@@ -124,7 +136,7 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
       <dl className="consumer-booking-facts consultation-booking-details">
         <div><dt>Preferred date</dt><dd>{formatDisplayDate(booking.preferredDate)}</dd></div>
         <div><dt>Preferred window</dt><dd>{formatConsultantTimeSlot(booking.preferredTimeSlot, { [booking.preferredTimeSlot]: { startTime: booking.slotStartTime, endTime: booking.slotEndTime } })}</dd></div>
-        {booking.confirmedDate && <div><dt>Confirmed appointment</dt><dd>{formatDisplayDate(booking.confirmedDate)} · {booking.confirmedTime}</dd></div>}
+        {booking.confirmedDate && <div><dt>Confirmed appointment</dt><dd>{formatDisplayDate(booking.confirmedDate)} · {booking.confirmedTime ? `${booking.confirmedTime} IST` : `${booking.slotStartTime} - ${booking.slotEndTime} IST`}</dd></div>}
         {role === "admin" && <><div><dt>Consumer</dt><dd>{booking.consumerName}</dd></div><div><dt>Email</dt><dd>{booking.consumerEmail}</dd></div><div><dt>Phone</dt><dd>{booking.consumerPhone}</dd></div></>}
         {booking.consumerNotes && <div><dt>Consumer notes</dt><dd>{booking.consumerNotes}</dd></div>}
         {booking.adminNotes && <div><dt>Appointment notes</dt><dd>{booking.adminNotes}</dd></div>}
@@ -132,21 +144,22 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
       </div>
       <div className="consumer-booking-meta"><span className="portal-status" data-status={booking.status}>{formatStatus(booking.status)}</span><div className="consumer-booking-cost"><span>Consultation charge</span><strong>{formatCurrency(booking.consultantCharge)}</strong></div></div>
       <div className="operational-booking-actions"><div className="portal-actions">
-        {role === "admin" && booking.status === "requested" && <><button className="portal-button" disabled={busy} onClick={() => open(booking, "confirmed")}>Confirm appointment</button><button className="portal-button danger" disabled={busy} onClick={() => open(booking, "rejected")}>Reject</button></>}
+        {role === "admin" && ["requested", "confirmed"].includes(booking.status) && <button className="portal-button secondary" disabled={busy} onClick={() => open(booking, "reschedule")}>Reschedule</button>}
         {role === "admin" && booking.status === "confirmed" && <button className="portal-button" disabled={busy} onClick={() => open(booking, "completed")}>Mark completed</button>}
         {["requested", "confirmed"].includes(booking.status) && <button className="portal-button danger" disabled={busy} onClick={() => open(booking, "cancelled")}>Cancel appointment</button>}
       </div></div>
     </article>)}</div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
     </div>
-    <PortalDialog open={Boolean(action)} title={action ? `${action.status === "confirmed" ? "Confirm" : action.status === "completed" ? "Complete" : action.status === "rejected" ? "Reject" : "Cancel"} appointment?` : "Appointment"}
-      message="The status changes only after you confirm." tone={action?.status === "cancelled" || action?.status === "rejected" ? "danger" : "default"}
+    <PortalDialog open={Boolean(action)} title={action ? `${action.status === "reschedule" ? "Reschedule" : action.status === "completed" ? "Complete" : "Cancel"} appointment?` : "Appointment"}
+      message={action?.status === "reschedule" ? "Save the revised schedule and email the consumer after it is saved." : action?.status === "cancelled" && role === "admin" ? "Cancel this appointment and email the consumer after it is saved." : "The status changes only after you confirm."} tone={action?.status === "cancelled" ? "danger" : "default"}
       busy={busy} onCancel={() => { if (!submitting.current) setAction(null); }} onConfirm={() => void confirm()}>
       <div className="portal-form consultation-dialog-fields">
-        {action?.status === "confirmed" && <><label>Confirmed date *<DateInput min={toDateInputValue()} value={date} onChange={(event) => setDate(event.target.value)} disabled={busy} required /></label>
-          <label>Confirmed time *<input type="time" value={time} min={action.booking.slotStartTime} max={action.booking.slotEndTime} onChange={(event) => setTime(event.target.value)} disabled={busy} required /></label><p className="full">Choose a time inside the requested {action.booking.slotStartTime} to {action.booking.slotEndTime} window after coordinating availability.</p></>}
+        {action?.status === "reschedule" && <><p className="full">Current appointment: {formatDisplayDate(action.booking.confirmedDate ?? action.booking.preferredDate)} · {action.booking.confirmedTime ?? `${action.booking.slotStartTime} - ${action.booking.slotEndTime}`} IST</p><label>New appointment date *<DateInput min={toDateInputValue()} value={date} onChange={(event) => setDate(event.target.value)} disabled={busy} required /></label>
+          <label>New appointment time (IST) *<input type="time" value={time} min={action.booking.slotStartTime} max={action.booking.slotEndTime} onChange={(event) => setTime(event.target.value)} disabled={busy} required /></label><p className="full">Choose a time inside the {action.booking.slotStartTime} to {action.booking.slotEndTime} IST appointment window. The current consultant availability is checked before saving.</p></>}
         {role === "admin" && <label className="full">Appointment notes (visible to the consumer)<textarea value={notes} onChange={(event) => setNotes(event.target.value)} maxLength={1000} disabled={busy} /></label>}
         {error && <p className="portal-form-error full" role="alert">{error}</p>}
+        {busy && <p className="full" role="status">{role === "admin" && action?.status !== "completed" ? "Saving the appointment and checking email delivery. Please wait." : "Saving the appointment. Please wait."}</p>}
       </div>
     </PortalDialog>
   </PortalShell>;

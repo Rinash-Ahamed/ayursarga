@@ -23,10 +23,10 @@ export function bookingFlowFixture(options = {}) {
   const profile = { name: "Patient", email: "patient@example.com", phone: "9876543210", hospitalId: actor.role === "hospital" ? "centre" : null,
     privacyConsentVersion: versions.CONSUMER_PRIVACY_NOTICE_VERSION, customerTermsVersion: versions.CUSTOMER_TERMS_VERSION,
     privacyConsentAt: {}, customerTermsAcceptedAt: {}, ...options.profile };
-  let sequence = 0;
+  let sequence = Math.max(0, ...[...records.keys()].map((path) => Number(/\/auto-(\d+)$/.exec(path)?.[1] ?? 0)));
   let queue = Promise.resolve();
   let throwAfterCommit = options.throwAfterCommit ?? false;
-  const calls = { commits: 0, writes: [], fields: [], emails: [] };
+  const calls = { commits: 0, writes: [], fields: [], emails: [], smtp: [] };
   const snapshot = (ref) => ({ id: ref.id, ref, exists: records.has(ref.path), data: () => records.get(ref.path), updateTime: Timestamp.now() });
   const firestore = {
     collection: (collection) => {
@@ -66,6 +66,7 @@ export function bookingFlowFixture(options = {}) {
       try {
         const result = await callback(transaction);
         if (options.failCommit) throw new Error("Simulated commit failure");
+        if (options.failEmailOutcomeCommit && pending.some((entry) => entry.ref.path.startsWith("consultationEmailEvents/") && ["accepted", "failed"].includes(entry.data.status))) throw new Error("Simulated delivery acknowledgement failure");
         for (const entry of pending) if (entry.type === "create" && records.has(entry.ref.path)) throw new Error("Duplicate document creation");
         for (const entry of pending) records.set(entry.ref.path, entry.type === "update" ? { ...records.get(entry.ref.path), ...entry.data } : entry.data);
         calls.writes.push(...pending);
@@ -76,6 +77,13 @@ export function bookingFlowFixture(options = {}) {
     },
   };
   const overrides = {
+    "@/services/auth/authEmailService": { authEmailSiteUrl: () => "https://ayursarga.com" },
+    "@/services/email/emailService": { sendEmail: async (message) => {
+      const events = [...records.values()].filter((record) => record.status === "sending" && record.payload);
+      if (!events.length) throw new Error("Consultation SMTP must follow a committed claim");
+      calls.smtp.push(message);
+      if (options.failEmail) throw new Error("Simulated SMTP failure");
+    } },
     "@/services/email/bookingEmailService": { scheduleBookingConfirmation: (kind, bookingId, booking) => {
       if (!calls.commits || records.get(`${kind === "hospital" ? "bookings" : "consultationBookings"}/${bookingId}`)?.status !== "confirmed") throw new Error("Email must follow a committed confirmation");
       calls.emails.push({ kind, bookingId, booking });

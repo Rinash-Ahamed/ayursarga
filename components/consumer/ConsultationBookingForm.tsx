@@ -74,7 +74,7 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
     <div className="portal-flow-page">
     {!service ? <><nav className="portal-actions portal-flow-navigation" aria-label="Consultation navigation"><Link className="portal-button secondary" href="/#wellness">Choose another service</Link><Link className="portal-button secondary" href="/app/bookings/consultations">My online consultations</Link></nav><p className="portal-form-error">Choose a valid service from Wellness Path.</p></> : <>
       <section className="portal-flow-intro" aria-label="Consultation guidance">
-        <p>Choose an available professional and preferred time window. Ayursarga will coordinate and confirm the appointment date and time. Online consultation is not an emergency service.</p>
+        <p>Choose an available professional, date and time window. Your appointment is confirmed when booked. An exact time is shown if Ayursarga reschedules it. Online consultation is not an emergency service.</p>
         <nav className="portal-actions portal-flow-navigation" aria-label="Consultation navigation"><Link className="portal-button secondary" href="/#wellness">Choose another service</Link><Link className="portal-button secondary" href="/app/bookings/consultations">My online consultations</Link></nav>
       </section>
       <PortalToast message={loadError} notification={loadNotification} tone="error" />
@@ -102,7 +102,7 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
         <PortalToast message={error} notification={notification} tone="error" />
         {error && <p className="portal-form-error full" role="alert">{error}</p>}
         {error && <div className="portal-actions full"><button type="button" className="portal-button secondary" disabled={busy || isLoading} onClick={() => { setConsultantId(""); setSlot(""); setConsent(false); void reload(); }}>Refresh consultants</button></div>}
-        <div className="portal-actions full"><button className="portal-button" disabled={busy || !consent || !consultant || !date || !slot}>{busy ? "Submitting..." : "Request appointment"}</button></div>
+        <div className="portal-actions full"><button className="portal-button" disabled={busy || !consent || !consultant || !date || !slot}>{busy ? "Booking appointment..." : "Book appointment"}</button></div>
       </form>}
     </>}
     </div>

@@ -1,0 +1,86 @@
+import "server-only";
+import { Timestamp, type Firestore, type Transaction } from "firebase-admin/firestore";
+import { bookingEmail, type BookingEmailData } from "@/lib/bookingEmail";
+import { authEmailSiteUrl } from "@/services/auth/authEmailService";
+import { sendEmail } from "@/services/email/emailService";
+import { isValidEmail } from "@/utils/text";
+import type { ConsultationEmailResult } from "@/features/consultations/email";
+
+const COLLECTION = "consultationEmailEvents";
+type AppointmentEmailEvent = "confirmed" | "rescheduled" | "cancelled";
+
+/** Called inside the appointment transaction, after all its reads. No SMTP here. */
+export function queueConsultationEmail(transaction: Transaction, firestore: Firestore, input: {
+  eventId: string; bookingId: string; event: AppointmentEmailEvent; booking: Record<string, unknown>;
+  previous?: Record<string, unknown>; actorId: string; actorRole: "admin" | "consumer"; auditId: string; now: unknown; payloadHash?: string;
+}) {
+  const { booking, previous = booking } = input;
+  const payload = {
+    consumerName: String(booking.consumerName ?? ""), bookingReference: String(booking.bookingReference ?? ""),
+    providerName: String(booking.consultantName ?? ""), serviceName: String(booking.serviceName ?? ""),
+    date: booking.confirmedDate ?? booking.preferredDate,
+    time: typeof booking.confirmedTime === "string" ? booking.confirmedTime : null,
+    timeWindow: `${booking.slotStartTime} - ${booking.slotEndTime}`,
+    previousDate: previous.confirmedDate ?? previous.preferredDate,
+    previousTime: typeof previous.confirmedTime === "string" ? previous.confirmedTime : null,
+    previousTimeWindow: `${previous.slotStartTime} - ${previous.slotEndTime}`,
+    amount: typeof booking.consultantCharge === "number" ? booking.consultantCharge : null,
+  };
+  transaction.create(firestore.collection(COLLECTION).doc(input.eventId), {
+    bookingId: input.bookingId, event: input.event, payloadHash: input.payloadHash ?? null, actorRole: input.actorRole,
+    recipient: String(booking.consumerEmail ?? "").trim().toLowerCase(), payload,
+    status: "pending", createdAt: input.now, createdBy: input.actorId,
+    updatedAt: input.now, updatedBy: input.actorId, archivedAt: null, archivedBy: null, lastAuditId: input.auditId,
+  });
+}
+
+/**
+ * A durable, single claim per committed event. Never retry SMTP after an
+ * ambiguous result: SMTP has no exactly-once contract. Retries report the
+ * recorded outcome instead of sending another copy.
+ */
+export async function deliverConsultationEmail(firestore: Firestore, eventId: string): Promise<ConsultationEmailResult> {
+  const reference = firestore.collection(COLLECTION).doc(eventId);
+  try {
+    const claim = await firestore.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(reference);
+      const event = snapshot.data();
+      if (!event) return { status: "unknown" as const, event: null };
+      if (event.status !== "pending") return { status: event.status as ConsultationEmailResult["status"], event: null };
+      const audit = firestore.collection("auditLogs").doc();
+      const now = Timestamp.now();
+      transaction.update(reference, { status: "sending", updatedAt: now, updatedBy: event.createdBy, lastAuditId: audit.id });
+      transaction.create(audit, { action: "update", module: COLLECTION, recordId: eventId, actorId: event.createdBy,
+        actorRole: event.actorRole, previousValues: { status: "pending" }, updatedValues: { status: "sending" }, timestamp: now, source: "server" });
+      return { status: "sending" as const, event };
+    });
+    if (!claim.event) return { status: claim.status };
+    const event = claim.event;
+    let status: "accepted" | "failed" = "failed";
+    try {
+      if (!isValidEmail(event.recipient)) throw new Error("Invalid saved recipient");
+      const url = new URL("/app/bookings/consultations", authEmailSiteUrl());
+      url.searchParams.set("booking", event.bookingId);
+      const template = bookingEmail({ ...event.payload, amount: event.payload.amount ?? undefined,
+        kind: "consultation", event: event.event, bookingUrl: url.href } as BookingEmailData);
+      await sendEmail({ to: event.recipient, replyTo: "info@ayursarga.com", ...template });
+      status = "accepted";
+    } catch {
+      // Do not expose SMTP details or automatically repeat a potentially accepted message.
+      status = "failed";
+    }
+    await firestore.runTransaction(async (transaction) => {
+      const current = await transaction.get(reference);
+      if (current.data()?.status !== "sending") return;
+      const audit = firestore.collection("auditLogs").doc();
+      const now = Timestamp.now();
+      transaction.update(reference, { status, updatedAt: now, updatedBy: event.createdBy, lastAuditId: audit.id });
+      transaction.create(audit, { action: "update", module: COLLECTION, recordId: eventId, actorId: event.createdBy,
+        actorRole: event.actorRole, previousValues: { status: "sending" }, updatedValues: { status }, timestamp: now, source: "server" });
+    });
+    return { status };
+  } catch {
+    // A lost database acknowledgement may follow successful SMTP acceptance.
+    return { status: "unknown" };
+  }
+}

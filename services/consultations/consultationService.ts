@@ -3,7 +3,8 @@
 import type { ConsultationServiceId } from "@/features/consultations/catalog";
 import type { ConsultantPage } from "@/features/consultations/types";
 import type { ConsultationBookingDocument } from "@/features/firestore/models";
-import { authorizedApiRequest, authorizedMutationRequest } from "@/services/api/client";
+import { authorizedApiRequest, decodeMutation } from "@/services/api/client";
+import type { ConsultationEmailResult } from "@/features/consultations/email";
 import { readDocument, runFilteredQuery, type QueryPageOptions } from "@/services/firestore/firestoreService";
 
 export async function listPublicConsultants(service: ConsultationServiceId, cursor: number | null = null, signal?: AbortSignal): Promise<ConsultantPage> {
@@ -20,7 +21,7 @@ export function createConsultationBooking(input: {
   preferredTimeSlot: string; expectedSlotStartTime: string; expectedSlotEndTime: string;
   consumerNotes: string; expectedCharge: number; bookingTermsAccepted: boolean; requestId: string;
 }) {
-  return authorizedApiRequest<{ ok: true; bookingId: string; bookingReference: string }>("/api/consumer/consultations", {
+  return authorizedApiRequest<{ ok: true; bookingId: string; bookingReference: string; email?: ConsultationEmailResult }>("/api/consumer/consultations", {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
     signedOutMessage: "Sign in before booking a consultation.", failureMessage: "We could not book your consultation. Try again.",
   });
@@ -35,9 +36,11 @@ export function getConsultationBooking(id: string) {
   return readDocument<ConsultationBookingDocument>("consultationBookings", id);
 }
 
-export function updateConsultationBooking(id: string, input: { status: string; confirmedDate?: string; confirmedTime?: string; adminNotes?: string }) {
-  return authorizedMutationRequest<ConsultationBookingDocument>(`/api/consultations/${encodeURIComponent(id)}`, {
+export async function updateConsultationBooking(id: string, input: { action: "reschedule" | "completed" | "cancelled"; requestId: string; expectedAuditId: string; confirmedDate?: string; confirmedTime?: string; adminNotes?: string }) {
+  const result = await authorizedApiRequest<{ changes: Record<string, unknown>; email?: ConsultationEmailResult }>(`/api/consultations/${encodeURIComponent(id)}`, {
     method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
     signedOutMessage: "Sign in again to update this consultation.", failureMessage: "We could not update the consultation. Try again.",
   });
+  if (!result.changes || typeof result.changes !== "object" || Array.isArray(result.changes)) throw new Error("The response was incomplete. Refresh to check the saved appointment.");
+  return { changes: decodeMutation(result.changes) as Partial<ConsultationBookingDocument>, email: result.email };
 }

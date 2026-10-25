@@ -31,7 +31,7 @@ export async function authorizedApiRequest<T>(url: string, options: AuthorizedRe
   });
 }
 
-function decodeMutation(value: unknown): unknown {
+export function decodeMutation(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(decodeMutation);
   if (value && typeof value === "object") {
     const record = value as Record<string, unknown>;

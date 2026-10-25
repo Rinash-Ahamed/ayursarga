@@ -20,11 +20,13 @@ test("consultation creation snapshots actual charge, provider, Consumer and cons
   const f = fixture();
   const response = await create(f, { ...input, consultantCharge: 1, status: "confirmed", consumerId: "other", consultantName: "Untrusted" });
   assert.equal(response.status, 201);
-  const { bookingId } = await response.json();
+  const { bookingId, email } = await response.json();
+  assert.equal(email.status, "accepted");
   const record = f.records.get(`consultationBookings/${bookingId}`);
   assert.equal(record.consumerId, "patient"); assert.equal(record.consultantName, consultant.name);
-  assert.equal(record.consultantCharge, 900.5); assert.equal(record.status, "requested");
-  assert.equal(f.calls.emails.length, 0);
+  assert.equal(record.consultantCharge, 900.5); assert.equal(record.status, "confirmed");
+  assert.equal(record.confirmedDate, input.preferredDate); assert.equal(record.confirmedTime, null); assert.ok(record.confirmedAt);
+  assert.equal(f.calls.smtp.length, 1);
   assert.equal(record.slotStartTime, "09:30"); assert.equal(record.consumerPhone, "9876543210");
   assert.ok(record.bookingTermsAcceptedAt); assert.ok(record.bookingTermsVersion);
   assert.ok(f.records.get(`auditLogs/${record.lastAuditId}`));
@@ -39,14 +41,15 @@ test("duplicate, concurrent and lost-response retries create one appointment and
     const f = fixture({ throwAfterCommit });
     const responses = await Promise.all([create(f), create(f)]);
     assert.deepEqual(responses.map((value) => value.status), throwAfterCommit ? [503, 200] : [201, 200]);
-    assert.equal(f.values("consultationBookings").length, 1); assert.equal(f.values("auditLogs").length, 1); assert.equal(f.values("notifications").length, 1);
+    assert.equal(f.values("consultationBookings").length, 1); assert.equal(f.values("auditLogs").filter((item) => item.module === "consultationBookings").length, 1); assert.equal(f.values("notifications").length, 1);
+    assert.equal(f.calls.smtp.length, 1);
     assert.equal((await create(f, { ...input, preferredDate: "2099-10-26" })).status, 409);
   }
 });
 
 test("invalid consent, profile, service, time window and date cannot create an appointment", async () => {
   for (const changes of [{ bookingTermsAccepted: false }, { serviceId: "made-up" }, { preferredTimeSlot: "evening" }, { preferredDate: "25/10/2099" }, { preferredDate: "2099-02-30" }, { consumerNotes: "x".repeat(501) }, { requestId: "short" }]) {
-    const f = fixture(); assert.ok((await create(f, { ...input, ...changes })).status >= 400); assert.equal(f.values("auditLogs").length, 0);
+    const f = fixture(); assert.ok((await create(f, { ...input, ...changes })).status >= 400); assert.equal(f.values("auditLogs").filter((item) => item.module === "consultationBookings").length, 0);
   }
   for (const profile of [{ phone: "" }, { privacyConsentVersion: "old" }, { customerTermsAcceptedAt: null }]) {
     const f = fixture({ profile }); assert.equal((await create(f)).status, 409); assert.equal(f.values("consultationBookings").length, 0);
@@ -90,29 +93,37 @@ async function seeded(options = {}) {
   return { f, id: (await response.json()).bookingId };
 }
 
-test("Admin confirmation and completion preserve price, consent and provider snapshots and notify the Consumer once", async () => {
+test("Admin reschedules a confirmed consultation, emails old and new schedule once, then completes it", async () => {
   const { f, id } = await seeded();
   f.actor.role = "admin"; f.actor.uid = "admin";
-  const body = { status: "confirmed", confirmedDate: "2099-10-25", confirmedTime: "10:15", adminNotes: "Please be ready five minutes before your consultation.", consultantCharge: 1 };
-  assert.equal((await update(f, id, body)).status, 200);
+  const savedBefore = f.records.get(`consultationBookings/${id}`);
+  const body = { action: "reschedule", requestId: "reschedule-attempt-0001", expectedAuditId: savedBefore.lastAuditId,
+    confirmedDate: "2099-10-26", confirmedTime: "10:15", adminNotes: "Please be ready five minutes before your consultation.", consultantCharge: 1 };
+  const response = await update(f, id, body);
+  assert.equal(response.status, 200); assert.equal((await response.json()).email.status, "accepted");
   assert.equal((await update(f, id, body)).status, 200);
   const saved = f.records.get(`consultationBookings/${id}`);
   assert.equal(saved.status, "confirmed"); assert.equal(saved.confirmedTime, "10:15"); assert.equal(saved.consultantCharge, 900.5);
-  assert.equal(f.calls.emails.length, 1);
-  assert.equal(f.calls.emails[0].kind, "consultation");
-  assert.equal(f.calls.emails[0].booking.consumerEmail, "patient@example.com");
-  assert.equal(f.calls.emails[0].booking.confirmedTime, "10:15");
+  assert.equal(saved.confirmedAt, savedBefore.confirmedAt);
+  assert.equal(f.calls.smtp.length, 2);
+  assert.match(f.calls.smtp[1].text, /rescheduled/);
+  assert.match(f.calls.smtp[1].text, /Original appointment date: 25\/10\/2099/);
+  assert.match(f.calls.smtp[1].text, /Original appointment time: 09:30 - 11:45 IST/);
+  assert.match(f.calls.smtp[1].text, /Updated appointment date: 26\/10\/2099/);
+  assert.match(f.calls.smtp[1].text, /10:15 IST/);
+  assert.equal(f.calls.smtp[1].to, "patient@example.com");
+  assert.doesNotMatch(f.calls.smtp[1].text, /five minutes/); // private notes are not copied into email.
   assert.equal(f.values("notifications").filter((item) => item.recipientId === "patient").length, 1);
-  assert.equal(f.values("auditLogs").length, 2);
-  assert.equal((await update(f, id, { status: "completed" })).status, 200);
-  assert.equal(f.calls.emails.length, 1);
-  assert.equal((await update(f, id, body)).status, 409);
+  assert.equal(f.values("auditLogs").filter((item) => item.module === "consultationBookings").length, 2);
+  assert.equal((await update(f, id, { action: "completed" })).status, 200);
+  assert.equal(f.calls.smtp.length, 2);
   assert.ok(f.records.get(`consultationBookings/${id}`).completedAt);
+  assert.equal((await update(f, id, { ...body, requestId: "reschedule-attempt-0002", confirmedTime: "10:30" })).status, 409);
 });
 
 test("Consumer can cancel only their own pending or confirmed consultation; Hospital cannot update any", async () => {
   const { f, id } = await seeded();
-  assert.equal((await update(f, id, { status: "confirmed" })).status, 403);
+  assert.equal((await update(f, id, { status: "confirmed" })).status, 400);
   f.actor.uid = "stranger"; assert.equal((await update(f, id, { status: "cancelled" })).status, 403);
   f.actor.role = "hospital"; assert.equal((await update(f, id, { status: "cancelled" })).status, 403);
   f.actor.role = "consumer"; f.actor.uid = "patient";
@@ -122,15 +133,111 @@ test("Consumer can cancel only their own pending or confirmed consultation; Hosp
   assert.equal(f.values("notifications").filter((entry) => entry.recipientId === "admin").length, 2);
 });
 
-test("Admin cannot confirm outside a preferred window, against inactive providers, or skip transitions", async () => {
+test("Admin cannot reschedule outside the window, against unavailable providers, or use removed actions", async () => {
   const { f, id } = await seeded(); f.actor.role = "admin"; f.actor.uid = "admin";
+  const base = { action: "reschedule", requestId: "reschedule-attempt-0001", confirmedDate: "2099-10-25", confirmedTime: "10:00" };
   for (const confirmedTime of ["09:00", "11:45", "19:00", "10:99", "invalid"]) {
-    assert.equal((await update(f, id, { status: "confirmed", confirmedDate: "2099-10-25", confirmedTime })).status, 400);
+    assert.equal((await update(f, id, { ...base, confirmedTime })).status, 400);
   }
-  assert.equal((await update(f, id, { status: "completed" })).status, 409);
+  for (const status of ["confirmed", "rejected"]) assert.equal((await update(f, id, { status })).status, 400);
+  assert.equal((await update(f, id, { ...base, requestId: "bad" })).status, 400);
+  assert.equal((await update(f, id, { ...base, expectedAuditId: "stale" })).status, 409);
   f.records.set("consultants/AS001", { ...consultant, status: "inactive" });
-  assert.equal((await update(f, id, { status: "confirmed", confirmedDate: "2099-10-25", confirmedTime: "10:00" })).status, 409);
-  assert.equal(f.values("auditLogs").length, 1); assert.equal(f.values("notifications").length, 1);
+  assert.equal((await update(f, id, base)).status, 409);
+  assert.equal(f.values("auditLogs").filter((item) => item.module === "consultationBookings").length, 1);
+  assert.equal(f.values("notifications").length, 1);
+  assert.equal(f.calls.smtp.length, 1);
+});
+
+test("Admin cancellation emails the original schedule after saving and retries never resend", async () => {
+  const { f, id } = await seeded(); f.actor.role = "admin"; f.actor.uid = "admin";
+  const body = { action: "cancelled", requestId: "cancellation-attempt-0001" };
+  const response = await update(f, id, body); assert.equal(response.status, 200);
+  assert.equal((await response.json()).email.status, "accepted");
+  assert.equal((await update(f, id, body)).status, 200);
+  assert.equal((await update(f, id, { ...body, requestId: "cancellation-attempt-0002" })).status, 200);
+  assert.equal(f.records.get(`consultationBookings/${id}`).status, "cancelled");
+  assert.equal(f.calls.smtp.length, 2);
+  assert.match(f.calls.smtp[1].text, /cancelled/); assert.match(f.calls.smtp[1].text, /25\/10\/2099/);
+  assert.match(f.calls.smtp[1].text, /09:30 - 11:45 IST/);
+  assert.match(f.calls.smtp[1].text, /info@ayursarga.com/);
+});
+
+test("Repeated reschedules preserve each original schedule, reject stale/conflicting actions, and create separate notifications", async () => {
+  const { f, id } = await seeded(); f.actor.role = "admin"; f.actor.uid = "admin";
+  const first = { action: "reschedule", requestId: "reschedule-attempt-0001", expectedAuditId: f.records.get(`consultationBookings/${id}`).lastAuditId, confirmedDate: "2099-10-26", confirmedTime: "10:00" };
+  const responses = await Promise.all([update(f, id, first), update(f, id, first)]);
+  assert.deepEqual(responses.map((value) => value.status), [200, 200]);
+  assert.equal(f.calls.smtp.length, 2);
+  assert.equal((await update(f, id, { ...first, confirmedTime: "10:15" })).status, 409);
+  assert.equal((await update(f, id, { ...first, requestId: "reschedule-attempt-0002", confirmedTime: "10:15" })).status, 409);
+  const second = { ...first, requestId: "reschedule-attempt-0002", expectedAuditId: f.records.get(`consultationBookings/${id}`).lastAuditId, confirmedDate: "2099-10-27", confirmedTime: "10:30" };
+  assert.equal((await update(f, id, second)).status, 200);
+  assert.equal((await update(f, id, first)).status, 200); // A delayed retry must not revert the new schedule.
+  assert.equal(f.records.get(`consultationBookings/${id}`).confirmedDate, "2099-10-27");
+  assert.equal(f.calls.smtp.length, 3);
+  assert.match(f.calls.smtp[2].text, /Original appointment date: 26\/10\/2099/);
+  assert.match(f.calls.smtp[2].text, /Original appointment time: 10:00 IST/);
+  assert.equal(f.values("notifications").filter((item) => item.recipientId === "patient").length, 2);
+});
+
+test("SMTP failure or an unknown delivery outcome never undo bookings or resend an event", async () => {
+  for (const options of [{ failEmail: true }, { failEmailOutcomeCommit: true }]) {
+    const { f, id } = await seeded(options); f.actor.role = "admin"; f.actor.uid = "admin";
+    const body = { action: "cancelled", requestId: "cancellation-attempt-0001" };
+    const response = await update(f, id, body);
+    assert.equal(response.status, 200);
+    const result = await response.json();
+    assert.equal(result.email.status, options.failEmail ? "failed" : "unknown");
+    assert.equal(f.records.get(`consultationBookings/${id}`).status, "cancelled");
+    const before = f.calls.smtp.length;
+    const retry = await update(f, id, body); assert.equal(retry.status, 200);
+    assert.ok(["failed", "sending"].includes((await retry.json()).email.status));
+    assert.equal(f.calls.smtp.length, before);
+  }
+});
+
+test("Legacy requested consultations can be rescheduled but are never silently migrated", async () => {
+  const { f, id } = await seeded();
+  const path = `consultationBookings/${id}`;
+  f.records.set(path, { ...f.records.get(path), status: "requested", confirmedDate: null, confirmedTime: null, confirmedAt: null });
+  f.actor.role = "admin"; f.actor.uid = "admin";
+  assert.equal((await update(f, id, { action: "completed" })).status, 409);
+  assert.equal((await update(f, id, { action: "reschedule", requestId: "legacy-reschedule-0001", confirmedDate: "2099-10-25", confirmedTime: "10:00" })).status, 200);
+  assert.equal(f.records.get(path).status, "confirmed");
+});
+
+test("a rejected appointment commit cannot send a reschedule or cancellation email", async () => {
+  const { f: original, id } = await seeded();
+  for (const action of ["reschedule", "cancelled"]) {
+    const f = fixture({ actor: { role: "admin", uid: "admin" }, failCommit: true, records: Object.fromEntries(original.records) });
+    assert.equal((await update(f, id, { action, requestId: "failing-action-00001", confirmedDate: "2099-10-26", confirmedTime: "10:00" })).status, 503);
+    assert.equal(f.calls.smtp.length, 0);
+    assert.equal(f.records.get(`consultationBookings/${id}`).confirmedDate, "2099-10-25");
+    assert.equal(f.values("consultationEmailEvents").length, 1);
+  }
+});
+
+test("a lost action response resumes its pending email once without repeating the schedule change", async () => {
+  const { f: original, id } = await seeded();
+  const f = fixture({ actor: { role: "admin", uid: "admin" }, throwAfterCommit: true, records: Object.fromEntries(original.records) });
+  const body = { action: "reschedule", requestId: "lost-response-action-0001", confirmedDate: "2099-10-26", confirmedTime: "10:00" };
+  assert.equal((await update(f, id, body)).status, 503);
+  assert.equal(f.calls.smtp.length, 0);
+  assert.equal((await update(f, id, body)).status, 200);
+  assert.equal((await update(f, id, body)).status, 200);
+  assert.equal(f.calls.smtp.length, 1);
+  assert.equal(f.values("auditLogs").filter((item) => item.module === "consultationBookings").length, 2);
+  assert.equal(f.values("notifications").filter((item) => item.recipientId === "patient").length, 1);
+});
+
+test("schedule validation uses India care dates, excludes past times and never reverses day/month", () => {
+  const { validConsultationSchedule } = loadTypeScript("features/consultations/schedule.ts");
+  const now = new Date("2099-10-25T04:30:00Z"); // 10:00 IST
+  assert.equal(validConsultationSchedule("2099-10-25", "09:30", "11:45", "09:59", now), false);
+  assert.equal(validConsultationSchedule("2099-10-25", "09:30", "11:45", "10:01", now), true);
+  assert.equal(validConsultationSchedule("2099-10-25", "09:30", "11:45", undefined, now), true);
+  assert.equal(validConsultationSchedule("25/10/2099", "09:30", "11:45", "10:01", now), false);
 });
 
 test("public consultant projection is an explicit whitelist, excludes private records and supports zero charges", () => {
@@ -148,6 +255,8 @@ test("rules retain Admin-only raw consultant reads and server-only consultation 
   const match = rules.split("match /consultationBookings/{bookingId} {")[1].split("\n    }")[0];
   assert.match(match, /isAdmin\(\) \|\| \(isConsumer\(\) && resource.data.consumerId == request.auth.uid\)/);
   assert.match(match, /allow create, update, delete: if false/);
+  const deliveryRule = rules.split("match /consultationEmailEvents/{eventId} {")[1].split("\n    }")[0];
+  assert.match(deliveryRule, /allow read, write: if false/);
   assert.match(rules.split("match /consultants/{consultantId} {")[1], /^\s*allow read: if isAdmin\(\)/);
   const indexes = JSON.parse(readFileSync("firestore.indexes.json", "utf8")).indexes;
   assert.ok(indexes.some((entry) => entry.collectionGroup === "consultants" && entry.fields.some((field) => field.fieldPath === "consultationServices" && field.arrayConfig === "CONTAINS")));

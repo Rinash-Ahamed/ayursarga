@@ -683,6 +683,11 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    match /consultationEmailEvents/{eventId} {
+      // Private, immutable-payload delivery records; verified server endpoints only.
+      allow read, write: if false;
+    }
+
     match /availability/{availabilityId} {
       allow read: if isAdmin() || hasOperationalHospitalAccess(resource.data.hospitalId);
       allow create, update, delete: if false;

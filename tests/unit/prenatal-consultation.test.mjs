@@ -98,10 +98,11 @@ test("Cosmetologist opens one online provider card instead of location/date fiel
 test("Stress management uses its requested heading and allows only one choice", () => {
   const flow = wellnessFlow("Stress management");
   assert.ok(flow.render().some((node) => node.type === "h3" && text(node) === "What kind of wellness experience are you looking for?"));
-  flow.choose("Yoga & relaxation therapies");
-  flow.choose("Body therapies");
+  assert.deepEqual(flow.render().filter((node) => node.type === "button" && typeof node.props["aria-pressed"] === "boolean").map(text), ["Wellness Retreats", "Spa & Rejuvenation", "Psychologist consultation"]);
+  flow.choose("Wellness Retreats");
+  flow.choose("Spa & Rejuvenation");
   const selected = flow.render().filter((node) => node.type === "button" && node.props["aria-pressed"] === true);
-  assert.deepEqual(selected.map(text), ["Body therapies"]);
+  assert.deepEqual(selected.map(text), ["Spa & Rejuvenation"]);
 });
 
 test("Psychologist opens a single consultation card without location or date fields", () => {
@@ -115,9 +116,23 @@ test("Psychologist opens a single consultation card without location or date fie
   flow.choose("Continue →");
   assert.equal(flow.render().some((node) => node.type === "input" || node.type === "select" || node.type.name === "DateInput"), false);
   flow.choose("← Back");
-  flow.choose("Body therapies");
+  flow.choose("Spa & Rejuvenation");
   flow.choose("Continue →");
   assert.equal(flow.render().some((node) => node.type.name === "DateInput"), true);
+});
+
+test("Stress retreats and spa keep the centre booking flow instead of online consultation", () => {
+  for (const preference of ["Wellness Retreats", "Spa & Rejuvenation"]) {
+    const flow = wellnessFlow("Stress management");
+    flow.choose(preference);
+    flow.choose("Continue →");
+    assert.equal(flow.render().some((node) => node.type.name === "DateInput"), true);
+    assert.equal(flow.render().some((node) => node.props.className === "consultation-options consultation-options-single"), false);
+    flow.render().find((node) => node.type.name === "DateInput").props.onChange({ target: { value: "2099-10-25" } });
+    flow.choose("Prepare my request →");
+    const link = flow.render().find((node) => node.type === "a" && text(node).includes("Browse centres and packages"));
+    assert.equal(new URL(link.props.href, "https://test.local").searchParams.get("startDate"), "2099-10-25");
+  }
 });
 
 test("Lactation concerns retain multiselect behavior", () => {

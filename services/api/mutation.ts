@@ -9,6 +9,6 @@ function encode(value: unknown): unknown {
 }
 
 /** Return only committed fields; callers must invoke this after the atomic write. */
-export function mutationJson(changes: Record<string, unknown>) {
-  return apiJson({ ok: true, changes: encode(changes) });
+export function mutationJson(changes: Record<string, unknown>, metadata?: { email: { status: string } }) {
+  return apiJson({ ok: true, changes: encode(changes), ...metadata });
 }

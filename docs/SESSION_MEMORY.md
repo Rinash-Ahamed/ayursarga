@@ -2,6 +2,61 @@
 
 Updated: 25 October 2026 (Asia/Calcutta).
 
+## Automatic online consultation confirmation and schedule emails (25 October 2026)
+
+- v4.14.0: new consultationBookings are confirmed immediately for the chosen
+  India care date/window; confirmedTime stays null rather than inventing an exact
+  appointment. Admin Confirm/Reject actions are removed. Reschedule validates a
+  future India date/exact time within the snapshotted and currently configured
+  consultant window, retains confirmed status and preserves original snapshots.
+  Legacy requested/rejected documents are not migrated. Requested records may
+  be explicitly rescheduled or cancelled; completion still requires confirmed.
+- Existing IDs, consent, charges, own-Consumer/Admin reads, Hospital isolation,
+  audited transactions and bounded lists remain. Admin action IDs deduplicate
+  retries; expected audit IDs reject stale UI edits. Repeated reschedules use
+  distinct atomic bell events. Consumer and Admin copy/status/date displays agree.
+  Hospital package booking routes and their immediate confirmation are untouched.
+- Shared bookingEmail branding/SMTP now supports original/updated schedule and
+  cancellation emails (including a window when no exact time was assigned).
+  Server-only consultationEmailEvents snapshots are queued in the same
+  appointment/audit transaction. After commit, one durable claim precedes SMTP.
+  Recorded outcomes prevent retries from sending another email. Pending events
+  can resume through the original request retry; there is no background worker.
+  SMTP acceptance is not inbox-delivery proof. Crashes or an uncertain SMTP/
+  outcome-write result may leave a sending/unknown event; it is deliberately not
+  auto-resent. Admin sees explicit failure/uncertainty feedback and is directed
+  to contact the Consumer rather than being told delivery succeeded.
+- Delivery state changes are audited. Explicit Firestore rules deny every
+  client role access to email-event records (already default-denied); existing
+  consultation client-write denial and role-scoped reads stay unchanged.
+  No new index is required; server document access uses the verified Admin SDK,
+  not client permissions. Application and explicit rule changes have not been
+  deployed. AGENTS workflow guidance is
+  updated to match the owner's new confirmation decision.
+- Validation: 48 focused unit/API/transaction/email/shared-mutation/Hospital
+  booking regressions passed with fake cloud dependencies. 16 browser cases
+  passed across desktop, 320px Chromium phone, WebKit phone, tablet and landscape,
+  covering booking consent, rescheduling/cancel-before-save, invalid times,
+  double-submit prevention, scroll restoration, filters and visible email errors.
+  Initial browser assertions used capitalized status text (the existing formatter
+  is lowercase); corrected tests only. Lost-response coverage also required fake
+  auto IDs to continue after seeded records; the fixture now avoids those clashes.
+  Emulator denial cases added, not executed; no deployed-permission, physical
+  device or live SMTP claim. No build, lint, typecheck or deployment performed.
+
+## Stress Management choices (25 October 2026)
+
+- v4.13.3 replaces Yoga & relaxation therapies, Pranayama & meditation and
+  Body therapies with Wellness Retreats and Spa & Rejuvenation. Exactly three
+  single-select choices remain, including Psychologist consultation.
+- Only Psychologist opens online consultation. Both retreat/spa options retain
+  preferred date/district and centre/package discovery. Following the public
+  design skill, existing layout, styling and other wellness categories remain
+  unchanged. No API, rules or booking persistence changes.
+- All 12 focused Wellness Path regression tests passed, covering exact choices,
+  single selection, online routing, centre routing and other existing paths.
+  No build, lint, device-browser validation or deployment performed.
+
 ## Silent portal notification alerts (25 October 2026)
 
 - v4.13.2 removes the shared Web Audio chime/helper and gesture-priming

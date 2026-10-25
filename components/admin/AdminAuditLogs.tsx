@@ -47,6 +47,7 @@ const RECORD_LABELS: Record<string, string> = {
   services: "Service package",
   bookings: "Booking",
   consultationBookings: "Online consultation",
+  consultationEmailEvents: "Consultation email",
   invoices: "Invoice",
   notificationInboxes: "Notification inbox",
 };
@@ -74,6 +75,7 @@ function areaLabel(module: string) {
     services: "Services",
     bookings: "Bookings",
     consultationBookings: "Online consultations",
+    consultationEmailEvents: "Consultation email delivery",
     invoices: "Invoices & Billing",
     notificationInboxes: "Notifications",
   };

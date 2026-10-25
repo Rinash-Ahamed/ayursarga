@@ -13,8 +13,11 @@ import { CONSULTANT_TIME_SLOTS, type ConsultantTimeSlot } from "@/features/consu
 import { BOOKING_TERMS_VERSION, CUSTOMER_TERMS_VERSION, CONSUMER_PRIVACY_NOTICE_VERSION } from "@/features/consumers/privacyConsent";
 import { isValidPhoneNumber } from "@/utils/phone";
 import { isIsoDate, toDateInputValue } from "@/utils/date";
+import { validConsultationSchedule } from "@/features/consultations/schedule";
+import { queueConsultationEmail, deliverConsultationEmail } from "@/services/email/consultationEmailService";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 class ConsultationError extends Error { constructor(message: string, public status: number) { super(message); } }
 
 export async function POST(request: Request) {
@@ -51,6 +54,7 @@ export async function POST(request: Request) {
       if (!provider || !provider.preferredTimeSlots.includes(slot) || !timing) throw new ConsultationError("This consultant or time window is no longer bookable. Please choose again.", 409);
       if (provider.consultantCharge !== expectedCharge) throw new ConsultationError("The consultation charge has changed. Refresh the consultant list and review the new charge before booking.", 409);
       if (timing.startTime !== body.expectedSlotStartTime || timing.endTime !== body.expectedSlotEndTime) throw new ConsultationError("The preferred time window has changed. Refresh the consultant list and choose again.", 409);
+      if (!validConsultationSchedule(date, timing.startTime, timing.endTime)) throw new ConsultationError("Choose an available date and time window that has not ended.", 400);
       const admins = await consultationAdminRecipients(transaction, firestore);
       const bookingReference = await reserveBookingReference(transaction, firestore, id);
       const audit = firestore.collection("auditLogs").doc();
@@ -62,18 +66,21 @@ export async function POST(request: Request) {
         consultantId, consultantName: provider.name, consultantDesignation: provider.designation,
         serviceId: service.id, serviceName: service.label, consultantCharge: provider.consultantCharge,
         preferredDate: date, preferredTimeSlot: slot, slotStartTime: timing.startTime, slotEndTime: timing.endTime,
-        consumerNotes: notes || null, adminNotes: null, status: "requested", confirmedDate: null, confirmedTime: null,
-        confirmedAt: null, completedAt: null, bookingTermsAcceptedAt: now, bookingTermsVersion: BOOKING_TERMS_VERSION,
+        consumerNotes: notes || null, adminNotes: null, status: "confirmed", confirmedDate: date, confirmedTime: null,
+        confirmedAt: now, completedAt: null, bookingTermsAcceptedAt: now, bookingTermsVersion: BOOKING_TERMS_VERSION,
         createdAt: now, createdBy: uid, updatedAt: now, updatedBy: uid, archivedAt: null, archivedBy: null, lastAuditId: audit.id,
       };
       transaction.create(reference, data);
       transaction.create(audit, { action: "create", module: "consultationBookings", recordId: id, actorId: uid, actorRole: "consumer",
         previousValues: null, updatedValues: data, timestamp: now, source: "server", device: requestAuditDevice(request) });
+      queueConsultationEmail(transaction, firestore, { eventId: `confirmation-${id}`, bookingId: id, event: "confirmed",
+        booking: data, actorId: uid, actorRole: "consumer", auditId: audit.id, now });
       for (const admin of admins) addConsultationNotification(transaction, firestore, { recipientId: admin, recipientRole: "admin", bookingId: id, bookingReference,
-        message: `${provider.name} · ${service.label} · New online appointment request.`, event: "consultation_created", actorId: uid, auditId: audit.id, now });
+        message: `${provider.name} · ${service.label} · Online appointment confirmed.`, event: "consultation_created", actorId: uid, auditId: audit.id, now });
       return { bookingReference, duplicate: false };
     });
-    return apiJson({ ok: true, bookingId: id, ...result }, result.duplicate ? 200 : 201);
+    const email = await deliverConsultationEmail(firestore, `confirmation-${id}`);
+    return apiJson({ ok: true, bookingId: id, ...result, email }, result.duplicate ? 200 : 201);
   } catch (error) {
     if (error instanceof AdminAuthorizationError || error instanceof RequestBodyError || error instanceof ConsultationError) return apiJson({ error: error.message }, error.status);
     logApiError("POST /api/consumer/consultations", error);

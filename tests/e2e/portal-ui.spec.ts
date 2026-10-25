@@ -30,7 +30,7 @@ test("online consultation form uses assigned charges and custom windows, require
   page.on("pageerror", (error) => errors.push(error.message));
   await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
   await mount(page, "consumer-consultation-new");
-  const submit = page.getByRole("button", { name: "Request appointment", exact: true });
+  const submit = page.getByRole("button", { name: "Book appointment", exact: true });
   await expect(submit).toBeDisabled();
   await page.getByRole("radio", { name: /Assigned Consultation Professional/ }).check();
   const providerCard = await page.locator(".consultation-professional").boundingBox();
@@ -77,9 +77,9 @@ test("online consultant availability refreshes when the Consumer returns to the 
 test("consumer online consultation history uses the aligned empty-state pattern", async ({ page }) => {
   await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
   await mount(page, "consumer-consultations-empty");
-  await expect(page.getByText("Preferred time windows are requests.", { exact: false })).toBeVisible();
+  await expect(page.getByText("Appointments are confirmed when booked", { exact: false })).toBeVisible();
   await expect(page.getByRole("heading", { name: "No online consultations yet" })).toBeVisible();
-  await expect(page.getByText("Appointments requested through Wellness Path", { exact: false })).toBeVisible();
+  await expect(page.getByText("Appointments booked through Wellness Path", { exact: false })).toBeVisible();
   await expect(page.getByRole("link", { name: "My hospital bookings" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
@@ -142,28 +142,52 @@ test("booking detail navigation stays separate from booking content", async ({ p
   }
 });
 
-test("online consultation history confirms with a locked shared dialog and Consumer sees no Admin controls", async ({ page }, testInfo) => {
+test("online consultation history reschedules with a locked shared dialog and Consumer sees no Admin controls", async ({ page }, testInfo) => {
   await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
   await mount(page, "admin-consultations");
   await expect(page.getByText("Assigned Consultation Professional", { exact: false })).toBeVisible();
-  await page.getByRole("button", { name: "Confirm appointment", exact: true }).click();
+  await expect(page.locator(".portal-status")).toHaveText("confirmed");
+  await expect(page.getByRole("button", { name: "Confirm appointment", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Reject", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Reschedule", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
   expect(await page.evaluate(() => document.body.style.position)).toBe("fixed");
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { consultantWrites: object[] } }).consumerBookingFixture.consultantWrites.length)).toBe(0);
-  await page.getByRole("button", { name: "Confirm appointment", exact: true }).click();
+  await page.getByRole("button", { name: "Reschedule", exact: true }).click();
   await dialog.locator('input[type="time"]').fill("10:15");
   await dialog.getByRole("button", { name: "Confirm", exact: true }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.getByText("25/10/2099 · 10:15", { exact: true })).toBeVisible();
+  await expect(page.getByText("25/10/2099 · 10:15 IST", { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.body.style.position)).not.toBe("fixed");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath("online-consultation-history.png"), fullPage: true });
   await mount(page, "consumer-consultations");
+  await expect(page.locator(".portal-status")).toHaveText("confirmed");
   await expect(page.getByRole("button", { name: "Confirm appointment", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Reschedule", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Reject", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Cancel appointment", exact: true })).toBeVisible();
+});
+
+test("consultation rescheduling validates before saving, submits once and reports email failure honestly", async ({ page }) => {
+  await mount(page, "admin-consultations-email-failure");
+  await page.getByRole("button", { name: "Reschedule", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.locator('input[type="time"]').fill("12:00");
+  await dialog.getByRole("button", { name: "Confirm", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toContainText("within the appointment window");
+  expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { consultantWrites: unknown[] } }).consumerBookingFixture.consultantWrites.length)).toBe(0);
+  await dialog.locator('input[type="time"]').fill("10:15");
+  await dialog.getByRole("button", { name: "Confirm", exact: true }).evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
+  await expect(dialog).toBeHidden();
+  expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { consultantWrites: unknown[] } }).consumerBookingFixture.consultantWrites.length)).toBe(1);
+  await expect(page.getByText("25/10/2099 · 10:15 IST", { exact: true })).toBeVisible();
+  await expect(page.locator(".portal-form-error")).toContainText("mail service did not confirm");
+  await expect(page.locator('.portal-toast[data-tone="error"]')).toContainText("mail service did not confirm");
+  expect(await page.evaluate(() => document.body.style.position)).not.toBe("fixed");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
 
 test("Admin online consultations match booking cards and provide responsive filters", async ({ page }) => {

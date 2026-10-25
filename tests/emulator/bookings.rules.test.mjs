@@ -108,6 +108,16 @@ test("consultations remain separate: Admin/own Consumer reads only and no client
   }
 });
 
+test("consultation delivery records deny every client role", async () => {
+  const path = `consultationEmailEvents/local-email-${suffix}`;
+  await seed(path, { ...metadata, ...fields({ status: "accepted", recipient: "private@example.com" }) });
+  for (const role of [undefined, "admin", "consumer", "hospital", "other", "inactive"]) {
+    assert.equal((await call(`/${path}`, { role })).status, 403);
+    assert.equal((await call(`/${path}`, { role, method: "PATCH", body: { fields: fields({ status: "pending" }) } })).status, 403);
+    assert.equal((await call(`/${path}`, { role, method: "DELETE" })).status, 403);
+  }
+});
+
 test("invoice records are Admin-readable and deny all direct client writes", async () => {
   const path = `invoices/local-invoice-${suffix}`;
   await seed(path, { ...metadata, ...fields({ invoiceNumber: "AS/2026/00001", hospitalId: centre, totalPaise: 118000, status: "issued" }) });
