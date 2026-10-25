@@ -116,6 +116,21 @@ test("hospital can start automatically confirmed treatment without an exact appo
   assert.equal(f.calls.writes.length, 2);
 });
 
+test("Hospital can complete treatment directly after start with audited completion timestamps", async () => {
+  const f = fixture({ "hospitals/centre": { status: "active" }, "bookings/booking": {
+    hospitalId: "centre", status: "confirmed", treatmentStatus: "started",
+  } });
+  const response = await f.load("app/api/hospital/bookings/[bookingId]/route.ts").PATCH(request({ action: "treatment", treatmentStatus: "completed" }), context("bookingId", "booking"));
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.changes.status, "completed");
+  assert.equal(body.changes.treatmentStatus, "completed");
+  assert.ok(body.changes.completedAt.__ayursargaTimestamp);
+  assert.ok(body.changes.treatmentCompletedAt.__ayursargaTimestamp);
+  assert.equal(f.calls.commits, 1);
+  assert.equal(f.calls.writes.length, 2);
+});
+
 test("legacy Hospital confirmation emails follow successful commits, never failed updates or treatment changes", async () => {
   for (const failCommit of [false, true]) {
     const f = fixture({ "hospitals/centre": { status: "active" }, "bookings/booking": {

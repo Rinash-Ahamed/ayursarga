@@ -183,6 +183,10 @@ to deploy, rerun maintenance scripts, or modify live data.
 - Keep appointment status separate from treatment progress. Hospital treatment
   progress follows `not_started` → `started` → `ongoing` → `completed` (with a
   direct `started` → `completed` option), and every transition is audited.
+  The Hospital booking UI exposes Start treatment then Complete treatment only,
+  with Treatment Started/Treatment completed badges. Do not restore Hospital
+  Reschedule or Mark ongoing actions. Preserve historical reschedule/ongoing
+  records and their supported handling without silently migrating data.
 - Online Wellness Path appointments use the separate `consultationBookings`
   collection and authenticated server endpoints, not hospital `bookings` or
   invented hospital/service IDs. Creation snapshots consultant/service, charge,
@@ -197,11 +201,24 @@ to deploy, rerun maintenance scripts, or modify live data.
   confirmed and unaffected. Consumer reads/cancellation are
   own-record only; Hospitals cannot access these appointments. No client writes,
   automatic payments, meeting links or consultant Auth accounts are implied.
+  Configured consultant weekdays and optional ISO `availableDates` (maximum 31)
+  restrict online booking dates: when both are set, both must match. Missing/
+  empty date preferences preserve legacy unrestricted future days. Consumer
+  calendars and Admin rescheduling use the same restrictions; creation and
+  rescheduling must recheck current consultant data in the audited transaction.
+  Public projections expose only these safe availability fields, never contacts.
+  Changing availability must not cancel or silently migrate existing appointments.
   Consultation confirmation/reschedule/cancellation emails use the shared
   branded SMTP service and server-only `consultationEmailEvents` records queued
   atomically with the appointment audit. Send only after commit; claim each
   event once and report SMTP acceptance/failure/uncertainty honestly. Never
   automatically resend an event after an ambiguous SMTP result.
+  Before claiming a pending consultation email, transactionally check the current
+  appointment status and originating booking audit revision. Mark obsolete
+  events superseded with an atomic audit instead of sending; apply this to both
+  recipients and all consultation email types. Legacy pending events may use
+  their unchanged lastAuditId as the originating revision. Never restart an
+  already claimed/accepted/failed/unknown email or claim SMTP can be recalled.
   New consultation bookings, Admin reschedules and Admin cancellations also
   email the assigned consultant using their server-read registered email.
   Consultant and Consumer delivery claims/outcomes are independent; missing

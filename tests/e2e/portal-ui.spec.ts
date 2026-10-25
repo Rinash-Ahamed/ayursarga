@@ -25,6 +25,29 @@ async function mount(page: Page, screen: string) {
   }
   await page.waitForTimeout(120);
 }
+test("Hospital bookings go directly from start to complete with treatment badges and no reschedule or ongoing actions", async ({ page }) => {
+  await mount(page, "hospital-bookings");
+  await expect(page.getByRole("button", { name: "Reschedule", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Mark ongoing", exact: true })).toHaveCount(0);
+  await mount(page, "hospital-auto-confirmed");
+  await page.getByRole("button", { name: "Start treatment", exact: true }).click();
+  await expect(page.locator(".portal-status")).toHaveText("Treatment Started");
+  await expect(page.getByRole("button", { name: "Start treatment", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Complete treatment", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.locator(".portal-status")).toHaveText("Treatment Started");
+  await page.getByRole("button", { name: "Complete treatment", exact: true }).click();
+  await dialog.getByRole("button", { name: "Complete treatment", exact: true }).click();
+  await expect(page.locator(".portal-status")).toHaveText("Treatment completed");
+  await expect(page.getByRole("button", { name: "Complete treatment", exact: true })).toHaveCount(0);
+  expect(await page.evaluate(() => document.body.style.position)).not.toBe("fixed");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await mount(page, "admin-booking-detail");
+  await expect(page.locator(".portal-status")).toHaveText("confirmed");
+});
+
 test("online consultation form uses assigned charges and custom windows, requires consent and submits once", async ({ page }, testInfo) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -376,6 +399,62 @@ test("hospital user cards show account details without raw hospital IDs", async 
   await expect(card).not.toContainText("Hospital centre");
   await expect(card.locator(".portal-status")).toHaveText("active");
   await expect(card.getByRole("button", { name: "Remove", exact: true })).toHaveCount(0);
+});
+
+test("consultant date restrictions disable unavailable dates and keep nested calendars viewport-safe", async ({ page }) => {
+  await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "consumer-consultation-restricted");
+  await page.getByRole("radio").first().check();
+  const date = page.getByRole("textbox", { name: "Preferred appointment date *", exact: true });
+  await date.fill("26/10/2099"); await date.blur();
+  await expect(date).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByRole("button", { name: "Book appointment", exact: true })).toBeDisabled();
+  await expect(page.getByText("The consultant is not available on this date. Choose an available date.", { exact: true })).toBeVisible();
+  await date.fill("25/10/2099");
+  await page.getByRole("button", { name: "Open calendar", exact: true }).click();
+  const calendar = page.getByRole("dialog", { name: "Choose appointment date" });
+  await expect(calendar.getByRole("button", { name: "26/10/2099", exact: true })).toBeDisabled();
+  await expect(calendar.getByRole("button", { name: "25/10/2099", exact: true })).toBeEnabled();
+  const bounds = await calendar.boundingBox();
+  expect(bounds!.x).toBeGreaterThanOrEqual(0);
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
+  await expect(page.locator("body")).toHaveCSS("position", "fixed");
+  await calendar.getByRole("button", { name: "25/10/2099", exact: true }).click();
+  await expect(calendar).toHaveCount(0);
+  await expect(date).toHaveValue("25/10/2099");
+  expect(await page.evaluate(() => document.body.style.position)).not.toBe("fixed");
+  await mount(page, "admin-consultations-restricted");
+  await page.getByRole("button", { name: "Reschedule", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Reschedule appointment?" });
+  const revised = dialog.getByRole("textbox", { name: "New appointment date *", exact: true });
+  await expect(revised).toBeEnabled();
+  await revised.fill("26/10/2099"); await revised.blur();
+  await expect(dialog.getByRole("button", { name: "Confirm", exact: true })).toBeDisabled();
+  await revised.fill("25/10/2099");
+  await dialog.getByRole("button", { name: "Open calendar", exact: true }).click();
+  await expect(calendar).toBeVisible();
+  await calendar.getByRole("button", { name: "Close calendar", exact: true }).click();
+  await expect(dialog).toBeVisible();
+  await expect(page.locator("body")).toHaveCSS("position", "fixed");
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  expect(await page.evaluate(() => document.body.style.position)).not.toBe("fixed");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("consultant specific available dates save and reopen without losing legacy preferences", async ({ page }) => {
+  await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "admin-consultants");
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  const editor = page.getByRole("textbox", { name: /Specific available dates/ });
+  await editor.fill("25/10/2099");
+  await page.getByRole("button", { name: "Add available date", exact: true }).click();
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.locator(".consultant-details")).toContainText("25/10/2099");
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(page.locator('input[name="availableDates"]')).toHaveValue("2099-10-25");
+  await page.getByRole("button", { name: "Remove available date 25/10/2099", exact: true }).click();
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.locator(".consultant-details")).not.toContainText("25/10/2099");
 });
 
 test("consultant designation and preferred availability edit legacy records safely", async ({ page }) => {

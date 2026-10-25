@@ -222,10 +222,52 @@ service cloud.firestore {
         && timings[slot].startTime != timings[slot].endTime);
     }
 
+    function validConsultantDateAt(dates, index) {
+      return dates.size() <= index || (dates[index] is string
+        && dates[index].matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$'));
+    }
+
+    function validConsultantDates(dates) {
+      // Rules have no list-every operation; check each entry in this bounded list.
+      return dates is list && dates.size() <= 31
+        && dates.toSet().size() == dates.size()
+        && validConsultantDateAt(dates, 0)
+        && validConsultantDateAt(dates, 1)
+        && validConsultantDateAt(dates, 2)
+        && validConsultantDateAt(dates, 3)
+        && validConsultantDateAt(dates, 4)
+        && validConsultantDateAt(dates, 5)
+        && validConsultantDateAt(dates, 6)
+        && validConsultantDateAt(dates, 7)
+        && validConsultantDateAt(dates, 8)
+        && validConsultantDateAt(dates, 9)
+        && validConsultantDateAt(dates, 10)
+        && validConsultantDateAt(dates, 11)
+        && validConsultantDateAt(dates, 12)
+        && validConsultantDateAt(dates, 13)
+        && validConsultantDateAt(dates, 14)
+        && validConsultantDateAt(dates, 15)
+        && validConsultantDateAt(dates, 16)
+        && validConsultantDateAt(dates, 17)
+        && validConsultantDateAt(dates, 18)
+        && validConsultantDateAt(dates, 19)
+        && validConsultantDateAt(dates, 20)
+        && validConsultantDateAt(dates, 21)
+        && validConsultantDateAt(dates, 22)
+        && validConsultantDateAt(dates, 23)
+        && validConsultantDateAt(dates, 24)
+        && validConsultantDateAt(dates, 25)
+        && validConsultantDateAt(dates, 26)
+        && validConsultantDateAt(dates, 27)
+        && validConsultantDateAt(dates, 28)
+        && validConsultantDateAt(dates, 29)
+        && validConsultantDateAt(dates, 30);
+    }
+
     function hasValidConsultantFields() {
       return request.resource.data.keys().hasOnly([
           'employeeId', 'employeeSequence', 'name', 'email', 'contactNo', 'whatsappNo',
-          'qualification', 'yearsExperience', 'lastWorkedCompany', 'address', 'designation', 'consultantCharge', 'preferredTimeSlots', 'preferredSlotTimings', 'preferredDays', 'consultationServices',
+          'qualification', 'yearsExperience', 'lastWorkedCompany', 'address', 'designation', 'consultantCharge', 'preferredTimeSlots', 'preferredSlotTimings', 'preferredDays', 'availableDates', 'consultationServices',
           'emergencyContactNo', 'status', 'createdAt', 'createdBy', 'updatedAt',
           'updatedBy', 'archivedAt', 'archivedBy', 'lastAuditId'
         ])
@@ -241,6 +283,7 @@ service cloud.firestore {
           && request.resource.data.consultantCharge >= 0
           && request.resource.data.consultantCharge <= 90071992547409.9
         ))
+        && validConsultantDates(request.resource.data.get('availableDates', []))
         && request.resource.data.get('preferredDays', []) is list
         && request.resource.data.get('preferredDays', []).size() <= 7
         && request.resource.data.get('preferredDays', []).hasOnly(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'])
@@ -669,7 +712,7 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name', 'email', 'contactNo', 'whatsappNo', 'qualification',
             'yearsExperience', 'lastWorkedCompany', 'address', 'emergencyContactNo',
-            'designation', 'consultantCharge', 'preferredTimeSlots', 'preferredSlotTimings', 'preferredDays', 'consultationServices',
+            'designation', 'consultantCharge', 'preferredTimeSlots', 'preferredSlotTimings', 'preferredDays', 'availableDates', 'consultationServices',
             'updatedAt', 'updatedBy', 'lastAuditId'
           ])) || (linkedAuditAction() == 'status_change'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([

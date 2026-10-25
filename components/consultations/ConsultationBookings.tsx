@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useDeferredValue, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import type { ConsultationBookingDocument } from "@/features/firestore/models";
 import type { DocumentRecord, QueryPageOptions } from "@/services/firestore/firestoreService";
 import { emptyQueryPage } from "@/services/firestore/firestoreService";
-import { getConsultationBooking, listConsultationBookings, updateConsultationBooking } from "@/services/consultations/consultationService";
+import { getConsultationBooking, getPublicConsultant, listConsultationBookings, updateConsultationBooking } from "@/services/consultations/consultationService";
+import type { PublicConsultant } from "@/features/consultations/types";
+import { consultantAvailabilitySummary, isConsultantDateAvailable } from "@/features/consultations/availability";
 import { useAuth } from "@/hooks/useAuth";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
@@ -38,6 +40,24 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
   }, [firebaseUser, role, bookingId]);
   const { items, error: loadError, errorNotification, isLoading, hasMore, loadMore, patchItem, reload } = usePaginatedList<ConsultationBookingDocument>(loader, "We could not load online consultations. Please try again.");
   const [action, setAction] = useState<Action | null>(null);
+  const [availability, setAvailability] = useState<PublicConsultant | null>(null);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState("");
+  useEffect(() => {
+    if (action?.status !== "reschedule") return;
+    const controller = new AbortController();
+    getPublicConsultant(action.booking.serviceId, action.booking.consultantId, controller.signal)
+      .then((provider) => {
+        if (controller.signal.aborted) return;
+        setAvailability(provider);
+        if (!provider) setAvailabilityError("This consultant is no longer bookable. Check their availability in Our Consultants.");
+      })
+      .catch(() => { if (!controller.signal.aborted) setAvailabilityError("Could not check current availability. Close and reopen to try again."); })
+      .finally(() => { if (!controller.signal.aborted) setAvailabilityLoading(false); });
+    return () => controller.abort();
+  }, [action]);
+  const dateAllowed = useCallback((value: string) => Boolean(availability && isConsultantDateAvailable(value, availability)), [availability]);
+  const availableDates = availability?.availableDates?.filter((value) => value >= toDateInputValue() && dateAllowed(value)).toSorted() ?? [];
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [notes, setNotes] = useState("");
@@ -71,10 +91,14 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
       ? "Appointments booked through Wellness Path will appear here with their consultant, appointment window and current status."
       : "New online consultation requests will appear here when they are submitted.";
   function open(booking: Appointment, status: Action["status"]) {
+    setAvailability(null); setAvailabilityError(""); setAvailabilityLoading(status === "reschedule");
     setError(null); setDate(booking.confirmedDate ?? booking.preferredDate); setTime(booking.confirmedTime ?? booking.slotStartTime); setNotes(booking.adminNotes ?? ""); setAction({ booking, status, requestId: globalThis.crypto.randomUUID() });
   }
   async function confirm() {
     if (!action || submitting.current) return;
+    if (action.status === "reschedule" && (!availability || availabilityLoading || !dateAllowed(date))) {
+      setError("Choose a date matching the consultant's current availability."); return;
+    }
     if (action.status === "reschedule" && !validConsultationSchedule(date, action.booking.slotStartTime, action.booking.slotEndTime, time)) {
       setError("Choose a future date and a time within the appointment window."); return;
     }
@@ -155,9 +179,13 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
     </div>
     <PortalDialog open={Boolean(action)} title={action ? `${action.status === "reschedule" ? "Reschedule" : action.status === "completed" ? "Complete" : "Cancel"} appointment?` : "Appointment"}
       message={action?.status === "reschedule" ? "Save the revised schedule and email the consumer after it is saved." : action?.status === "cancelled" && role === "admin" ? "Cancel this appointment and email the consumer after it is saved." : "The status changes only after you confirm."} tone={action?.status === "cancelled" ? "danger" : "default"}
-      busy={busy} onCancel={() => { if (!submitting.current) setAction(null); }} onConfirm={() => void confirm()}>
+      busy={busy} confirmDisabled={action?.status === "reschedule" && (availabilityLoading || !availability || !dateAllowed(date))} onCancel={() => { if (!submitting.current) setAction(null); }} onConfirm={() => void confirm()}>
       <div className="portal-form consultation-dialog-fields">
-        {action?.status === "reschedule" && <><p className="full">Current appointment: {formatDisplayDate(action.booking.confirmedDate ?? action.booking.preferredDate)} · {action.booking.confirmedTime ?? `${action.booking.slotStartTime} - ${action.booking.slotEndTime}`} IST</p><label>New appointment date *<DateInput min={toDateInputValue()} value={date} onChange={(event) => setDate(event.target.value)} disabled={busy} required /></label>
+        {action?.status === "reschedule" && <><p className="full">Current appointment: {formatDisplayDate(action.booking.confirmedDate ?? action.booking.preferredDate)} · {action.booking.confirmedTime ?? `${action.booking.slotStartTime} - ${action.booking.slotEndTime}`} IST</p>
+          {availabilityLoading && <p className="full" role="status">Checking current consultant availability…</p>}
+          {availabilityError && <p className="portal-form-error full" role="alert">{availabilityError}</p>}
+          {availability && <p className="full">Available days/dates: {consultantAvailabilitySummary(availability)}</p>}
+          <label>New appointment date *<DateInput min={availableDates[0] ?? toDateInputValue()} max={availableDates.at(-1)} value={date} isDateAllowed={dateAllowed} onChange={(event) => setDate(event.target.value)} disabled={busy || availabilityLoading || !availability} required /></label>
           <label>New appointment time (IST) *<input type="time" value={time} min={action.booking.slotStartTime} max={action.booking.slotEndTime} onChange={(event) => setTime(event.target.value)} disabled={busy} required /></label><p className="full">Choose a time inside the {action.booking.slotStartTime} to {action.booking.slotEndTime} IST appointment window. The current consultant availability is checked before saving.</p></>}
         {role === "admin" && <label className="full">Appointment notes (visible to the consumer)<textarea value={notes} onChange={(event) => setNotes(event.target.value)} maxLength={1000} disabled={busy} /></label>}
         {error && <p className="portal-form-error full" role="alert">{error}</p>}

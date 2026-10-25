@@ -1,5 +1,6 @@
 import { isValidEmail, toTrimmedString } from "@/utils/text";
 import { isValidPhoneNumber } from "@/utils/phone";
+import { isIsoDate } from "@/utils/date";
 import { CONSULTATION_SERVICES, consultationService, type ConsultationServiceId } from "@/features/consultations/catalog";
 
 export const CONSULTANT_TIME_SLOTS = ["morning", "noon", "evening"] as const;
@@ -32,6 +33,7 @@ export type ConsultantFields = {
   consultantCharge: number | null;
   consultationServices: ConsultationServiceId[];
   preferredDays: ConsultantWeekDay[];
+  availableDates: string[];
   preferredTimeSlots: ConsultantTimeSlot[];
   preferredSlotTimings: ConsultantSlotTimings;
   email: string;
@@ -55,6 +57,7 @@ export function validateConsultantFields(input: Record<string, unknown>) {
     consultantCharge: input.consultantCharge == null || (typeof input.consultantCharge === "string" && !input.consultantCharge.trim()) ? null : Number(input.consultantCharge),
     preferredTimeSlots: CONSULTANT_TIME_SLOTS.filter((slot) => Array.isArray(input.preferredTimeSlots) && input.preferredTimeSlots.includes(slot)),
     preferredDays: CONSULTANT_WEEK_DAYS.filter((day) => Array.isArray(input.preferredDays) && input.preferredDays.includes(day)),
+    availableDates: Array.isArray(input.availableDates) ? input.availableDates.filter((date): date is string => typeof date === "string").toSorted() : [],
     preferredSlotTimings: {},
     email: toTrimmedString(input.email, 160).toLowerCase(),
     contactNo: toTrimmedString(input.contactNo, 25),
@@ -66,6 +69,11 @@ export function validateConsultantFields(input: Record<string, unknown>) {
     emergencyContactNo: toTrimmedString(input.emergencyContactNo, 25),
   };
   const errors: ConsultantValidationErrors = {};
+  if (input.availableDates != null && (!Array.isArray(input.availableDates) || input.availableDates.length > 31
+    || input.availableDates.some((date: unknown) => typeof date !== "string" || !isIsoDate(date))
+    || new Set(input.availableDates).size !== input.availableDates.length)) {
+    errors.availableDates = "Choose up to 31 valid specific dates, without duplicates.";
+  }
   if (input.preferredDays != null && (!Array.isArray(input.preferredDays)
     || input.preferredDays.length > CONSULTANT_WEEK_DAYS.length
     || input.preferredDays.some((day: unknown) => !CONSULTANT_WEEK_DAYS.includes(day as ConsultantWeekDay))
@@ -121,6 +129,7 @@ export function consultantFormValues(form: FormData): Record<string, unknown> {
     consultantCharge: form.get("consultantCharge"),
     consultationServices: form.getAll("consultationServices"),
     preferredDays: form.getAll("preferredDays"),
+    availableDates: form.getAll("availableDates"),
     preferredTimeSlots: form.getAll("preferredTimeSlots"),
     preferredSlotTimings: Object.fromEntries(CONSULTANT_TIME_SLOTS.filter((slot) => form.getAll("preferredTimeSlots").includes(slot)).map((slot) => [slot, {
       startTime: form.get(`${slot}StartTime`) ?? CONSULTANT_TIME_SLOT_CONFIG[slot].startTime,

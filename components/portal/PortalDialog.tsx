@@ -11,6 +11,7 @@ export function PortalDialog({
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
   busy = false,
+  confirmDisabled = false,
   children,
   onConfirm,
   onCancel,
@@ -22,6 +23,7 @@ export function PortalDialog({
   confirmLabel?: string;
   cancelLabel?: string;
   busy?: boolean;
+  confirmDisabled?: boolean;
   children?: ReactNode;
   onConfirm: () => void;
   onCancel: () => void;
@@ -38,7 +40,7 @@ export function PortalDialog({
       {children}
       <div className="portal-actions portal-dialog-actions">
         <button ref={cancelRef} type="button" className="portal-button secondary" disabled={busy} onClick={onCancel}>{cancelLabel}</button>
-        <button type="button" className={`portal-button${tone === "danger" ? " danger" : ""}`} disabled={busy} onClick={onConfirm}>{busy ? "Working..." : confirmLabel}</button>
+        <button type="button" className={`portal-button${tone === "danger" ? " danger" : ""}`} disabled={busy || confirmDisabled} onClick={onConfirm}>{busy ? "Working..." : confirmLabel}</button>
       </div>
     </section>
   </ModalLayer>;

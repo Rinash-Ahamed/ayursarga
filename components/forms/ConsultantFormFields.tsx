@@ -5,6 +5,8 @@ import type { ConsultantDocument } from "@/features/firestore/models";
 import type { ConsultantField, ConsultantValidationErrors } from "@/features/consultants/validation";
 import { CONSULTANT_WEEK_DAYS, CONSULTANT_DAY_LABELS, CONSULTANT_TIME_SLOTS, CONSULTANT_TIME_SLOT_CONFIG, type ConsultantTimeSlot } from "@/features/consultants/validation";
 import { PhoneInput } from "@/components/forms/PhoneInput";
+import { DateInput } from "@/components/forms/DateInput";
+import { formatDisplayDate, toDateInputValue } from "@/utils/date";
 import { CONSULTATION_SERVICES } from "@/features/consultations/catalog";
 
 type ConsultantDefaults = Partial<ConsultantDocument>;
@@ -23,6 +25,8 @@ export function ConsultantFormFields({ defaultValues = {}, errors }: {
   const [whatsappNo, setWhatsappNo] = useState(initialWhatsapp);
   const [sameAsContact, setSameAsContact] = useState(Boolean(initialContact && initialContact === initialWhatsapp));
   const [selectedSlots, setSelectedSlots] = useState<ConsultantTimeSlot[]>(defaultValues.preferredTimeSlots ?? []);
+  const [availableDates, setAvailableDates] = useState<string[]>(defaultValues.availableDates ?? []);
+  const [dateDraft, setDateDraft] = useState("");
 
   return <>
     <label>Name *<input name="name" defaultValue={defaultValues.name} required minLength={2} maxLength={120} autoComplete="name" aria-invalid={Boolean(errors.name)} /><FieldError field="name" errors={errors} /></label>
@@ -44,6 +48,19 @@ export function ConsultantFormFields({ defaultValues = {}, errors }: {
         </label>)}
       </div>
       <FieldError field="preferredDays" errors={errors} />
+      <p>Selected weekdays restrict online booking. Leave weekdays blank to allow any day.</p>
+      <label><span className="portal-field-label">Specific available dates <small>(Optional)</small></span>
+        <DateInput value={dateDraft} min={toDateInputValue()} onChange={(event) => setDateDraft(event.target.value)} aria-invalid={Boolean(errors.availableDates)} />
+      </label>
+      <div className="portal-actions"><button className="portal-button secondary" type="button" disabled={!dateDraft || availableDates.includes(dateDraft) || availableDates.length >= 31} onClick={() => {
+        setAvailableDates((dates) => [...dates, dateDraft].toSorted()); setDateDraft("");
+      }}>Add available date</button></div>
+      <div className="consultant-date-options">{availableDates.map((date) => <span key={date}>
+        <input type="hidden" name="availableDates" value={date} />
+        <button className="portal-button secondary" type="button" aria-label={`Remove available date ${formatDisplayDate(date)}`} onClick={() => setAvailableDates((dates) => dates.filter((value) => value !== date))}>{formatDisplayDate(date)} ×</button>
+      </span>)}</div>
+      <p>Add up to 31 dates to limit booking to those dates. If weekdays are also selected, a date must match both. Leave both blank for unrestricted days. Existing appointments are not changed.</p>
+      <FieldError field="availableDates" errors={errors} />
       <div className="consultant-slot-options">{CONSULTANT_TIME_SLOTS.map((slot) => {
         const config = CONSULTANT_TIME_SLOT_CONFIG[slot];
         const timing = defaultValues.preferredSlotTimings?.[slot] ?? config;

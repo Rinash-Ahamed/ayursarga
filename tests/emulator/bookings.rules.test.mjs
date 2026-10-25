@@ -142,11 +142,21 @@ test("consultant assignments: valid audited Admin edits succeed; unknown/duplica
   assert.equal(response.status, 200, await response.text());
   const saved = (await (await call(`/${path}`, { role: "admin" })).json()).fields;
   assert.deepEqual(saved.preferredDays.arrayValue.values.map((value) => value.stringValue), ["mon", "wed", "sun"]);
+  const dates = await auditedUpdate(path, saved, { availableDates: ["2099-10-25", "2099-10-26"] }, "admin", "consultants", "update");
+  assert.equal(dates.status, 200, await dates.text());
+  for (const availableDates of [["25/10/2099"], ["2099-13-25"], ["2099-10-25", "2099-10-25"], "2099-10-25", [1], Array(32).fill("2099-10-25")]) {
+    assert.equal((await auditedUpdate(path, saved, { availableDates }, "admin", "consultants", "update")).status, 403);
+  }
+  assert.equal((await auditedUpdate(path, saved, { availableDates: [] }, "admin", "consultants", "update")).status, 200);
+  const maximumDates = Array.from({ length: 31 }, (_, index) => `2099-10-${String(index + 1).padStart(2, "0")}`);
+  const maximum = await auditedUpdate(path, saved, { availableDates: maximumDates }, "admin", "consultants", "update");
+  assert.equal(maximum.status, 200, await maximum.text());
   for (const preferredDays of [["invented"], ["mon", "mon"], "mon", [1]]) assert.equal((await auditedUpdate(path, saved, { preferredDays }, "admin", "consultants", "update")).status, 403);
   assert.equal((await auditedUpdate(path, saved, { preferredDays: [] }, "admin", "consultants", "update")).status, 200);
   for (const consultationServices of [["invented"], ["lactation", "lactation"]]) assert.equal((await auditedUpdate(path, saved, { consultationServices }, "admin", "consultants", "update")).status, 403);
   for (const role of ["consumer", "hospital"]) {
     assert.equal((await call(`/${path}`, { role })).status, 403);
     assert.equal((await auditedUpdate(path, saved, { consultationServices: [], preferredDays: ["fri"] }, role, "consultants", "update")).status, 403);
+    assert.equal((await auditedUpdate(path, saved, { availableDates: ["2099-10-25"] }, role, "consultants", "update")).status, 403);
   }
 });

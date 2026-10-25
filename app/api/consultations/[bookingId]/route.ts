@@ -10,6 +10,7 @@ import { consultationAdminRecipients, addConsultationNotification } from "@/serv
 import { publicConsultantProjection } from "@/features/consultations/publicProjection";
 import type { ConsultantTimeSlot } from "@/features/consultants/validation";
 import { validConsultationSchedule } from "@/features/consultations/schedule";
+import { isConsultantDateAvailable } from "@/features/consultations/availability";
 import { queueConsultationEmail, deliverConsultationEmails } from "@/services/email/consultationEmailService";
 
 export const runtime = "nodejs";
@@ -65,6 +66,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
         consultantContact = consultant.data() ?? {};
         const provider = consultant.exists ? publicConsultantProjection(consultant.id, consultant.data()!, booking.serviceId) : null;
         const timing = provider?.preferredSlotTimings[booking.preferredTimeSlot as ConsultantTimeSlot];
+        if (provider && !isConsultantDateAvailable(date, provider)) throw new ConsultationError("The consultant is not available on this date. Choose a configured available day.", 409);
         if (!provider || !timing || time < timing.startTime || time >= timing.endTime) throw new ConsultationError("The consultant is no longer available in this appointment window.", 409);
         update.confirmedDate = date; update.confirmedTime = time;
         update.confirmedAt = booking.confirmedAt ?? now;

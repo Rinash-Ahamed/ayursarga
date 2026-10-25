@@ -12,6 +12,13 @@ export async function GET(request: Request) {
     const params = new URL(request.url).searchParams;
     const service = consultationService(params.get("service"));
     if (!service) return apiJson({ error: "Choose a valid consultation service." }, 400);
+    const consultantId = params.get("consultantId");
+    if (consultantId !== null) {
+      if (!/^AS[0-9]{3,}$/.test(consultantId)) return apiJson({ error: "Invalid consultant." }, 400);
+      const snapshot = await getFirebaseAdminFirestore().collection("consultants").doc(consultantId).get();
+      const consultant = snapshot.exists ? publicConsultantProjection(snapshot.id, snapshot.data()!, service.id) : null;
+      return apiJson({ consultant });
+    }
     const rawCursor = params.get("cursor");
     if (rawCursor !== null && (!/^\d+$/.test(rawCursor) || !Number.isSafeInteger(Number(rawCursor)) || Number(rawCursor) < 1)) return apiJson({ error: "Invalid page cursor." }, 400);
     let query = getFirebaseAdminFirestore().collection("consultants")

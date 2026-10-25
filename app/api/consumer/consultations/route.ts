@@ -14,6 +14,7 @@ import { BOOKING_TERMS_VERSION, CUSTOMER_TERMS_VERSION, CONSUMER_PRIVACY_NOTICE_
 import { isValidPhoneNumber } from "@/utils/phone";
 import { isIsoDate, toDateInputValue } from "@/utils/date";
 import { validConsultationSchedule } from "@/features/consultations/schedule";
+import { isConsultantDateAvailable } from "@/features/consultations/availability";
 import { queueConsultationEmail, deliverConsultationEmails } from "@/services/email/consultationEmailService";
 
 export const runtime = "nodejs";
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
       const timing = provider?.preferredSlotTimings[slot];
       if (!provider || !provider.preferredTimeSlots.includes(slot) || !timing) throw new ConsultationError("This consultant or time window is no longer bookable. Please choose again.", 409);
       if (provider.consultantCharge !== expectedCharge) throw new ConsultationError("The consultation charge has changed. Refresh the consultant list and review the new charge before booking.", 409);
+      if (!isConsultantDateAvailable(date, provider)) throw new ConsultationError("The consultant is not available on this date. Choose an available day or refresh the consultant list.", 409);
       if (timing.startTime !== body.expectedSlotStartTime || timing.endTime !== body.expectedSlotEndTime) throw new ConsultationError("The preferred time window has changed. Refresh the consultant list and choose again.", 409);
       if (!validConsultationSchedule(date, timing.startTime, timing.endTime)) throw new ConsultationError("Choose an available date and time window that has not ended.", 400);
       const admins = await consultationAdminRecipients(transaction, firestore);

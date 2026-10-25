@@ -36,6 +36,148 @@ test("consultation creation snapshots actual charge, provider, Consumer and cons
   assert.equal(f.values("bookings").length, 0); // Hospital booking schema/workflow stays independent.
 });
 
+test("availability intersects configured weekdays and exact dates, with fail-closed malformed config", async () => {
+  const { isConsultantDateAvailable } = loadTypeScript("features/consultations/availability.ts");
+  assert.equal(isConsultantDateAvailable("2099-10-25", {}), true);
+  assert.equal(isConsultantDateAvailable("2099-10-25", { preferredDays: ["sun"] }), true);
+  assert.equal(isConsultantDateAvailable("2099-10-25", { preferredDays: ["mon"] }), false);
+  for (const changes of [
+    { preferredDays: ["mon"] }, { availableDates: ["2099-10-26"] },
+    { preferredDays: ["mon"], availableDates: [input.preferredDate] },
+    { preferredDays: ["invalid"] }, { availableDates: ["2099-02-30"] },
+  ]) {
+    const f = fixture({ records: { "consultants/AS001": { ...consultant, ...changes } } });
+    assert.equal((await create(f)).status, 409);
+    assert.equal(f.calls.writes.length, 0);
+    assert.equal(f.calls.smtp.length, 0); assert.equal(f.calls.consultantSmtp.length, 0);
+  }
+  const f = fixture({ records: { "consultants/AS001": { ...consultant, preferredDays: ["sun"], availableDates: [input.preferredDate] } } });
+  assert.equal((await create(f)).status, 201);
+  // A retry of an already committed request remains idempotent after Admin changes availability.
+  f.records.set("consultants/AS001", { ...consultant, preferredDays: ["mon"] });
+  assert.equal((await create(f)).status, 200);
+  assert.equal(f.values("consultationBookings").length, 1);
+});
+
+test("Admin rescheduling checks current days/dates without changing existing appointments on failure", async () => {
+  for (const changes of [{ preferredDays: ["sun"] }, { availableDates: ["2099-10-25"] }, { preferredDays: ["mon"], availableDates: ["2099-10-27"] }]) {
+    const { f, id } = await seeded();
+    const before = f.records.get(`consultationBookings/${id}`);
+    f.records.set("consultants/AS001", { ...consultant, ...changes });
+    f.actor.role = "admin"; f.actor.uid = "admin";
+    assert.equal((await update(f, id, { action: "reschedule", requestId: "reschedule-availability-0001", confirmedDate: "2099-10-26", confirmedTime: "10:15" })).status, 409);
+    assert.deepEqual(f.records.get(`consultationBookings/${id}`), before);
+    assert.equal(f.calls.smtp.length, 1); assert.equal(f.calls.consultantSmtp.length, 1);
+  }
+  const { f, id } = await seeded();
+  f.records.set("consultants/AS001", { ...consultant, preferredDays: ["mon"], availableDates: ["2099-10-26"] });
+  f.actor.role = "admin"; f.actor.uid = "admin";
+  assert.equal((await update(f, id, { action: "reschedule", requestId: "reschedule-availability-0002", confirmedDate: "2099-10-26", confirmedTime: "10:15" })).status, 200);
+});
+
+test("retrying original creation after cancellation suppresses obsolete pending emails for both recipients", async () => {
+  const f = fixture({ throwAfterCommit: true });
+  assert.equal((await create(f)).status, 503); // Booking/event commit succeeded, response was lost before SMTP.
+  const booking = f.values("consultationBookings")[0];
+  assert.equal(f.calls.smtp.length, 0); assert.equal(f.calls.consultantSmtp.length, 0);
+  const legacyPath = `consultationEmailEvents/confirmation-${booking.id}`;
+  const { bookingAuditId, ...legacyEvent } = f.records.get(legacyPath);
+  assert.ok(bookingAuditId);
+  f.records.set(legacyPath, legacyEvent); // Existing pending consumer event, before this fix.
+  f.actor.role = "admin"; f.actor.uid = "admin";
+  assert.equal((await update(f, booking.id, { action: "cancelled", requestId: "cancel-before-original-retry-001" })).status, 200);
+  assert.equal(f.calls.smtp.length, 1); assert.equal(f.calls.consultantSmtp.length, 1);
+  assert.match(f.calls.smtp[0].subject, /cancelled/i);
+  f.actor.role = "consumer"; f.actor.uid = "patient";
+  const retry = await create(f);
+  assert.equal(retry.status, 200); assert.equal((await retry.json()).email.status, "superseded");
+  const before = f.calls.writes.length;
+  assert.equal((await create(f)).status, 200);
+  assert.equal(f.calls.writes.length, before);
+  assert.equal(f.calls.smtp.length, 1); assert.equal(f.calls.consultantSmtp.length, 1);
+  for (const suffix of ["", "-consultant"]) {
+    const event = f.records.get(`consultationEmailEvents/confirmation-${booking.id}${suffix}`);
+    assert.equal(event.status, "superseded"); assert.ok(event.supersededAt);
+    assert.equal(event.failureReason, "appointment_changed");
+    const audit = f.records.get(`auditLogs/${event.lastAuditId}`);
+    assert.equal(audit.updatedValues.status, "superseded");
+  }
+  assert.equal(f.records.get(`consultationBookings/${booking.id}`).status, "cancelled");
+  assert.equal(f.values("notifications").filter((record) => record.message.includes("email could not")).length, 0);
+});
+
+test("original pending confirmations cannot replay after rescheduling, completion, archival or a missing booking", async () => {
+  for (const change of ["reschedule", "completed", "consumer-cancelled", "archived", "missing"]) {
+    const f = fixture({ throwAfterCommit: true });
+    assert.equal((await create(f)).status, 503);
+    const booking = f.values("consultationBookings")[0];
+    if (change === "reschedule" || change === "completed") {
+      f.actor.role = "admin"; f.actor.uid = "admin";
+      assert.equal((await update(f, booking.id, { action: change, requestId: "update-before-original-retry-001",
+        confirmedDate: "2099-10-26", confirmedTime: "10:00" })).status, 200);
+    } else if (change === "consumer-cancelled") {
+      assert.equal((await update(f, booking.id, { status: "cancelled" })).status, 200);
+    } else if (change === "archived") f.records.set(`consultationBookings/${booking.id}`, { ...booking, archivedAt: {} });
+    else f.records.delete(`consultationBookings/${booking.id}`); // Isolated fixture only.
+    const sent = [f.calls.smtp.length, f.calls.consultantSmtp.length];
+    const delivery = await f.load("services/email/consultationEmailService.ts").deliverConsultationEmails(f.firestore, `confirmation-${booking.id}`);
+    assert.equal(delivery.email.status, "superseded"); assert.equal(delivery.consultantEmail.status, "superseded");
+    assert.deepEqual([f.calls.smtp.length, f.calls.consultantSmtp.length], sent);
+  }
+});
+
+test("legacy pending emails use the originating audit, while newer schedule revisions supersede older reschedule retries", async () => {
+  const pending = fixture({ throwAfterCommit: true });
+  assert.equal((await create(pending)).status, 503);
+  for (const [path, event] of pending.records) if (path.startsWith("consultationEmailEvents/")) {
+    const { bookingAuditId, ...legacyEvent } = event;
+    assert.ok(bookingAuditId); pending.records.set(path, legacyEvent);
+  }
+  const deliver = pending.load("services/email/consultationEmailService.ts").deliverConsultationEmails;
+  const confirmationId = `confirmation-${pending.values("consultationBookings")[0].id}`;
+  assert.equal((await deliver(pending.firestore, confirmationId)).email.status, "accepted");
+  assert.equal(pending.calls.smtp.length, 1); assert.equal(pending.calls.consultantSmtp.length, 1);
+
+  const { f: original, id } = await seeded();
+  const f = fixture({ actor: { uid: "admin", role: "admin" }, throwAfterCommit: true, records: Object.fromEntries(original.records) });
+  const old = { action: "reschedule", requestId: "older-pending-reschedule-001", confirmedDate: "2099-10-26", confirmedTime: "10:00" };
+  assert.equal((await update(f, id, old)).status, 503);
+  assert.equal((await update(f, id, { ...old, requestId: "newer-reschedule-0000001", confirmedDate: "2099-10-27" })).status, 200);
+  assert.equal((await update(f, id, { ...old, requestId: "newest-back-to-same-date-1" })).status, 200);
+  const response = await update(f, id, old);
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.equal(result.email.status, "superseded"); assert.equal(result.consultantEmail.status, "superseded");
+  assert.equal(f.calls.smtp.length, 2); assert.equal(f.calls.consultantSmtp.length, 2);
+  assert.equal(f.records.get(`consultationBookings/${id}`).confirmedDate, "2099-10-26");
+});
+
+test("an unavailable database cannot authorize SMTP; a later verified current event still sends normally", async () => {
+  const f = fixture({ throwAfterCommit: true });
+  assert.equal((await create(f)).status, 503);
+  const eventId = `confirmation-${f.values("consultationBookings")[0].id}`;
+  const deliver = f.load("services/email/consultationEmailService.ts").deliverConsultationEmails;
+  const runTransaction = f.firestore.runTransaction;
+  f.firestore.runTransaction = async () => { throw new Error("Isolated read failure"); };
+  const uncertain = await deliver(f.firestore, eventId);
+  assert.equal(uncertain.email.status, "unknown"); assert.equal(uncertain.consultantEmail.status, "unknown");
+  assert.equal(f.calls.smtp.length, 0); assert.equal(f.calls.consultantSmtp.length, 0);
+  assert.equal(f.records.get(`consultationEmailEvents/${eventId}`).status, "pending");
+  f.firestore.runTransaction = runTransaction;
+  const verified = await deliver(f.firestore, eventId);
+  assert.equal(verified.email.status, "accepted"); assert.equal(verified.consultantEmail.status, "accepted");
+  assert.equal(f.calls.smtp.length, 1); assert.equal(f.calls.consultantSmtp.length, 1);
+});
+
+test("superseded email feedback never claims delivery or asks Admin to retry an obsolete email", () => {
+  const { consultationEmailFeedback } = loadTypeScript("features/consultations/email.ts");
+  for (const recipient of ["consumer", "consultant"]) {
+    const text = consultationEmailFeedback({ status: "superseded" }, recipient);
+    assert.match(text, /outdated.*not sent.*appointment has changed/);
+    assert.doesNotMatch(text, /accepted|contact.*directly|resent/);
+  }
+});
+
 test("duplicate, concurrent and lost-response retries create one appointment and never replay notifications", async () => {
   for (const throwAfterCommit of [false, true]) {
     const f = fixture({ throwAfterCommit });
@@ -320,7 +462,7 @@ test("cancellation reads the assigned consultant's current email and never targe
 test("public consultant projection is an explicit whitelist, excludes private records and supports zero charges", () => {
   const { publicConsultantProjection } = loadTypeScript("features/consultations/publicProjection.ts");
   const projected = publicConsultantProjection("AS001", consultant, "prenatal-doctor");
-  assert.deepEqual(Object.keys(projected).sort(), ["id", "name", "designation", "qualification", "yearsExperience", "consultantCharge", "preferredTimeSlots", "preferredSlotTimings"].sort());
+  assert.deepEqual(Object.keys(projected).sort(), ["id", "name", "designation", "qualification", "yearsExperience", "consultantCharge", "preferredTimeSlots", "preferredSlotTimings", "preferredDays", "availableDates"].sort());
   assert.equal(publicConsultantProjection("AS001", { ...consultant, consultationServices: undefined }, "prenatal-doctor"), null);
   assert.equal(publicConsultantProjection("AS001", { ...consultant, consultantCharge: 0 }, "prenatal-doctor").consultantCharge, 0);
   assert.equal(publicConsultantProjection("AS001", { ...consultant, preferredSlotTimings: { morning: { startTime: "25:00", endTime: "26:00" } } }, "prenatal-doctor"), null);
@@ -338,6 +480,27 @@ test("rules retain Admin-only raw consultant reads and server-only consultation 
   const indexes = JSON.parse(readFileSync("firestore.indexes.json", "utf8")).indexes;
   assert.ok(indexes.some((entry) => entry.collectionGroup === "consultants" && entry.fields.some((field) => field.fieldPath === "consultationServices" && field.arrayConfig === "CONTAINS")));
   assert.ok(indexes.some((entry) => entry.collectionGroup === "consultationBookings" && entry.fields.some((field) => field.fieldPath === "consumerId")));
+});
+
+test("exact consultant availability lookup stays bounded and cannot expose inactive or private data", async () => {
+  let reads = 0;
+  let data = { ...consultant, preferredDays: ["sun"], availableDates: ["2099-10-25"] };
+  const { GET } = loadTypeScript("app/api/public/consultants/route.ts", {
+    "@/services/firebase/admin": { getFirebaseAdminFirestore: () => ({ collection: () => ({ doc: (id) => ({
+      get: async () => { reads++; return { id, exists: true, data: () => data }; },
+    }) }) }) },
+    "@/services/api/rateLimit": { allowRequest: () => true, requestFingerprint: () => "fixture" },
+    "@/services/api/server": { apiJson: (body, status = 200) => Response.json(body, { status }), logApiError: () => {} },
+  });
+  assert.equal((await GET(new Request("https://test.local/api/public/consultants?service=prenatal-doctor&consultantId=../users"))).status, 400);
+  assert.equal(reads, 0);
+  const response = await GET(new Request("https://test.local/api/public/consultants?service=prenatal-doctor&consultantId=AS001"));
+  const { consultant: provider } = await response.json();
+  assert.deepEqual(provider.preferredDays, ["sun"]); assert.deepEqual(provider.availableDates, ["2099-10-25"]);
+  for (const field of ["email", "contactNo", "address", "lastAuditId"]) assert.equal(field in provider, false);
+  data = { ...data, status: "inactive" };
+  assert.equal((await (await GET(new Request("https://test.local/api/public/consultants?service=prenatal-doctor&consultantId=AS001"))).json()).consultant, null);
+  assert.equal(reads, 2);
 });
 
 test("public consultant API validates service/cursor, bounds reads and returns only the sanitized projection", async () => {

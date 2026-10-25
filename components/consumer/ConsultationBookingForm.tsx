@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { consultationService } from "@/features/consultations/catalog";
+import { consultantAvailabilitySummary, isConsultantDateAvailable } from "@/features/consultations/availability";
+import { validConsultationSchedule } from "@/features/consultations/schedule";
 import type { PublicConsultant } from "@/features/consultations/types";
 import { formatConsultantTimeSlot, type ConsultantTimeSlot } from "@/features/consultants/validation";
 import { createConsultationBooking, listPublicConsultants } from "@/services/consultations/consultationService";
@@ -33,7 +35,14 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
   const attempt = useRef<{ key: string; id: string } | null>(null);
   const lastVisibilityRefresh = useRef(0);
   const consultant = items.find((item) => item.id === consultantId);
+  const dateAllowed = useCallback((value: string) => Boolean(consultant && isConsultantDateAvailable(value, consultant)
+    && consultant.preferredTimeSlots.some((key) => {
+      const window = consultant.preferredSlotTimings[key];
+      return window && validConsultationSchedule(value, window.startTime, window.endTime);
+    })), [consultant]);
   const hasConsultants = items.length > 0;
+  const availableDates = consultant?.availableDates?.filter(dateAllowed).toSorted() ?? [];
+  const noAvailableDates = Boolean(consultant?.availableDates?.length && !availableDates.length);
   useEffect(() => {
     const refreshVisibleConsultants = () => {
       if (document.visibilityState !== "visible" || Date.now() - lastVisibilityRefresh.current < 1_500) return;
@@ -56,6 +65,9 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
     const timing = slot && consultant?.preferredSlotTimings[slot];
     if (!consultant || !slot || !timing || !consultant.preferredTimeSlots.includes(slot) || !isIsoDate(date) || date < toDateInputValue() || !consent) {
       setError("Choose a consultant, date and preferred time window, and accept the booking terms."); return;
+    }
+    if (!dateAllowed(date) || !validConsultationSchedule(date, timing.startTime, timing.endTime)) {
+      setError("Choose an available date and a time window that has not ended."); return;
     }
     const notes = String(new FormData(event.currentTarget).get("notes") ?? "").trim();
     const key = JSON.stringify([service.id, consultantId, date, slot, notes, consultant.consultantCharge, timing.startTime, timing.endTime]);
@@ -85,14 +97,19 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
         <fieldset className="full consultation-professionals" disabled={busy}>
           <legend>Choose your consultant *</legend>
           <div className="consultation-professional-grid">{items.map((item) => <label className="consultation-professional" key={item.id} data-selected={item.id === consultantId}>
-            <input type="radio" name="consultant" value={item.id} checked={item.id === consultantId} required onChange={() => { setConsultantId(item.id); setSlot(""); }} />
+            <input type="radio" name="consultant" value={item.id} checked={item.id === consultantId} required onChange={() => { setConsultantId(item.id); setDate(""); setSlot(""); }} />
             <span><strong>{item.name}</strong><span>{item.designation || item.qualification}</span><span>{item.qualification} · {item.yearsExperience} years of experience</span><strong>{formatCurrency(item.consultantCharge)}</strong></span>
           </label>)}</div>
           <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
         </fieldset>
-        <label>Preferred appointment date *<DateInput value={date} min={toDateInputValue()} onChange={(event) => setDate(event.target.value)} required disabled={busy} /></label>
+        {consultant && <p className="full portal-form-note">Available days/dates: {consultantAvailabilitySummary(consultant)}. Dates must match all configured restrictions.</p>}
+        {noAvailableDates && <p className="full portal-form-error" role="status">This consultant has no future available dates matching their configured weekdays. Choose another professional or contact Ayursarga.</p>}
+        <label>Preferred appointment date *<DateInput value={date} min={availableDates[0] ?? toDateInputValue()} max={availableDates.at(-1)} isDateAllowed={dateAllowed} onChange={(event) => { setDate(event.target.value); setSlot(""); }} required disabled={busy || !consultant || noAvailableDates} /></label>
         <label>Preferred time window *<select value={slot} onChange={(event) => setSlot(event.target.value as ConsultantTimeSlot)} required disabled={busy || !consultant}>
-          <option value="">Select a preferred window</option>{consultant?.preferredTimeSlots.map((value) => <option key={value} value={value}>{formatConsultantTimeSlot(value, consultant.preferredSlotTimings)}</option>)}
+          <option value="">Select a preferred window</option>{consultant?.preferredTimeSlots.map((value) => {
+            const window = consultant.preferredSlotTimings[value];
+            return <option key={value} value={value} disabled={!date || !dateAllowed(date) || !window || !validConsultationSchedule(date, window.startTime, window.endTime)}>{formatConsultantTimeSlot(value, consultant.preferredSlotTimings)}</option>;
+          })}
         </select></label>
         <label className="full">Notes (optional)<textarea name="notes" maxLength={500} disabled={busy} /></label>
         <fieldset className="portal-consent full" disabled={busy}><legend>Booking confirmation *</legend>
@@ -102,7 +119,7 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
         <PortalToast message={error} notification={notification} tone="error" />
         {error && <p className="portal-form-error full" role="alert">{error}</p>}
         {error && <div className="portal-actions full"><button type="button" className="portal-button secondary" disabled={busy || isLoading} onClick={() => { setConsultantId(""); setSlot(""); setConsent(false); void reload(); }}>Refresh consultants</button></div>}
-        <div className="portal-actions full"><button className="portal-button" disabled={busy || !consent || !consultant || !date || !slot}>{busy ? "Booking appointment..." : "Book appointment"}</button></div>
+        <div className="portal-actions full"><button className="portal-button" disabled={busy || !consent || !consultant || !date || !dateAllowed(date) || !slot}>{busy ? "Booking appointment..." : "Book appointment"}</button></div>
       </form>}
     </>}
     </div>

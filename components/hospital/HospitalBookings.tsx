@@ -4,12 +4,11 @@ import { useCallback, useDeferredValue, useMemo, useState } from "react";
 import Link from "next/link";
 import type { BookingDocument, BookingStatus, TreatmentStatus } from "@/features/firestore/models";
 import { bookingStatusLabel } from "@/features/bookings/display";
-import { getTreatmentStatus } from "@/features/bookings/treatmentStatus";
+import { getTreatmentStatus, treatmentStatusLabel } from "@/features/bookings/treatmentStatus";
 import { emptyQueryPage, type DocumentRecord, type QueryPageOptions } from "@/services/firestore/firestoreService";
 import { getPortalBooking, listHospitalBookings, updateHospitalBooking, updateTreatmentProgress, type HospitalBookingUpdate } from "@/services/bookings/bookingService";
 import { getCalendarMonthRange, toDateInputValue, parseDateInputValue } from "@/utils/date";
 import { DateInput } from "@/components/forms/DateInput";
-import { formatStatus } from "@/utils/text";
 import { useAuth } from "@/hooks/useAuth";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { PortalShell } from "@/components/portal/PortalShell";
@@ -29,7 +28,7 @@ const BOOKING_STATUSES: readonly BookingStatus[] = [
 
 type PendingBookingAction = {
   item: DocumentRecord<BookingDocument>;
-  nextStatus: HospitalBookingUpdate["status"];
+  nextStatus: Exclude<HospitalBookingUpdate["status"], "reschedule_requested">;
   date: string;
   time: string;
   notes: string;
@@ -37,7 +36,7 @@ type PendingBookingAction = {
 
 type PendingTreatmentAction = {
   item: DocumentRecord<BookingDocument>;
-  treatmentStatus: Exclude<TreatmentStatus, "not_started">;
+  treatmentStatus: "completed";
 };
 
 export function HospitalBookings({ bookingId }: { bookingId?: string } = {}) {
@@ -89,7 +88,7 @@ export function HospitalBookings({ bookingId }: { bookingId?: string } = {}) {
     setMonth("");
   }
 
-  function act(item: DocumentRecord<BookingDocument>, nextStatus: HospitalBookingUpdate["status"]) {
+  function act(item: DocumentRecord<BookingDocument>, nextStatus: PendingBookingAction["nextStatus"]) {
     setPendingBookingAction({
       item,
       nextStatus,
@@ -103,7 +102,7 @@ export function HospitalBookings({ bookingId }: { bookingId?: string } = {}) {
     if (!pendingBookingAction || busy) return;
     const { item, nextStatus, date, time, notes } = pendingBookingAction;
     const update: HospitalBookingUpdate = { status: nextStatus, hospitalNotes: notes.trim() || null };
-    if (nextStatus === "confirmed" || nextStatus === "reschedule_requested") {
+    if (nextStatus === "confirmed") {
       const confirmedDate = parseDateInputValue(date);
       if (!confirmedDate || !time) {
         setActionError("Enter a valid proposed date and time before continuing.");
@@ -126,14 +125,14 @@ export function HospitalBookings({ bookingId }: { bookingId?: string } = {}) {
     }
   }
 
-  async function applyTreatmentUpdate(item: DocumentRecord<BookingDocument>, treatmentStatus: Exclude<TreatmentStatus, "not_started">) {
+  async function applyTreatmentUpdate(item: DocumentRecord<BookingDocument>, treatmentStatus: Extract<TreatmentStatus, "started" | "completed">) {
     if (busy) return;
     setBusy(item.id); setActionError(null); setActionMessage(null);
     try {
       const changes = await updateTreatmentProgress(item.id, treatmentStatus, item);
       if (status && changes.status && changes.status !== status) removeItem(item.id);
       else patchItem(item.id, changes);
-      setActionMessage(`Treatment marked as ${formatStatus(treatmentStatus)}.`);
+      setActionMessage(`${treatmentStatusLabel(treatmentStatus)}.`);
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : "We could not update the treatment status. Try again.");
     } finally {
@@ -141,7 +140,7 @@ export function HospitalBookings({ bookingId }: { bookingId?: string } = {}) {
     }
   }
 
-  function markTreatment(item: DocumentRecord<BookingDocument>, treatmentStatus: Exclude<TreatmentStatus, "not_started">) {
+  function markTreatment(item: DocumentRecord<BookingDocument>, treatmentStatus: Extract<TreatmentStatus, "started" | "completed">) {
     if (treatmentStatus === "completed") {
       setPendingTreatmentAction({ item, treatmentStatus });
       return;
@@ -179,20 +178,19 @@ export function HospitalBookings({ bookingId }: { bookingId?: string } = {}) {
     <PortalToast message={actionError} notification={actionErrorNotification} tone="error" />
     {detailsError && <p className="portal-form-error" role="status">Some centre or package names could not be loaded. Booking details are still available. Refresh to retry.</p>}
     <div className="portal-list consumer-booking-list">
-      {visible.map((item) => <PortalBookingSummary key={item.id} booking={item}>
+      {visible.map((item) => <PortalBookingSummary key={item.id} booking={item} showTreatmentBadge>
         <div className="portal-actions">
-          {item.status === "requested" && <><button className="portal-button" disabled={busy === item.id} onClick={() => void act(item, "confirmed")}>Confirm</button><button className="portal-button secondary" disabled={busy === item.id} onClick={() => void act(item, "reschedule_requested")}>Reschedule</button><button className="portal-button danger" disabled={busy === item.id} onClick={() => void act(item, "rejected")}>Reject</button></>}
+          {item.status === "requested" && <><button className="portal-button" disabled={busy === item.id} onClick={() => void act(item, "confirmed")}>Confirm</button><button className="portal-button danger" disabled={busy === item.id} onClick={() => void act(item, "rejected")}>Reject</button></>}
           {item.status === "reschedule_requested" && <button className="portal-button" disabled={busy === item.id} onClick={() => void act(item, "confirmed")}>Confirm</button>}
-          {item.status === "confirmed" && getTreatmentStatus(item) === "not_started" && <><button className="portal-button" disabled={busy === item.id} onClick={() => void markTreatment(item, "started")}>Start treatment</button><button className="portal-button secondary" disabled={busy === item.id} onClick={() => void act(item, "reschedule_requested")}>Reschedule</button></>}
-          {item.status === "confirmed" && getTreatmentStatus(item) === "started" && <><button className="portal-button" disabled={busy === item.id} onClick={() => void markTreatment(item, "ongoing")}>Mark ongoing</button><button className="portal-button" disabled={busy === item.id} onClick={() => void markTreatment(item, "completed")}>Complete treatment</button></>}
-          {item.status === "confirmed" && getTreatmentStatus(item) === "ongoing" && <button className="portal-button" disabled={busy === item.id} onClick={() => void markTreatment(item, "completed")}>Complete treatment</button>}
+          {item.status === "confirmed" && getTreatmentStatus(item) === "not_started" && <button className="portal-button" disabled={busy === item.id} onClick={() => void markTreatment(item, "started")}>Start treatment</button>}
+          {item.status === "confirmed" && ["started", "ongoing"].includes(getTreatmentStatus(item)) && <button className="portal-button" disabled={busy === item.id} onClick={() => void markTreatment(item, "completed")}>Complete treatment</button>}
         </div>
       </PortalBookingSummary>)}
     </div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
     <PortalDialog open={Boolean(pendingBookingAction)} title={pendingBookingAction?.nextStatus === "rejected" ? "Reject this booking?" : "Update booking details"} message={pendingBookingAction?.nextStatus === "rejected" ? "The patient request will be marked as rejected." : "Confirm the proposed appointment details before sending the update."} tone={pendingBookingAction?.nextStatus === "rejected" ? "danger" : "default"} confirmLabel={pendingBookingAction?.nextStatus === "rejected" ? "Reject booking" : "Save booking update"} busy={busy === pendingBookingAction?.item.id} onCancel={() => setPendingBookingAction(null)} onConfirm={() => void submitBookingAction()}>
       {pendingBookingAction && <div className="portal-dialog-form">
-        {(pendingBookingAction.nextStatus === "confirmed" || pendingBookingAction.nextStatus === "reschedule_requested") && <div className="portal-form">
+        {pendingBookingAction.nextStatus === "confirmed" && <div className="portal-form">
           <label>Proposed date<DateInput value={pendingBookingAction.date} onChange={(event) => setPendingBookingAction((current) => current ? { ...current, date: event.target.value } : current)} /></label>
           <label>Proposed time<input type="time" value={pendingBookingAction.time} onChange={(event) => setPendingBookingAction((current) => current ? { ...current, time: event.target.value } : current)} /></label>
         </div>}

@@ -16,6 +16,7 @@ import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { formatStatus } from "@/utils/text";
 import { focusFirstInvalidField } from "@/utils/formFocus";
 import { formatCurrency } from "@/utils/currency";
+import { formatDisplayDate } from "@/utils/date";
 import { consultationService } from "@/features/consultations/catalog";
 
 export function ConsultantsManager() {
@@ -137,6 +138,7 @@ export function ConsultantsManager() {
       </form> : <>
         <dl className="consultant-details">
           <div className="consultant-detail-wide"><dt>Preferred days</dt><dd>{consultant.preferredDays?.length ? CONSULTANT_WEEK_DAYS.filter((day) => consultant.preferredDays?.includes(day)).map((day) => CONSULTANT_DAY_LABELS[day]).join(" · ") : "Days not specified"}</dd></div>
+          {Boolean(consultant.availableDates?.length) && <div className="consultant-detail-wide"><dt>Available dates</dt><dd>{consultant.availableDates?.map((date) => formatDisplayDate(date)).join(", ")}</dd></div>}
           <div className="consultant-detail-wide"><dt>Preferred availability</dt><dd>{consultant.preferredTimeSlots?.length ? consultant.preferredTimeSlots.map((slot) => <span className="consultant-slot" key={slot}>{formatConsultantTimeSlot(slot, consultant.preferredSlotTimings)}</span>) : "Not specified"}</dd></div>
           <div><dt>Email</dt><dd>{consultant.email}</dd></div>
           <div><dt>Contact number</dt><dd>{consultant.contactNo}</dd></div>

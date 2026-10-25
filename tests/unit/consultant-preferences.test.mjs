@@ -26,6 +26,7 @@ test("legacy consultants default to optional empty preferences", () => {
   assert.equal(result.data.consultantCharge, null);
   assert.deepEqual(result.data.preferredTimeSlots, []);
   assert.deepEqual(result.data.preferredDays, []);
+  assert.deepEqual(result.data.availableDates, []);
   assert.deepEqual(result.data.consultationServices, []);
 });
 
@@ -58,6 +59,18 @@ test("preferred days support all seven days, canonical form order and clearing; 
   }
 });
 
+test("specific dates validate strictly, sort, clear and survive form parsing", () => {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(legacy)) form.set(key, String(value));
+  form.append("availableDates", "2099-10-26"); form.append("availableDates", "2099-10-25");
+  assert.deepEqual(validateConsultantFields(consultantFormValues(form)).data.availableDates, ["2099-10-25", "2099-10-26"]);
+  for (const availableDates of ["2099-10-25", ["2099-02-30"], ["25/10/2099"], [null], [1], ["2099-10-25", "2099-10-25"], Array(32).fill("2099-10-25")]) {
+    assert.equal(validateConsultantFields({ ...legacy, availableDates }).isValid, false);
+  }
+  assert.equal(validateConsultantFields({ ...legacy, availableDates: ["2028-02-29"] }).isValid, true);
+  assert.deepEqual(validateConsultantFields({ ...legacy, availableDates: [] }).data.availableDates, []);
+});
+
 test("consultant charges preserve blank, zero and decimal amounts through form validation", () => {
   for (const [raw, expected] of [[undefined, null], [null, null], ["", null], ["  ", null], ["0", 0], [0, 0], ["900.50", 900.5], [1250.75, 1250.75]]) {
     const result = validateConsultantFields({ ...legacy, consultantCharge: raw });
@@ -85,10 +98,12 @@ test("consultant service sends validated charges and preserves atomic audited ed
     "@/services/firestore/auditService": { getAuditActorId: () => "admin", updateAuditedDocument: async (...args) => calls.push({ kind: "update", args }) },
     "@/services/api/client": { authorizedApiRequest: async (url, options) => { calls.push({ kind: "create", url, body: JSON.parse(options.body) }); return { employeeId: "AS001" }; } },
   });
-  assert.equal(await service.createConsultant({ ...legacy, consultantCharge: "900.50", preferredDays: ["fri", "mon"] }), "AS001");
+  assert.equal(await service.createConsultant({ ...legacy, consultantCharge: "900.50", preferredDays: ["fri", "mon"], availableDates: ["2099-10-26"] }), "AS001");
+  assert.deepEqual(calls[0].body.availableDates, ["2099-10-26"]);
   assert.equal(calls[0].body.consultantCharge, 900.5);
   assert.deepEqual(calls[0].body.preferredDays, ["mon", "fri"]);
-  await service.updateConsultant("AS001", { ...legacy, consultantCharge: 0, preferredDays: ["sun"] }, {});
+  await service.updateConsultant("AS001", { ...legacy, consultantCharge: 0, preferredDays: ["sun"], availableDates: ["2099-10-25"] }, {});
+  assert.deepEqual(calls[1].args[2].availableDates, ["2099-10-25"]);
   assert.equal(calls[1].args[2].consultantCharge, 0);
   assert.deepEqual(calls[1].args[2].preferredDays, ["sun"]);
   assert.deepEqual(calls[1].args[3], { action: "update", actorRole: "admin" });
@@ -102,7 +117,7 @@ test("consultant service sends validated charges and preserves atomic audited ed
 
 test("creation API checks Admin access and charge validation before its atomic consultant/audit write", async () => {
   class AuthorizationError extends Error { constructor() { super("Denied"); this.status = 403; } }
-  for (const scenario of ["allowed", "invalid", "invalid-days", "denied"]) {
+  for (const scenario of ["allowed", "invalid", "invalid-days", "invalid-dates", "denied"]) {
     const writes = [];
     let commits = 0;
     const firestore = {
@@ -123,7 +138,7 @@ test("creation API checks Admin access and charge validation before its atomic c
       "@/services/firebase/adminAuthorization": { AdminAuthorizationError: AuthorizationError, requireActiveAdmin: async () => { if (scenario === "denied") throw new AuthorizationError(); return { uid: "admin", firestore }; } },
       "@/services/api/server": { apiJson: (body, status = 200) => Response.json(body, { status }) },
     });
-    const response = await POST(new Request("https://test.local/api/admin/consultants", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...legacy, consultationServices: ["lactation"], preferredDays: scenario === "invalid-days" ? ["bad-day"] : ["mon", "wed"], consultantCharge: scenario === "invalid" ? -1 : 900.5 }) }));
+    const response = await POST(new Request("https://test.local/api/admin/consultants", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...legacy, consultationServices: ["lactation"], availableDates: scenario === "invalid-dates" ? ["2099-02-30"] : ["2099-10-26"], preferredDays: scenario === "invalid-days" ? ["bad-day"] : ["mon", "wed"], consultantCharge: scenario === "invalid" ? -1 : 900.5 }) }));
     assert.equal(response.status, scenario === "allowed" ? 201 : scenario === "denied" ? 403 : 400);
     assert.equal(commits, scenario === "allowed" ? 1 : 0);
     if (scenario === "allowed") {
@@ -132,6 +147,8 @@ test("creation API checks Admin access and charge validation before its atomic c
       assert.equal(consultant.data.consultantCharge, 900.5);
       assert.deepEqual(consultant.data.consultationServices, ["lactation"]);
       assert.deepEqual(consultant.data.preferredDays, ["mon", "wed"]);
+      assert.deepEqual(consultant.data.availableDates, ["2099-10-26"]);
+      assert.deepEqual(audit.data.updatedValues.availableDates, ["2099-10-26"]);
       assert.equal(audit.data.updatedValues.consultantCharge, 900.5);
       assert.deepEqual(audit.data.updatedValues.consultationServices, ["lactation"]);
       assert.deepEqual(audit.data.updatedValues.preferredDays, ["mon", "wed"]);

@@ -30,6 +30,7 @@ export function queueConsultationEmail(transaction: Transaction, firestore: Fire
   };
   transaction.create(firestore.collection(COLLECTION).doc(input.eventId), {
     bookingId: input.bookingId, event: input.event, payloadHash: input.payloadHash ?? null, actorRole: input.actorRole,
+    bookingAuditId: input.auditId,
     audience: "consumer", channel: "email",
     recipient: String(booking.consumerEmail ?? "").trim().toLowerCase(), payload,
     status: "pending", createdAt: input.now, createdBy: input.actorId,
@@ -38,6 +39,7 @@ export function queueConsultationEmail(transaction: Transaction, firestore: Fire
   if (input.consultant !== undefined) {
     transaction.create(firestore.collection(COLLECTION).doc(`${input.eventId}-consultant`), {
       bookingId: input.bookingId, consultantId: String(booking.consultantId ?? ""), event: input.event,
+      bookingAuditId: input.auditId,
       payloadHash: input.payloadHash ?? null, actorRole: input.actorRole, audience: "consultant", channel: "email",
       recipient: typeof input.consultant.email === "string" ? input.consultant.email.trim().toLowerCase() : "",
       payload: { ...payload, providerName: String(input.consultant.name ?? booking.consultantName ?? "") },
@@ -69,8 +71,26 @@ export async function deliverConsultationEmail(firestore: Firestore, eventId: st
       const event = snapshot.data();
       if (!event) return { status: "unknown" as const, event: null };
       if (event.status !== "pending") return { status: event.status as ConsultationEmailResult["status"], event: null };
+      const appointment = typeof event.bookingId === "string" && /^consultation-[a-f0-9]{64}$/.test(event.bookingId)
+        ? (await transaction.get(firestore.collection("consultationBookings").doc(event.bookingId))).data() : null;
+      // Legacy pending events retain their originating booking audit in lastAuditId.
+      // New events snapshot it separately because delivery updates lastAuditId.
+      const bookingAuditId = event.bookingAuditId ?? event.lastAuditId;
+      const expectedStatus = event.event === "cancelled" ? "cancelled" : "confirmed";
+      const current = appointment && appointment.archivedAt == null
+        && ["confirmed", "rescheduled", "cancelled"].includes(event.event)
+        && typeof bookingAuditId === "string" && bookingAuditId === appointment.lastAuditId
+        && appointment.status === expectedStatus;
       const audit = firestore.collection("auditLogs").doc();
       const now = Timestamp.now();
+      if (!current) {
+        transaction.update(reference, { status: "superseded", supersededAt: now, failureReason: "appointment_changed",
+          updatedAt: now, updatedBy: event.createdBy, lastAuditId: audit.id });
+        transaction.create(audit, { action: "update", module: COLLECTION, recordId: eventId, actorId: event.createdBy,
+          actorRole: event.actorRole, previousValues: { status: "pending" },
+          updatedValues: { status: "superseded", failureReason: "appointment_changed" }, timestamp: now, source: "server" });
+        return { status: "superseded" as const, event: null };
+      }
       transaction.update(reference, { status: "sending", updatedAt: now, updatedBy: event.createdBy, lastAuditId: audit.id });
       transaction.create(audit, { action: "update", module: COLLECTION, recordId: eventId, actorId: event.createdBy,
         actorRole: event.actorRole, previousValues: { status: "pending" }, updatedValues: { status: "sending" }, timestamp: now, source: "server" });

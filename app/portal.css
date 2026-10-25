@@ -974,3 +974,14 @@ body.portal-active .portal-toast-viewport{ top:var(--portal-toast-top,calc(150px
   .portal-flow-navigation .portal-button{ width:100%; }
   .portal-state-card{ min-height:200px; padding:28px 20px; }
 }
+.consultant-date-options { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.date-picker-dialog { width: min(100%, 380px); }
+.date-picker-dialog h2 { font-size: 1.35rem; }
+.date-picker-month { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 14px 0; }
+.date-picker-month button, .date-picker-grid button { min-width: 0; min-height: 38px; border: 1px solid var(--portal-border, #cdd7cf); border-radius: 8px; background: #fff; color: #184e3a; font: inherit; }
+.date-picker-month button { width: 40px; }
+.date-picker-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-bottom: 18px; }
+.date-picker-grid > span { text-align: center; font-size: 11px; }
+.date-picker-grid button[aria-pressed="true"] { background: #184e3a; color: #fff; }
+.date-picker-grid button:disabled, .date-picker-month button:disabled { opacity: .38; cursor: not-allowed; }
+.date-picker-grid button:focus-visible, .date-picker-month button:focus-visible { outline: 2px solid #b89a50; outline-offset: 2px; }

@@ -1,17 +1,19 @@
 import type { ReactNode } from "react";
 import type { BookingDocument } from "@/features/firestore/models";
 import { bookingReferenceLabel, bookingStatusLabel } from "@/features/bookings/display";
-import { getTreatmentStatus } from "@/features/bookings/treatmentStatus";
+import { getTreatmentStatus, treatmentStatusLabel } from "@/features/bookings/treatmentStatus";
 import { formatBystanders } from "@/features/hospitals/searchContext";
 import { formatCurrency } from "@/utils/currency";
 import { formatStatus } from "@/utils/text";
 import { formatDisplayDate } from "@/utils/date";
 
-export function PortalBookingSummary({ booking, showCommission = false, children }: {
-  booking: BookingDocument; showCommission?: boolean; children?: ReactNode;
+export function PortalBookingSummary({ booking, showCommission = false, showTreatmentBadge = false, children }: {
+  booking: BookingDocument; showCommission?: boolean; showTreatmentBadge?: boolean; children?: ReactNode;
 }) {
   const startDate = formatDisplayDate(booking.preferredDate);
   const endDate = formatDisplayDate(booking.preferredEndDate);
+  const treatment = getTreatmentStatus(booking);
+  const treatmentBadge = showTreatmentBadge && ["confirmed", "completed"].includes(booking.status) && treatment !== "not_started";
   return <article className="portal-row consumer-booking-row operational-booking-card" data-accent={booking.status}>
     <div className="consumer-booking-copy">
       <span className="consumer-booking-reference">Booking ID: {bookingReferenceLabel(booking)}</span>
@@ -32,7 +34,7 @@ export function PortalBookingSummary({ booking, showCommission = false, children
       {booking.hospitalNotes && <div className="consumer-booking-note"><strong>Centre response</strong><p>{booking.hospitalNotes}</p></div>}
     </div>
     <div className="consumer-booking-meta">
-      <span className="portal-status" data-status={booking.status}>{bookingStatusLabel(booking.status)}</span>
+      <span className="portal-status" data-status={booking.status}>{treatmentBadge ? treatmentStatusLabel(treatment) : bookingStatusLabel(booking.status)}</span>
       <div className="consumer-booking-cost"><span>Package amount</span><strong>{formatCurrency(booking.servicePrice)}</strong><small>At time of request</small></div>
       {showCommission && <div className="consumer-booking-cost operational-booking-commission"><span>Estimated commission</span><strong>{formatCurrency(booking.estimatedCommission ?? 0)}</strong></div>}
     </div>

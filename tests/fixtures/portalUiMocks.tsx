@@ -123,7 +123,10 @@ export const reviewAvailabilityRequest = async (_item: unknown, action: string) 
   return {};
 };
 export const updateHospitalBooking = async () => ({});
-export const updateTreatmentProgress = async () => ({});
+export const updateTreatmentProgress = async (_id: string, treatmentStatus: string) => {
+  portalUiState.calls++;
+  return { treatmentStatus, status: treatmentStatus === "completed" ? "completed" : "confirmed" };
+};
 export const archiveConsumer = async () => ({});
 export const createConsultant = async (input: unknown) => { portalUiState.consultantWrites.push(input); return "AS002"; };
 export const updateConsultant = async (_id: string, input: unknown) => { portalUiState.consultantWrites.push(input); return {}; };
@@ -142,8 +145,11 @@ const consultation = { ...metadata, id: "consultation-fixture", bookingReference
   consumerNotes: "Guidance about pregnancy lifestyle", adminNotes: null };
 export const listPublicConsultants = () => {
   const staleFirstRead = portalUiState.screen === "consumer-consultation-refresh" && portalUiState.publicConsultantReads++ === 0;
-  return page(portalUiState.screen === "consumer-consultation-empty" || staleFirstRead ? [] : [consultationProfessional]);
+  return page(portalUiState.screen === "consumer-consultation-empty" || staleFirstRead ? [] : [portalUiState.screen.endsWith("-restricted")
+    ? { ...consultationProfessional, preferredDays: ["sun"], availableDates: ["2099-10-25"] } : consultationProfessional]);
 };
+export const getPublicConsultant = async () => portalUiState.screen.endsWith("-restricted")
+  ? { ...consultationProfessional, preferredDays: ["sun"], availableDates: ["2099-10-25"] } : consultationProfessional;
 export const createConsultationBooking = async (input: unknown) => { portalUiState.consultantWrites.push(input); return { ok: true, bookingId: "consultation-fixture", bookingReference: "AYURCONS01" }; };
 export const listConsultationBookings = () => page(portalUiState.screen === "consumer-consultations-empty" ? [] : [consultation]);
 export const getConsultationBooking = async () => consultation;

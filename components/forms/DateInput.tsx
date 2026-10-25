@@ -1,12 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState, type ChangeEvent, type InputHTMLAttributes } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type ChangeEvent, type InputHTMLAttributes } from "react";
 import { formatDisplayDate, isIsoDate, parseDisplayDate } from "@/utils/date";
+const DatePickerCalendar = lazy(() => import("@/components/forms/DatePickerCalendar").then((module) => ({ default: module.DatePickerCalendar })));
 
-type DateInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type" | "value" | "defaultValue"> & { value?: string; defaultValue?: string };
+type DateInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type" | "value" | "defaultValue"> & {
+  value?: string; defaultValue?: string;
+  isDateAllowed?: (date: string) => boolean;
+};
 
 /** Visible DD/MM/YYYY editor + native calendar. Named form values stay ISO. */
-export function DateInput({ value, defaultValue = "", name, min, max, required, disabled, readOnly, onChange, onBlur, ...props }: DateInputProps) {
+export function DateInput({ value, defaultValue = "", name, min, max, required, disabled, readOnly, onChange, onBlur, isDateAllowed, ...props }: DateInputProps) {
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [localValue, setLocalValue] = useState(defaultValue);
   const iso = value ?? localValue;
   const [draft, setDraft] = useState(() => formatDisplayDate(iso));
@@ -18,8 +23,9 @@ export function DateInput({ value, defaultValue = "", name, min, max, required, 
   const textRef = useRef<HTMLInputElement>(null);
   const lastEmitted = useRef(iso);
   const parsed = draft ? parseDisplayDate(draft) : "";
-  const invalid = Boolean(draft && (!parsed || (min && parsed < String(min)) || (max && parsed > String(max))));
-  const error = invalid ? "Enter a valid date in DD/MM/YYYY" + (min || max ? " within the allowed range." : ".") : "";
+  const unavailable = Boolean(parsed && isDateAllowed && !isDateAllowed(parsed));
+  const invalid = Boolean(draft && (!parsed || (min && parsed < String(min)) || (max && parsed > String(max)) || unavailable));
+  const error = unavailable ? "The consultant is not available on this date. Choose an available date." : invalid ? "Enter a valid date in DD/MM/YYYY" + (min || max ? " within the allowed range." : ".") : "";
 
   useEffect(() => {
     // A calendar button inside an existing label must not become part of the
@@ -47,9 +53,14 @@ export function DateInput({ value, defaultValue = "", name, min, max, required, 
     const form = input?.form;
     const sync = (event: Event) => {
       if (!input) return;
+      if (isDateAllowed && input.value && !isDateAllowed(input.value)) {
+        setDraft(formatDisplayDate(input.value));
+        setTouched(true);
+        input.value = "";
+      }
       const changed = lastEmitted.current !== input.value;
       setLocalValue(input.value);
-      setDraft(formatDisplayDate(input.value));
+      if (input.value || !isDateAllowed) setDraft(formatDisplayDate(input.value));
       lastEmitted.current = input.value;
       // Safari can emit input before change/blur when its native picker commits.
       // Publish that value immediately; the later change event is deduplicated.
@@ -71,7 +82,7 @@ export function DateInput({ value, defaultValue = "", name, min, max, required, 
     input?.addEventListener("change", sync);
     form?.addEventListener("reset", reset);
     return () => { input?.removeEventListener("input", sync); input?.removeEventListener("change", sync); form?.removeEventListener("reset", reset); };
-  }, [defaultValue, value, onChange]);
+  }, [defaultValue, value, onChange, isDateAllowed]);
 
   function emit(next: string, event: ChangeEvent<HTMLInputElement>) {
     const native = nativeRef.current;
@@ -86,6 +97,7 @@ export function DateInput({ value, defaultValue = "", name, min, max, required, 
   function openPicker() {
     const native = nativeRef.current;
     if (!native || disabled || readOnly) return;
+    if (isDateAllowed) { setCalendarOpen(true); return; }
     try { if (native.showPicker) native.showPicker(); else { native.focus(); native.click(); } } catch { native.focus(); }
   }
 
@@ -100,7 +112,7 @@ export function DateInput({ value, defaultValue = "", name, min, max, required, 
           : raw;
         setDraft(next);
         const date = parseDisplayDate(next);
-        emit(date && (!min || date >= String(min)) && (!max || date <= String(max)) ? date : "", event);
+        emit(date && (!min || date >= String(min)) && (!max || date <= String(max)) && (!isDateAllowed || isDateAllowed(date)) ? date : "", event);
       }}
       onBlur={(event) => { setTouched(true); if (parsed) setDraft(formatDisplayDate(parsed)); onBlur?.(event); }} />
     <button className="date-input-calendar" type="button" aria-label="Open calendar" disabled={disabled || readOnly} onClick={openPicker}>
@@ -108,7 +120,12 @@ export function DateInput({ value, defaultValue = "", name, min, max, required, 
     </button>
     <input ref={nativeRef} type="date" className="date-input-picker" name={name} form={props.form} value={isIsoDate(iso) ? iso : ""} min={min} max={max} required={required}
       disabled={disabled} readOnly={readOnly} tabIndex={-1} aria-hidden="true" aria-invalid={Boolean(props["aria-invalid"] || invalid)} onClick={() => { try { nativeRef.current?.showPicker?.(); } catch { /* Native Safari picker remains available. */ } }}
-      onChange={(event) => { setDraft(formatDisplayDate(event.target.value)); setTouched(false); emit(event.target.value, event); }} />
+      onChange={(event) => { const next = event.target.value; setDraft(formatDisplayDate(next)); setTouched(Boolean(next && isDateAllowed && !isDateAllowed(next))); emit(!next || !isDateAllowed || isDateAllowed(next) ? next : "", event); }} />
+    {calendarOpen && !disabled && !readOnly && isDateAllowed && <Suspense fallback={<span className="date-input-error" role="status">Opening calendar…</span>}><DatePickerCalendar value={iso} min={min === undefined ? undefined : String(min)} max={max === undefined ? undefined : String(max)} isDateAllowed={isDateAllowed} onClose={() => setCalendarOpen(false)} onSelect={(next) => {
+      setDraft(formatDisplayDate(next)); setTouched(false);
+      emit(next, { target: nativeRef.current, currentTarget: nativeRef.current } as ChangeEvent<HTMLInputElement>);
+      setCalendarOpen(false);
+    }} /></Suspense>}
     {touched && error && <span className="date-input-error" role="alert">{error}</span>}
   </span>;
 }

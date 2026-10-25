@@ -2,6 +2,133 @@
 
 Updated: 25 October 2026 (Asia/Calcutta).
 
+## Owner-requested build and lint validation (25 October 2026)
+
+- ESLint initially caught a redundant synchronous availability state reset in
+  ConsultationBookings' fetch effect. Removed it: the dialog open handler
+  already initializes all three values. No rule suppression or workflow change.
+  Final ESLint passed with zero errors/warnings. Production build rerun after
+  that correction succeeded, including TypeScript and all 71 generated pages.
+- Four focused desktop/WebKit-phone browser regressions passed for current
+  availability, nested calendars, scroll locking and rescheduling after the
+  effect correction. No authenticated live workflow/API test or real email.
+- Started a fresh next start server for this build on loopback port 3217.
+  /api/health and /api/health?deep=true with application/json returned 200/ok
+  in configuration/deep-configuration modes (3/5 dependencies ready).
+  /health?deep=true returned 200 with expected themed content and rendered at
+  390px/1440px with five service cards, no runtime errors or horizontal overflow.
+  These are configuration-only checks, not delivery/connectivity/permission
+  proof. Temporary server stopped; generated Next route-type import restored.
+- Version remains 4.16.1; no separate validation-only bump. No deployment.
+  Pending availability rules/application release and SMTP latency limits remain.
+
+## Obsolete pending consultation emails suppressed (25 October 2026)
+
+- v4.16.1 fixes the high-priority stale pending-email retry finding. The shared
+  delivery claim now reads the current consultation in the same transaction
+  before SMTP. Its status and lastAuditId must match the originating appointment
+  revision; archived/missing appointments and changed revisions are not sent.
+  New events snapshot bookingAuditId for both recipients; existing pending
+  events use their unchanged original lastAuditId. No historical backfill.
+- Obsolete pending confirmation/reschedule/cancellation events become terminal
+  superseded records, with timestamp/reason and atomic audit. Repeated retries
+  do not add audits, send email, or create false delivery-failure bell alerts.
+  Feedback explicitly says the outdated email was not sent. Consumer and
+  consultant claims remain independent; accepted/failed/sending/unknown records
+  are never restarted. Hospital booking email implementation is unchanged.
+- Validation: all 44 focused consultation lifecycle/API/email/hospital-booking
+  tests passed with isolated cloud/SMTP fixtures. Tests cover the exact lost
+  creation-response -> Admin cancellation -> original POST retry reproduction,
+  legacy and new pending events, Consumer cancellation, completion, archival/
+  missing records, old reschedule retries after a later return to the same date,
+  database failure before claim, valid delivery, duplicates and independent
+  recipient failures. No live database mutation or real email was performed.
+- This closes the obsolete *pending* event finding, not the separate awaited
+  SMTP-latency finding. The transactional claim is the dispatch boundary:
+  cancellation after a successful send claim cannot atomically recall SMTP
+  already in flight/accepted. No exactly-once inbox-delivery guarantee.
+- Server-only event records remain denied to every client role, so no new
+  rules/index change is required for this fix. Earlier availability rule changes
+  still need their own validation/deployment. No build/lint/typecheck, browser
+  run or deployment for this task; the application must be released for this
+  guard to take effect. Version synchronized in package.json/package-lock.
+
+## Enforced consultant booking dates (25 October 2026)
+
+- v4.16.0 enforces existing preferredDays plus optional availableDates (up to
+  31 ISO care dates). Both restrictions must match when configured; both empty/
+  missing preserves legacy unrestricted future dates. Past/ended windows still
+  cannot be booked. Changing availability does not migrate/cancel appointments.
+- Admin consultant create/edit validation, form parsing, model and both
+  Firestore document/changed-field allowlists include availableDates. Existing
+  API create and direct-SDK edit atomic audits are reused. Admin can add/remove
+  dates, see saved dates and reopen them for editing; DD/MM/YYYY display remains.
+- Public whitelist exposes only safe weekdays/dates, rejecting malformed
+  configurations. A bounded exact-consultant lookup reuses that projection for
+  Admin rescheduling; never returns contacts or raw operational documents.
+  Consumer calendar disables unavailable dates and expired windows; typing,
+  submitting and switching consultants cannot preserve an invalid selection.
+  Optional lazy-loaded restricted calendar uses ModalLayer for focus, viewport
+  handling and nested scroll locking; ordinary DateInput keeps its native picker.
+- Creation and Admin rescheduling re-read current consultant availability in
+  their existing transactions before any write/email. Committed request retries
+  remain idempotent despite later availability edits. Hospital package bookings,
+  appointment IDs/status lifecycle and existing records are unchanged.
+- Validation: 55 focused unit/API/date/hospital-booking regressions passed;
+  consultant-save suite rerun passed all 13 after additional API assertions.
+  18 final Playwright cases passed across desktop, 320px Chromium phone and
+  WebKit phone: restricted dates, nested calendar dialogs/scroll restoration,
+  Admin save/reopen, legacy preferences, rescheduling, ordinary native date
+  inputs and single Consumer submission/consent. Fake cloud/email fixtures;
+  no live database writes, email or physical-device testing.
+- Added emulator coverage for valid/invalid/duplicate/cleared/max-31 dates and
+  denied Hospital/Consumer changes, not executed: only Java 8 is installed.
+  Mock/source checks do not prove deployed rules or their expression budget.
+  Rules must be validated/deployed before releasing Admin edits with the new
+  field; no index change is needed. No deployment/build/lint/typecheck was run
+  for this task. Earlier stale pending-email replay and awaited SMTP-latency
+  audit findings remain separate and unfixed; this availability task does not
+  claim to remedy them. Version synchronized in package.json and package-lock.
+
+## Firebase deployment after reauthentication (25 October 2026)
+
+- Owner requested redeployment after Firebase reauthentication. Scoped,
+  non-interactive deployment to ayursarga-connect succeeded for firestore:rules
+  and firestore:indexes. CLI compiled/released firestore.rules and reported
+  successful index deployment. Read-only index listing verified all 17 deployed
+  composite indexes READY, including consultant discovery and own-consumer
+  consultation history indexes; none initializing. No forced index deletion.
+- No Hosting, Storage, Functions or operational records were changed. Firebase
+  Hosting still targets static out/ (absent), so it must not replace the
+  Node-capable application hosting. UI/API version 4.15.1 needs a separate
+  application release. Generated CLI debug log removed; no version bump.
+- Earlier audit findings remain unfixed: obsolete pending confirmation emails
+  can replay after cancellation (reproduced with isolated fixtures); SMTP
+  currently delays consultation responses; configured preferred weekdays are
+  advisory in practice and not enforced by booking validation. Deployment does
+  not remedy these findings. Prior build/lint/typecheck, 77 focused tests and
+  40 UI cases passed; fresh-build health was configuration-ready, not proof of
+  live SMTP delivery or deployed authenticated permission flows.
+
+## Hospital treatment controls and badges (25 October 2026)
+
+- v4.15.1 removes Hospital booking Reschedule and Mark ongoing buttons.
+  Start treatment changes the Hospital badge to Treatment Started and leaves
+  only Complete treatment. Completion retains the shared confirmation dialog
+  and displays Treatment completed, with no further treatment action.
+- Existing direct started-to-completed API/service/rule transition is reused;
+  its ownership, validation, concurrency precondition, timestamps and atomic
+  audit are unchanged. Historical ongoing records can still complete, and
+  reschedule_requested records remain readable/confirmable. No data migration,
+  API restriction change or Firestore rule/index update. Admin/Consumer summary
+  defaults are unchanged; Hospital opts into treatment-specific badge labels.
+- Validation: 14 focused mutation/booking-details regressions passed, including
+  audited direct completion and permission denials. 3 browser cases passed
+  (desktop, 320px Chromium phone, WebKit phone) for start/completion badges,
+  absent removed controls, cancelling/confirming completion, scroll restoration,
+  overflow and unchanged Admin badge behavior. No build, lint, emulator, live
+  writes or deployment.
+
 ## Consultant appointment emails, phase 1 only (25 October 2026)
 
 - v4.15.0 emails the assigned consultant for new consultation bookings, Admin

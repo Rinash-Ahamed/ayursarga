@@ -1,7 +1,7 @@
 "use client";
 
 import type { ConsultationServiceId } from "@/features/consultations/catalog";
-import type { ConsultantPage } from "@/features/consultations/types";
+import type { ConsultantPage, PublicConsultant } from "@/features/consultations/types";
 import type { ConsultationBookingDocument } from "@/features/firestore/models";
 import { authorizedApiRequest, decodeMutation } from "@/services/api/client";
 import type { ConsultationEmailResult } from "@/features/consultations/email";
@@ -14,6 +14,13 @@ export async function listPublicConsultants(service: ConsultationServiceId, curs
   const result = await response.json();
   if (!response.ok) throw new Error(typeof result.error === "string" ? result.error : "Consultant search is unavailable.");
   return result;
+}
+
+export async function getPublicConsultant(service: string, consultantId: string, signal?: AbortSignal): Promise<PublicConsultant | null> {
+  const response = await fetch(`/api/public/consultants?${new URLSearchParams({ service, consultantId })}`, { signal, cache: "no-store" });
+  const result = await response.json();
+  if (!response.ok) throw new Error(typeof result.error === "string" ? result.error : "Consultant availability is unavailable.");
+  return result.consultant;
 }
 
 export function createConsultationBooking(input: {
