@@ -7,7 +7,7 @@ import type { BookingDocument } from "@/features/firestore/models";
 import { getTreatmentStatus } from "@/features/bookings/treatmentStatus";
 import { emptyQueryPage, type DocumentRecord, type QueryPageOptions } from "@/services/firestore/firestoreService";
 import { cancelConsumerBooking, getConsumerBookingDetails, getPortalBooking, listConsumerBookings } from "@/services/bookings/bookingService";
-import { bookingReferenceLabel, bookingStatusLabel } from "@/features/bookings/display";
+import { bookingDateFacts, bookingReferenceLabel, bookingStatusLabel } from "@/features/bookings/display";
 import { formatBystanders } from "@/features/hospitals/searchContext";
 import { formatCurrency } from "@/utils/currency";
 import { formatStatus } from "@/utils/text";
@@ -102,7 +102,7 @@ export function ConsumerBookings({ bookingId }: { bookingId?: string } = {}) {
           <dl className="consumer-booking-facts">
             <div><dt>Requested care dates</dt><dd>{formatDisplayDate(booking.preferredDate)}{booking.preferredEndDate && formatDisplayDate(booking.preferredEndDate) !== formatDisplayDate(booking.preferredDate) ? ` to ${formatDisplayDate(booking.preferredEndDate)}` : ""}</dd></div>
             <div><dt>Accompanying</dt><dd>{formatBystanders(booking.bystanderCount ?? 1)}{(booking.additionalBystanderTotal ?? 0) > 0 && <small>{formatCurrency(booking.additionalBystanderTotal!)} additional</small>}</dd></div>
-            {booking.confirmedDate && <div><dt>{booking.status === "reschedule_requested" ? "Proposed appointment" : "Confirmed appointment"}</dt><dd>{formatDisplayDate(booking.confirmedDate)}{booking.confirmedTime ? ` · ${booking.confirmedTime}` : ""}</dd></div>}
+            {bookingDateFacts(booking).map((fact) => <div key={fact.label}><dt>{fact.label}</dt><dd>{fact.value}</dd></div>)}
           </dl>
           {booking.hospitalNotes && <div className="consumer-booking-note"><strong>Centre response</strong><p>{booking.hospitalNotes}</p></div>}
           {booking.consumerNotes && <details className="consumer-booking-notes"><summary>Your request notes</summary><p>{booking.consumerNotes}</p></details>}

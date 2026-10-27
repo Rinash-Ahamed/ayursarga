@@ -38,7 +38,9 @@ test("booking history identifies the centre, package, dates, prices and response
   await expect(cards.first()).toContainText("Requested care dates");
   await expect(cards.first()).toContainText("₹24,000");
   await expect(cards.first()).toContainText("2 adult bystanders");
-  await expect(cards.nth(1)).toContainText("Confirmed appointment");
+  await expect(cards.locator("dt").filter({ hasText: /^Booked on$/ })).toHaveCount(3);
+  await expect(cards.nth(1)).toContainText("Scheduled care date");
+  await expect(cards.getByText("Confirmed appointment", { exact: true })).toHaveCount(0);
   await expect(cards.nth(1)).toContainText("Your preferred care dates are available.");
   await expect(cards.first()).toContainText("appointment is not confirmed yet");
   await expect(cards.first()).toContainText("AYUR000000");

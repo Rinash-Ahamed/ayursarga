@@ -2,7 +2,7 @@ import type { UserProfile } from "@/features/auth/contracts";
 
 export const CONSUMER_PRIVACY_NOTICE_VERSION = "2026-09-23";
 export const CUSTOMER_TERMS_VERSION = "2026-09-23";
-export const BOOKING_TERMS_VERSION = "2026-09-23";
+export const BOOKING_TERMS_VERSION = "2026-10-27";
 
 export function hasCurrentConsumerPrivacyConsent(profile: UserProfile | null | undefined) {
   return profile?.role === "consumer"

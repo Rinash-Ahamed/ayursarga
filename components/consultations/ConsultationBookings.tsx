@@ -160,9 +160,10 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
       <h3>{booking.serviceName}</h3>
       <p className="consumer-booking-package">{booking.consultantName}{booking.consultantDesignation ? ` · ${booking.consultantDesignation}` : ""}</p>
       <dl className="consumer-booking-facts consultation-booking-details">
+        <div><dt>Booked on</dt><dd>{formatDisplayDate(booking.createdAt, "Not recorded")}</dd></div>
         <div><dt>Preferred date</dt><dd>{formatDisplayDate(booking.preferredDate)}</dd></div>
         <div><dt>Preferred window</dt><dd>{formatConsultantTimeSlot(booking.preferredTimeSlot, { [booking.preferredTimeSlot]: { startTime: booking.slotStartTime, endTime: booking.slotEndTime } })}</dd></div>
-        {booking.confirmedDate && <div><dt>Confirmed appointment</dt><dd>{formatDisplayDate(booking.confirmedDate)} · {booking.confirmedTime ? `${booking.confirmedTime} IST` : `${booking.slotStartTime} - ${booking.slotEndTime} IST`}</dd></div>}
+        {booking.confirmedDate && <div><dt>Scheduled appointment</dt><dd>{formatDisplayDate(booking.confirmedDate)} · {booking.confirmedTime ? `${booking.confirmedTime} IST` : `${booking.slotStartTime} - ${booking.slotEndTime} IST`}</dd></div>}
         {role === "admin" && <><div><dt>Consumer</dt><dd>{booking.consumerName}</dd></div><div><dt>Email</dt><dd>{booking.consumerEmail}</dd></div><div><dt>Phone</dt><dd>{booking.consumerPhone}</dd></div></>}
         {booking.consumerNotes && <div><dt>Consumer notes</dt><dd>{booking.consumerNotes}</dd></div>}
         {booking.adminNotes && <div><dt>Appointment notes</dt><dd>{booking.adminNotes}</dd></div>}

@@ -1,0 +1,1 @@
+npx firebase firestore:delete --all-collections --recursive --database "(default)" --project ayursarga-connect

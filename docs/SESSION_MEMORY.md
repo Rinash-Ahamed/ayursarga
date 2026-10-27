@@ -2,6 +2,62 @@
 
 Updated: 27 October 2026 (Asia/Calcutta).
 
+## Booking placement dates versus care schedules (27 October 2026)
+
+- v4.18.4 fixes the screenshot's duplicate hospital-booking date: Consumer,
+  Hospital and Admin summaries now show Booked on from createdAt, never from
+  confirmedDate or confirmedAt. Shared bookingDateFacts uses DD/MM/YYYY and
+  India-day formatting. Missing legacy creation dates show Not recorded.
+- The existing requested care dates remain visible. Duplicate auto-confirmed
+  care dates are omitted; different care schedules, explicit appointment times
+  and historical reschedule proposals remain as Scheduled care date or Proposed
+  care date. Appointment/treatment statuses and booking actions are unchanged.
+- Consumer/Admin online consultation history also shows Booked on separately
+  from Scheduled appointment (the actual consultation date/time). Consumer help
+  wording distinguishes placement from care dates. Reviewed email schedule
+  sources; they correctly use appointment dates and were not changed.
+- 10 focused date/details unit/API-fixture checks and 9 browser cases passed
+  across desktop Chromium, mobile Chromium and mobile WebKit. Covered India
+  midnight boundaries, Firestore timestamps, missing creation dates, preserved
+  legacy/proposed schedules, role-facing summaries and consultation rescheduling.
+  No persisted fields, database records, APIs, rules or email logic were changed;
+  no build, lint, live mutations or deployment were run for this UI-only request.
+
+## Online consultation cancellation wording (27 October 2026)
+
+- v4.18.3 replaces only the Cancellation & Refund Policy's old Online
+  Consultation Cancellation heading/paragraph with the owner's new heading and
+  three exact paragraphs: 100% refund at least 48 hours before consultation;
+  no refund inside 48 hours except approved exceptional circumstances or legal
+  requirements; eligible refunds through the original payment method. Other
+  policy sections, metadata, documents and page styling are unchanged.
+- BOOKING_TERMS_VERSION advances to 2026-10-27 so new server-created hospital
+  and online consultation booking consents identify the updated combined terms.
+  Profile-completion Privacy/Customer Terms versions remain unchanged. Existing
+  records are not migrated. Both creation routes already snapshot this shared
+  constant; client writes remain denied and rules retain existing consent
+  immutability. No rules, cancellation eligibility, payments or automatic refund
+  processing were changed or deployed.
+- 43 focused local legal, hospital-booking and consultation-booking regressions
+  passed with synthetic Firebase/email fixtures, including consent validation,
+  role/ownership denials, audit/notification atomicity and legacy/retry behavior.
+  Added JSON/BOM and exact-replacement-copy regression checks. No build, lint,
+  live mutations, emails or deployment were run for this copy-update request.
+
+## Firebase rules redeployment (27 October 2026)
+
+- Owner reauthenticated and explicitly requested redeployment. Scoped,
+  non-interactive deployment to ayursarga-connect completed with exit code 0:
+  Firestore rules, Firestore indexes and Storage rules only. Both rulesets
+  compiled; Firestore rules were uploaded/released, and unchanged Storage rules
+  were released. Deployment's index listing showed 17 READY indexes; no index
+  creation or initialization was reported.
+- No Hosting/application deployment, data cleanup, Auth-account deletion, image
+  removal, build or lint was performed in this deployment task. The earlier
+  permanent-cleanup discussion did not execute any deletion. Prior emulator
+  coverage limitations and separate dependency-remediation blockers remain;
+  deployed-rule compilation is not a substitute for workflow permission tests.
+
 ## Search Centre image loading (27 October 2026)
 
 - v4.18.2 is a compatible public image-performance fix, using the public-design
