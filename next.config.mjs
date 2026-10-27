@@ -5,6 +5,8 @@ const nextConfig = {
   reactStrictMode: true,
   env: {
     NEXT_PUBLIC_APP_VERSION: packageJson.version,
+    // Public build-time switch. No endpoint/polling is needed to decide visibility.
+    NEXT_PUBLIC_AYU_ONLINE: process.env.AYU_ONLINE === "true" ? "true" : "false",
   },
   images: {
     formats: ["image/avif", "image/webp"],

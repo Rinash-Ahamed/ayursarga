@@ -24,6 +24,7 @@ import { formatStatus } from "@/utils/text";
 import { formatConsultantTimeSlot } from "@/features/consultants/validation";
 import { validConsultationSchedule } from "@/features/consultations/schedule";
 import { consultationEmailFeedback } from "@/features/consultations/email";
+import { formatBookingPlacedAt } from "@/features/bookings/display";
 
 type Appointment = DocumentRecord<ConsultationBookingDocument>;
 type Action = { booking: Appointment; status: "reschedule" | "completed" | "cancelled"; requestId: string };
@@ -160,7 +161,7 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
       <h3>{booking.serviceName}</h3>
       <p className="consumer-booking-package">{booking.consultantName}{booking.consultantDesignation ? ` · ${booking.consultantDesignation}` : ""}</p>
       <dl className="consumer-booking-facts consultation-booking-details">
-        <div><dt>Booked on</dt><dd>{formatDisplayDate(booking.createdAt, "Not recorded")}</dd></div>
+        <div><dt>Booked on</dt><dd>{formatBookingPlacedAt(booking.createdAt)}</dd></div>
         <div><dt>Preferred date</dt><dd>{formatDisplayDate(booking.preferredDate)}</dd></div>
         <div><dt>Preferred window</dt><dd>{formatConsultantTimeSlot(booking.preferredTimeSlot, { [booking.preferredTimeSlot]: { startTime: booking.slotStartTime, endTime: booking.slotEndTime } })}</dd></div>
         {booking.confirmedDate && <div><dt>Scheduled appointment</dt><dd>{formatDisplayDate(booking.confirmedDate)} · {booking.confirmedTime ? `${booking.confirmedTime} IST` : `${booking.slotStartTime} - ${booking.slotEndTime} IST`}</dd></div>}

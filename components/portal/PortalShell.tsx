@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { PortalNotifications } from "@/components/portal/PortalNotifications";
 import { lockDocumentScroll } from "@/utils/documentScrollLock";
 import { ConsumerPortalFooter } from "@/components/consumer/ConsumerPortalFooter";
+import AyuBuddy from "@/components/AyuBuddy";
 
 type PortalNavigationIcon = "dashboard" | "hospitals" | "consultants" | "users" | "bookings" | "availability" | "audit" | "profile" | "services" | "password" | "search" | "person" | "support" | "billing";
 type NavigationItem = readonly [label: string, href: string, icon: PortalNavigationIcon, nested?: boolean];
@@ -279,6 +280,7 @@ export function PortalShell({ role, title, children, focused = false }: {
       </div>
       {role === "consumer" && <ConsumerPortalFooter />}
     </section>
+    {role === "consumer" && <AyuBuddy />}
     {role === "consumer" && <nav className="consumer-bottom-nav" aria-label="Consumer mobile navigation">
       {NAVIGATION.consumer.map(([label, href, icon], index) => <Link key={href} href={href} aria-label={label} aria-current={isNavigationActive(pathname, href) ? "page" : undefined}><PortalNavigationIcon name={icon} /><span>{["Bookings", "Search", "Profile", "Help"][index]}</span></Link>)}
     </nav>}

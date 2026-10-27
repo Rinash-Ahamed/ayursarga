@@ -15,8 +15,8 @@ export function contactEmailHtml(data: ContactEmailData) {
   <html><body style="margin:0;background:#f9f5ea;font-family:Arial,sans-serif;color:#2a281f">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f9f5ea;padding:32px 16px"><tr><td align="center">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 16px 44px rgba(58,61,46,.12)">
-        <tr><td style="background:#3a3d2e;padding:34px 40px;color:#f9f5ea"><div style="font-family:Georgia,serif;font-size:28px">Ayursarga</div><div style="margin-top:8px;color:#c9a66b;font-size:11px;letter-spacing:2px;text-transform:uppercase">New retreat enquiry</div></td></tr>
-        <tr><td style="padding:38px 40px"><h1 style="font-family:Georgia,serif;font-size:28px;font-weight:400;margin:0 0 8px;color:#3a3d2e">A new journey begins.</h1><p style="color:#6c6d5d;line-height:1.7;margin:0 0 30px">A visitor submitted a consultation request through ayursarga.com.</p>
+        <tr><td style="background:#3a3d2e;padding:34px 40px;color:#f9f5ea"><div style="font-family:Georgia,serif;font-size:28px">Ayursarga</div><div style="margin-top:8px;color:#c9a66b;font-size:11px;letter-spacing:2px;text-transform:uppercase">New Ayursarga enquiry</div></td></tr>
+        <tr><td style="padding:38px 40px"><h1 style="font-family:Georgia,serif;font-size:28px;font-weight:400;margin:0 0 8px;color:#3a3d2e">A question for the Ayursarga team.</h1><p style="color:#6c6d5d;line-height:1.7;margin:0 0 30px">A visitor submitted an enquiry through ayursarga.com.</p>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">
             ${emailRow("Name", safe.name)}${emailRow("Email", safe.email)}${emailRow("Phone", safe.phone)}${emailRow("Interested in", safe.interest)}${safe.guidanceProfile ? emailRow("Guidance preferences", safe.guidanceProfile) : ""}${emailRow("Message", safe.message || "No message provided")}
           </table>

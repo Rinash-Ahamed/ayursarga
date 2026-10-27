@@ -1,6 +1,6 @@
 {
   "name": "ayursarga",
-  "version": "4.18.5",
+  "version": "4.19.2",
   "private": true,
   "engines": {
     "node": "24.x"
@@ -22,6 +22,7 @@
     "test:e2e:performance": "playwright test --config=tests/config/playwright.performance.config.ts",
     "test:e2e:portal-ui": "playwright test --config=tests/config/playwright.portal-ui.config.ts",
     "test:e2e:search-performance": "playwright test --config=tests/config/playwright.search-performance.config.ts",
+    "test:e2e:ayu": "playwright test --config=tests/config/playwright.ayu.config.ts",
     "firebase:emulators": "firebase emulators:start --project demo-ayursarga --only auth,firestore,hosting",
     "firebase:emulators:auth": "firebase emulators:start --project demo-ayursarga --only auth",
     "firebase:provision-user": "node scripts/provision-portal-user.mjs",

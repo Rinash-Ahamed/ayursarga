@@ -8,8 +8,15 @@ const paths = ["next/navigation", "@/contexts/AuthContext", "@/hooks/useAuth", "
 const mocks = loadTypeScript("tests/fixtures/navHydrationMocks.tsx");
 const overrides = Object.fromEntries(paths.map((path) => [path, mocks]));
 const { default: Nav } = loadTypeScript<{ default: ComponentType }>("components/Nav.tsx", overrides);
+const previousAyuFlag = process.env.NEXT_PUBLIC_AYU_ONLINE;
+process.env.NEXT_PUBLIC_AYU_ONLINE = "true";
 const html = renderToString(createElement(Nav));
-const bundle = bundleDialogHarness("tests/fixtures/navHydrationHarness.tsx", Object.fromEntries(paths.map((path) => [path, "tests/fixtures/navHydrationMocks.tsx"])));
+if (previousAyuFlag === undefined) delete process.env.NEXT_PUBLIC_AYU_ONLINE;
+else process.env.NEXT_PUBLIC_AYU_ONLINE = previousAyuFlag;
+const bundle = bundleDialogHarness("tests/fixtures/navHydrationHarness.tsx", {
+  ...Object.fromEntries(paths.map((path) => [path, "tests/fixtures/navHydrationMocks.tsx"])),
+  "next/link": "tests/fixtures/centreSearchMocks.tsx",
+}, { NEXT_PUBLIC_AYU_ONLINE: "true" });
 
 test("server and browser paths may differ without hydration warnings; active links still follow navigation", async ({ page }) => {
   const errors: string[] = [];

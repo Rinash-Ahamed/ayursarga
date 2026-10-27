@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { loadTypeScript } from "../helpers/loadTypeScript.mjs";
 
-const { bookingDateFacts } = loadTypeScript("features/bookings/display.ts");
+const { bookingDateFacts, formatBookingPlacedAt } = loadTypeScript("features/bookings/display.ts");
 const booking = {
   createdAt: new Date("2026-10-27T20:30:00Z"), // Already 28 October in India.
   preferredDate: "2027-01-07", confirmedDate: "2027-01-07",
@@ -11,10 +11,10 @@ const booking = {
 
 test("Booked on uses creation in India time, not the future care or confirmation date", () => {
   assert.deepEqual(bookingDateFacts({ ...booking, confirmedAt: new Date("2026-10-30") }), [
-    { label: "Booked on", value: "28/10/2026" },
+    { label: "Booked on", value: "28/10/2026, 02:00 am IST" },
   ]);
   assert.deepEqual(bookingDateFacts({ ...booking, createdAt: { toDate: () => booking.createdAt } }), [
-    { label: "Booked on", value: "28/10/2026" },
+    { label: "Booked on", value: "28/10/2026, 02:00 am IST" },
   ]);
 });
 
@@ -40,7 +40,29 @@ test("cancelled/completed/requested history retains placement date without misla
   for (const status of ["cancelled", "completed", "requested"]) {
     const record = { ...booking, status };
     const before = { ...record };
-    assert.deepEqual(bookingDateFacts(record), [{ label: "Booked on", value: "28/10/2026" }]);
+    assert.deepEqual(bookingDateFacts(record), [{ label: "Booked on", value: "28/10/2026, 02:00 am IST" }]);
     assert.deepEqual(record, before);
   }
+});
+
+test("both booking flows share an explicit India timestamp independent of device timezone", () => {
+  const previous = process.env.TZ;
+  try {
+    for (const zone of ["UTC", "Asia/Kolkata", "America/Los_Angeles", "Pacific/Auckland"]) {
+      process.env.TZ = zone;
+      assert.equal(formatBookingPlacedAt("2026-10-27T20:30:00Z"), "28/10/2026, 02:00 am IST");
+      assert.equal(formatBookingPlacedAt("2026-10-27T09:15:00Z"), "27/10/2026, 02:45 pm IST");
+    }
+  } finally {
+    if (previous === undefined) delete process.env.TZ;
+    else process.env.TZ = previous;
+  }
+});
+
+test("legacy date-only records never display an invented booking time", () => {
+  assert.equal(formatBookingPlacedAt("2026-10-27"), "27/10/2026 (time not recorded)");
+  assert.equal(formatBookingPlacedAt("05/11/2026"), "05/11/2026 (time not recorded)");
+  assert.equal(formatBookingPlacedAt("2026-02-30"), "Not recorded");
+  assert.equal(formatBookingPlacedAt("31/02/2026"), "Not recorded");
+  assert.equal(formatBookingPlacedAt(new Date("invalid")), "Not recorded");
 });

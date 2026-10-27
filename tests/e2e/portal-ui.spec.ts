@@ -224,6 +224,7 @@ test("booking detail navigation stays separate from booking content", async ({ p
   await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
   for (const screen of ["admin-booking-detail", "hospital-booking-detail"] as const) {
     await mount(page, screen);
+    await expect(page.getByRole("button", { name: "Ask Ayu, your Ayursarga guide" })).toHaveCount(0);
     const navigation = page.getByRole("navigation", { name: screen.startsWith("admin") ? "Booking categories" : "Booking navigation" });
     await expect(navigation.getByRole("link", { name: "View all bookings" })).toBeVisible();
     await expect(page.locator(".consumer-booking-row").first().getByText("Booked on", { exact: true })).toBeVisible();
@@ -242,6 +243,7 @@ test("online consultation history reschedules with a locked shared dialog and Co
   await expect(page.getByText("Assigned Consultation Professional", { exact: false })).toBeVisible();
   await expect(page.locator(".portal-status")).toHaveText("confirmed");
   await expect(page.getByText("Booked on", { exact: true })).toBeVisible();
+  await expect(page.locator("dt").filter({ hasText: /^Booked on$/ }).locator("..").locator("dd")).toHaveText("21/09/2026, 07:43 pm IST");
   await expect(page.getByText("Scheduled appointment", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Confirm appointment", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Reject", exact: true })).toHaveCount(0);
@@ -262,6 +264,7 @@ test("online consultation history reschedules with a locked shared dialog and Co
   await mount(page, "consumer-consultations");
   await expect(page.locator(".portal-status")).toHaveText("confirmed");
   await expect(page.getByText("Booked on", { exact: true })).toBeVisible();
+  await expect(page.locator("dt").filter({ hasText: /^Booked on$/ }).locator("..").locator("dd")).toHaveText("21/09/2026, 07:43 pm IST");
   await expect(page.getByText("Scheduled appointment", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Confirm appointment", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Reschedule", exact: true })).toHaveCount(0);

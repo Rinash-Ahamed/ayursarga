@@ -31,6 +31,7 @@ test("booking history identifies the centre, package, dates, prices and response
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await mount(page, "consumer-bookings");
+  await expect(page.getByRole("button", { name: "Ask Ayu, your Ayursarga guide" })).toHaveCount(1);
   const cards = page.locator(".consumer-booking-row");
   await expect(cards).toHaveCount(3);
   await expect(cards.first().getByRole("heading")).toContainText("Ayursarga Mother and Baby");
@@ -125,6 +126,7 @@ test("new automatically confirmed bookings display consistently without hospital
     await expect(card).toHaveCount(1);
     await expect(card.locator(".portal-status")).toHaveText(/confirmed/i);
     await expect(card).toContainText("Booked on");
+    await expect(card.locator("dt").filter({ hasText: /^Booked on$/ }).locator("..").locator("dd")).toHaveText("21/09/2026, 07:43 pm IST");
     await expect(card).not.toContainText("Confirmed appointment");
     await expect(card).not.toContainText("awaiting");
     await expect(card.getByRole("button", { name: "Confirm", exact: true })).toHaveCount(0);

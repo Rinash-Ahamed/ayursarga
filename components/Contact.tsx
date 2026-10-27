@@ -1,16 +1,18 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { FadeUp } from "./Reveal";
 import MagneticButton from "./MagneticButton";
 import { clearGuidanceProfile, formatGuidanceProfile, loadGuidanceProfile, type GuidanceProfile } from "@/lib/guidanceProfile";
 import { PhoneInput } from "@/components/forms/PhoneInput";
 import { formatDisplayDate } from "@/utils/date";
+import { sendContactEnquiry } from "@/services/contact/contactClient";
 
 type FormStatus = "idle" | "sending" | "sent" | "error";
 
 export default function Contact({ guidanceProfile = null, initialInterest = "" }: { guidanceProfile?: GuidanceProfile | null; initialInterest?: string }) {
   const [status, setStatus] = useState<FormStatus>("idle");
+  const submitting = useRef(false);
   const [interest, setInterest] = useState(initialInterest);
   const [storedGuidanceProfile, setStoredGuidanceProfile] = useState<GuidanceProfile | null>(null);
   const activeGuidanceProfile = guidanceProfile ?? storedGuidanceProfile;
@@ -33,18 +35,12 @@ export default function Contact({ guidanceProfile = null, initialInterest = "" }
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (submitting.current) return;
+    submitting.current = true;
     const form = event.currentTarget;
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 20000);
     setStatus("sending");
     try {
-      const response = await fetch("/api/contact", {
-        method: "POST",
-        signal: controller.signal,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(Object.fromEntries(new FormData(form).entries())),
-      });
-      if (!response.ok) throw new Error("Delivery failed");
+      await sendContactEnquiry(Object.fromEntries(new FormData(form).entries()));
       form.reset();
       clearGuidanceProfile();
       setStoredGuidanceProfile(null);
@@ -52,7 +48,7 @@ export default function Contact({ guidanceProfile = null, initialInterest = "" }
     } catch {
       setStatus("error");
     } finally {
-      window.clearTimeout(timeout);
+      submitting.current = false;
     }
   };
 

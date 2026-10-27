@@ -5,7 +5,7 @@ import ts from "typescript";
 
 // Bundle the actual shared components for browser tests without a test-only
 // application route, authentication bypass, cloud writes or build dependency.
-export function bundleDialogHarness(fixture = "tests/fixtures/dialogHarness.tsx", overrides: Record<string, string> = {}) {
+export function bundleDialogHarness(fixture = "tests/fixtures/dialogHarness.tsx", overrides: Record<string, string> = {}, environment: Record<string, string> = {}) {
   const root = process.cwd();
   const localRequire = createRequire(path.join(root, "package.json"));
   const productionModule = (name: string, file: string) => path.join(path.dirname(localRequire.resolve(name)), "cjs", file);
@@ -15,6 +15,7 @@ export function bundleDialogHarness(fixture = "tests/fixtures/dialogHarness.tsx"
     "react-dom": productionModule("react-dom", "react-dom.production.js"),
     "react-dom/client": productionModule("react-dom", "react-dom-client.production.js"),
     scheduler: productionModule("scheduler", "scheduler.production.js"),
+    "next/dynamic": path.join(root, "tests/fixtures/dynamicMock.tsx"),
   };
   const modules: Array<{ source: string; imports: Record<string, number> }> = [];
   const ids = new Map<string, number>();
@@ -38,5 +39,5 @@ export function bundleDialogHarness(fixture = "tests/fixtures/dialogHarness.tsx"
     return id;
   }
   const entry = include(path.join(root, fixture));
-  return `(function(){const process={env:{NODE_ENV:"production"}},modules=${JSON.stringify(modules)},cache={};function load(id){if(cache[id])return cache[id].exports;const module={exports:{}};cache[id]=module;const item=modules[id];new Function("require","module","exports","process",item.source)(name=>load(item.imports[name]),module,module.exports,process);return module.exports;}load(${entry});})();`;
+  return `(function(){const process={env:${JSON.stringify({ NODE_ENV: "production", ...environment })}},modules=${JSON.stringify(modules)},cache={};function load(id){if(cache[id])return cache[id].exports;const module={exports:{}};cache[id]=module;const item=modules[id];new Function("require","module","exports","process",item.source)(name=>load(item.imports[name]),module,module.exports,process);return module.exports;}load(${entry});})();`;
 }

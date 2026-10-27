@@ -1,0 +1,11 @@
+import { ROUTES } from "@/config/routes";
+
+/** Curated platform guidance only; no medical advice, AI calls or private data. */
+export const AYU_GUIDE_TOPICS = [
+  { id: "about", title: "What is Ayursarga?", answer: "Ayursarga helps you discover Ayurvedic care centres and wellness professionals. Explore different options in one place; your selected centre or professional provides the actual care.", href: ROUTES.public.whoWeAre, action: "Meet Ayursarga" },
+  { id: "find", title: "Find the right care", answer: "Search by centre or location, explore facilities and packages, and use Compare care options to compare two centres with the same package duration. Choose a centre to see its full details.", href: ROUTES.public.centers, action: "Search hospitals" },
+  { id: "book", title: "How do I book?", answer: "Choose a hospital and an available package, then select Request appointment. Sign in with Google, complete your contact details, choose your preferred start date or expected delivery date, and accept the booking policies. Eligible bookings are confirmed when successfully placed.", href: ROUTES.public.howAyursargaWorks, action: "See how it works" },
+  { id: "online", title: "Online consultations", answer: "Explore Wellness Path and choose an online consultation. Select an available professional, an eligible date and a configured time window. Review the charge and booking policies before submitting. This is not an emergency service.", href: "/#wellness", action: "Explore Wellness Path" },
+  { id: "history", title: "Where is my booking?", answer: "Sign in with the Google account you used to book, then open My bookings from your profile menu. Hospital bookings and online consultations have separate views. Booked on is the date you placed the booking, not your scheduled care date.", href: ROUTES.consumer.bookings, action: "My bookings" },
+  { id: "policy", title: "Cancellations and refunds", answer: "Check the Cancellation & Refund Policy for the terms that apply to your booking. Hospital packages and online consultations have different conditions. Contact the Ayursarga team if you need help; cancelling does not itself confirm a refund.", href: ROUTES.public.cancellationRefundPolicy, action: "Read the policy" },
+] as const;

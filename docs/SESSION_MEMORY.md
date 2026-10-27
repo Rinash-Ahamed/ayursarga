@@ -2,6 +2,156 @@
 
 Updated: 27 October 2026 (Asia/Calcutta).
 
+## Owner-requested build and lint validation (27 October 2026)
+
+- On v4.19.2, npm run lint passed without warnings/errors. npm run build passed:
+  optimized compilation, Next TypeScript validation and all 71 static pages.
+  No implementation or dependency changes, version bump or deployment.
+- Started this newly built production application on temporary localhost port
+  3197. /api/health?deep=true with Accept: application/json returned HTTP 200,
+  status ok, mode deep-configuration; firebase-admin, contact-email, auth-email,
+  firebase-client and hospital-images all reported ready. /health?deep=true
+  returned HTTP 200 with the themed card, expanded checks, success heading and
+  stylesheet links present. Stopped the temporary server afterward.
+- These checks verify configuration and server-rendered health HTML, not SMTP
+  delivery, database connectivity, deployed permissions, all APIs or live booking
+  workflows. No emails, record reads/mutations or Firebase deployment performed.
+
+## Booking placement date and time (27 October 2026)
+
+- v4.19.2 fixes date-only formatting that hid the saved booking creation time.
+  Shared formatBookingPlacedAt uses utils/date.ts to display DD/MM/YYYY and
+  12-hour time with explicit IST. Both flows use the same formatter: hospital
+  package cards in Consumer/Admin/Hospital and online consultation cards in
+  Consumer/Admin. Appointment schedules and care dates remain separate.
+- Both creation endpoints already store createdAt in their audited transaction;
+  existing authenticated reads preserve Timestamp values. No new persisted field,
+  API call, permission, rules change, migration or appointment time is introduced.
+  Missing timestamps show Not recorded; legacy date-only strings retain their
+  date with time not recorded, never an invented midnight or device-local time.
+- Focused checks passed: 12/12 booking-date/date-format unit contracts (including
+  UTC-midnight boundaries, four device timezones, Timestamp/ISO inputs, legacy
+  values and unchanged API date serialization); 3/3 hospital-booking browser cases
+  covering all three roles; 3/3 online-consultation browser cases covering Admin
+  and Consumer, rescheduling and role controls. Browser projects covered desktop,
+  narrow phone and WebKit phone with local fixtures, not real devices/live data.
+  git diff --check passed. Build, lint, typecheck, broad API checks, deployment and
+  live mutations were not requested or performed.
+
+## Ayu visibility and deferred dialog (27 October 2026)
+
+- v4.19.1 removes the guide action-link arrow and underline without changing
+  destinations or other legal/email link styling. Public-design and web-quality
+  skills kept the existing layout and accessible focus indicators intact.
+- AYU_ONLINE=true enables Ayu; false, missing or any other value hides it.
+  next.config.mjs exposes only the compiled public boolean, shared by SSR/client.
+  The local flag is true and .env.example documents it. Restart local dev after
+  changes; hosting needs the flag configured and a rebuild/redeploy. No deployment
+  was performed. This is not a runtime toggle or Firestore setting.
+- The whole dialog, ModalLayer, guide, phone control and email transport now load
+  on first open, rather than importing the modal shell in the initial view. Only
+  the small launcher and existing 16,524-byte WebP are needed while enabled/idle.
+  Disabled Ayu renders nothing and requests no mascot or dialog. No idle API
+  polling, preload of the panel or background listeners were added. A chunk error
+  is isolated with a dismissible contact fallback, leaving the site usable.
+- Focused local checks: 8/8 unit/API-contract tests, 35/35 Ayu browser cases over
+  seven Chromium/WebKit viewport projects, 1/1 navigation hydration check and
+  3/3 Consumer booking integration cases and 3/3 Admin/Hospital role integration
+  cases passed. These include arrow/underline
+  removal, the disabled flag, deferred loader invocation, chunk failure isolation,
+  scroll/focus restoration, form errors and duplicate-submit protection. Fixtures
+  use mocked transport, not real email delivery or deployed API validation.
+- No production build, lint, typecheck, deployment or production performance
+  benchmark was requested/run. Deferred loading reduces initial work, but no
+  claim of zero bundle overhead or measured production timing improvement.
+
+## Ayu consumer guide (27 October 2026)
+
+- v4.19.0 adds Ayu with the owner's tagline, Your little buddy for natural
+  wellness. Used the public-design skill to preserve the current site layout,
+  palette, typography and other controls. The supplied public/Ayu.png remains
+  unchanged; a transparent 256x252 WebP display derivative is 16,524 bytes versus
+  the 1,130,732-byte original. No new image generation, paid service or dependency.
+- A compact Ask Ayu launcher appears through public Nav and standard Consumer
+  PortalShell only, not Hospital/Admin interfaces or the focused profile-completion
+  layout. It does not auto-open or play sounds. The larger guide/form panel is
+  dynamically imported only when opened. Body-level ModalLayer handles viewport,
+  focus containment and reference-counted scroll locking; the launcher explicitly
+  focuses before opening to fix Safari's pointer-button focus-return behavior.
+- This is a curated website guide, not a generative AI/live agent/medical adviser.
+  Six bounded topics cover Ayursarga, search/comparison, hospital booking, online
+  consultations, booking history and policies, with existing route links and no
+  speculative pricing, clinical advice or access to private booking/profile data.
+- Questions use the existing /api/contact route and SMTP transport. Required name,
+  email, 10-digit phone and question are entered explicitly; no medical reports,
+  chat transcript, stored wellness profile or authenticated PII is auto-attached.
+  Ayu identifies its source using the existing guidanceProfile field. Destination
+  remains server-configured CONTACT_TO_EMAIL/default info@ayursarga.com; reply-to
+  uses validated visitor email. No new API, persisted fields, rules or Auth roles.
+- Shared contactClient transport is reused by the existing Contact form: explicit
+  JSON ok acknowledgement, 20-second timeout, no automatic retries, and uncertain
+  delivery feedback. Both forms guard immediate duplicate submission. Ayu keeps
+  user input on failure, blocks closing/other topic changes during submission,
+  shows success only after API acknowledgement and clears panel state on close.
+  Existing Contact page appearance/fields are preserved. Contact email copy now
+  accurately describes a general enquiry rather than inventing a consultation.
+- Six focused local API/transport/asset tests passed: real contact validation,
+  whitelist and configured recipient, HTML escaping, honeypot/rate limits,
+  malformed/oversized input, unavailable/failed SMTP, acknowledgement and no-retry
+  behavior. All email transport is mocked, never live delivery.
+- 28 distinct browser cases passed: 21 Ayu guidance/form tests over all seven
+  phone/landscape/tablet/desktop Chromium/WebKit projects; 3 Consumer booking
+  integration cases; 3 Admin/Hospital absence/detail cases; 1 public-nav hydration
+  regression. Tested scroll/focus restoration, viewport bounds, repeated open/
+  close, 16px controls, duplicate submits, busy Escape protection, errors/retries
+  and no stale success after reopening. Inspected the narrow-screen screenshot.
+  Added a shared faithful lazy-component fixture for next/dynamic and the
+  npm run test:e2e:ayu command. No build, lint, live emails, mutations or deployment
+  was performed for this implementation; real-device checks remain unverified.
+
+## Future scalability upgrades: recorded plan (27 October 2026)
+
+- Owner requested this plan be saved for future upgrades, not implemented now.
+  Keep Next.js API routes plus Firebase as the existing backend. Do not rewrite
+  into a separate backend merely because bookings increase; extract workloads
+  only when measured demand or independent operational requirements justify it.
+- First establish isolated, synthetic booking load tests: simultaneous hospital
+  and consultation bookings, duplicate submissions, retries/lost responses,
+  cancellations and concurrent changes. Verify response-time percentiles,
+  throughput, failures, transaction contention, duplicate prevention, audit/data
+  consistency and notification behavior. Do not run load tests against production
+  or claim a safe concurrent-user/booking capacity without measured evidence.
+- Next evaluate durable notification processing, especially hospital booking
+  emails currently sent best-effort after the response. Reuse audited event/outbox
+  conventions from consultation emails. Queue only after a committed booking,
+  keep consumer/consultant outcomes independent, suppress stale events, and never
+  blindly resend after uncertain SMTP acceptance. Durable worker/queue selection
+  and deployment need separate approval; no Cloud Functions, paid integration,
+  automatic retry policy or new infrastructure is authorized by this note.
+- Replace process-local in-memory rate limits with shared enforcement before
+  relying on limits across multiple server instances. Review trusted-proxy/IP
+  handling and privacy; retain server-side role/ownership validation and existing
+  idempotency. Choose any shared backing service with explicit cost approval.
+- Verify actual application-host API region versus Firestore, runtime/instance
+  limits, bounded indexed queries, latency/error monitoring and billing alerts.
+  Optimize measured bottlenecks while preserving data and existing workflows.
+  Firebase rule deployments do not deploy the Next.js application/API code.
+- Capacity enforcement is a separate product decision: current booking checks
+  validate hospital/package eligibility and approved blocked dates, not room
+  inventory reservations. If confirmation must guarantee a room, obtain owner
+  approval before implementing atomic capacity reservations, overlap rules and
+  cancellation releases. Never silently introduce this behavior or claim the
+  existing system prevents inventory overbooking.
+- Owner explicitly chose dependency-security remediation as a separate
+  release-blocking task, rather than mixing upgrades into the earlier audit.
+  Complete compatible upgrades and their focused regression/build/security
+  validation before release; the prior findings were not fixed by image or UI
+  improvements. Existing emulator/live coverage limitations remain documented.
+- Suggested sequence: isolated booking load-test baseline -> measured fixes ->
+  durable notifications/shared rate limiting -> repeat load/regression checks.
+  No code changes, dependency upgrades, tests, deployments or live mutations were
+  authorized or executed by this memory-only task; app version stays 4.18.5.
+
 ## Treatment progress timeline (27 October 2026)
 
 - v4.18.5 fixes the mismatch between Hospital's Start/Complete workflow and the

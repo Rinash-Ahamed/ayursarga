@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ROUTES } from "@/config/routes";
 import ScrollLogo from "@/components/ScrollLogo";
 import { ModalLayer } from "@/components/ModalLayer";
+import AyuBuddy from "@/components/AyuBuddy";
 
 const LINKS = [
   { href: "#discover-hospitals", label: "How It Works" },
@@ -194,5 +195,5 @@ function PublicNav({ sectionPrefix = "", solid = false }: NavProps) {
 }
 
 export default function Nav(props: NavProps) {
-  return <AuthProvider><PublicNav {...props} /></AuthProvider>;
+  return <AuthProvider><PublicNav {...props} /><AyuBuddy /></AuthProvider>;
 }
