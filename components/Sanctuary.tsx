@@ -83,6 +83,7 @@ export default function Sanctuary() {
       <div className="trust-media">
         <Image
           src="/why.png"
+          loading="eager"
           alt="Ayursarga connecting trusted Ayurvedic hospitals, services, appointment requests and personal guidance"
           width={1402}
           height={1122}

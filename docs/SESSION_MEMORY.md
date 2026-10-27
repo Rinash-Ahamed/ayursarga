@@ -2,6 +2,63 @@
 
 Updated: 27 October 2026 (Asia/Calcutta).
 
+## Why Ayursarga image loading warning (27 October 2026)
+
+- v4.20.1 explicitly sets loading="eager" on Sanctuary's /why.png after the owner
+  reported it as LCP. Public-design/web-quality guidance kept the existing asset,
+  1402x1122 dimensions, responsive sizes, quality 82 and all visual styles intact.
+  No priority/preload or changes to other images. This image can now request
+  earlier even on top-of-home visits where the section is below the fold; do not
+  claim a measured overall performance gain from this narrow warning fix.
+- Focused TypeScript-AST source checks verified the single image's eager loading,
+  unchanged sizing/quality and lack of priority/preload. Version/lock entries
+  synchronized and git diff --check passed. No browser LCP measurement, build,
+  lint, typecheck, full-site checks or deployment requested/performed this task.
+
+## Razorpay helper foundation only (27 October 2026)
+
+- v4.20.0 introduces services/payments/razorpay.ts at the owner's request for a
+  later integration into both booking flows. API-audit guidance informed strict
+  validation, fixed provider URLs, no retries, secret-safe errors and the boundary
+  between verified signatures and actual captured payment. No frontend import,
+  checkout script, new endpoint, Firestore field/rule, UI or booking transition.
+  Existing hospital and consultation bookings remain immediately confirmed.
+- Uses built-in fetch and node:crypto with server-only protection; no dependency
+  added. Helpers cover configuration readiness, decimal INR-to-paise conversion,
+  INR order creation/retrieval, whitelisted payment retrieval, timing-safe checkout
+  and untouched-body webhook HMAC checks, and separate captured/order/amount/
+  currency/unrefunded-payment assertions. Receipts are opaque 1-40 character
+  server references, not customer or clinical data. Provider contact/card/bank
+  fields and raw errors are excluded from helper results/errors.
+- .env.example documents optional RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET and the
+  independent RAZORPAY_WEBHOOK_SECRET. Actual credentials were not read, added or
+  tested. Missing keys do not affect existing pages or health status: this unused
+  foundation does not initialize or contact Razorpay on import. Test-mode keys
+  must be used first when integration is separately authorized.
+- A 20-second bounded request deadline, no redirects/cache and no automatic retries
+  are enforced. Failed/ambiguous order creates expose outcomeUnknown and require
+  reconciliation, not blind resubmission. Receipt validation is NOT implemented
+  application idempotency. Webhook signature checking is NOT replay protection.
+- Still required before payment activation: owner-defined pricing/advance/full
+  payment rules for each flow; authenticated ownership and server-priced intents;
+  audited persistent request/event deduplication and reconciliation; webhook
+  endpoint/event handling; callback verification against saved order/payment
+  expectations; availability rechecks and explicit booking/payment lifecycle
+  policy; capture/refund decisions, email timing, tests and reviewed Firestore
+  permissions. No capture/refund/settlement or payment-success booking logic has
+  been invented. Do not add secrets to browser bundles or client-readable records.
+- Verified against official docs:
+  https://razorpay.com/docs/api/orders/create/
+  https://razorpay.com/docs/api/payments/fetch-with-id/
+  https://razorpay.com/docs/payments/payment-gateway/web-integration/standard/integration-steps/
+  https://razorpay.com/docs/webhooks/validate-test/
+- 13/13 focused local contracts passed with ALL HTTP requests mocked, including
+  malformed configuration/input/responses, fixed authentication/paths, no retries,
+  uncertain outcomes, signatures, raw webhook bytes, payment mismatches, privacy
+  whitelist and disconnected existing booking endpoints. These are not live
+  payment/provider, authorization or deployed Firestore tests. No build, lint,
+  typecheck, live orders/payments or deployment requested/performed for this task.
+
 ## Owner-requested build and lint validation (27 October 2026)
 
 - On v4.19.2, npm run lint passed without warnings/errors. npm run build passed:
