@@ -1,4 +1,5 @@
 import { apiJson, logApiError } from "@/services/api/server";
+import { hasPublishedPackage } from "@/features/hospitals/packageReview";
 import { getFirebaseAdminFirestore } from "@/services/firebase/admin";
 import { PUBLIC_SERVICE_FIELDS, publicPageSize, publicServiceProjection, validPublicDocumentId } from "@/services/hospitals/publicProjection";
 import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
@@ -34,17 +35,17 @@ export async function GET(request: Request, context: { params: Promise<{ hospita
     // is verified. Select only the established public package projection.
     const [hospital, snapshot] = await Promise.all([
       firestore.collection("hospitals").doc(hospitalId).get(),
-      query.select(...PUBLIC_SERVICE_FIELDS).get(),
+      query.select(...PUBLIC_SERVICE_FIELDS, "reviewStatus", "publishedAt").get(),
     ]);
     if (!hospital.exists || hospital.data()?.status !== "active" || hospital.data()?.isPublic !== true) {
       return apiJson({ error: "The Ayurvedic centre could not be found." }, 404);
     }
     const page = snapshot.docs.slice(0, pageSize);
     return apiJson({
-      documents: page.map((document) => publicServiceProjection(document.id, document.data())),
+      documents: page.filter((document) => hasPublishedPackage(document.data())).map((document) => publicServiceProjection(document.id, document.data())),
       cursor: page.at(-1)?.id ?? null,
       hasMore: snapshot.size > pageSize,
-    }, 200, { cache: "public-short" });
+    });
   } catch (error) {
     logApiError("GET /api/public/hospitals/:hospitalId/services", error);
     return apiJson({ error: "Centre packages are temporarily unavailable." }, 503);

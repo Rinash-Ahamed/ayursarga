@@ -30,7 +30,11 @@ const PublicHospitalImages = memo(function PublicHospitalImages({ hospital, prio
   const sizes = "(max-width: 600px) calc((100vw - 86px) / 2), (max-width: 1100px) calc((100vw - 106px) / 2), 318px";
   const galleryRef = useRef<HTMLDivElement>(null);
   const [nearViewport, setNearViewport] = useState(false);
-  const { images, displayedIndex, imageUrl, direction, loadedImageUrl, markLoaded, failImage, showImage } = useHospitalImageGallery(getHospitalImageUrls(hospital), sizes, nearViewport);
+  const [highPriority, setHighPriority] = useState(false);
+  const [originalOnly, setOriginalOnly] = useState<string[]>([]);
+  // Search prioritises covers, not the next photo in every visible gallery.
+  // Gallery navigation still decodes a requested photo before replacing the cover.
+  const { images, displayedIndex, imageUrl, direction, loadedImageUrl, markLoaded, failImage, showImage } = useHospitalImageGallery(getHospitalImageUrls(hospital), sizes, false);
 
   useEffect(() => {
     const gallery = galleryRef.current;
@@ -42,12 +46,13 @@ const PublicHospitalImages = memo(function PublicHospitalImages({ hospital, prio
     }
     const observer = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting) return;
+      setHighPriority(priority && entry.boundingClientRect.top < window.innerHeight);
       setNearViewport(true);
       observer.disconnect();
     }, { rootMargin: "320px" });
     observer.observe(gallery);
     return () => observer.disconnect();
-  }, []);
+  }, [priority]);
 
   if (!imageUrl) return <div className="public-center-card-image placeholder" aria-hidden="true">
     <span>Ayursarga</span>
@@ -58,22 +63,29 @@ const PublicHospitalImages = memo(function PublicHospitalImages({ hospital, prio
     {/* Uploaded photos provide responsive sources; existing external links remain supported. */}
     {/* eslint-disable-next-line @next/next/no-img-element */}
     {nearViewport && <img
-      key={imageUrl}
+      key={`${imageUrl}-${originalOnly.includes(imageUrl)}`}
       ref={(image) => { if (image?.complete && image.naturalWidth > 0) markLoaded(imageUrl); }}
       className={loadedImageUrl === imageUrl ? "is-loaded" : ""}
       src={imageUrl}
-      srcSet={hospitalImageSrcSet(imageUrl)}
+      srcSet={originalOnly.includes(imageUrl) ? undefined : hospitalImageSrcSet(imageUrl)}
       sizes={sizes}
       width={1200}
       height={900}
       alt={`${hospital.name} Ayurvedic center`}
       data-direction={direction}
-      loading={priority ? "eager" : "lazy"}
-      fetchPriority={priority ? "high" : "auto"}
+      // IntersectionObserver already defers off-screen images. A second native
+      // lazy-loading gate can postpone the request again after scrolling.
+      loading="eager"
+      fetchPriority={highPriority ? "high" : "auto"}
       decoding="async"
       referrerPolicy="no-referrer"
       onLoad={() => markLoaded(imageUrl)}
-      onError={() => failImage(imageUrl)}
+      onError={(event) => {
+        // A missing responsive derivative must not discard a valid original.
+        if (!originalOnly.includes(imageUrl) && event.currentTarget.currentSrc !== imageUrl && hospitalImageSrcSet(imageUrl)) {
+          setOriginalOnly((current) => [...current, imageUrl]);
+        } else failImage(imageUrl);
+      }}
     />}
     {images.length > 1 && <div className="public-center-image-arrows">
       <button
@@ -222,7 +234,7 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
               <div className="public-center-card-body"><span /><span /><span /></div>
             </article>)}
           </>}
-          {visibleHospitals.map((hospital, hospitalIndex) => <HospitalResultCard key={hospital.id} hospital={hospital} detailQuery={detailQuery} priority={hospitalIndex === 0} soldOut={isHospitalSoldOut(hospital, startDate)} />)}
+          {visibleHospitals.map((hospital, hospitalIndex) => <HospitalResultCard key={hospital.id} hospital={hospital} detailQuery={detailQuery} priority={hospitalIndex < 3} soldOut={isHospitalSoldOut(hospital, startDate)} />)}
         </div>
 
         {hasMore && (

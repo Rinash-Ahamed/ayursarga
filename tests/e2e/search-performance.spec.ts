@@ -1,5 +1,41 @@
 import { test, expect } from "@playwright/test";
 
+for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
+  test(`image loading profile at ${viewport.width}px with slow image responses`, async ({ page }, info) => {
+    await page.setViewportSize(viewport);
+    const requests: string[] = [];
+    let releaseImages!: () => void;
+    const imageGate = new Promise<void>((resolve) => { releaseImages = resolve; });
+    const documents = Array.from({ length: 12 }, (_, index) => ({
+      id: `image-centre-${index}`, name: `Care Centre ${index}`, city: "Palakkad", state: "Kerala", address: "Centre Road",
+      imageUrls: [0, 1].map((photo) => `https://images.test/${index}-${photo}.svg`),
+    }));
+    await page.route("**/api/public/hospitals?*", (route) => route.fulfill({ json: { documents, cursor: null, hasMore: false } }));
+    await page.route("https://images.test/**", async (route) => {
+      requests.push(route.request().url());
+      await imageGate;
+      // Controlled slow image response, independent of external/CDN availability.
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      await route.fulfill({ contentType: "image/svg+xml", headers: { "cache-control": "public,max-age=31536000,immutable" }, body: '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#c9d8cd"/></svg>' });
+    });
+    await page.goto("/centers", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Care Centre 0", exact: true })).toBeVisible();
+    const first = page.locator(".public-center-card:not(.public-center-skeleton) .public-center-card-image").first();
+    await first.evaluate((element) => element.scrollIntoView({ block: "center", behavior: "instant" }));
+    const start = Date.now();
+    releaseImages();
+    await expect(first.locator("img")).toHaveCSS("opacity", "1");
+    const coverVisibleMs = Date.now() - start;
+    await page.waitForTimeout(600);
+    const report = { width: viewport.width, simulatedImageLatencyMs: 250, coverVisibleMs, covers: requests.filter((url) => url.endsWith("-0.svg")).length, unrequestedGalleryPhotos: requests.filter((url) => url.endsWith("-1.svg")).length };
+    console.log("SEARCH_IMAGE_PROFILE", JSON.stringify(report));
+    await info.attach("search-image-profile", { body: JSON.stringify(report), contentType: "application/json" });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(report.unrequestedGalleryPhotos).toBe(0);
+    expect(report.covers).toBeLessThan(documents.length);
+  });
+}
+
 // Production route, controlled public data and media. No authentication or cloud writes.
 test("profile search rendering, navigation requests and input responsiveness", async ({ page }, info) => {
   const session = await page.context().newCDPSession(page);

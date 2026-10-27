@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash } from "node:crypto";
 
 const PUBLIC_HOSPITAL_FIELDS = [
   "name", "description", "email", "phone", "hospitalPhone1", "hospitalPhone2",
@@ -64,7 +65,17 @@ export function publicHospitalListProjection(id: string, data: FirebaseFirestore
 }
 
 export function publicServiceProjection(id: string, data: FirebaseFirestore.DocumentData) {
-  return projectFields(id, data, PUBLIC_SERVICE_FIELDS);
+  return { ...projectFields(id, data, PUBLIC_SERVICE_FIELDS), packageVersion: publicPackageVersion(id, data) };
+}
+
+/** Opaque version of public package content only; never reveals audit/actor IDs. */
+export function publicPackageVersion(id: string, data: FirebaseFirestore.DocumentData) {
+  const canonical = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(canonical);
+    if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, item]) => [key, canonical(item)]));
+    return value;
+  };
+  return createHash("sha256").update(JSON.stringify(canonical(projectFields(id, data, PUBLIC_SERVICE_FIELDS)))).digest("hex");
 }
 
 export function publicPageSize(value: string | null, fallback = 12) {

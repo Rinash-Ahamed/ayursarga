@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { authorizedApiRequest } from "@/services/api/client";
-import { MAX_HOSPITAL_IMAGES } from "@/features/hospitals/images";
+import { MAX_HOSPITAL_IMAGES, MIN_PUBLIC_HOSPITAL_IMAGES } from "@/features/hospitals/images";
 import { prepareHospitalImage } from "@/utils/prepareHospitalImage";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { PortalDialog } from "@/components/portal/PortalDialog";
@@ -14,9 +14,10 @@ type Props = {
   imageUrls: string[];
   onChange: (imageUrls: string[]) => void;
   disabled?: boolean;
+  isPublic?: boolean;
 };
 
-export function HospitalImageManager({ hospitalId, hospitalName, imageUrls, onChange, disabled }: Props) {
+export function HospitalImageManager({ hospitalId, hospitalName, imageUrls, onChange, disabled, isPublic = false }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
@@ -24,6 +25,8 @@ export function HospitalImageManager({ hospitalId, hospitalName, imageUrls, onCh
   const [error, setError, errorNotification] = useRepeatableMessage();
   const [message, setMessage, messageNotification] = useRepeatableMessage();
   const endpoint = `/api/hospitals/${encodeURIComponent(hospitalId)}/images`;
+  const minimumReached = new Set(imageUrls).size >= MIN_PUBLIC_HOSPITAL_IMAGES;
+  const canRemove = !isPublic || new Set(imageUrls).size > MIN_PUBLIC_HOSPITAL_IMAGES;
 
   async function upload(files: File[]) {
     if (!files.length || busy || disabled) return;
@@ -76,15 +79,18 @@ export function HospitalImageManager({ hospitalId, hospitalName, imageUrls, onCh
   }
 
   return <div className="portal-image-manager" aria-busy={busy}>
-    <p className="portal-form-note">Add up to 10 photos of your centre. JPG, PNG or WebP, up to 15 MB each. Images are automatically resized and cropped to a consistent 4:3 frame.</p>
+    <p className="portal-form-note">Upload at least {MIN_PUBLIC_HOSPITAL_IMAGES} different photos before your centre goes public, up to {MAX_HOSPITAL_IMAGES} photos in total. You can upload gradually. The first photo is the cover image shown on Search cards. JPG, PNG or WebP, up to 15 MB each. Images are automatically resized and cropped to a consistent 4:3 frame.</p>
+    {!minimumReached && <p className="portal-form-note">Add {MIN_PUBLIC_HOSPITAL_IMAGES - new Set(imageUrls).size} more photo(s) to meet the publication minimum.</p>}
+    {isPublic && !canRemove && <p className="portal-form-note">Upload a replacement before removing a photo. Public centres must keep at least {MIN_PUBLIC_HOSPITAL_IMAGES} different images.</p>}
     {imageUrls.length > 0 && <div className="portal-hospital-gallery">
       {imageUrls.map((url, index) => <div className="portal-image-manager-item" key={url}>
-        <a href={url} target="_blank" rel="noreferrer" aria-label={`View ${hospitalName} image ${index + 1}`}>
+        <a href={url} target="_blank" rel="noreferrer" aria-label={`View ${hospitalName} image ${index + 1}${index === 0 ? ", cover image" : ""}`}>
           {/* Existing approved external links and uploaded Storage images share this gallery. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={url} alt={`${hospitalName} image ${index + 1}`} loading="lazy" decoding="async" referrerPolicy="no-referrer" />
+          {index === 0 && <span className="portal-image-cover-badge">Cover image</span>}
         </a>
-        <button className="portal-button danger" type="button" disabled={busy || disabled} onClick={() => setRemoving(url)} aria-label={`Remove centre image ${index + 1}`}>Remove</button>
+        <button className="portal-button danger" type="button" disabled={busy || disabled || !canRemove} onClick={() => setRemoving(url)} aria-label={`Remove centre image ${index + 1}`}>Remove</button>
       </div>)}
     </div>}
     <div className="portal-actions">

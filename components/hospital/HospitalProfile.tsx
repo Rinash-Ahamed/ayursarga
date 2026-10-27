@@ -94,6 +94,6 @@ export function HospitalProfile() {
     <div className="portal-actions full">{error && <p className="portal-form-error">{error}</p>}<button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save profile"}</button></div>
   </form>}{hospital && <section className="portal-card portal-hospital-media-card">
     <h2>Centre images</h2>
-    <HospitalImageManager hospitalId={hospital.id} hospitalName={hospital.name} imageUrls={getHospitalImageUrls(hospital)} disabled={busy} onChange={(imageUrls) => setHospital((current) => current ? { ...current, imageUrls, imageUrl: null } : current)} />
+    <HospitalImageManager hospitalId={hospital.id} hospitalName={hospital.name} imageUrls={getHospitalImageUrls(hospital)} isPublic={hospital.status === "active" && hospital.isPublic === true} disabled={busy} onChange={(imageUrls) => setHospital((current) => current ? { ...current, imageUrls, imageUrl: null } : current)} />
   </section>}</PortalShell>;
 }

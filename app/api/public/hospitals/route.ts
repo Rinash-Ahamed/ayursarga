@@ -1,4 +1,5 @@
 import { FieldPath } from "firebase-admin/firestore";
+import { hasPublishedPackage } from "@/features/hospitals/packageReview";
 import { apiJson, logApiError } from "@/services/api/server";
 import { getFirebaseAdminFirestore } from "@/services/firebase/admin";
 import { publicHospitalListProjection, publicPageSize, validPublicDocumentId } from "@/services/hospitals/publicProjection";
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
       }
       const serviceSnapshot = await serviceQuery.get();
       const page = serviceSnapshot.docs.slice(0, pageSize);
-      const hospitalIds = [...new Set(page.map((document) => String(document.data().hospitalId ?? "")).filter(Boolean))];
+      const hospitalIds = [...new Set(page.filter((document) => hasPublishedPackage(document.data())).map((document) => String(document.data().hospitalId ?? "")).filter(Boolean))];
       const hospitalSnapshots = hospitalIds.length
         ? await firestore.getAll(...hospitalIds.map((id) => firestore.collection("hospitals").doc(id)))
         : [];

@@ -130,6 +130,13 @@ to deploy, rerun maintenance scripts, or modify live data.
   browser Storage access is denied by `storage.rules`; only individual gallery
   download-token URLs are public. Configure the server-only
   `FIREBASE_STORAGE_BUCKET` in local and hosting environments.
+  The first gallery photo is the Search-card cover; label it in image management.
+  Allow gradual uploads but require at least four distinct valid image URLs
+  before activation/publication. Live public centres cannot remove/replace
+  their gallery below four photos. Preserve existing live legacy centres below
+  the minimum without silently hiding them; allow top-ups and require four
+  before reactivation. Enforce the minimum server-side and in direct-client
+  rules, without deleting Storage files or changing booking availability.
 - Admin alone controls centre location, commission,
   Pending/Active state, contract
   workflow, signed-contract URL, visibility, activation, and archive/restore.
@@ -238,6 +245,27 @@ to deploy, rerun maintenance scripts, or modify live data.
   35 days. Each selected procedure stores its included day count in a keyed map
   so it cannot be duplicated within one package; the same procedure may appear
   in multiple packages. Package deletion remains an audited archive action.
+- New Hospital packages start as private drafts and require explicit submission
+  and Admin approval before publication. Keep proposed content in draftPackage;
+  top-level package fields are the approved version used by public discovery
+  and booking price snapshots. Approved versions remain unchanged during edits,
+  pending review and requests for changes. Legacy records without review
+  metadata retain their existing publication state; never silently migrate them.
+  Hospital cannot self-approve or activate an unpublished package. Admin review
+  is hospital-scoped, revision-checked and atomic for up to 20 selected packages;
+  stale/cross-hospital entries abort the whole review. Review retries must not
+  duplicate audit records or bell notifications. All service mutations use
+  authenticated audited server endpoints; Firestore denies direct client
+  create/update/delete, including legacy write/changed-field bypass paths.
+  New draft saves use a stable per-form request ID to prevent duplicated records
+  after lost responses; submission retries recognize their original draft audit
+  revision. Public package responses include only an opaque content version,
+  never approval/actor/audit metadata. Consumer booking sends that version and
+  rechecks it transactionally so changed price/procedures require a new review;
+  retries of an already saved booking still return its original snapshot.
+  Legacy callers without a version retain their existing server-priced behavior.
+  Fetch public package data without stale HTTP caching; do not change immutable
+  gallery-image caching or introduce a runtime Firestore import into discovery.
 - Active hospitals may have an Admin-controlled `ayursargaRating` and
   `ayursargaReviewNote`. Public UI must identify both as Ayursarga editorial
   content and must never present them as verified patient feedback. Hospitals

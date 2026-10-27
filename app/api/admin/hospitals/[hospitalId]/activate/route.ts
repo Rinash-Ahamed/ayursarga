@@ -1,5 +1,6 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { validateHospitalFields } from "@/features/hospitals/validation";
+import { hasMinimumHospitalImages, MIN_PUBLIC_HOSPITAL_IMAGES } from "@/features/hospitals/images";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
 import { apiHealth, apiJson } from "@/services/api/server";
@@ -47,6 +48,7 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
     }
 
     const auditReference = firestore.collection("auditLogs").doc();
+    if (!hasMinimumHospitalImages(hospital)) return apiJson({ error: `Upload at least ${MIN_PUBLIC_HOSPITAL_IMAGES} different hospital images before making this hospital public.` }, 409);
     const now = FieldValue.serverTimestamp();
     const changes = {
       status: "active",
@@ -58,7 +60,7 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
       lastAuditId: auditReference.id,
     };
     const batch = firestore.batch();
-    batch.update(hospitalReference, changes);
+    batch.update(hospitalReference, changes, { lastUpdateTime: hospitalSnapshot.updateTime! });
     batch.set(auditReference, {
       action: "hospital_activated",
       module: "hospitals",

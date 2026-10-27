@@ -425,8 +425,9 @@ main>.dark-section{
 .public-center-card-image{ position:relative; z-index:3; width:calc(100% - 14px); min-height:0; aspect-ratio:4/3; align-self:center; overflow:hidden; contain:paint; margin:14px 0 14px 14px; border:1px solid rgba(31,61,43,.16); border-radius:14px; background:rgba(31,61,43,.06); pointer-events:none; }
 .public-center-card-image img{ width:100%; height:100%; object-fit:contain; opacity:0; backface-visibility:hidden; }
 .public-center-image-skeleton{ position:absolute; inset:0; border-radius:inherit; background:linear-gradient(135deg,rgba(31,61,43,.065),rgba(184,135,47,.045)); pointer-events:none; }
-.public-center-card-image img.is-loaded{ animation:publicCenterImageNext .38s var(--ease-out) both; }
-.public-center-card-image img.is-loaded[data-direction="previous"]{ animation-name:publicCenterImagePrevious; }
+.public-center-card-image img.is-loaded{ opacity:1; }
+.public-center-card-image img.is-loaded[data-direction="next"]{ animation:publicCenterImageNext .38s var(--ease-out) both; }
+.public-center-card-image img.is-loaded[data-direction="previous"]{ animation:publicCenterImagePrevious .38s var(--ease-out) both; }
 @keyframes publicCenterImageNext{ from{ opacity:.35; transform:translate3d(18px,0,0); } to{ opacity:1; transform:translate3d(0,0,0); } }
 @keyframes publicCenterImagePrevious{ from{ opacity:.35; transform:translate3d(-18px,0,0); } to{ opacity:1; transform:translate3d(0,0,0); } }
 .public-center-card-image.placeholder{ display:grid; place-items:center; background:linear-gradient(145deg,rgba(31,61,43,.12),rgba(184,135,47,.12)); }

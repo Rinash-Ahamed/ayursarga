@@ -76,6 +76,7 @@ test("request summary and mandatory consent remain usable at every size", async 
   await page.screenshot({ path: testInfo.outputPath("booking-request.png"), fullPage: true });
   await submit.click();
   await expect.poll(() => page.evaluate(() => (window as unknown as { consumerBookingFixture: { navigatedTo: string } }).consumerBookingFixture.navigatedTo)).toBe("/app/bookings?booking=booking-0");
+  expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { bookingInputs: { expectedPackageVersion?: string }[] } }).consumerBookingFixture.bookingInputs.at(-1)?.expectedPackageVersion)).toBe("a".repeat(64));
 });
 
 test("sold-out booking dates disable submission but other dates remain bookable", async ({ page }) => {
@@ -130,7 +131,7 @@ test("new automatically confirmed bookings display consistently without hospital
     }
     if (role === "hospital") {
       await expect(card.getByRole("button", { name: "Start treatment", exact: true })).toBeEnabled();
-      await expect(card.getByRole("button", { name: "Reschedule", exact: true })).toBeEnabled();
+      await expect(card.getByRole("button", { name: "Reschedule", exact: true })).toHaveCount(0);
     }
     await checkLayout(page);
   }

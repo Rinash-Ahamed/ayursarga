@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useMemo, useRef, useState, type FormEvent } from "react";
 import type { ServiceDocument } from "@/features/firestore/models";
 import { emptyQueryPage, type DocumentRecord, type QueryPageOptions } from "@/services/firestore/firestoreService";
-import { archiveService, createService, listHospitalServices, updateService } from "@/services/hospitals/serviceService";
+import { archiveService, createService, listHospitalServices, updateService, submitService } from "@/services/hospitals/serviceService";
+import { hasPublishedPackage, workingPackage, packageReviewLabel } from "@/features/hospitals/packageReview";
 import {
   PACKAGE_DURATIONS,
   PACKAGE_PROCEDURE_GROUPS,
@@ -135,6 +136,8 @@ export function ServicesManager() {
   const [actionError, setActionError, actionErrorNotification] = useRepeatableMessage();
   const [actionMessage, setActionMessage, actionMessageNotification] = useRepeatableMessage();
   const [busyId, setBusyId] = useState<string | null>(null);
+  const submitting = useRef(false);
+  const createRequestId = useRef<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [serviceToRemove, setServiceToRemove] = useState<DocumentRecord<ServiceDocument> | null>(null);
   const [serviceToToggle, setServiceToToggle] = useState<DocumentRecord<ServiceDocument> | null>(null);
@@ -149,8 +152,8 @@ export function ServicesManager() {
     loader,
     "We could not load your packages. Refresh the page and try again.",
   );
-  const usedInCreate = useMemo(() => usedProcedures(items), [items]);
-  const orderedItems = useMemo(() => sortPackagesByDuration(items), [items]);
+  const usedInCreate = useMemo(() => usedProcedures(items.map(workingPackage)), [items]);
+  const orderedItems = useMemo(() => sortPackagesByDuration(items.map(workingPackage)), [items]);
 
   function beginAction(id: string) {
     setBusyId(id);
@@ -164,11 +167,14 @@ export function ServicesManager() {
     const form = event.currentTarget;
     beginAction("create");
     try {
-      await createService({ hospitalId, ...readPackageForm(form), status: "active" });
+      const input = readPackageForm(form);
+      createRequestId.current ??= crypto.randomUUID();
+      const saved = await createService({ hospitalId, ...input, status: "inactive" }, createRequestId.current);
+      createRequestId.current = null;
       setHasPackageAmount(false);
       setCreateFormKey((current) => current + 1);
       await reload();
-      setActionMessage("The package has been added.");
+      setActionMessage(saved.duplicate ? "This package was already saved. Review it below before making further changes." : "Draft saved. Submit the package for Admin approval before it appears publicly.");
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : "We could not add the package. Check the details and try again.");
       focusFirstInvalidField(form);
@@ -184,10 +190,10 @@ export function ServicesManager() {
     beginAction(item.id);
     try {
       const changes = readPackageForm(form);
-      const saved = await updateService(item.id, changes);
+      const saved = await updateService(item.id, changes, item.lastAuditId);
       patchItem(item.id, saved);
       setEditingId(null);
-      setActionMessage("The package has been updated.");
+      setActionMessage("Draft saved. Submit your changes for Admin review. Any approved version remains unchanged.");
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : "We could not save the package. Check the details and try again.");
       focusFirstInvalidField(form);
@@ -209,6 +215,18 @@ export function ServicesManager() {
     } finally {
       setBusyId(null);
     }
+  }
+
+  async function submitPackage(item: DocumentRecord<ServiceDocument>) {
+    if (busyId || submitting.current) return;
+    submitting.current = true;
+    beginAction(item.id);
+    try {
+      patchItem(item.id, await submitService(item.id, item.lastAuditId));
+      setActionMessage("Package submitted to Admin for review.");
+    } catch (caught) {
+      setActionError(caught instanceof Error ? caught.message : "We could not submit this package.");
+    } finally { submitting.current = false; setBusyId(null); }
   }
 
   function toggleStatus(item: DocumentRecord<ServiceDocument>) {
@@ -238,8 +256,9 @@ export function ServicesManager() {
   return <PortalShell role="hospital" title="Services">
     <PortalLoadGuard notification={loadErrorNotification} loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/hospital" loadingMessage="Loading hospital packages..." />
     <form className="portal-card portal-form portal-service-form" onSubmit={addService} noValidate key={createFormKey}>
+      <p className="portal-form-note full">Save your packages as drafts, then submit them for Admin approval. Only approved packages are shown to consumers.</p>
       <PackageFields usedIn={usedInCreate} onAmountValidityChange={setHasPackageAmount} />
-      <div className="portal-actions full"><button className="portal-button" disabled={busyId !== null || !hasPackageAmount}>{busyId === "create" ? "Adding..." : "Add package"}</button></div>
+      <div className="portal-actions full"><button className="portal-button" disabled={busyId !== null || !hasPackageAmount}>{busyId === "create" ? "Saving..." : "Save draft"}</button></div>
     </form>
     <label className="portal-search">Search packages
       <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by package duration" autoComplete="off" />
@@ -258,7 +277,13 @@ export function ServicesManager() {
         </article>
         : <article className="portal-row portal-service-row" key={item.id}>
           <div className="portal-service-content"><div className="portal-row-heading portal-service-heading"><h3>{packageTitle(item)}</h3><span className="portal-status portal-service-status" data-status={item.status}>{formatStatus(item.status)}</span></div><p>{packageProcedureEntries(item).length} procedures included</p>{typeof item.price === "number" && <p>₹{item.price.toLocaleString("en-IN")}</p>}{item.description && <p>{item.description}</p>}<ul className="portal-package-summary">{packageProcedureEntries(item).slice(0, 4).map((procedure) => <li key={procedure.id}>{procedure.label} {procedure.days !== null && <span>{procedure.days} days</span>}</li>)}</ul></div>
-          <div className="portal-service-controls"><div className="portal-actions"><button className="portal-button secondary" type="button" disabled={busyId !== null} onClick={() => { setEditingId(item.id); setActionError(null); setActionMessage(null); }}>Edit package</button><button className={`portal-button${item.status === "active" ? " danger" : ""}`} type="button" disabled={busyId !== null} onClick={() => void toggleStatus(item)}>{item.status === "active" ? "Deactivate" : "Activate"}</button><button className="portal-button danger" type="button" disabled={busyId !== null} onClick={() => setServiceToRemove(item)}>Delete</button></div></div>
+          <div className="portal-service-controls"><span className="portal-status" data-status={item.reviewStatus === "pending" ? "pending" : item.reviewStatus === "changes_requested" ? "rejected" : item.reviewStatus === "draft" ? "inactive" : "active"}>{packageReviewLabel(item)}</span>
+            {item.reviewNote && <p className="portal-form-note">Admin feedback: {item.reviewNote}</p>}
+            {item.draftPackage && hasPublishedPackage(item) && <p className="portal-form-note">The current approved version remains {item.status === "active" ? "public" : "inactive"} until these changes are approved.</p>}
+            <div className="portal-actions"><button className="portal-button secondary" type="button" disabled={busyId !== null} onClick={() => { setEditingId(item.id); setActionError(null); setActionMessage(null); }}>Edit package</button>
+              {item.draftPackage && item.reviewStatus !== "pending" && <button className="portal-button" type="button" disabled={busyId !== null} onClick={() => void submitPackage(item)}>{busyId === item.id ? "Submitting..." : "Submit for approval"}</button>}
+              {hasPublishedPackage(item) && <button className={`portal-button${item.status === "active" ? " danger" : ""}`} type="button" disabled={busyId !== null} onClick={() => void toggleStatus(item)}>{item.status === "active" ? "Deactivate" : "Activate"}</button>}
+              <button className="portal-button danger" type="button" disabled={busyId !== null} onClick={() => setServiceToRemove(item)}>Delete</button></div></div>
         </article>)}
     </div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />

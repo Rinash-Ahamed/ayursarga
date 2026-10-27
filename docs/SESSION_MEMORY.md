@@ -2,6 +2,217 @@
 
 Updated: 27 October 2026 (Asia/Calcutta).
 
+## Search Centre image loading (27 October 2026)
+
+- v4.18.2 is a compatible public image-performance fix, using the public-design
+  and web-quality skills. No API, permissions, stored images, gallery dimensions,
+  card layout or dependency versions were changed by this task.
+- Search keeps its 320px IntersectionObserver warm-up, but mounted images load
+  eagerly rather than passing through a second native lazy-loading gate. Only
+  actually visible first-row candidates receive high fetch priority. Search no
+  longer downloads adjacent gallery photos speculatively; manual navigation still
+  decodes before replacing the current image. The shared hook coalesces in-flight
+  decodes for repeated taps/preloads, without caching completed errors or creating
+  a parallel HTTP cache. Initial covers no longer wait for the 380ms slide/fade;
+  explicit next/previous navigation retains both directional animations.
+- Responsive derivative failures retry the existing original once. Exhausted
+  galleries retain the branded, reserved 4:3 frame. Existing responsive WebP
+  variants and immutable caching were already appropriately sized: a bounded,
+  read-only live sample returned HTTP 200 for 480x360 (18,216 bytes), 800x600
+  (32,318 bytes), and 1200x900 (57,764 bytes), all with year-long immutable cache
+  headers. Real production-page checks selected 480px sources at 390px/DPR2 and
+  1440px/DPR1. No regeneration or further quality reduction was needed.
+- Production lab comparison, three runs per viewport with synthetic hospital
+  data and controlled 250ms image responses: median cover reveal after releasing
+  the image gate improved 917 to 418ms at 390px, and 925 to 403ms at 1440px.
+  Requests in this controlled view dropped from six covers plus six unrequested
+  gallery photos to six covers only. These are lab reveal timings, not field LCP,
+  actual mobile bandwidth measurements or guaranteed real-device performance.
+- Validation: 13 focused unit/API/bundle-boundary checks passed. All 77 distinct
+  Search/details browser cases passed across seven Chromium/WebKit phone,
+  landscape, tablet and desktop projects, including responsive sources, decode
+  coalescing, missing derivatives, actual 404 exhaustion, filtering, comparison,
+  sold-out handling and package/booking links. Initial landscape/tablet failures
+  came from a fixture whose gallery was inside the intentional warm-up margin;
+  the fixture now explicitly puts it beyond that margin, and all seven corrected
+  off-screen cases plus seven 404/visibility cases passed on rerun.
+- Six after-change slow-response production cases passed. The existing 4x-CPU
+  production scrolling/input profile also passed: CLS 0.001043, one public API
+  call, zero detail prefetches, two initial image requests and twelve after
+  scrolling, median test input response 144ms. Actual public images loaded on
+  mobile/desktop without runtime errors or horizontal overflow; all three
+  desktop cover images and normal-motion forward/backward galleries were checked.
+- Final full ESLint passed with zero warnings/errors. Production build passed,
+  including TypeScript and 71 generated pages. The same
+  fresh production build returned healthy HTTP 200 essential/deep health JSON
+  (3/3 and 5/5 configuration checks), and themed health pages rendered in desktop
+  Chromium/mobile WebKit without overflow or runtime errors. Health is not a live
+  Firestore permission, SMTP-delivery or all-API check. Real iOS/Android hardware
+  remains untested. This task does not resolve or deploy the previous section's
+  independent dependency-security and Java/emulator/Firestore-rule blockers.
+  The temporary production server was stopped; generated next-env routing types
+  were restored to the pre-existing development import. No deployment occurred.
+
+## Package/gallery workflow release audit (27 October 2026)
+
+- v4.18.1 follows the API/security/web-quality skills and fixes confirmed gaps:
+  stable per-form Hospital draft request IDs now deduplicate concurrent and
+  lost-response saves through an audited transaction; submission retries can
+  recognize their originating audit via submittedFromAuditId; missing active
+  notification recipients fail with actionable 409 feedback before any write.
+  Corrected the shared notification writer's incompatible Firestore generic
+  overload type using a minimal structural set signature, without suppressions.
+- Public package projection adds an opaque SHA-256 content version computed
+  only from canonical public fields, not audits, actors, commissions or draft
+  content. Consumer booking forwards expectedPackageVersion and checks it in
+  the current eligibility transaction. A reapproved price/procedure/note change
+  requires the Consumer to review again; saved-booking retries still return the
+  original result/snapshot. Legacy callers without the optional version remain
+  compatible. No new persisted quote/version fields or client permission grants.
+- Public HTTP reads now explicitly use no-store, and the public package endpoint
+  no longer serves stale short-cache responses after approval/deactivation.
+  In-flight deduplication, parallel bounded reads and pagination remain. Gallery
+  images retain responsive derivatives and immutable year-long caching/quality.
+- Full baseline: 154 unit/API cases passed. Final full suite: 161/161 passed,
+  covering the complete approval/edit/reapproval/booking lifecycle, original
+  price snapshots, races/retries, malformed payloads, role and ownership denials,
+  real shared authorization with fake Firebase token/profile adapters, missing
+  recipients, public privacy/version stability, image minimum and existing
+  booking/treatment/consultation/email/consent regressions. Cloud dependencies
+  in these tests are synthetic; they do not prove deployed rules or SMTP delivery.
+- Browser results: 40/40 affected portal cases across all eight configured
+  sizes/engines, 30 distinct Consumer cases across phone/desktop/WebKit phone,
+  27/27 Search/details cases and 33/33 comparison cases. One Consumer WebKit
+  multi-screen case exceeded its unchanged 30s total timeout during the parallel
+  build/suite run (29/30 initially); its isolated unchanged-timeout rerun passed
+  in 4.5s. Fixed a stale test that expected Hospital Reschedule, contrary to the
+  existing removal decision; no Hospital action was restored. Browser tests use
+  real components and synthetic APIs, not authenticated live cloud workflows or
+  physical iOS/Android devices. 130 distinct affected cases passed in total.
+- Final complete ESLint passed (no errors/warnings). Standalone typecheck passed
+  after the writer type fix. Production build passed, including TypeScript and
+  all 71 generated pages, with package/lock versions synchronized at 4.18.1.
+  Fresh production server on 127.0.0.1:3107 served this build's health checks:
+  /api/health 200 configuration (3/3 ready), /api/health?deep=true 200
+  deep-configuration (5/5 ready), /health?deep=true rendered on Chromium 1440px
+  and WebKit 390px with five service cards, no overflow or runtime errors.
+  Configuration health did not generate links, contact SMTP or query Firestore.
+- Actual production HTTP checks: eight affected mutation endpoints correctly
+  returned uncached 401 without tokens. Separately authorized bounded read-only
+  public API checks returned 200: hospital list pageSize=1 (1 record, 1259ms),
+  its public package list (6 records, 202ms, no-store). Package responses had
+  opaque versions and no draft/review/audit/commission fields. These are single
+  samples, not latency percentiles. No authenticated cloud writes or emails.
+- Three fresh production Search lab runs with controlled public data/media and
+  4x CPU throttling passed: results-ready 3464/2146/2564ms (median 2564), input
+  medians 179/287/148ms (median 179), CLS .00104 each, median long-task total
+  830ms, one listing request, zero detail prefetches, four initial image requests
+  and 24 after scrolling all results. No like-for-like before run, field INP,
+  Lighthouse score or real-device speed improvement is claimed.
+- RELEASE BLOCKERS: demo-only Firestore emulators:exec was attempted and exited
+  before tests because installed Java is 8 and firebase-tools requires Java 21.
+  Rule-engine tests remain unrun, although source/API denials passed. Changed
+  rules have NOT been deployed. No new index is required by these changes.
+- npm audit --omit=dev executed and reported 19 dependency advisories: 1 critical,
+  10 high, 8 moderate (counts include transitive package propagation, not 19
+  proven exploitable application paths). Installed Next.js is 16.2.11; maintainer
+  advisories include the Windows-hosted RCE fixed in 16.3.3 and next/og RCE fixed
+  in 16.3.6 (specific runtime/input conditions apply). Sharp/Firebase/Nodemailer
+  and transitive packages also require remediation/applicability review. No
+  automatic force fixes, Firebase downgrades or major upgrades were performed.
+  Owner was asked asynchronously whether dependency remediation should be a
+  separate release-blocking task or included; no reply received during audit.
+  Primary references:
+  https://github.com/vercel/next.js/security/advisories/GHSA-p293-qw3h-jr36
+  https://github.com/vercel/next.js/security/advisories/GHSA-vcvr-r3jv-pc5j
+- Do NOT call this production-ready until dependency findings are resolved or
+  explicitly reviewed, Java 21 rule tests pass, and rules/deployment plus staged
+  authenticated smoke checks are completed. No live deployment, operational
+  deletion, real upload/email or dependency version changes occurred. Temporary
+  production server stopped; generated validation artifacts cleaned; restored
+  next-env.d.ts's pre-existing dev type import to avoid unrelated generated diff.
+
+## Hospital cover badge and publication image minimum (27 October 2026)
+
+- v4.18.0 labels the first gallery photo Cover image in the shared Admin/Hospital
+  image manager and read-only gallery. The badge follows array order, matching
+  the first Search-card photo; removal naturally moves it to the next image.
+  Uses the portal emerald/white palette and readable overlay, without new cover
+  fields, sorting/reordering controls or public-card changes.
+- Owner chose gradual uploads, with four photos required before going public,
+  not a four-file initial upload. Shared MIN_PUBLIC_HOSPITAL_IMAGES and
+  hasMinimumHospitalImages count four distinct valid normalized HTTPS sources.
+  Admin activation/reactivation UI and server endpoint enforce the minimum;
+  the activation write now has an update-time precondition to reject stale
+  gallery checks. Hospital image removal checks the current transaction's gallery
+  for both roles; Admin general image updates enforce the same public minimum.
+  Public galleries at/below four disable removal and explain uploading a
+  replacement first. Private galleries still support single/gradual uploads and
+  removal. Existing public legacy centres below four are not hidden/migrated;
+  they may top up, cannot remove more photos, and need four on reactivation.
+- Firestore Hospital update rules guard publication plus image/imageUrls
+  changed-field bypasses, while allowing unrelated updates to existing live
+  legacy centres below four. Existing role restrictions, audit linkage, image
+  upload processing, max-ten cap, Storage preservation and bookings unchanged.
+- Focused local checks: 25 unit/API/source cases passed (six gallery/minimum
+  cases plus existing portal mutations and booking regressions). Six distinct
+  browser cases passed on Chromium 320px/desktop and WebKit phone: cover badges
+  in both portals, badge reassignment, removal disabled at four, gradual-upload
+  availability, activation disabled at three, and existing destructive dialogs.
+  Initial browser fixture incorrectly tried an archived Hospital Details route
+  which intentionally redirects; removed this unreachable test scenario and
+  reran all three new cases successfully. Reviewed gallery screenshots with
+  stubbed external image failures; no real-device/CDN delivery claims.
+- Added demo-only emulator cases for denied below-minimum publication/removal,
+  allowed four-photo publication and unchanged legacy-live profile updates.
+  Emulator unreachable at 127.0.0.1:8080; these rule-engine cases were not run.
+  Rules need deployment; no build/lint/typecheck, deployment, real Storage writes,
+  live data changes, file deletion or email sending requested/performed.
+
+## Hospital package publication approval (27 October 2026)
+
+- v4.17.0 adds private Hospital drafts, explicit Submit for approval, and Admin
+  individual/bulk approval in each hospital's Packages and services section.
+  Bulk selection is bounded to 20 packages from that hospital; the shared
+  confirmation dialog supports Cancel without a request. Admin can return an
+  individual request with required feedback. Both submission and review queue
+  addressed bell notifications atomically with their package audit/write.
+- Top-level service content remains the approved version; draftPackage holds
+  proposed edits. New packages start inactive with reviewStatus=draft and
+  publishedAt=null. Hospital edits reset reviewStatus to draft without changing
+  public content or booked price snapshots; pending/revision changes invalidate
+  stale Admin approval. Approval transaction validates every selected current
+  revision before any writes, publishes all or none, and handles retries without
+  duplicate audits/notifications (returning canonical saved data on retries).
+- Hospital cannot activate unpublished packages. Public package and service
+  discovery plus Consumer booking eligibility reject unapproved new records;
+  public projections never return draft/review metadata. Approved content stays
+  visible during review unless independently deactivated/archived. Legacy
+  records without review metadata retain existing publication eligibility;
+  no records/packages were removed or migrated. Existing Hospital package
+  bookings remain immediately confirmed and snapshot approved price/content.
+- Firestore service reads retain active Admin/assigned Hospital isolation.
+  Direct client service create/update/delete are now denied, replacing old
+  create/changed-field write allowlists that could bypass approval; existing
+  mutations already use authenticated server APIs. Removed the three now-unused
+  service-only rule validators. No new indexes or anonymous SDK reads.
+- Focused validation: 34 unit/API/source/dependency regressions passed,
+  including role/ownership denials, stale and cross-hospital bulk failures,
+  failed commits, concurrent/idempotent reviews, public projection privacy,
+  approved pricing while pending, and unchanged booking/treatment flows.
+  Final 14 review/public API subset rerun passed after retry-response coverage.
+  Seven distinct browser cases passed: the new review workflow on 320px phone,
+  tablet, desktop and WebKit phone, plus existing create/edit layout cases on
+  phone/desktop/WebKit. Verified submission, single/bulk approval, feedback,
+  disabled unpublished activation, scroll lock and no horizontal overflow.
+  Reviewed isolated Hospital/Admin package screenshots; all API/UI tests used
+  local synthetic data, not production mutations or physical devices.
+- Added demo-only emulator tests for allowed scoped reads and denied direct
+  writes, including audited bypass attempts. Firestore emulator was unreachable
+  on 127.0.0.1:8080, so emulator/deployed-rule coverage remains unverified.
+  Rules MUST be deployed with this feature to close old direct-write bypasses;
+  no deployment, build, lint, typecheck or live data changes were requested/run.
+
 ## Search comparison disclosure (27 October 2026)
 
 - v4.16.4 makes Compare care options collapsed by default on every fresh Search

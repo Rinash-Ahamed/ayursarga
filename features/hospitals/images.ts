@@ -1,4 +1,5 @@
 export const MAX_HOSPITAL_IMAGES = 10;
+export const MIN_PUBLIC_HOSPITAL_IMAGES = 4;
 
 /** Responsive versions exist only for images written by our upload endpoint. */
 export function hospitalImageSrcSet(url: string) {
@@ -59,4 +60,8 @@ export function getHospitalImageUrls(hospital: HospitalImageSource) {
   const current = Array.isArray(hospital.imageUrls) ? hospital.imageUrls : [];
   const candidates = current.length ? current : hospital.imageUrl ? [hospital.imageUrl] : [];
   return candidates.map(secureImageUrl).filter((url): url is string => Boolean(url)).slice(0, MAX_HOSPITAL_IMAGES);
+}
+
+export function hasMinimumHospitalImages(hospital: HospitalImageSource) {
+  return new Set(getHospitalImageUrls(hospital)).size >= MIN_PUBLIC_HOSPITAL_IMAGES;
 }

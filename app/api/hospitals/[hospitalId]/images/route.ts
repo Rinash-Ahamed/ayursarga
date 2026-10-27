@@ -7,7 +7,7 @@ import { apiHealth, apiJson, logApiError } from "@/services/api/server";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { allowRequest } from "@/services/api/rateLimit";
 import { requestAuditDevice } from "@/services/api/audit";
-import { getHospitalImageUrls, MAX_HOSPITAL_IMAGES } from "@/features/hospitals/images";
+import { getHospitalImageUrls, hasMinimumHospitalImages, MIN_PUBLIC_HOSPITAL_IMAGES, MAX_HOSPITAL_IMAGES } from "@/features/hospitals/images";
 
 export const runtime = "nodejs";
 const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;
@@ -70,6 +70,7 @@ async function changeGallery(actor: Actor, request: Request, url: string, action
     if (action === "add" && current.length >= MAX_HOSPITAL_IMAGES) throw new ImageError("A centre can have up to 10 images. Remove an image before uploading another.", 409);
     if (action === "remove" && !current.includes(url)) throw new ImageError("This image has already been removed. Refresh the gallery.", 409);
     const imageUrls = action === "add" ? [...current, url] : current.filter((image) => image !== url);
+    if (action === "remove" && hospital.status === "active" && hospital.isPublic === true && !hasMinimumHospitalImages({ imageUrls })) throw new ImageError(`A public hospital must keep at least ${MIN_PUBLIC_HOSPITAL_IMAGES} different images. Upload a replacement before removing this image.`, 409);
     const audit = actor.firestore.collection("auditLogs").doc();
     const now = Timestamp.now();
     const changes = { imageUrls, imageUrl: null, updatedAt: now, updatedBy: actor.uid, lastAuditId: audit.id };

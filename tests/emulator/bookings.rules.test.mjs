@@ -60,6 +60,39 @@ before(async () => {
   await seed(`hospitals/other-${centre}`, fields({ status: "active" }));
 });
 
+test("hospital publication requires four images; live gallery changes cannot drop below four", async () => {
+  const images = Array.from({ length: 4 }, (_, index) => `https://images.test/centre-${index}.webp`);
+  const data = { ...metadata, ...fields({ name: "Centre", description: "Care", email: "partner@example.com", phone: "9876543210", hospitalPhone1: "9876543210", address: "A complete centre address", city: "Palakkad", district: "Palakkad", state: "Kerala", commissionPercentage: 10, status: "active", isPublic: true, contractStatus: "signed", contractUrl: "https://example.com/signed.pdf", imageUrls: images }), contractSignedAt: timestamp };
+  const path = `hospitals/gallery-${suffix}`;
+  await seed(path, data);
+  assert.equal((await auditedUpdate(path, data, { imageUrls: images.slice(0, 3) }, "admin", "hospitals", "update")).status, 403);
+  const legacyPath = `hospitals/gallery-legacy-${suffix}`;
+  const legacy = { ...data, ...fields({ imageUrls: images.slice(0, 3) }) };
+  await seed(legacyPath, legacy);
+  assert.equal((await auditedUpdate(legacyPath, legacy, { description: "Updated care description" }, "admin", "hospitals", "update")).status, 200);
+  for (const count of [3, 4]) {
+    const pendingPath = `hospitals/gallery-pending-${count}-${suffix}`;
+    const pending = { ...data, ...fields({ status: "pending", isPublic: false, imageUrls: images.slice(0, count), activatedAt: null, activatedBy: null }) };
+    await seed(pendingPath, pending);
+    const result = await auditedUpdate(pendingPath, pending, { status: "active", isPublic: true, activatedBy: ids.admin }, "admin", "hospitals", "hospital_activated", ["activatedAt"]);
+    assert.equal(result.status, count === 4 ? 200 : 403);
+  }
+});
+
+test("package reviews: scoped reads remain allowed but direct publication, draft writes and deletion are denied", async () => {
+  const path = `services/package-review-${suffix}`;
+  const data = { ...metadata, ...fields({ hospitalId: centre, name: "7-day package", description: "Approved version", price: 12000, status: "active", reviewStatus: "approved" }), publishedAt: timestamp };
+  await seed(path, data);
+  for (const role of ["admin", "hospital"]) assert.equal((await call(`/${path}`, { role })).status, 200);
+  for (const role of [undefined, "consumer", "otherHospital", "inactive"]) assert.equal((await call(`/${path}`, { role })).status, 403);
+  for (const role of ["admin", "hospital", "consumer"]) {
+    assert.equal((await call(`/services/new-${role}-${suffix}`, { role, method: "PATCH", body: { fields: data } })).status, 403);
+    assert.equal((await auditedUpdate(path, data, { price: 1 }, role, "services", "update")).status, 403);
+    assert.equal((await auditedUpdate(path, data, { reviewStatus: "approved" }, role, "services", "update")).status, 403);
+    assert.equal((await call(`/${path}`, { role, method: "DELETE" })).status, 403);
+  }
+});
+
 test("existing hospital bookings: scoped Consumer/Hospital/Admin reads and no anonymous/other-account access", async () => {
   const { path } = await booking("reads");
   for (const role of ["admin", "consumer", "hospital"]) assert.equal((await call(`/${path}`, { role })).status, 200, role);

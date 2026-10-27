@@ -1,6 +1,6 @@
 import { Timestamp } from "firebase-admin/firestore";
 import { mutationJson } from "@/services/api/mutation";
-import { validateHospitalImageUrls } from "@/features/hospitals/images";
+import { validateHospitalImageUrls, hasMinimumHospitalImages, MIN_PUBLIC_HOSPITAL_IMAGES } from "@/features/hospitals/images";
 import { validateHospitalLocationUrl } from "@/features/hospitals/location";
 import { validateHospitalFields } from "@/features/hospitals/validation";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
@@ -96,6 +96,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ hospi
           const images = validateHospitalImageUrls(changes.imageUrls);
           if (images.error) return apiJson({ error: images.error }, 400);
           changes.imageUrls = images.imageUrls;
+          if (hospital.status === "active" && hospital.isPublic === true && !hasMinimumHospitalImages({ imageUrls: images.imageUrls })) return apiJson({ error: `A public hospital must keep at least ${MIN_PUBLIC_HOSPITAL_IMAGES} different images.` }, 409);
         }
         if ("locationUrl" in changes) {
           const location = validateHospitalLocationUrl(changes.locationUrl);

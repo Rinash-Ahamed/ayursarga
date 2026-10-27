@@ -100,6 +100,7 @@ export function bookingFlowFixture(options = {}) {
     },
     "@/services/api/server": { apiJson: (body, status = 200) => Response.json(body, { status, headers: { "cache-control": "no-store" } }), logApiError: () => {} },
     "@/services/api/rateLimit": { allowRequest: () => true, requestFingerprint: () => "test" },
+    ...(options.overrides ?? {}),
   };
   return { actor, profile, firestore, records, calls,
     load: (path) => loadTypeScript(path, overrides),

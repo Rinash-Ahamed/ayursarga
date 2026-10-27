@@ -5,6 +5,7 @@ import type { DocumentRecord, QueryPage } from "@/services/firestore/firestoreSe
 import { shareInFlightRequest } from "@/utils/inFlightRequests";
 
 export type PublicPageCursor = string;
+export type PublicServiceDocument = ServiceDocument & { packageVersion?: string };
 // Public HTTP dates need no operational Firestore SDK in the discovery bundle.
 export type PublicHospitalDocument = Omit<HospitalDocument, "blockedDateRanges"> & {
   blockedDateRanges?: Array<{ startDate: Date; endDate: Date; availabilityId: string }>;
@@ -18,7 +19,7 @@ function publicRequest<T>(url: string, signal?: AbortSignal) {
   // Only public GETs overlap here. Keep caller-abortable requests independent,
   // and rely on the endpoint's HTTP cache policy rather than retaining stale data.
   return shareInFlightRequest<T>(signal ? null : `public-get:${url}`, async () => {
-    const response = await fetch(url, { signal });
+    const response = await fetch(url, { signal, cache: "no-store" });
     const body = await response.json().catch(() => ({})) as T & { error?: string };
     if (!response.ok) throw new Error(body.error || "The requested information is temporarily unavailable.");
     return body;
@@ -76,8 +77,8 @@ export async function getPublicHospital(hospitalId: string, signal?: AbortSignal
   return body.hospital ? restoreHospital(body.hospital) : null;
 }
 
-export async function listPublicHospitalServices(hospitalId: string, options: PublicPageOptions & { signal?: AbortSignal } = {}): Promise<QueryPage<ServiceDocument, PublicPageCursor>> {
-  const body = await publicRequest<ApiPage<DocumentRecord<ServiceDocument>>>(publicPageUrl(
+export async function listPublicHospitalServices(hospitalId: string, options: PublicPageOptions & { signal?: AbortSignal } = {}): Promise<QueryPage<PublicServiceDocument, PublicPageCursor>> {
+  const body = await publicRequest<ApiPage<DocumentRecord<PublicServiceDocument>>>(publicPageUrl(
     `/api/public/hospitals/${encodeURIComponent(hospitalId)}/services`,
     options,
   ), options.signal);

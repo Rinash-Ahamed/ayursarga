@@ -25,6 +25,75 @@ async function mount(page: Page, screen: string) {
   }
   await page.waitForTimeout(120);
 }
+test("hospital cover badge follows the first photo and public galleries keep their four-photo minimum", async ({ page }) => {
+  await page.route("https://images.test/**", (route) => route.fulfill({ status: 404 }));
+  for (const screen of ["admin-details", "hospital-profile"]) {
+    await mount(page, screen);
+    const gallery = page.locator(".portal-hospital-gallery");
+    const badge = gallery.getByText("Cover image", { exact: true });
+    await expect(badge).toHaveCount(1);
+    await expect(badge).toBeVisible();
+    await expect(gallery.locator("a").first()).toContainText("Cover image");
+    await expect(badge).toHaveCSS("color", "rgb(255, 255, 255)");
+    await page.getByRole("button", { name: "Remove centre image 1", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Remove image", exact: true }).click();
+    await expect(gallery.locator("a")).toHaveCount(4);
+    await expect(gallery.locator("a").first()).toHaveAttribute("href", "https://images.test/centre-1.webp");
+    await expect(gallery.getByText("Cover image", { exact: true })).toHaveCount(1);
+    for (const button of await gallery.getByRole("button", { name: /Remove centre image/ }).all()) await expect(button).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Upload images", exact: true })).toBeEnabled();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await gallery.screenshot({ path: test.info().outputPath(`${screen}-cover-gallery.png`) });
+  }
+  await mount(page, "admin-gallery-incomplete");
+  await expect(page.getByRole("button", { name: "Activate hospital", exact: true })).toBeDisabled();
+  await expect(page.getByText("Upload at least 4 different hospital images to enable activation.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Upload images", exact: true })).toBeEnabled();
+});
+
+test("package review supports private Hospital drafts and confirmed individual or bulk Admin approval", async ({ page }) => {
+  await mount(page, "hospital-package-review");
+  const hospitalCard = page.locator(".portal-service-row").first();
+  await expect(hospitalCard.getByText("Draft", { exact: true })).toBeVisible();
+  await expect(hospitalCard.getByRole("button", { name: "Activate", exact: true })).toHaveCount(0);
+  await hospitalCard.getByRole("button", { name: "Submit for approval", exact: true }).click();
+  await expect(hospitalCard.getByText("Pending review", { exact: true })).toBeVisible();
+  await expect(hospitalCard.getByRole("button", { name: "Submit for approval", exact: true })).toHaveCount(0);
+  await hospitalCard.screenshot({ path: test.info().outputPath("hospital-package-review.png") });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+  await mount(page, "admin-package-review");
+  const packages = page.getByRole("region", { name: "Packages and services" });
+  await expect(packages.getByText("3 pending review", { exact: true })).toBeVisible();
+  await packages.screenshot({ path: test.info().outputPath("admin-package-review.png") });
+  await packages.getByRole("button", { name: "Approve package", exact: true }).first().click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  expect(await page.evaluate(() => document.body.style.position)).toBe("fixed");
+  const calls = await page.evaluate(() => (window as unknown as { consumerBookingFixture: { calls: number } }).consumerBookingFixture.calls);
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { calls: number } }).consumerBookingFixture.calls)).toBe(calls);
+  await packages.getByRole("button", { name: "Approve package", exact: true }).first().click();
+  await dialog.getByRole("button", { name: "Approve and publish", exact: true }).click();
+  await expect(packages.getByText("2 pending review", { exact: true })).toBeVisible();
+  await packages.getByRole("button", { name: "Request changes", exact: true }).first().click();
+  await dialog.getByRole("button", { name: "Send feedback", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toContainText("Enter a reason");
+  await dialog.getByRole("textbox", { name: "Reason for changes" }).fill("Please correct the procedure details.");
+  await dialog.getByRole("button", { name: "Send feedback", exact: true }).click();
+  await expect(packages.getByText("1 pending review", { exact: true })).toBeVisible();
+  await packages.getByRole("checkbox", { name: "Select up to 20 pending packages", exact: true }).check();
+  await packages.getByRole("button", { name: "Approve selected (1)", exact: true }).click();
+  await dialog.getByRole("button", { name: "Approve and publish", exact: true }).click();
+  await expect(packages.getByRole("button", { name: "Approve package", exact: true })).toHaveCount(0);
+  await expect(packages.getByText("Approved", { exact: true })).toHaveCount(2);
+  await expect(packages.getByText("Changes requested", { exact: true })).toHaveCount(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect(await page.evaluate(() => document.body.style.position)).not.toBe("fixed");
+  await page.screenshot({ path: test.info().outputPath("package-review.png"), fullPage: true });
+});
+
 test("Hospital bookings go directly from start to complete with treatment badges and no reschedule or ongoing actions", async ({ page }) => {
   await mount(page, "hospital-bookings");
   await expect(page.getByRole("button", { name: "Reschedule", exact: true })).toHaveCount(0);

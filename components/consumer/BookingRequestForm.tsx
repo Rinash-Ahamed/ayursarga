@@ -8,9 +8,8 @@ import { createBookingRequest } from "@/services/bookings/bookingService";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { formatBystanders, type CentreSearchContext } from "@/features/hospitals/searchContext";
-import type { ServiceDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
-import { getPublicHospital, getPublicHospitalService, type PublicHospitalDocument } from "@/services/hospitals/publicHospitalService";
+import { getPublicHospital, getPublicHospitalService, type PublicHospitalDocument, type PublicServiceDocument } from "@/services/hospitals/publicHospitalService";
 import { packageTitle, packageProcedureEntries } from "@/features/hospitals/packages";
 import { INCLUDED_BYSTANDERS, resolveHospitalBystanderPolicy } from "@/features/hospitals/bystanders";
 import { formatCurrency } from "@/utils/currency";
@@ -28,7 +27,7 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
   const [preferredDate, setPreferredDate] = useState(searchContext.startDate);
   const [bookingTermsAccepted, setBookingTermsAccepted] = useState(false);
   const selectionKey = `${hospitalId}:${serviceId}`;
-  const [selection, setSelection] = useState<{ key: string; hospital: DocumentRecord<PublicHospitalDocument> | null; service: DocumentRecord<ServiceDocument> | null } | null>(null);
+  const [selection, setSelection] = useState<{ key: string; hospital: DocumentRecord<PublicHospitalDocument> | null; service: DocumentRecord<PublicServiceDocument> | null } | null>(null);
   const hospitalLoading = selection?.key !== selectionKey;
   const hospital = !hospitalLoading ? selection.hospital : null;
   const service = !hospitalLoading ? selection.service : null;
@@ -90,7 +89,7 @@ export function BookingRequestForm({ hospitalId, serviceId, searchContext }: { h
     try {
       const result = await createBookingRequest({ consumerId: firebaseUser.uid, consumerName: userProfile.name,
         consumerEmail: userProfile.email, consumerPhone: userProfile.phone, consumerAddress: userProfile.address,
-        hospitalId, serviceId,
+        hospitalId, serviceId, expectedPackageVersion: service.packageVersion,
         preferredDate: parseDateInputValue(preferredDate)!,
         preferredEndDate: null,
         preferredTime: "Flexible", bystanderCount,

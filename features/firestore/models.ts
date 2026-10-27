@@ -113,6 +113,16 @@ export type ServiceDocument = AuditedDocument & {
   otherProcedureName?: string | null;
   otherProcedureDays?: number | null;
   status: "active" | "inactive" | "archived";
+  reviewStatus?: "draft" | "pending" | "approved" | "changes_requested";
+  draftPackage?: import("@/features/hospitals/packageReview").PackageDraft | null;
+  publishedAt?: Timestamp | null;
+  submittedAt?: Timestamp | null;
+  submittedBy?: string | null;
+  submittedFromAuditId?: string | null;
+  reviewedAt?: Timestamp | null;
+  reviewedBy?: string | null;
+  reviewNote?: string;
+  reviewedRequestAuditId?: string | null;
 };
 
 export type BookingStatus =
@@ -244,7 +254,7 @@ export type PaymentDocument = AuditedDocument & {
 export type NotificationDocument = AuditedDocument & {
   recipientId: string;
   recipientRole: "admin" | "hospital" | "consumer";
-  type: "availability_requested" | "availability_approved" | "availability_rejected" | "availability_cancelled" | "booking_created" | "consultation_updated";
+  type: "availability_requested" | "availability_approved" | "availability_rejected" | "availability_cancelled" | "booking_created" | "consultation_updated" | "package_submitted" | "package_reviewed";
   bookingReference?: string;
   title: string;
   message: string;

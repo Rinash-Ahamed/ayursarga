@@ -328,102 +328,6 @@ service cloud.firestore {
         && request.resource.data.status in ['active', 'inactive'];
     }
 
-    function hasValidServiceFields() {
-      let durationMinutes = request.resource.data.get('durationMinutes', null);
-      let durationUnit = request.resource.data.get('durationUnit', null);
-      let packageDurationDays = request.resource.data.get('packageDurationDays', null);
-      let procedures = request.resource.data.get('procedures', {});
-      let otherProcedures = request.resource.data.get('otherProcedures', []);
-      let otherProcedureName = request.resource.data.get('otherProcedureName', null);
-      let otherProcedureDays = request.resource.data.get('otherProcedureDays', null);
-      return request.resource.data.keys().hasOnly([
-          'hospitalId', 'name', 'description', 'price', 'durationMinutes', 'durationUnit', 'status',
-          'packageDurationDays', 'procedures', 'otherProcedures', 'otherProcedureName', 'otherProcedureDays',
-          'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
-          'archivedAt', 'archivedBy', 'lastAuditId'
-        ])
-        && request.resource.data.hospitalId is string
-        && request.resource.data.name is string
-        && request.resource.data.name.size() >= 2
-        && request.resource.data.name.size() <= 160
-        && request.resource.data.description is string
-        && request.resource.data.description.size() <= 2000
-        && request.resource.data.status in ['active', 'inactive', 'archived']
-        && ((packageDurationDays == null
-          && !request.resource.data.keys().hasAny(['procedures', 'otherProcedures', 'otherProcedureName', 'otherProcedureDays'])
-          && request.resource.data.price is number
-          && request.resource.data.price >= 0
-          && ((durationMinutes == null && durationUnit == null)
-            || (durationMinutes is int
-              && durationMinutes > 0
-              && durationUnit in ['minutes', 'hours', 'days'])))
-        || (packageDurationDays in [7, 10, 14, 21, 28, 35]
-          && !request.resource.data.keys().hasAny(['durationMinutes', 'durationUnit'])
-          && request.resource.data.price is number
-          && request.resource.data.price > 0
-          && procedures is map
-          && procedures.keys().hasOnly([
-            'headMassage', 'hairPack', 'faceMassage', 'facePack',
-            'fullBodyMassage', 'fullBodyPack', 'podiKizhi', 'narangaKizhi',
-            'elaKizhi', 'njavaraKizhi', 'njavaraTheppu', 'njavaraFacial',
-            'vethuKuli', 'thakraDhara', 'ksheeraDhara', 'tailaDhara',
-            'anjanam', 'dhoomapanam', 'keshaDhoopanam', 'yoniDhoopanam',
-            'abdominalBinding'
-          ])
-          && (procedures.keys().size() > 0 || otherProcedures.size() > 0 || otherProcedureName != null)
-          && validPackageProcedureDays(procedures, 'headMassage')
-          && validPackageProcedureDays(procedures, 'hairPack')
-          && validPackageProcedureDays(procedures, 'faceMassage')
-          && validPackageProcedureDays(procedures, 'facePack')
-          && validPackageProcedureDays(procedures, 'fullBodyMassage')
-          && validPackageProcedureDays(procedures, 'fullBodyPack')
-          && validPackageProcedureDays(procedures, 'podiKizhi')
-          && validPackageProcedureDays(procedures, 'narangaKizhi')
-          && validPackageProcedureDays(procedures, 'elaKizhi')
-          && validPackageProcedureDays(procedures, 'njavaraKizhi')
-          && validPackageProcedureDays(procedures, 'njavaraTheppu')
-          && validPackageProcedureDays(procedures, 'njavaraFacial')
-          && validPackageProcedureDays(procedures, 'vethuKuli')
-          && validPackageProcedureDays(procedures, 'thakraDhara')
-          && validPackageProcedureDays(procedures, 'ksheeraDhara')
-          && validPackageProcedureDays(procedures, 'tailaDhara')
-          && validPackageProcedureDays(procedures, 'anjanam')
-          && validPackageProcedureDays(procedures, 'dhoomapanam')
-          && validPackageProcedureDays(procedures, 'keshaDhoopanam')
-          && validPackageProcedureDays(procedures, 'yoniDhoopanam')
-          && validPackageProcedureDays(procedures, 'abdominalBinding')
-          && otherProcedures is list
-          && otherProcedures.size() <= 5
-          && validOtherProcedure(otherProcedures, 0)
-          && validOtherProcedure(otherProcedures, 1)
-          && validOtherProcedure(otherProcedures, 2)
-          && validOtherProcedure(otherProcedures, 3)
-          && validOtherProcedure(otherProcedures, 4)
-          && ((otherProcedureName == null && otherProcedureDays == null)
-            || (otherProcedureName is string
-              && otherProcedureName.size() >= 2
-              && otherProcedureName.size() <= 100
-              && otherProcedureDays is int
-              && otherProcedureDays >= 1))));
-    }
-
-    function validPackageProcedureDays(procedures, procedureId) {
-      return !procedures.keys().hasAny([procedureId])
-        || (procedures[procedureId] is int
-          && procedures[procedureId] >= 1);
-    }
-
-    function validOtherProcedure(otherProcedures, index) {
-      return otherProcedures.size() <= index || (
-        otherProcedures[index] is map
-        && otherProcedures[index].keys().hasOnly(['name', 'days'])
-        && otherProcedures[index].name is string
-        && otherProcedures[index].name.size() >= 2
-        && otherProcedures[index].name.size() <= 100
-        && otherProcedures[index].days is int
-        && otherProcedures[index].days >= 1
-      );
-    }
 
     function isAuditedModule(module) {
       return module in ['users', 'hospitals', 'consultants', 'services', 'bookings', 'hospitalCapacity', 'availability'];
@@ -676,6 +580,11 @@ service cloud.firestore {
       allow update: if hasLinkedAudit('hospitals', hospitalId)
         && request.resource.data.updatedAt == request.time
         && request.resource.data.updatedBy == request.auth.uid
+        && (request.resource.data.get('isPublic', false) != true
+          || (resource.data.get('isPublic', false) == true
+            && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['imageUrls', 'imageUrl']))
+          || (request.resource.data.get('imageUrls', []) is list
+            && request.resource.data.get('imageUrls', []).toSet().size() >= 4))
         && ((isAdmin()
           && validAdminHospitalUpdate()
           && (!(linkedAuditAction() in ['update', 'hospital_activated'])
@@ -774,37 +683,10 @@ service cloud.firestore {
 
     match /services/{serviceId} {
       allow read: if isAdmin() || hasOperationalHospitalAccess(resource.data.hospitalId);
-      allow create: if (isAdmin() || hasOperationalHospitalAccess(request.resource.data.hospitalId))
-        && hasValidServiceFields()
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.createdBy == request.auth.uid
-        && request.resource.data.updatedAt == request.time
-        && request.resource.data.updatedBy == request.auth.uid
-        && request.resource.data.archivedAt == null
-        && request.resource.data.archivedBy == null
-        && hasCreateAudit('services', serviceId);
-      allow update: if hasLinkedAudit('services', serviceId)
-        && request.resource.data.updatedAt == request.time
-        && request.resource.data.updatedBy == request.auth.uid
-        && ((linkedAuditAction() == 'archive'
-            && request.resource.data.status == 'archived'
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'status', 'updatedAt', 'updatedBy', 'archivedAt', 'archivedBy', 'lastAuditId'
-            ]))
-          || (linkedAuditAction() == 'status_change'
-            && request.resource.data.status != resource.data.status
-            && request.resource.data.status != 'archived'
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'status', 'updatedAt', 'updatedBy', 'lastAuditId'
-            ]))
-          || (linkedAuditAction() == 'update'
-            && request.resource.data.status == resource.data.status
-            && hasValidServiceFields()))
-        && (isAdmin() || (
-          hasOperationalHospitalAccess(resource.data.hospitalId)
-          && request.resource.data.hospitalId == resource.data.hospitalId
-        ));
-      allow delete: if false;
+      // Package drafts, publication and reviews are validated and audited by
+      // authenticated server endpoints. Deny all direct client write paths,
+      // including old field/changed-field allowlists that bypassed approval.
+      allow create, update, delete: if false;
     }
 
     match /bookings/{bookingId} {

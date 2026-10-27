@@ -26,7 +26,8 @@ test("public blocked dates use plain dates with unchanged ISO instants and inclu
 
 test("identical public GETs share one in-flight response, not completed outcomes", async (t) => {
   let calls = 0;
-  t.mock.method(globalThis, "fetch", async () => {
+  t.mock.method(globalThis, "fetch", async (_url, options) => {
+    assert.equal(options.cache, "no-store");
     calls++;
     await new Promise((resolve) => setTimeout(resolve, 15));
     return Response.json({ documents: [], cursor: null, hasMore: false });

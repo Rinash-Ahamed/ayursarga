@@ -8,6 +8,8 @@ import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
 import { isValidPhoneNumber } from "@/utils/phone";
 import { packageTitle } from "@/features/hospitals/packages";
+import { hasPublishedPackage } from "@/features/hospitals/packageReview";
+import { publicPackageVersion } from "@/services/hospitals/publicProjection";
 import { ensureBookingReference, reserveBookingReference } from "@/services/bookings/bookingReferenceAdmin";
 import { addBookingNotifications, bookingNotificationRecipients } from "@/services/notifications/bookingNotificationsAdmin";
 import { requestAuditDevice } from "@/services/api/audit";
@@ -101,6 +103,7 @@ export async function POST(request: Request) {
       return apiJson({ error: "Complete your contact details and consent before requesting an appointment." }, 409);
     }
     if (body.bookingTermsAccepted !== true) return apiJson({ error: "Read and accept the applicable terms and policies before sending your request." }, 400);
+    if (body.expectedPackageVersion !== undefined && (typeof body.expectedPackageVersion !== "string" || !/^[a-f0-9]{64}$/.test(body.expectedPackageVersion))) return apiJson({ error: "Reload and review the selected package before booking." }, 400);
 
     const hospitalId = validId(body.hospitalId);
     const serviceId = validId(body.serviceId);
@@ -140,9 +143,10 @@ export async function POST(request: Request) {
       if (!hospitalSnapshot.exists || hospital?.status !== "active" || hospital.isPublic !== true) {
         throw new BookingFlowError("This hospital is not accepting bookings right now.", 409);
       }
-      if (!serviceSnapshot.exists || service?.status !== "active" || service.hospitalId !== hospitalId) {
+      if (!serviceSnapshot.exists || service?.status !== "active" || service.hospitalId !== hospitalId || !hasPublishedPackage(service)) {
         throw new BookingFlowError("This package is not accepting bookings right now.", 409);
       }
+      if (body.expectedPackageVersion !== undefined && body.expectedPackageVersion !== publicPackageVersion(serviceId, service)) throw new BookingFlowError("This package has changed. Return to the centre page and review the latest price and details before booking.", 409);
       if (dateBlocked(hospital, preferredDate, preferredEndDate)) {
         throw new BookingFlowError("This hospital is unavailable for the selected dates. Choose another date and try again.", 409);
       }

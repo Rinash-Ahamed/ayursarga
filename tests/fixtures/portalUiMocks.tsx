@@ -1,9 +1,10 @@
 import { useSyncExternalStore, type ReactNode } from "react";
+import type { ServiceDocument } from "@/features/firestore/models";
 import { CONSUMER_PRIVACY_NOTICE_VERSION, CUSTOMER_TERMS_VERSION } from "@/features/consumers/privacyConsent";
 import { validateInvoiceInput, INVOICE_ISSUER, invoiceParty, type InvoiceInput } from "@/features/billing/invoices";
 export { buildBrandedDocumentPdf } from "../../features/hospitals/contractPdf";
 
-export const portalUiState = { screen: "admin-dashboard", calls: 0, bookingRequests: 0, cancelledBookings: 0, navigatedTo: "", unavailablePackage: false, availabilityReviews: [] as string[], holdAvailability: false, failAvailability: false, consultantWrites: [] as unknown[], publicConsultantReads: 0 };
+export const portalUiState = { screen: "admin-dashboard", calls: 0, bookingRequests: 0, bookingInputs: [] as unknown[], cancelledBookings: 0, navigatedTo: "", unavailablePackage: false, availabilityReviews: [] as string[], holdAvailability: false, failAvailability: false, consultantWrites: [] as unknown[], publicConsultantReads: 0 };
 export let finishAvailabilityReview: (() => void) | undefined;
 Object.assign(globalThis, { finishAvailabilityReview: () => finishAvailabilityReview?.() });
 export class Timestamp {
@@ -71,19 +72,20 @@ export default function MockNextElement({ src, href, children, alt, width, heigh
   // eslint-disable-next-line @next/next/no-img-element
   return src ? <img src={src} alt={alt ?? ""} width={width} height={height} /> : <a href={href} {...props}>{children}</a>;
 }
-export const getHospital = async () => ({ ...hospital, facilities: "Free WiFi\nFree parking" });
+const coverGallery = Array.from({ length: 5 }, (_, index) => `https://images.test/centre-${index}.webp`);
+export const getHospital = async () => ({ ...hospital, imageUrls: portalUiState.screen === "admin-gallery-incomplete" ? coverGallery.slice(0, 3) : coverGallery, status: portalUiState.screen === "admin-gallery-incomplete" ? "pending" : hospital.status, isPublic: portalUiState.screen === "admin-gallery-incomplete" ? false : hospital.isPublic, facilities: "Free WiFi\nFree parking" });
 export const getHospitalCapacity = async () => ({ ...metadata, id: "centre", hospitalId: "centre", totalRooms: 10, occupiedRooms: 4, status: "active" });
 export const listAllHospitals = () => page(portalUiState.screen === "admin-hospitals-empty" ? [] : [hospital]);
-export const listHospitalServices = () => page(portalUiState.screen === "hospital-services-empty" ? [] : services);
+export const listHospitalServices = () => page(portalUiState.screen === "hospital-services-empty" ? [] : portalUiState.screen.endsWith("package-review") ? services.map((service) => ({ ...service, status: "inactive", reviewStatus: portalUiState.screen.startsWith("admin") ? "pending" : "draft", publishedAt: null, draftPackage: { name: service.name, description: service.description, packageDurationDays: service.packageDurationDays, procedures: service.procedures, otherProcedures: [], price: 28000 } })) : services);
 const operationalBookings = () => bookings.map((booking, index) => index === 0 ? { ...booking, hospitalName: undefined, serviceName: undefined, serviceId: "package-14" } : booking);
 export const listHospitalBookings = () => page(portalUiState.screen === "hospital-bookings-empty" ? [] : operationalBookings());
 export const listConsumerBookings = () => page(portalUiState.screen === "consumer-bookings-empty" ? [] : bookings.map((booking, index) => ({ ...booking, serviceId: "package-14", hospitalName: index === 0 ? undefined : hospital.name, serviceName: index === 0 ? undefined : "14-day package", treatmentStatus: index === 0 ? "not_started" : "started", confirmedDate: index === 1 ? now : null, confirmedTime: index === 1 ? "10:30" : null, consumerNotes: "Please confirm room accessibility.", hospitalNotes: index === 1 ? "Your preferred care dates are available." : null, bystanderCount: 2, additionalBystanderTotal: 500 })));
 export const getConsumerBookingDetails = async () => ({ details: { "booking-0": { hospitalName: hospital.name, serviceName: "14-day package", hospitalLocation: "Palakkad, Kerala" } } });
 export const cancelConsumerBooking = async () => { portalUiState.cancelledBookings++; };
-export const createBookingRequest = async () => { portalUiState.bookingRequests++; return { ok: true, bookingId: "booking-0", bookingReference: "AYUR000000" }; };
+export const createBookingRequest = async (input: unknown) => { portalUiState.bookingRequests++; portalUiState.bookingInputs.push(input); return { ok: true, bookingId: "booking-0", bookingReference: "AYUR000000" }; };
 export const getPortalBooking = async (id: string) => portalUiState.screen.endsWith("auto-confirmed") && id === autoConfirmedBooking.id ? autoConfirmedBooking : bookings.find((booking) => booking.id === id) ?? null;
 export const getPublicHospital = async () => ({ ...hospital, blockedDateRanges: (globalThis as unknown as { bookingSoldOut?: boolean }).bookingSoldOut ? [{ startDate: Timestamp.fromDate(new Date("2099-10-25T00:00:00+05:30")), endDate: Timestamp.fromDate(new Date("2099-10-25T00:00:00+05:30")) }] : [] });
-export const getPublicHospitalService = async () => portalUiState.unavailablePackage ? null : services[1];
+export const getPublicHospitalService = async () => portalUiState.unavailablePackage ? null : { ...services[1], packageVersion: "a".repeat(64) };
 export const listAdminBookings = () => page(portalUiState.screen === "admin-bookings-empty" ? [] : operationalBookings());
 export const readDocumentsByIds = async (collectionPath: string, ids: string[]) => collectionPath === "hospitals" ? [hospital].filter((item) => ids.includes(item.id)) : collectionPath === "services" ? services.filter((item) => ids.includes(item.id)) : [];
 export const listUsers = () => page(portalUiState.screen === "admin-users-empty" ? [] : [user]);
@@ -100,7 +102,7 @@ let notificationReceiver: ((items: unknown[], snapshot: { fromCache: boolean }) 
 export const subscribeToNotifications = (_id: string, receive: (items: unknown[], snapshot: { fromCache: boolean }) => void) => { notificationReceiver = receive; const inject = (event: Event) => receive((event as CustomEvent).detail, { fromCache: false }); window.addEventListener('portal-test-notifications', inject); receive([{ ...metadata, id: "notification", title: "New booking AYUR000000", message: "Patient With a Longer Display Name · 14-day package · Booked, awaiting hospital confirmation", actionHref: `/${portalUiState.screen.startsWith("hospital") ? "hospital" : "admin"}/bookings?booking=booking-0`, readAt: null }], { fromCache: false }); return () => { notificationReceiver = null; window.removeEventListener('portal-test-notifications', inject); }; };
 export const clearAllNotifications = async () => { portalUiState.calls++; notificationReceiver?.([], { fromCache: false }); return { ok: true, clearedThrough: { seconds: now.seconds + 1, nanoseconds: 0 } }; };
 export const buildHospitalContractPdf = () => ({ html: "<h1>Contract fixture</h1>", filename: "contract.pdf", blob: new Blob() });
-export const authorizedApiRequest = async () => { portalUiState.calls++; return { imageUrls: [] }; };
+export const authorizedApiRequest = async (url?: string, options?: RequestInit) => { portalUiState.calls++; return { imageUrls: url?.endsWith("/images") && options?.method === "PATCH" ? coverGallery.filter((image) => image !== JSON.parse(String(options.body)).imageUrl) : [] }; };
 export const updateHospital = async () => ({});
 export const recordHospitalContractGeneration = async () => ({});
 export const confirmHospitalContractSigning = async () => ({});
@@ -113,6 +115,14 @@ export const updateHospitalProfile = async () => ({});
 export const saveHospitalCapacity = async () => ({});
 export const createService = async () => ({});
 export const updateService = async () => ({});
+export const submitService = async () => { portalUiState.calls++; return { reviewStatus: "pending", lastAuditId: "submitted-audit" }; };
+export const reviewHospitalPackages = async (_hospitalId: string, packages: { id: string; auditId: string }[], action: "approve" | "request_changes", reason: string) => {
+  portalUiState.calls++;
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  return { packages: Object.fromEntries(packages.map(({ id }) => [id, action === "approve"
+    ? { reviewStatus: "approved", status: "active", draftPackage: null, price: 28000, publishedAt: now }
+    : { reviewStatus: "changes_requested", reviewNote: reason }])) as Record<string, Partial<ServiceDocument>> };
+};
 export const archiveService = async () => ({});
 export const requestAvailabilityBlock = async () => ({});
 export const createAdminAvailabilityBlock = async () => ({});

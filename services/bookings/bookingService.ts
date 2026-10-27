@@ -19,6 +19,7 @@ type BookingRequestInput = {
   consumerNotes?: string | null; consumerName: string;
   consumerEmail: string; consumerPhone: string; consumerAddress: string | null;
   bookingTermsAccepted: boolean; requestId: string;
+  expectedPackageVersion?: string;
 };
 
 export async function createBookingRequest(input: BookingRequestInput) {
@@ -40,6 +41,7 @@ export async function createBookingRequest(input: BookingRequestInput) {
       consumerNotes: input.consumerNotes?.trim() || null,
       bookingTermsAccepted: input.bookingTermsAccepted,
       requestId: input.requestId,
+      expectedPackageVersion: input.expectedPackageVersion,
     }),
     signedOutMessage: "Sign in before booking an appointment.",
     failureMessage: "We could not place your booking. Please try again.",
