@@ -1,10 +1,10 @@
 import { useSyncExternalStore, type ReactNode } from "react";
-import type { ServiceDocument } from "@/features/firestore/models";
+import type { ServiceDocument, TreatmentStatus } from "@/features/firestore/models";
 import { CONSUMER_PRIVACY_NOTICE_VERSION, CUSTOMER_TERMS_VERSION } from "@/features/consumers/privacyConsent";
 import { validateInvoiceInput, INVOICE_ISSUER, invoiceParty, type InvoiceInput } from "@/features/billing/invoices";
 export { buildBrandedDocumentPdf } from "../../features/hospitals/contractPdf";
 
-export const portalUiState = { screen: "admin-dashboard", calls: 0, bookingRequests: 0, bookingInputs: [] as unknown[], cancelledBookings: 0, navigatedTo: "", unavailablePackage: false, availabilityReviews: [] as string[], holdAvailability: false, failAvailability: false, consultantWrites: [] as unknown[], publicConsultantReads: 0 };
+export const portalUiState = { screen: "admin-dashboard", calls: 0, bookingRequests: 0, bookingInputs: [] as unknown[], cancelledBookings: 0, navigatedTo: "", unavailablePackage: false, availabilityReviews: [] as string[], holdAvailability: false, failAvailability: false, consultantWrites: [] as unknown[], publicConsultantReads: 0, autoConfirmedTreatment: "not_started" as TreatmentStatus };
 export let finishAvailabilityReview: (() => void) | undefined;
 Object.assign(globalThis, { finishAvailabilityReview: () => finishAvailabilityReview?.() });
 export class Timestamp {
@@ -83,7 +83,9 @@ export const listConsumerBookings = () => page(portalUiState.screen === "consume
 export const getConsumerBookingDetails = async () => ({ details: { "booking-0": { hospitalName: hospital.name, serviceName: "14-day package", hospitalLocation: "Palakkad, Kerala" } } });
 export const cancelConsumerBooking = async () => { portalUiState.cancelledBookings++; };
 export const createBookingRequest = async (input: unknown) => { portalUiState.bookingRequests++; portalUiState.bookingInputs.push(input); return { ok: true, bookingId: "booking-0", bookingReference: "AYUR000000" }; };
-export const getPortalBooking = async (id: string) => portalUiState.screen.endsWith("auto-confirmed") && id === autoConfirmedBooking.id ? autoConfirmedBooking : bookings.find((booking) => booking.id === id) ?? null;
+export const getPortalBooking = async (id: string) => portalUiState.screen.endsWith("auto-confirmed") && id === autoConfirmedBooking.id
+  ? { ...autoConfirmedBooking, treatmentStatus: portalUiState.autoConfirmedTreatment, status: portalUiState.autoConfirmedTreatment === "completed" ? "completed" : "confirmed" }
+  : bookings.find((booking) => booking.id === id) ?? null;
 export const getPublicHospital = async () => ({ ...hospital, blockedDateRanges: (globalThis as unknown as { bookingSoldOut?: boolean }).bookingSoldOut ? [{ startDate: Timestamp.fromDate(new Date("2099-10-25T00:00:00+05:30")), endDate: Timestamp.fromDate(new Date("2099-10-25T00:00:00+05:30")) }] : [] });
 export const getPublicHospitalService = async () => portalUiState.unavailablePackage ? null : { ...services[1], packageVersion: "a".repeat(64) };
 export const listAdminBookings = () => page(portalUiState.screen === "admin-bookings-empty" ? [] : operationalBookings());
@@ -133,8 +135,9 @@ export const reviewAvailabilityRequest = async (_item: unknown, action: string) 
   return {};
 };
 export const updateHospitalBooking = async () => ({});
-export const updateTreatmentProgress = async (_id: string, treatmentStatus: string) => {
+export const updateTreatmentProgress = async (_id: string, treatmentStatus: TreatmentStatus) => {
   portalUiState.calls++;
+  if (_id === autoConfirmedBooking.id) portalUiState.autoConfirmedTreatment = treatmentStatus;
   return { treatmentStatus, status: treatmentStatus === "completed" ? "completed" : "confirmed" };
 };
 export const archiveConsumer = async () => ({});

@@ -1,10 +1,9 @@
 import type { ReactNode } from "react";
 import type { BookingDocument } from "@/features/firestore/models";
 import { bookingDateFacts, bookingReferenceLabel, bookingStatusLabel } from "@/features/bookings/display";
-import { getTreatmentStatus, treatmentStatusLabel } from "@/features/bookings/treatmentStatus";
+import { getTreatmentProgress, getTreatmentStatus, treatmentStatusLabel } from "@/features/bookings/treatmentStatus";
 import { formatBystanders } from "@/features/hospitals/searchContext";
 import { formatCurrency } from "@/utils/currency";
-import { formatStatus } from "@/utils/text";
 import { formatDisplayDate } from "@/utils/date";
 
 export function PortalBookingSummary({ booking, showCommission = false, showTreatmentBadge = false, children }: {
@@ -28,7 +27,7 @@ export function PortalBookingSummary({ booking, showCommission = false, showTrea
         <div><dt>Accompanying</dt><dd>{formatBystanders(booking.bystanderCount ?? 1)}{(booking.additionalBystanderTotal ?? 0) > 0 && <small>{formatCurrency(booking.additionalBystanderTotal!)} additional</small>}</dd></div>
         <div><dt>Customer address</dt><dd>{booking.consumerAddress || "Not provided"}</dd></div>
         {bookingDateFacts(booking).map((fact) => <div key={fact.label}><dt>{fact.label}</dt><dd>{fact.value}</dd></div>)}
-        {(booking.status === "confirmed" || booking.status === "completed") && <div><dt>Treatment</dt><dd>{formatStatus(getTreatmentStatus(booking))}</dd></div>}
+        {(booking.status === "confirmed" || booking.status === "completed") && <div><dt>Treatment</dt><dd>{getTreatmentProgress(treatment).label}</dd></div>}
       </dl>
       {booking.consumerNotes && <div className="consumer-booking-note"><strong>Customer note</strong><p>{booking.consumerNotes}</p></div>}
       {booking.hospitalNotes && <div className="consumer-booking-note"><strong>Centre response</strong><p>{booking.hospitalNotes}</p></div>}

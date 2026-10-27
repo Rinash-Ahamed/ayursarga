@@ -182,9 +182,9 @@ html[data-theme="dark"] .portal-toast[data-tone="error"],body[data-theme="dark"]
 .consumer-booking-notes p,.consumer-booking-note p{ white-space:pre-wrap; overflow-wrap:anywhere; }
 .consumer-booking-notes>summary:focus-visible,.consumer-request-navigation a:focus-visible{ outline:2px solid var(--forest); outline-offset:3px; border-radius:3px; }
 .portal-row.consumer-booking-row .consumer-booking-pending{ margin-top:16px; font-size:12px; }
-.consumer-booking-copy .portal-treatment-trail{ margin-top:12px; gap:20px; }
+.consumer-booking-copy .portal-treatment-trail{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); align-items:start; margin-top:12px; gap:12px; }
 .consumer-booking-copy .portal-treatment-step{ display:grid; gap:5px; justify-items:center; }
-.consumer-booking-copy .portal-treatment-step>span{ color:var(--sage); font-size:10px; }
+.consumer-booking-copy .portal-treatment-step>span{ color:var(--sage); font-size:10px; text-align:center; overflow-wrap:anywhere; }
 .operational-booking-actions{ grid-column:1/-1; min-width:0; padding-top:16px; border-top:1px solid rgba(31,61,43,.13); }
 .operational-booking-actions .portal-actions{ margin-top:0; }
 .operational-booking-card .operational-booking-commission strong{ font-size:17px; }

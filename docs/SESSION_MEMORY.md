@@ -2,6 +2,30 @@
 
 Updated: 27 October 2026 (Asia/Calcutta).
 
+## Treatment progress timeline (27 October 2026)
+
+- v4.18.5 fixes the mismatch between Hospital's Start/Complete workflow and the
+  Consumer's old started/ongoing/completed timeline. Shared display mapping now
+  shows Yet to be started -> Ongoing -> Completed. Stored started and legacy
+  ongoing both highlight Ongoing; not_started highlights the first stage;
+  completed booking/treatment status highlights Completed. No data migration.
+- Consumer treatment text and Admin/Hospital summary detail use the same mapping.
+  Hospital action badges remain Treatment Started/Treatment completed; no Mark
+  ongoing or Hospital Reschedule action was restored. Internal treatment statuses,
+  server transitions, ownership checks, audits and Firestore rules are unchanged.
+- Timeline marks its current step accessibly, has one active dot, and keeps three
+  equal-width columns with top-aligned dots when the longer first label wraps on
+  narrow screens. This is a display fix, not a new realtime subscription; consumers
+  still see updates when their existing booking loader retrieves current data.
+- 14 focused unit/API-fixture checks passed, including mapping, legacy fallback,
+  actual Hospital route transition/role/ownership checks and audited completion.
+  All 14 distinct auto-confirmation and cross-portal treatment browser cases
+  passed over seven phone/landscape/tablet/desktop Chromium/WebKit projects.
+  Seven additional reruns passed with the final dot-alignment assertion. The
+  browser fixture now preserves the mocked start/completion between portal views.
+  Updated an old auto-confirmation test to expect Booked on instead of the date
+  label removed in v4.18.4. No build, lint, live mutations or deployment was run.
+
 ## Booking placement dates versus care schedules (27 October 2026)
 
 - v4.18.4 fixes the screenshot's duplicate hospital-booking date: Consumer,
