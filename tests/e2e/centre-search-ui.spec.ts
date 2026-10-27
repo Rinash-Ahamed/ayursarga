@@ -45,6 +45,8 @@ test("search page reflows and retains live filtering, galleries and comparison",
   await page.getByRole("button", { name: "Show next hospital image" }).click();
   await expect(page.locator(".public-center-image-nav>span")).toHaveText("2 / 10");
   await expect(page.getByRole("link", { name: "View details for Sanjeevani" })).toHaveAttribute("href", /\/centers\/beta/);
+  await expect(page.getByRole("button", { name: "Expand comparison", exact: true })).toHaveAttribute("aria-expanded", "false");
+  await page.getByRole("button", { name: "Expand comparison", exact: true }).click();
   await page.getByRole("combobox", { name: "First center", exact: true }).fill("Alpha");
   await page.getByRole("option", { name: /Alpha/ }).click();
   await page.getByRole("combobox", { name: "Second center", exact: true }).fill("Beta");
@@ -89,6 +91,7 @@ test("loading placeholders do not block search or comparison controls", async ({
   await expect(page.locator('.public-center-grid')).toHaveAttribute('aria-busy', 'true');
   await expect(page.locator('.public-center-skeleton')).toHaveCount(12);
   await page.getByRole('searchbox', { name: 'Centre or location' }).fill('Palakkad');
+  await page.getByRole('button', { name: 'Expand comparison', exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'First center', exact: true })).toBeEnabled();
   await expect(page.locator('.public-center-skeleton')).toHaveCount(0);
   await expect(page.locator('.public-center-card')).toHaveCount(1);

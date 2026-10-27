@@ -37,7 +37,9 @@ export function subscribeToNotifications(
       ...(clearedThrough ? [where("createdAt", ">", clearedThrough)] : []),
       orderBy("createdAt", "desc"), limit(NOTIFICATION_LIMIT),
     );
-    stopNotifications = onSnapshot(notificationsQuery, (snapshot) => {
+    // The tracker needs the authoritative baseline even when only fromCache
+    // changes. Otherwise the first real arrival is mistaken for initial history.
+    stopNotifications = onSnapshot(notificationsQuery, { includeMetadataChanges: true }, (snapshot) => {
       if (version !== generation) return;
       onChange(snapshot.docs
         .map((item) => ({ id: item.id, ...item.data() } as DocumentRecord<NotificationDocument>))

@@ -588,6 +588,8 @@ test("both portals pulse only for new notifications and stop when viewed without
     await deliver(["notification", "fresh"]);
     await expect(bell).toHaveAttribute("data-attention", "true");
     await expect(bell.locator("svg")).toHaveCSS("animation-name", "portal-notification-pulse");
+    await expect(bell.locator("svg")).toHaveCSS("animation-duration", "2.4s");
+    await expect.poll(() => bell.locator("svg").evaluate((element) => Number(getComputedStyle(element).opacity))).toBeLessThan(.95);
     await expect(bell.locator(".portal-notification-count")).toHaveText("2");
     await expect(bell.locator(".portal-notification-count")).toHaveCSS("animation-name", "portal-notification-pulse");
     await bell.click();
@@ -602,6 +604,9 @@ test("both portals pulse only for new notifications and stop when viewed without
     await expect(bell).toHaveAttribute("data-attention", "true");
     await page.emulateMedia({ reducedMotion: "reduce" });
     await expect(bell.locator("svg")).toHaveCSS("animation-name", "none");
+    await expect(bell).toHaveCSS("outline-style", "solid");
+    // Keyboard focus may legitimately use the stronger shared 3px outline.
+    expect(await bell.evaluate((element) => parseFloat(getComputedStyle(element).outlineWidth))).toBeGreaterThanOrEqual(2);
     await deliver([]);
     await expect(bell).not.toHaveAttribute("data-attention");
     await expect(bell.locator(".portal-notification-count")).toHaveCount(0);

@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useId, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import type { HospitalDocument, ServiceDocument } from "@/features/firestore/models";
+import type { ServiceDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
-import { getPublicHospital, listPublicHospitalServices, searchPublicHospitals } from "@/services/hospitals/publicHospitalService";
+import { getPublicHospital, listPublicHospitalServices, searchPublicHospitals, type PublicHospitalDocument } from "@/services/hospitals/publicHospitalService";
 import { packageProcedureEntries } from "@/features/hospitals/packages";
 import { getHospitalImageUrls, hospitalImageSrcSet } from "@/features/hospitals/images";
 import { isHospitalSoldOut } from "@/features/hospitals/availability";
@@ -12,7 +12,7 @@ import { groupHospitalFacilities } from "@/features/hospitals/facilities";
 import { FacilityIcon } from "@/components/icons/FacilityIcon";
 
 type ComparisonCentre = {
-  hospital: DocumentRecord<HospitalDocument>;
+  hospital: DocumentRecord<PublicHospitalDocument>;
 };
 
 type ComparisonResult = {
@@ -25,7 +25,7 @@ type SelectedCentre = ComparisonCentre & {
   error: string | null;
 };
 
-function ComparisonImage({ hospital }: { hospital: DocumentRecord<HospitalDocument> }) {
+function ComparisonImage({ hospital }: { hospital: DocumentRecord<PublicHospitalDocument> }) {
   const url = getHospitalImageUrls(hospital)[0];
   const [failed, setFailed] = useState(false);
   return <div className="public-comparison-image">
@@ -47,17 +47,18 @@ function packageMap(services: DocumentRecord<ServiceDocument>[]) {
   return packages;
 }
 
-function SearchCentreField({ label, selected, excludedId, onSelect, onRemove }: {
+function SearchCentreField({ label, selected, excludedId, active, onSelect, onRemove }: {
   label: string;
+  active: boolean;
   selected: ComparisonCentre | null;
   excludedId?: string;
-  onSelect: (hospital: DocumentRecord<HospitalDocument>) => void;
+  onSelect: (hospital: DocumentRecord<PublicHospitalDocument>) => void;
   onRemove: () => void;
 }) {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [response, setResponse] = useState<{
-    query: string; excludedId?: string; options: DocumentRecord<HospitalDocument>[]; error: string | null;
+    query: string; excludedId?: string; options: DocumentRecord<PublicHospitalDocument>[]; error: string | null;
   } | null>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -75,7 +76,7 @@ function SearchCentreField({ label, selected, excludedId, onSelect, onRemove }: 
   const error = settled ? response.error : null;
 
   useLayoutEffect(() => {
-    if (!isOpen || !canSearch) return;
+    if (!active || !isOpen || !canSearch) return;
     let frame = 0;
     const viewport = window.visualViewport;
     const position = () => {
@@ -112,7 +113,7 @@ function SearchCentreField({ label, selected, excludedId, onSelect, onRemove }: 
       viewport?.removeEventListener("resize", schedule);
       viewport?.removeEventListener("scroll", schedule);
     };
-  }, [canSearch, isOpen]);
+  }, [active, canSearch, isOpen]);
 
   useEffect(() => {
     const closeOutside = (event: PointerEvent) => {
@@ -140,7 +141,7 @@ function SearchCentreField({ label, selected, excludedId, onSelect, onRemove }: 
     };
   }, [canSearch, excludedId, term]);
 
-  function selectOption(hospital: DocumentRecord<HospitalDocument>) {
+  function selectOption(hospital: DocumentRecord<PublicHospitalDocument>) {
     if (selectionCommitted.current || selected || hospital.id === excludedId || !options.some((option) => option.id === hospital.id)) return;
     selectionCommitted.current = true;
     requestVersion.current++;
@@ -168,7 +169,7 @@ function SearchCentreField({ label, selected, excludedId, onSelect, onRemove }: 
     if (gesture?.pointerId === event.pointerId && Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 10) gesture.moved = true;
   }
 
-  function finishOptionGesture(event: ReactPointerEvent<HTMLButtonElement>, hospital: DocumentRecord<HospitalDocument>) {
+  function finishOptionGesture(event: ReactPointerEvent<HTMLButtonElement>, hospital: DocumentRecord<PublicHospitalDocument>) {
     const gesture = optionGesture.current;
     optionGesture.current = null;
     if (!gesture || gesture.pointerId !== event.pointerId || gesture.hospitalId !== hospital.id || gesture.moved
@@ -186,7 +187,7 @@ function SearchCentreField({ label, selected, excludedId, onSelect, onRemove }: 
     <button type="button" onClick={() => { selectionCommitted.current = false; setQuery(""); setResponse(null); setIsOpen(false); onRemove(); }}>Change</button>
   </div>;
 
-  const showOptions = isOpen && canSearch;
+  const showOptions = active && isOpen && canSearch;
   return <div className="public-comparison-picker" ref={pickerRef} onBlur={(event) => {
     if (optionGesture.current) return;
     if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setIsOpen(false);
@@ -280,6 +281,8 @@ function PackageColumn({ result, duration, detailQuery }: { result: ComparisonRe
 }
 
 export function PublicCentreComparison({ detailQuery }: { detailQuery: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const contentId = useId();
   const [selected, setSelected] = useState<[SelectedCentre | null, SelectedCentre | null]>([null, null]);
   const [results, setResults] = useState<ComparisonResult[] | null>(null);
   const [duration, setDuration] = useState("");
@@ -342,7 +345,7 @@ export function PublicCentreComparison({ detailQuery }: { detailQuery: string })
     }
   }
 
-  function selectCentre(index: 0 | 1, hospital: DocumentRecord<HospitalDocument>) {
+  function selectCentre(index: 0 | 1, hospital: DocumentRecord<PublicHospitalDocument>) {
     if (selected[index === 0 ? 1 : 0]?.hospital.id === hospital.id) return;
     setSelected((current) => {
       if (current[index === 0 ? 1 : 0]?.hospital.id === hospital.id) return current;
@@ -389,15 +392,25 @@ export function PublicCentreComparison({ detailQuery }: { detailQuery: string })
     : [];
 
   return <section className="public-comparison-workspace" aria-labelledby="center-comparison-title">
+    <div className="public-comparison-disclosure">
     <div className="public-comparison-intro">
       <span>Compare care options</span>
       <h2 id="center-comparison-title">Compare two Ayurvedic centers</h2>
-      <p>Select two centers and a matching package duration to compare prices and included procedures.</p>
     </div>
+    <button type="button" className="public-comparison-toggle" aria-expanded={expanded} aria-controls={contentId} onClick={() => {
+      if (scrollFrame.current !== null) window.cancelAnimationFrame(scrollFrame.current);
+      setExpanded((current) => !current);
+    }}>
+      {expanded ? "Collapse comparison" : "Expand comparison"}
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d={expanded ? "m6 15 6-6 6 6" : "m6 9 6 6 6-6"} /></svg>
+    </button>
+    </div>
+    <div id={contentId} hidden={!expanded} className="public-comparison-content">
+    <div className="public-comparison-intro"><p>Select two centers and a matching package duration to compare prices and included procedures.</p></div>
     <div className="public-comparison-toolbar">
       <div className="public-comparison-searches">
         {([0, 1] as const).map((index) => <div className="public-comparison-center-control" key={index}>
-          <SearchCentreField label={index === 0 ? "First center" : "Second center"} selected={selected[index]} excludedId={selected[index === 0 ? 1 : 0]?.hospital.id} onSelect={(hospital) => selectCentre(index, hospital)} onRemove={() => removeCentre(index)} />
+          <SearchCentreField label={index === 0 ? "First center" : "Second center"} active={expanded} selected={selected[index]} excludedId={selected[index === 0 ? 1 : 0]?.hospital.id} onSelect={(hospital) => selectCentre(index, hospital)} onRemove={() => removeCentre(index)} />
           {selected[index] && !selected[index].packages && !selected[index].error && <p className="public-comparison-package-status" role="status">Loading package choices...</p>}
           {selected[index]?.error && <p className="public-comparison-package-status error" role="alert">{selected[index].error} <button type="button" onClick={() => { const centre = selected[index]; if (centre) selectCentre(index, centre.hospital); }}>Retry</button></p>}
         </div>)}
@@ -429,5 +442,6 @@ export function PublicCentreComparison({ detailQuery }: { detailQuery: string })
         </div>
       </section>
     </div>}
+    </div>
   </section>;
 }

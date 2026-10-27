@@ -11,11 +11,46 @@ test.beforeEach(async ({ page }) => {
   await page.setContent('<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><main class="centers-directory-page"><div id="fixture-root"></div></main></body></html>');
   await page.addStyleTag({ content: readFileSync("app/globals.css", "utf8") });
   await page.addScriptTag({ content: bundle });
+  const expand = page.getByRole("button", { name: "Expand comparison", exact: true });
+  await expect(expand).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByRole("combobox", { name: "First center", exact: true })).toHaveCount(0);
+  expect(await page.evaluate(() => window.comparisonCalls)).toEqual([]);
+  await expand.click();
 });
 async function choose(page: Page, label: string, name: string) {
   await page.getByRole("combobox", { name: label, exact: true }).fill(name);
   await page.getByRole("option", { name: new RegExp(name) }).click();
 }
+test("comparison disclosure preserves selections and results without refetching", async ({ page }) => {
+  await choose(page, "First center", "Alpha");
+  await choose(page, "Second center", "Beta");
+  const duration = page.getByRole("combobox", { name: "Package to compare" });
+  await expect(duration).toBeEnabled();
+  await duration.selectOption("7");
+  await page.getByRole("button", { name: "Compare package", exact: true }).click();
+  await expect(page.locator(".public-comparison-results")).toBeVisible();
+  const collapse = page.getByRole("button", { name: "Collapse comparison", exact: true });
+  await collapse.focus();
+  await collapse.press("Enter");
+  const expand = page.getByRole("button", { name: "Expand comparison", exact: true });
+  await expect(expand).toBeFocused();
+  await expect(expand).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator(".public-comparison-results")).toBeHidden();
+  await page.screenshot({ path: test.info().outputPath("comparison-collapsed.png"), fullPage: true });
+  await expand.press("Space");
+  await expect(duration).toHaveValue("7");
+  await expect(page.locator(".public-comparison-package")).toHaveCount(2);
+  await expect(page.locator(".public-comparison-results")).toBeVisible();
+  expect(await page.evaluate(() => window.comparisonCalls)).toEqual(["alpha", "beta"]);
+  expect(await page.evaluate(() => window.comparisonDetailCalls)).toEqual(["alpha", "beta"]);
+  await page.getByRole("button", { name: "Clear", exact: true }).click();
+  await page.getByRole("combobox", { name: "First center", exact: true }).fill("Alpha");
+  await expect(page.getByRole("option", { name: /Alpha/ })).toBeVisible();
+  await page.getByRole("button", { name: "Collapse comparison", exact: true }).click();
+  await expect(page.getByRole("option", { name: /Alpha/ })).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
 test("compare only chosen packages with image frames and no extra requests on compare", async ({ page }) => {
   await choose(page, "First center", "Alpha");
   await choose(page, "Second center", "Beta");

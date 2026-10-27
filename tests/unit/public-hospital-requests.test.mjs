@@ -3,8 +3,26 @@ import assert from "node:assert/strict";
 import { loadTypeScript } from "../helpers/loadTypeScript.mjs";
 
 function service() {
-  return loadTypeScript("services/hospitals/publicHospitalService.ts", { "firebase/firestore": { Timestamp: { fromDate: (date) => date } } });
+  return loadTypeScript("services/hospitals/publicHospitalService.ts");
 }
+
+test("public blocked dates use plain dates with unchanged ISO instants and inclusive India-day checks", async (t) => {
+  const hospital = { id: "centre", blockedDateRanges: [{ startDate: "2099-10-24T18:30:00.000Z", endDate: "2099-10-26T18:30:00.000Z" }] };
+  t.mock.method(globalThis, "fetch", async (url) => Response.json(String(url).includes("pageSize") ? { documents: [hospital] } : { hospital }));
+  const api = service();
+  const { isHospitalSoldOut, isHospitalUnavailable } = loadTypeScript("features/hospitals/availability.ts");
+  const fromList = (await api.listPublicHospitals()).documents[0];
+  const fromDetail = await api.getPublicHospital("centre");
+  for (const record of [fromList, fromDetail]) {
+    assert.ok(record.blockedDateRanges[0].startDate instanceof Date);
+    assert.equal(record.blockedDateRanges[0].startDate.toISOString(), hospital.blockedDateRanges[0].startDate);
+    assert.equal(record.blockedDateRanges[0].endDate.toISOString(), hospital.blockedDateRanges[0].endDate);
+    for (const date of ["2099-10-25", "2099-10-26", "2099-10-27"]) assert.equal(isHospitalSoldOut(record, date), true);
+    for (const date of ["2099-10-24", "2099-10-28"]) assert.equal(isHospitalSoldOut(record, date), false);
+    assert.equal(isHospitalUnavailable(record, "2099-10-24", "2099-10-28"), true);
+    assert.equal(isHospitalSoldOut(record, "", "", new Date("2099-10-24T20:00:00Z")), true);
+  }
+});
 
 test("identical public GETs share one in-flight response, not completed outcomes", async (t) => {
   let calls = 0;

@@ -154,6 +154,10 @@ to deploy, rerun maintenance scripts, or modify live data.
   `services` documents: those records contain contract, commission, actor, and
   audit metadata. A mirrored public collection is not currently required; if
   one is proposed later, document and review the migration first.
+  Public discovery HTTP adapters use plain Date values for serialized blocked
+  ranges and the shared India care-date helpers. Do not pull the Firestore SDK
+  into public discovery merely to reconstruct Timestamp values. Keep operational
+  Timestamp storage and API ISO formats unchanged.
 
 ## Hospital and booking workflow
 

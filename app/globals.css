@@ -461,6 +461,13 @@ main>.dark-section{
 .public-center-toggle:hover span{ transform:translateX(3px); }
 .public-center-toggle:hover,.public-center-toggle:focus-visible{ background:var(--gold); border-color:var(--gold); color:var(--forest); }
 .public-comparison-workspace{ width:min(100%,1040px); margin:0 auto 24px; padding:24px; border:1px solid rgba(31,61,43,.25); border-top:3px solid var(--gold); border-radius:20px; background:linear-gradient(135deg,rgba(31,61,43,.045),#fff 48%); box-shadow:0 14px 36px rgba(31,61,43,.1); }
+.public-comparison-disclosure{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; }
+.public-comparison-disclosure>.public-comparison-intro{ flex:1 1 240px; min-width:0; }
+.public-comparison-toggle{ display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:10px 14px; border:1px solid rgba(31,61,43,.28); border-radius:999px; background:#fff; color:var(--forest); font-size:12px; font-weight:700; cursor:pointer; }
+.public-comparison-toggle:hover{ background:rgba(31,61,43,.06); border-color:var(--forest); }
+.public-comparison-toggle:focus-visible{ outline:2px solid var(--forest); outline-offset:3px; }
+.public-comparison-toggle svg{ width:18px; height:18px; flex-shrink:0; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.public-comparison-content[hidden]{ display:none; }
 .public-comparison-intro>span{ color:var(--clay-dark); font-size:9px; font-weight:850; letter-spacing:.1em; text-transform:uppercase; }
 .public-comparison-intro h2{ margin-top:5px; color:var(--forest); font-family:var(--font-display); font-size:clamp(27px,3vw,38px); font-weight:550; line-height:1.12; }
 .public-comparison-intro p{ max-width:680px; margin-top:7px; color:var(--sage); font-size:10px; line-height:1.6; }
@@ -1935,6 +1942,32 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   .public-centre-services article>div:last-child,.public-centre-services article>div:last-child a{ width:100%; }
   .public-centre-contact-card{ padding:21px 18px; }
 }
+/* Reserve the existing centre-detail layout while its public data loads. */
+.public-centre-loading-announcement{ position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+.public-centre-skeleton-fill,.public-centre-skeleton-line{ display:block; border-radius:8px; background:rgba(31,61,43,.075); }
+.public-centre-skeleton-line{ width:100%; max-width:100%; height:14px; margin:12px 0; }
+.public-centre-skeleton-back{ width:170px; height:36px; margin:0; border-radius:100px; }
+.public-centre-loading-layout .public-centre-detail-nav{ overflow:hidden; align-items:center; min-height:54px; }
+.public-centre-loading-layout .public-centre-detail-nav>span{ flex:0 0 80px; width:80px; height:14px; margin:0; }
+.public-centre-loading-layout .public-centre-detail-header>div{ flex:1; min-width:0; }
+.public-centre-loading-layout .public-centre-detail-header>div>.public-centre-skeleton-line:first-child{ max-width:170px; height:10px; }
+.public-centre-skeleton-title{ width:75%; height:48px; }
+.public-centre-skeleton-action{ flex:0 0 170px; width:170px; height:48px; border-radius:100px; }
+.public-centre-loading-layout .public-centre-gallery-thumbs>span{ min-height:0; }
+.public-centre-loading-layout .public-centre-context>div{ width:min(100%,320px); }
+.public-centre-loading-layout .public-centre-context>.public-centre-skeleton-action{ width:120px; height:36px; }
+.public-centre-loading-main{ min-width:0; }
+.public-centre-skeleton-package{ min-height:160px; padding:18px; border:1px solid rgba(31,61,43,.14); border-radius:14px; }
+.public-centre-skeleton-map{ width:100%; aspect-ratio:4/3; margin-top:22px; }
+@media(max-width:760px){
+  .public-centre-loading-layout .public-centre-gallery-thumbs>span{ aspect-ratio:4/3; border-radius:10px; }
+}
+@media(max-width:720px){
+  .public-centre-loading-layout .public-centre-detail-header>div{ width:100%; }
+  .public-centre-loading-layout .public-centre-detail-header>.public-centre-skeleton-action{ flex:none; width:100%; }
+  .public-centre-loading-layout .public-centre-detail-header .public-centre-skeleton-title{ height:72px; }
+}
+
 /* System status */
 .health-page {
   min-height: 100svh;

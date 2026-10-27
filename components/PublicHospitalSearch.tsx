@@ -4,12 +4,12 @@ import Link from "next/link";
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { DateInput } from "@/components/forms/DateInput";
 import { toDateInputValue } from "@/utils/date";
-import type { HospitalDocument } from "@/features/firestore/models";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import {
   listPublicHospitals,
   listPublicHospitalsByServiceName,
   type PublicPageCursor,
+  type PublicHospitalDocument,
 } from "@/services/hospitals/publicHospitalService";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import { getHospitalImageUrls, hospitalImageSrcSet } from "@/features/hospitals/images";
@@ -26,7 +26,7 @@ type PublicHospitalSearchProps = {
 
 const SearchCentreComparison = memo(PublicCentreComparison);
 
-const PublicHospitalImages = memo(function PublicHospitalImages({ hospital, priority = false }: { hospital: DocumentRecord<HospitalDocument>; priority?: boolean }) {
+const PublicHospitalImages = memo(function PublicHospitalImages({ hospital, priority = false }: { hospital: DocumentRecord<PublicHospitalDocument>; priority?: boolean }) {
   const sizes = "(max-width: 600px) calc((100vw - 86px) / 2), (max-width: 1100px) calc((100vw - 106px) / 2), 318px";
   const galleryRef = useRef<HTMLDivElement>(null);
   const [nearViewport, setNearViewport] = useState(false);
@@ -108,7 +108,7 @@ const PublicHospitalImages = memo(function PublicHospitalImages({ hospital, prio
 });
 
 const HospitalResultCard = memo(function HospitalResultCard({ hospital, detailQuery, priority, soldOut }: {
-  hospital: DocumentRecord<HospitalDocument>; detailQuery: string; priority: boolean; soldOut: boolean;
+  hospital: DocumentRecord<PublicHospitalDocument>; detailQuery: string; priority: boolean; soldOut: boolean;
 }) {
   return <article className="public-center-card">
     <PublicHospitalImages hospital={hospital} priority={priority} />
@@ -140,7 +140,7 @@ export default function PublicHospitalSearch({ initialService = "", initialConte
       : listPublicHospitals({ pageSize: 12, cursor }),
     [initialService],
   );
-  const { items: hospitals, error, isLoading, hasMore, loadMore } = usePaginatedList<HospitalDocument, PublicPageCursor>(
+  const { items: hospitals, error, isLoading, hasMore, loadMore } = usePaginatedList<PublicHospitalDocument, PublicPageCursor>(
     hospitalLoader,
     "We could not load Ayurvedic centers right now. Please try again.",
   );

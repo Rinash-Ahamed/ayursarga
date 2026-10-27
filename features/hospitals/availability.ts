@@ -1,6 +1,10 @@
-import { Timestamp } from "firebase/firestore";
-import type { HospitalDocument } from "@/features/firestore/models";
+import type { Timestamp } from "firebase/firestore";
 import { formatDisplayDate, toDateInputValue, parseDateInputValue } from "@/utils/date";
+
+// Both operational SDK timestamps and public HTTP dates use identical care-date checks.
+type HospitalAvailability = {
+  blockedDateRanges?: ReadonlyArray<{ startDate: Timestamp | Date; endDate: Timestamp | Date }>;
+};
 
 export function parseAvailabilityDate(value: string, label: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error(`Choose a valid ${label.toLowerCase()}.`);
@@ -31,7 +35,7 @@ function indiaCareDate(value: Date) {
 }
 
 export function isHospitalUnavailable(
-  hospital: Pick<HospitalDocument, "blockedDateRanges">,
+  hospital: HospitalAvailability,
   requestedStart: string | Date,
   requestedEnd?: string | Date | null,
 ) {
@@ -45,12 +49,12 @@ export function isHospitalUnavailable(
   });
 }
 
-export function isHospitalSoldOut(hospital: Pick<HospitalDocument, "blockedDateRanges">, startDate?: string | null, endDate?: string | null, now = new Date()) {
+export function isHospitalSoldOut(hospital: HospitalAvailability, startDate?: string | null, endDate?: string | null, now = new Date()) {
   return isHospitalUnavailable(hospital, startDate || indiaCareDate(now), endDate);
 }
 
 export function countUpcomingAvailabilityBlocks(
-  hospital: Pick<HospitalDocument, "blockedDateRanges">,
+  hospital: HospitalAvailability,
   referenceDate = new Date(),
 ) {
   const startOfToday = toDateInputValue(referenceDate);

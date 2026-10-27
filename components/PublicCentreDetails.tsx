@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { HospitalDocument, ServiceDocument } from "@/features/firestore/models";
+import type { ServiceDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
-import { getPublicHospital, listPublicHospitalServices, type PublicPageCursor } from "@/services/hospitals/publicHospitalService";
+import { getPublicHospital, listPublicHospitalServices, type PublicPageCursor, type PublicHospitalDocument } from "@/services/hospitals/publicHospitalService";
 import { getHospitalImageUrls, hospitalImageSrcSet } from "@/features/hospitals/images";
 import { useHospitalImageGallery } from "@/hooks/useHospitalImageGallery";
 import { resolveCentreGuidelines } from "@/features/hospitals/guidelines";
@@ -35,7 +35,35 @@ function formatCareDates(context: CentreSearchContext) {
   return `${format(context.startDate)} to ${format(context.endDate)}`;
 }
 
-function CentreGallery({ hospital }: { hospital: DocumentRecord<HospitalDocument> }) {
+function CentreDetailsSkeleton() {
+  return <section className="section public-centre-detail-page" aria-busy="true">
+    <div className="section-inner public-centre-detail-inner">
+      <p className="public-centre-loading-announcement" role="status">Preparing centre details…</p>
+      <div className="public-centre-loading-layout" aria-hidden="true">
+        <span className="public-centre-skeleton-line public-centre-skeleton-back" />
+        <div className="public-centre-detail-nav">{CENTRE_DETAIL_SECTIONS.map(([id]) => <span className="public-centre-skeleton-line" key={id} />)}</div>
+        <div className="public-centre-detail-header">
+          <div><span className="public-centre-skeleton-line" /><span className="public-centre-skeleton-line public-centre-skeleton-title" /><span className="public-centre-skeleton-line" /></div>
+          <span className="public-centre-skeleton-fill public-centre-skeleton-action" />
+        </div>
+        <div className="public-centre-gallery">
+          <div className="public-centre-gallery-main public-centre-skeleton-fill" />
+          <div className="public-centre-gallery-thumbs">{[0, 1, 2].map((index) => <span className="public-centre-skeleton-fill" key={index} />)}</div>
+        </div>
+        <div className="public-centre-context"><div><span className="public-centre-skeleton-line" /><span className="public-centre-skeleton-line" /></div><span className="public-centre-skeleton-fill public-centre-skeleton-action" /></div>
+        <div className="public-centre-content-grid">
+          <div className="public-centre-loading-main">
+            <div className="public-centre-content-section"><span className="public-centre-skeleton-line public-centre-skeleton-title" /><span className="public-centre-skeleton-line" /><span className="public-centre-skeleton-line" /><span className="public-centre-skeleton-line" /></div>
+            <div className="public-centre-content-section"><span className="public-centre-skeleton-line public-centre-skeleton-title" /><div className="public-centre-services">{[0, 1, 2, 3].map((index) => <div className="public-centre-skeleton-package" key={index}><span className="public-centre-skeleton-line" /><span className="public-centre-skeleton-line" /><span className="public-centre-skeleton-line" /></div>)}</div></div>
+          </div>
+          <div className="public-centre-contact-card"><span className="public-centre-skeleton-line public-centre-skeleton-title" /><div className="public-centre-skeleton-fill public-centre-skeleton-map" /></div>
+        </div>
+      </div>
+    </div>
+  </section>;
+}
+
+function CentreGallery({ hospital }: { hospital: DocumentRecord<PublicHospitalDocument> }) {
   const sizes = "(max-width: 760px) calc(100vw - 44px), (max-width: 1200px) 64vw, 840px";
   const { images, imageUrl: selectedImage, displayedIndex, markLoaded, failImage, showImage } = useHospitalImageGallery(getHospitalImageUrls(hospital), sizes);
 
@@ -60,7 +88,7 @@ function CentreGallery({ hospital }: { hospital: DocumentRecord<HospitalDocument
 }
 
 export default function PublicCentreDetails({ hospitalId, searchContext, initialService = "", searchTerm = "" }: { hospitalId: string; searchContext: CentreSearchContext; initialService?: string; searchTerm?: string }) {
-  const [hospital, setHospital] = useState<DocumentRecord<HospitalDocument> | null>(null);
+  const [hospital, setHospital] = useState<DocumentRecord<PublicHospitalDocument> | null>(null);
   const [hospitalLoading, setHospitalLoading] = useState(true);
   const [hospitalError, setHospitalError] = useState<string | null>(null);
   const [expandedPackages, setExpandedPackages] = useState<Set<string>>(() => new Set());
@@ -119,7 +147,7 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
     return `/centers?${params.toString()}`;
   }, [initialService, searchContext, searchTerm]);
 
-  if (hospitalLoading) return <section className="section public-centre-detail-page"><div className="section-inner"><div className="public-centre-detail-status" role="status">Preparing centre details…</div></div></section>;
+  if (hospitalLoading) return <CentreDetailsSkeleton />;
   if (hospitalError || !hospital) return <section className="section public-centre-detail-page"><div className="section-inner"><div className="public-centre-detail-status error" role="alert"><strong>Centre details unavailable</strong><p>{hospitalError}</p><Link href={backHref}>Return to centre search</Link></div></div></section>;
 
   const guidelines = resolveCentreGuidelines(hospital);

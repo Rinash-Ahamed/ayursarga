@@ -1,6 +1,86 @@
 # Session handoff
 
-Updated: 25 October 2026 (Asia/Calcutta).
+Updated: 27 October 2026 (Asia/Calcutta).
+
+## Search comparison disclosure (27 October 2026)
+
+- v4.16.4 makes Compare care options collapsed by default on every fresh Search
+  page mount. A keyboard-accessible Expand/Collapse comparison button exposes
+  aria-expanded/aria-controls and retains the existing public theme, following
+  the public design skill. Selections, package duration and comparison results
+  remain mounted and are preserved when collapsed/reopened; no extra requests
+  are made by toggling. Hidden suggestions stop viewport positioning listeners,
+  and collapsing cancels any queued comparison-result scroll.
+- No API, persisted data, permissions, booking or loaded result changes.
+- Focused browser validation: 14 comparison cases and 14 Search integration
+  cases passed across Chromium mobile/landscape/tablet/desktop and WebKit
+  mobile/tablet/desktop configurations. Verified initial collapse, Enter/Space,
+  preserved selections/results, no refetch on toggling, hidden suggestions,
+  no horizontal overflow, and existing filtering/gallery/loading behavior.
+  Reviewed collapsed narrow-mobile and desktop screenshots. These are local
+  component fixtures with synthetic APIs, not physical-device/live API tests.
+- No build, lint, typecheck, deployment or live writes requested/run.
+
+## Public discovery quick performance fixes (27 October 2026)
+
+- v4.16.3 implements only the two approved quick fixes from the audit:
+  public discovery no longer reconstructs Firestore Timestamp objects, and
+  centre details reserve loading space with a responsive skeleton.
+- publicHospitalService decodes unchanged API ISO blocked-range instants into
+  plain Date values. Its PublicHospitalDocument type is used by Search, Compare,
+  centre details and the existing Consumer booking selection. Operational
+  HospitalDocument/Timestamp storage is unchanged. Shared availability helpers
+  accept either Date or SDK Timestamp using the same inclusive India care dates;
+  their SDK import is type-only. No API/rule/index/cache/write/auth changes.
+- A focused emitted-import graph regression verifies Search/Compare/Details
+  cannot reach the Firestore SDK at runtime. The previous audit observed a
+  ~158 KiB gzip Firestore chunk in the old production discovery bundle; no new
+  build was authorized, so actual new bundle size/LCP gains are not yet measured.
+- Following the public design skill, the skeleton reuses existing header, nav,
+  gallery, context, package-grid and location-card geometry/palette. Static
+  placeholders are aria-hidden and noninteractive, with a screen-reader loading
+  announcement. No shimmer, artificial delay, new requests or loaded-page
+  redesign. Footer remains below the viewport while loading instead of appearing
+  briefly near the top. Existing errors and return-to-search behavior remain.
+- Validation: all 20 focused public request/date/availability, dependency, API
+  projection/denial and Hospital-booking regressions passed. All 50 distinct
+  targeted browser cases passed across the relevant Chromium/WebKit phone,
+  landscape, tablet and desktop projects (35 centre/search cases, 12 Consumer
+  booking cases, 3 comparison cases). Chromium loading-transition fixtures
+  assert CLS below .01; WebKit checks layout/recovery, not field CLS. Reviewed
+  desktop/mobile loading screenshots. Two initial WebKit error cases exposed a
+  test-only race releasing a held mock before React installed its effect; the
+  harness now waits for that callback, and all four WebKit loading/error reruns
+  passed without changing production behavior.
+- No build/lint/typecheck, full-site performance run, deployed-permission or
+  physical-device test, live mutation/email or deployment. Existing SSR/email
+  performance recommendations were not implemented. No version bump beyond
+  the single grouped patch to 4.16.3; package/lock versions synchronized.
+
+## First new notification visual alert (27 October 2026)
+
+- v4.16.2 fixes a missed first-arrival bell pulse in both shared portals.
+  The alert tracker waits for an authoritative server baseline, but the bounded
+  Firestore notification query did not request metadata-only snapshots. When
+  cached/server items matched (including an empty inbox), that transition could
+  be omitted; the first actual new item was then silently treated as history.
+  Added includeMetadataChanges to the existing query subscription only.
+- No additional query/listener, write, API, rule, authorization or notification
+  model change. Initial history remains silent; only new unread items pulse.
+  Viewing acknowledges attention without changing unread counts; read/clear
+  behavior, stale-listener cleanup and absence of sounds remain unchanged.
+  Reduced-motion devices retain the static highlight instead of animation.
+- Focused reproduction failed before the fix and all 3 notification unit tests
+  passed afterward, covering empty/existing cache baselines, metadata transition,
+  first arrival, acknowledgement, no replay and inbox cutoff/listener cleanup.
+  All 3 focused browser cases passed (desktop, 320px Chromium phone, WebKit phone),
+  each checking both Admin/Hospital: actual animated opacity, count animation,
+  view acknowledgement, later arrivals, accurate counts and reduced motion.
+  An overly specific 2px-outline test initially rejected the valid shared 3px
+  keyboard-focus outline; corrected the assertion, not production styling.
+- No live notification mutation, real-device test, build/lint or deployment.
+  Application release and reload are needed to use this fix; no Firebase rule/
+  index deployment required. Version synchronized in package.json/package-lock.
 
 ## Owner-requested build and lint validation (25 October 2026)
 

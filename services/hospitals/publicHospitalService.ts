@@ -1,14 +1,17 @@
 "use client";
 
-import { Timestamp } from "firebase/firestore";
 import type { HospitalDocument, ServiceDocument } from "@/features/firestore/models";
 import type { DocumentRecord, QueryPage } from "@/services/firestore/firestoreService";
 import { shareInFlightRequest } from "@/utils/inFlightRequests";
 
 export type PublicPageCursor = string;
+// Public HTTP dates need no operational Firestore SDK in the discovery bundle.
+export type PublicHospitalDocument = Omit<HospitalDocument, "blockedDateRanges"> & {
+  blockedDateRanges?: Array<{ startDate: Date; endDate: Date; availabilityId: string }>;
+};
 type PublicPageOptions = { pageSize?: number; cursor?: PublicPageCursor | null };
 type SerializedRange = { startDate: string; endDate: string };
-type SerializedHospital = Omit<DocumentRecord<HospitalDocument>, "blockedDateRanges"> & { blockedDateRanges?: SerializedRange[] };
+type SerializedHospital = Omit<DocumentRecord<PublicHospitalDocument>, "blockedDateRanges"> & { blockedDateRanges?: SerializedRange[] };
 type ApiPage<T> = { documents?: T[]; cursor?: string | null; hasMore?: boolean; error?: string };
 
 function publicRequest<T>(url: string, signal?: AbortSignal) {
@@ -29,18 +32,18 @@ function publicPageUrl(path: string, options: PublicPageOptions, serviceName = "
   return `${path}?${params.toString()}`;
 }
 
-function restoreHospital(document: SerializedHospital) {
+function restoreHospital(document: SerializedHospital): DocumentRecord<PublicHospitalDocument> {
   const ranges = Array.isArray(document.blockedDateRanges)
     ? document.blockedDateRanges.map((range) => ({
-      startDate: Timestamp.fromDate(new Date(range.startDate)),
-      endDate: Timestamp.fromDate(new Date(range.endDate)),
+      startDate: new Date(range.startDate),
+      endDate: new Date(range.endDate),
       availabilityId: "",
     }))
     : [];
-  return { ...document, blockedDateRanges: ranges } as DocumentRecord<HospitalDocument>;
+  return { ...document, blockedDateRanges: ranges };
 }
 
-async function hospitalPage(url: string): Promise<QueryPage<HospitalDocument, PublicPageCursor>> {
+async function hospitalPage(url: string): Promise<QueryPage<PublicHospitalDocument, PublicPageCursor>> {
   const body = await publicRequest<ApiPage<SerializedHospital>>(url);
   return {
     documents: (body.documents ?? []).map(restoreHospital),
