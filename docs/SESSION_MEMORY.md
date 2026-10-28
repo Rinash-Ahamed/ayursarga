@@ -2,6 +2,49 @@
 
 Updated: 28 October 2026 (Asia/Calcutta).
 
+## Resume here: current session snapshot
+
+- Application version: 4.24.2. Admin MFA uses native Firebase TOTP with local QR
+  generation and manual-key fallback; Hospital/Consumer sign-in stays unchanged.
+- Admin Settings is below Audit Logs. Account security lives at /admin/settings;
+  old /admin/security bookmarks redirect there. Recovery help and signed-in
+  authenticator replacement use server-only ADMIN_MFA_RECOVERY_ENABLED=true/false.
+  Local flag was enabled; hosting configuration has not been verified. Lost-access
+  help opens an email request, NEVER resets MFA from password/email alone.
+- Signed-in replacement requires current password/code and confirmation; it
+  blocks old Admin sessions using an audited server-only profile cutoff, removes
+  the old factor, revokes refresh tokens and requires next-login QR enrollment.
+  It affects every device sharing the account. Unknown outcomes require owner
+  reconciliation, not automatic retries. Secrets must never enter this memory.
+- Firestore rules deployment is COMPLETE, ruleset
+  179da0b0-d5b1-48f7-99b9-3e65bbb13143. Application deployment is NOT verified for
+  v4.24.2; do not infer it from Git status, commits or prior main pushes.
+- Latest verified results: clean lint, successful production build with TypeScript,
+  28 focused unit/API contracts, 21 browser cases, production health JSON/themed
+  page HTTP 200 and initial login forms without enrollment chunk downloads.
+  These are local/mocked validations, not live reset or email-delivery proof.
+- Remaining: verify/deploy the application and hosting flag when explicitly
+  authorized; execute demo-only Firestore emulator tests with Java 21 (only
+  Java 8 available); perform a separately authorized controlled real-device
+  enrollment/replacement and authenticated role-permission check.
+- No new validation/deployment is authorized by this handoff. Do not repeat
+  maintenance operations automatically. Temporary production server was stopped;
+  local dev server was left running. Prior login 404s recovered by restarting
+  the identified dev server, without source changes or deleting the cache.
+
+## Firestore cutoff rules deployed (28 October 2026)
+
+- Owner requested Firestore deployment. Ran firebase deploy --only firestore:rules
+  --project ayursarga-connect --non-interactive. Exit 0; remote rules compilation
+  passed, upload succeeded and release PATCH returned HTTP 200.
+- Active release ruleset: 179da0b0-d5b1-48f7-99b9-3e65bbb13143, released
+  28/10/2026 at 23:32 IST (18:02:06 UTC). Admin auth_time cutoff rule is now
+  deployed. No indexes or Storage rules deployed; no records or Auth factors
+  changed. Application rollout remains separate and must include the cutoff
+  writer/API guard. No authenticated live permission tests implied by deployment.
+- No new build/lint/tests run for this deployment-only turn. Version stays
+  4.24.2. Generated Firebase debug log removed after confirming release outcome.
+
 ## MFA audit fixes / requested build and lint (28 October 2026)
 
 - v4.24.2 closes the direct-Firestore stale-ID-token window during replacement:
@@ -45,8 +88,9 @@ Updated: 28 October 2026 (Asia/Calcutta).
 - Added emulator cutoff denial/read/write/anti-tamper/legacy-role cases to the
   existing demo-only suite, but NOT executed: installed Java is 1.8.0_503, while
   Firebase CLI requires Java 21. No Java/tools installed, live factor changed,
-  email sent, data mutation or deployment performed. Firestore rules MUST deploy
-  to ayursarga-connect along with app rollout before the cutoff is fully live.
+  email sent, data mutation or deployment performed in that implementation turn.
+  Rules were subsequently deployed successfully (see deployment entry above);
+  application rollout remains separate before the cutoff workflow is fully live.
 
 ## Admin Settings navigation (28 October 2026)
 

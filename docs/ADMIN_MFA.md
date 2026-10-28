@@ -116,6 +116,10 @@ Consumer accounts are not required to enroll by Ayursarga.
   Only own-profile reads remain available for setup. No change to Hospital or
   Consumer session requirements. Rules deployment AND application deployment
   are required; until rules deploy, direct Firestore cutoff enforcement is NOT live.
+  Update 28 October 2026: rules-only deployment succeeded (remote compile/release
+  HTTP 200), ruleset 179da0b0-d5b1-48f7-99b9-3e65bbb13143 at 23:32 IST.
+  The cutoff rule is deployed; the v4.24.2 application writer/guard still requires
+  its own application rollout. No authenticated live reset was performed.
 - Audit Logs now includes Account security filtering and readable replacement
   Started/Completed/Unknown outcomes. Login enrollment UI is dynamically imported
   only when required; QR generation remains a separate on-interaction import.
