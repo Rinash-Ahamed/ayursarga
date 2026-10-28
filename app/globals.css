@@ -1596,6 +1596,13 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .partner-steps li{ border-top-color:rgba(58,61,46,.3); }
 .contact-form input,.contact-form select,.contact-form textarea{ border-color:rgba(58,61,46,.48); }
 .contact-form input::placeholder,.contact-form textarea::placeholder{ color:#667764; opacity:1; }
+.enquiry-verification{ width:100%; min-width:0; container-type:inline-size; }
+.enquiry-verification-label{ margin:0 0 8px; color:#536650; font-size:13px; line-height:1.5; }
+.enquiry-verification-widget{ width:100%; min-width:0; min-height:65px; }
+.enquiry-verification [role="alert"]{ color:#b44742; font-size:14px; line-height:1.5; }
+.enquiry-verification [role="alert"] p{ margin:8px 0; }
+.enquiry-verification [role="alert"] button{ min-height:44px; padding:8px 16px; border:1px solid #b8c8bc; border-radius:12px; background:#fff; color:#203c2b; font-size:14px; }
+@container(max-width:299px){ .enquiry-verification-widget{ min-height:150px; } }
 .general-questions-list{ border-top-color:rgba(31,61,43,.34); }
 .general-questions-list details{ border-bottom-color:rgba(31,61,43,.3); }
 .general-question-mark{ border-color:rgba(31,61,43,.52); }

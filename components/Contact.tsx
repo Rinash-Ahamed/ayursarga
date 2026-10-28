@@ -8,12 +8,15 @@ import { PhoneInput } from "@/components/forms/PhoneInput";
 import { formatDisplayDate } from "@/utils/date";
 import { sendContactEnquiry } from "@/services/contact/contactClient";
 import { AYURSARGA_PHONE } from "@/config/contact";
+import { EnquiryVerification } from "@/components/forms/EnquiryVerification";
 
 type FormStatus = "idle" | "sending" | "sent" | "error";
 
 export default function Contact({ guidanceProfile = null, initialInterest = "" }: { guidanceProfile?: GuidanceProfile | null; initialInterest?: string }) {
   const [status, setStatus] = useState<FormStatus>("idle");
   const [error, setError] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [verificationReset, setVerificationReset] = useState(0);
   const submitting = useRef(false);
   const [interest, setInterest] = useState(initialInterest);
   const [storedGuidanceProfile, setStoredGuidanceProfile] = useState<GuidanceProfile | null>(null);
@@ -38,12 +41,13 @@ export default function Contact({ guidanceProfile = null, initialInterest = "" }
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (submitting.current) return;
+    if (!turnstileToken) { setError("Please complete the security verification before sending."); setStatus("error"); return; }
     submitting.current = true;
     const form = event.currentTarget;
     setStatus("sending");
     setError("");
     try {
-      await sendContactEnquiry(Object.fromEntries(new FormData(form).entries()));
+      await sendContactEnquiry({ ...Object.fromEntries(new FormData(form).entries()), turnstileToken });
       form.reset();
       clearGuidanceProfile();
       setStoredGuidanceProfile(null);
@@ -52,6 +56,8 @@ export default function Contact({ guidanceProfile = null, initialInterest = "" }
       setError(caught instanceof Error ? caught.message : "We could not confirm your request was sent. Please email info@ayursarga.com.");
       setStatus("error");
     } finally {
+      setTurnstileToken("");
+      setVerificationReset((value) => value + 1);
       submitting.current = false;
     }
   };
@@ -110,8 +116,9 @@ export default function Contact({ guidanceProfile = null, initialInterest = "" }
           </select>
           <textarea name="message" aria-label="How can we help" placeholder={isPartnership ? "Hospital name, location, services, specialties, and how we can reach you" : "Anything you'd like us to know?"} rows={3} maxLength={3000} />
           <input className="hp-field" name="website" type="text" tabIndex={-1} autoComplete="off" aria-hidden="true" />
+          <EnquiryVerification source="contact" resetKey={verificationReset} onToken={setTurnstileToken} />
           {status === "error" && <p className="form-error" role="alert">{error}</p>}
-          <MagneticButton className="form-submit btn-magnetic btn-primary" type="submit" disabled={status === "sending"}>
+          <MagneticButton className="form-submit btn-magnetic btn-primary" type="submit" disabled={status === "sending" || !turnstileToken}>
             <span className="submit-label">{status === "sending" ? "Sending..." : isPartnership ? "Send partnership enquiry" : "Request personal guidance"}</span>
             <span className="submit-arrow" aria-hidden="true">&rarr;</span>
           </MagneticButton>

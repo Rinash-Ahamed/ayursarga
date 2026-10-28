@@ -6,6 +6,7 @@ import { AYU_GUIDE_TOPICS } from "@/features/consumers/ayuGuide";
 import { PhoneInput } from "@/components/forms/PhoneInput";
 import { sendContactEnquiry } from "@/services/contact/contactClient";
 import { ROUTES } from "@/config/routes";
+import { EnquiryVerification } from "@/components/forms/EnquiryVerification";
 
 export default function AyuBuddyPanel({ busy, onBusyChange, onNavigate }: {
   busy: boolean; onBusyChange: (busy: boolean) => void; onNavigate: () => void;
@@ -14,6 +15,8 @@ export default function AyuBuddyPanel({ busy, onBusyChange, onNavigate }: {
   const [enquiryOpen, setEnquiryOpen] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [verificationReset, setVerificationReset] = useState(0);
   const submitting = useRef(false);
   const id = useId();
   const topic = AYU_GUIDE_TOPICS.find((item) => item.id === topicId) ?? AYU_GUIDE_TOPICS[0];
@@ -21,6 +24,7 @@ export default function AyuBuddyPanel({ busy, onBusyChange, onNavigate }: {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting.current) return;
+    if (!turnstileToken) { setError("Please complete the security verification before sending."); return; }
     const form = event.currentTarget;
     const fields = Object.fromEntries(new FormData(form).entries());
     submitting.current = true;
@@ -28,7 +32,7 @@ export default function AyuBuddyPanel({ busy, onBusyChange, onNavigate }: {
     setError("");
     try {
       await sendContactEnquiry({
-        ...fields,
+        ...fields, turnstileToken,
         interest: "I need personal guidance", guidanceProfile: "Enquiry sent through Ayu, the Ayursarga website guide.",
       }, "ayu");
       form.reset();
@@ -36,6 +40,8 @@ export default function AyuBuddyPanel({ busy, onBusyChange, onNavigate }: {
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "We could not confirm your message was sent. Please email info@ayursarga.com.");
     } finally {
+      setTurnstileToken("");
+      setVerificationReset((value) => value + 1);
       submitting.current = false;
       onBusyChange(false);
     }
@@ -67,8 +73,9 @@ export default function AyuBuddyPanel({ busy, onBusyChange, onNavigate }: {
           <label htmlFor={`${id}-message`}>Your question *<textarea id={`${id}-message`} name="message" rows={3} maxLength={3000} required /></label>
           <input className="hp-field" name="website" type="text" tabIndex={-1} autoComplete="off" aria-hidden="true" />
         </fieldset>
+        <EnquiryVerification source="ayu" resetKey={verificationReset} onToken={setTurnstileToken} />
         {error && <p className="ayu-buddy-error" role="alert">{error}</p>}
-        <button type="submit" className="ayu-buddy-primary" disabled={busy}>{busy ? "Sending your question..." : "Send to Ayursarga"}</button>
+        <button type="submit" className="ayu-buddy-primary" disabled={busy || !turnstileToken}>{busy ? "Sending your question..." : "Send to Ayursarga"}</button>
         {busy && <p className="ayu-buddy-note" role="status">Please keep this window open while we confirm submission.</p>}
         <p className="ayu-buddy-note">Your details are used to respond to this enquiry. <Link href={ROUTES.public.privacyPolicy} prefetch={false} target="_blank" rel="noopener noreferrer">Privacy Policy</Link></p>
       </form>}

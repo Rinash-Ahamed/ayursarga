@@ -9,6 +9,7 @@ function fixture(t, realLimit = false) {
   t.mock.method(console, "info", (line) => logs.push(JSON.parse(line)));
   const rate = loadTypeScript("services/api/rateLimit.ts");
   const route = loadTypeScript("app/api/contact/route.ts", {
+    "@/services/contact/turnstile": { isTurnstileReady: () => true, verifyEnquiryTurnstile: async () => "valid" },
     "@/services/email/emailService": { isEmailReady: () => true, sendEmail: async (email) => emails.push(email) },
     "@/services/api/rateLimit": realLimit ? rate : { allowRequest: () => true, requestFingerprint: () => "private-hash" },
     "@/services/api/server": { apiJson: (body, status = 200) => Response.json(body, { status }), apiHealth: () => Response.json({}), logApiError: (...args) => errors.push(args) },

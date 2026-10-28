@@ -9,6 +9,7 @@ const request = (body = input, contentType = "application/json", headers = {}) =
 function fixture(options = {}) {
   const emails = [];
   const route = loadTypeScript("app/api/contact/route.ts", {
+    "@/services/contact/turnstile": { isTurnstileReady: () => true, verifyEnquiryTurnstile: async () => "valid" },
     "@/services/email/emailService": { isEmailReady: () => !options.unavailable, sendEmail: async (email) => { if (options.fail) throw new Error("Simulated SMTP failure"); emails.push(email); } },
     "@/services/api/rateLimit": { allowRequest: () => !options.limited, requestFingerprint: () => "synthetic" },
     "@/services/api/server": { apiJson: (body, status = 200) => Response.json(body, { status }), apiHealth: () => Response.json({}), logApiError: () => {} },

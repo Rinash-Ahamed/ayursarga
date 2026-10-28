@@ -5,12 +5,13 @@ import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
 import { validateContactEnquiry, type ContactSource } from "@/features/contact/validation";
 import { isContactRequestOriginAllowed } from "@/services/contact/contactRequestSecurity";
+import { isTurnstileReady, verifyEnquiryTurnstile } from "@/services/contact/turnstile";
 
 export const runtime = "nodejs";
 
 const MAX_REQUEST_BYTES = 16_000;
 export function GET() {
-  return apiHealth("/api/contact", [{ name: "email", ready: isContactEmailReady() }]);
+  return apiHealth("/api/contact", [{ name: "email", ready: isContactEmailReady() }, { name: "turnstile", ready: isTurnstileReady() }]);
 }
 
 export async function POST(request: Request) {
@@ -41,6 +42,11 @@ export async function POST(request: Request) {
       return reply({ error: "Email service is not configured." }, 503);
     }
 
+    const verification = await verifyEnquiryTurnstile(body.turnstileToken, source, new URL(request.headers.get("origin")!).hostname);
+    if (verification !== "valid") {
+      trace(verification === "invalid" ? "rejected" : "unavailable", "verification");
+      return reply({ error: verification === "invalid" ? "Please complete the security verification again before sending." : "Security verification is unavailable. Please retry or email info@ayursarga.com." }, verification === "invalid" ? 400 : 503);
+    }
     await sendContactEmail(validation.data, { reference: requestId, receivedAt, source });
     trace("smtp_accepted");
     return reply({ ok: true });

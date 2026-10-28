@@ -2,6 +2,47 @@
 
 Updated: 28 October 2026 (Asia/Calcutta).
 
+## Turnstile protection for Contact and Ayu (28 October 2026)
+
+- v4.22.2 integrates the owner's Cloudflare Managed widget into both public
+  enquiry forms. Confirmed both expected local environment settings are nonempty
+  without printing values. NEXT_PUBLIC_TURNSTILE_SITE_KEY is public/build-time;
+  TURNSTILE_SECRET_KEY is server-only. .env.example documents both. Configure
+  hosting settings and rebuild/redeploy the application; no deployment performed.
+- Shared EnquiryVerification explicitly renders the provider widget only near
+  the visible form. Ayu loads it only in its email-question form, never while
+  browsing guide topics. One shared script promise avoids duplicate downloads;
+  bounded loading, error/retry handling, unmount cleanup and ignored stale
+  callbacks preserve navigation. Compact mode handles containers below 300px;
+  flexible mode serves wider forms. Space is reserved for the challenge.
+- Forms require a token, preserve existing synchronous submission guards, clear
+  tokens after attempts and re-render verification for explicit retries. Expiry
+  clears eligibility until a new provider callback. Existing entered details
+  remain after errors; no automatic enquiry/email retries were added.
+- /api/contact verifies tokens through Cloudflare Siteverify before SMTP, after
+  existing bounded-body/origin/honeypot/input/rate controls. Enforces boolean
+  success, exact validated request-origin hostname and contact_enquiry or
+  ayu_enquiry action. Rejects missing/malformed/oversize tokens; uses an 8-second
+  timeout and no-store. Provider errors and missing configuration fail closed
+  with safe 503 feedback; invalid/expired/reused challenges return 400. Tokens,
+  secrets and provider payloads are not logged or included in emails. Existing
+  ENQ references, reported entry point and server-owned recipients are retained.
+  GET /api/contact includes configuration-only Turnstile readiness.
+- Targeted local coverage: 20 route/client/security contracts and 27 browser
+  cases across 320px touch Chromium, desktop Chromium and mobile WebKit. Covers
+  both forms, deferred loading, expiry, fresh-token retry, blocked provider
+  script recovery, configuration/provider failures, hostname/action binding,
+  no-email denials, existing duplicate-submit/modal behavior and retained input.
+  Cloudflare and SMTP are mocked/intercepted, not proof of real-key acceptance,
+  inbox delivery, real-device behavior or deployed protection. No build, lint,
+  typecheck, live email, database mutation or full-site audit requested/run.
+- Restart local dev after configuration changes. For local real-widget testing,
+  use a separate widget allowing localhost or Cloudflare's official test keys;
+  production hostnames alone do not authorize localhost. Never use test keys in
+  production. No portal Auth/MFA, booking, Firestore/Storage rules, dependency or
+  legal-copy changes. This is abuse reduction, not guaranteed bot exclusion or
+  visitor identity/location verification.
+
 ## Contact/Ayu enquiry abuse checks and trace references (28 October 2026)
 
 - v4.22.1 responds to an email containing ZAP/zaproxy@example.com and a repeated
