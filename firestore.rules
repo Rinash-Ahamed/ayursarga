@@ -18,10 +18,13 @@ service cloud.firestore {
     }
 
     function hasAdminSecondFactor() {
+      let cutoff = getCurrentUser().get('adminSessionRevokedBefore', 0);
       return isSignedIn()
         && request.auth.token.get('email_verified', false) == true
         && request.auth.token.firebase.get('sign_in_provider', '') == 'password'
-        && request.auth.token.firebase.get('sign_in_second_factor', '') == 'totp';
+        && request.auth.token.firebase.get('sign_in_second_factor', '') == 'totp'
+        && cutoff is int && cutoff >= 0
+        && (cutoff == 0 || request.auth.token.get('auth_time', 0) > cutoff);
     }
 
     function isAdmin() {

@@ -2,14 +2,18 @@
 
 ## Current rollout status (28 October 2026)
 
-Implementation is prepared in v4.23.0, not deployed. The first enablement attempt
+Implementation is released in v4.23.0. The first enablement attempt
 returned `auth/operation-not-allowed` on standard Firebase Authentication. The
 owner subsequently upgraded to Identity Platform. A read-only check confirmed
 `IDENTITY_PLATFORM`; the previously authorized enablement then succeeded. A fresh
-independent check confirmed `mfaEnabled=true` and `totpEnabled=true`. No accounts
-were enrolled/changed and no application or Firestore rules were deployed.
-Capability is now available, but Admin-only enforcement still requires coordinated
-application/rules rollout and real enrollment validation.
+independent check confirmed `mfaEnabled=true` and `totpEnabled=true`.
+After the owner pushed main, the production Admin login returned 200 and its
+published JavaScript contained the MFA challenge and setup UI. The verification
+page returned 200; an unauthenticated verification-email POST returned 401.
+Owner-requested Firestore-rules-only deployment then succeeded, release PATCH 200,
+ruleset `935b7bce-5025-491f-9c6f-a913da8bc5dc`. No users were enrolled or changed
+by the agent. Admin must now complete setup at `/admin/login`; actual operator
+enrollment and authenticated role-permission validation are still pending.
 
 Passed 43 focused route/service contracts and 21 browser regression cases on
 desktop Chromium, 320px Chromium and mobile WebKit. Auth/email operations were
@@ -51,8 +55,16 @@ Consumer accounts are not required to enroll by Ayursarga.
 - If the email is not verified, explicitly request the branded verification
   email. Its recipient comes from the verified token and active Admin profile,
   never client input. Open the link, confirm verification, return and continue.
-- Open an authenticator app, add a time-based account manually and enter the
-  displayed private setup key. No external QR image service receives that key.
+- In v4.23.2, choose Set up authenticator, open an authenticator app and scan
+  the QR code. Firebase's native enrollment URI is encoded locally into SVG by
+  the dynamically imported qrcode-generator package. No external QR service,
+  image URL, storage document or logging receives the setup secret.
+- If scanning is unavailable (including setup on the same phone), expand
+  "Can't scan? Enter setup key" and add a time-based account manually. The
+  fallback opens automatically if QR generation/loading fails. Both methods
+  enroll the same native factor and still require the app's valid six-digit code.
+- This UI enhancement requires application redeployment, not new Firestore
+  rules or project MFA configuration. It does not restart existing enrollment.
 - Enter the app's six-digit code to enroll with Firebase. If Firebase's enrollment
   token does not contain MFA sign-in proof, sign in again with password and code.
 - Future sign-ins require both the existing password and a native Firebase TOTP
@@ -71,8 +83,44 @@ Consumer accounts are not required to enroll by Ayursarga.
   no claim of atomic Firestore auditing of native Auth changes is made. Use the
   project's Identity Platform/Cloud audit logging for native factor changes and
   review its logging configuration/retention before production rollout.
-- No self-service factor removal, emailed MFA bypass, recovery-code invention or
-  automatic Auth account deletion is provided. Securely back up the authenticator.
+- v4.24.0 adds the server-only `ADMIN_MFA_RECOVERY_ENABLED` flag (only literal
+  `true` enables it; missing/false is off). Enabled locally at the owner's request;
+  hosting must configure it separately and redeploy. Login shows a lost-access
+  disclosure and a mailto recovery-help request, not an automated reset email/API.
+  The trusted project owner must verify identity independently; support-mail
+  ownership by itself is not proof. No password/key/code should be emailed.
+- Signed-in Admin → Settings (below Audit Logs) → Account security provides replacement when
+  this flag is enabled. Requires password/current TOTP reauthentication and
+  PortalDialog confirmation. The server independently requires an active Admin's
+  native verified password/TOTP token, authentication age ≤5 minutes, and exactly
+  the caller's expected single TOTP factor. Other roles, other target UIDs,
+  multi-factor configurations, stale tokens and changed factors are rejected.
+- Replacement removes the existing factor, revokes refresh tokens, signs out and
+  uses the existing next-login QR enrollment gate. It is not an enroll-new-first
+  transfer; operational Admin access remains blocked until new enrollment and
+  native MFA sign-in succeed. Everyone sharing this account loses the old key.
+  No password/account/booking data is deleted. Native Auth changes cannot be
+  atomic with Firestore: a durable started audit claim precedes mutation and an
+  append-only completed/unknown audit follows. No automatic mutation retries;
+  lost/uncertain outcomes sign out and require checking login or owner assistance.
+  If outcome logging fails, the started claim remains for owner reconciliation.
+- v4.24.2 additionally writes the server-only users/{uid}.adminSessionRevokedBefore
+  epoch-second cutoff in the SAME transaction as the started audit claim and
+  updatedAt/updatedBy/lastAuditId metadata, before touching native Auth. Admin API
+  authorization and hasAdminSecondFactor rules require auth_time strictly newer
+  than that cutoff (including same-second rejection). This closes the remaining
+  direct-Firestore ID-token lifetime window; refresh-token revocation alone was
+  insufficient. No additional authorization document read is introduced. Legacy
+  profiles with no cutoff/zero retain prior behavior; malformed cutoffs fail closed.
+  The field is intentionally excluded from all client create/change allowlists.
+  Only own-profile reads remain available for setup. No change to Hospital or
+  Consumer session requirements. Rules deployment AND application deployment
+  are required; until rules deploy, direct Firestore cutoff enforcement is NOT live.
+- Audit Logs now includes Account security filtering and readable replacement
+  Started/Completed/Unknown outcomes. Login enrollment UI is dynamically imported
+  only when required; QR generation remains a separate on-interaction import.
+- No lost-access self-service removal, emailed MFA bypass, invented recovery
+  codes or automatic Auth account deletion is provided. Back up the authenticator.
   If it is lost, the trusted Firebase project owner must independently verify
   identity, record the recovery action, reset the factor through privileged Auth
   administration and revoke refresh tokens. This requires a separate explicitly

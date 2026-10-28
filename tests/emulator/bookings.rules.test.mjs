@@ -21,7 +21,7 @@ function token(role, claims = {}) {
   const now = Math.floor(Date.now() / 1000);
   return [Buffer.from(JSON.stringify({ alg: "none", typ: "JWT" })).toString("base64url"), Buffer.from(JSON.stringify({
     sub: uid, user_id: uid, aud: project, iss: `https://securetoken.google.com/${project}`, iat: now, exp: now + 3600,
-    email_verified: role === "admin", ...claims,
+    email_verified: role === "admin", auth_time: now, ...claims,
     firebase: { sign_in_provider: role === "consumer" || role === "other" ? "google.com" : "password", ...(role === "admin" ? { sign_in_second_factor: "totp" } : {}), ...claims.firebase },
   })).toString("base64url"), ""].join(".");
 }
@@ -59,6 +59,25 @@ before(async () => {
     status: name === "inactive" ? "inactive" : "active", hospitalId: name === "hospital" ? centre : name === "otherHospital" ? `other-${centre}` : null }));
   await seed(`hospitals/${centre}`, fields({ status: "active" }));
   await seed(`hospitals/other-${centre}`, fields({ status: "active" }));
+});
+
+test("Admin revocation cutoff blocks old native-MFA reads/writes and cannot be cleared by client roles", async () => {
+  const cutoff = Math.floor(Date.now() / 1000);
+  const profile = fields({ uid: ids.admin, name: "Admin", phone: null, address: null, role: "admin", status: "active", hospitalId: null, adminSessionRevokedBefore: cutoff });
+  await seed(`users/${ids.admin}`, profile);
+  try {
+    for (const auth_time of [cutoff - 1, cutoff]) assert.equal((await call(`/hospitals/${centre}`, { role: "admin", claims: { auth_time } })).status, 403);
+    assert.equal((await call(`/hospitals/${centre}`, { role: "admin", claims: { auth_time: cutoff + 1 } })).status, 200);
+    assert.equal((await auditedUpdate(`users/${ids.admin}`, profile, { name: "Updated Admin" }, "admin", "users", "update", [], { auth_time: cutoff + 1 })).status, 200);
+    for (const role of ["admin", "hospital", "consumer"]) {
+      assert.equal((await auditedUpdate(`users/${ids.admin}`, profile, { adminSessionRevokedBefore: 0 }, role, "users", "update", [], { auth_time: cutoff + 1 })).status, 403);
+    }
+    const { path, data } = await booking("cutoff");
+    assert.equal((await auditedUpdate(path, data, { status: "completed" }, "admin", "bookings", "status_change", [], { auth_time: cutoff })).status, 403);
+    assert.equal((await call(`/hospitals/${centre}`, { role: "hospital" })).status, 200);
+  } finally {
+    await seed(`users/${ids.admin}`, fields({ uid: ids.admin, role: "admin", status: "active", hospitalId: null }));
+  }
 });
 
 test("hospital publication requires four images; live gallery changes cannot drop below four", async () => {

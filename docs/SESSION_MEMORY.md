@@ -2,6 +2,184 @@
 
 Updated: 28 October 2026 (Asia/Calcutta).
 
+## MFA audit fixes / requested build and lint (28 October 2026)
+
+- v4.24.2 closes the direct-Firestore stale-ID-token window during replacement:
+  users/{uid}.adminSessionRevokedBefore is server-only, epoch seconds. A Firestore
+  transaction rechecks active Admin and existing cutoff, creates the durable
+  per-factor started audit and updates cutoff/updatedAt/updatedBy/lastAuditId
+  atomically BEFORE native Auth mutation. Existing native removal, refresh-token
+  revocation and append-only completed/unknown outcome remain. Failures stay
+  fail-closed, with owner reconciliation rather than automatic retries.
+- Shared Admin API guard reuses its fetched profile for strict auth_time > cutoff;
+  hasAdminSecondFactor enforces the same in Firestore, including same-second
+  denial. No extra authorization document read. Missing/zero cutoff preserves
+  legacy behavior; malformed values fail closed. UserDocument has optional typed
+  field; client profile parsing tolerates the server metadata. Client consumer
+  create allowlist and Admin/self changed-field allowlists still EXCLUDE it.
+  Own-profile reads needed for setup remain allowed. Other roles unchanged.
+- Audit Logs: Account security area filter, readable replacement activity and
+  Started/Completed/Unknown outcomes. Lazy-load Admin enrollment using next/dynamic;
+  QR encoder remains on-interaction. Production browser checks confirmed neither
+  initial Admin nor Hospital Login downloaded the enrollment component chunk.
+  No quantified speed-up claimed (no comparable previous-build baseline).
+- Passed 28 focused unit/service/API contracts, including old/same-second claim
+  rejection, fresh claim acceptance, concurrent replacement, audit/revocation
+  failure, authorization, legacy handling and Settings. Passed 18 MFA browser
+  cases plus 3 audit-display cases across desktop Chromium, 320px touch Chromium
+  and mobile WebKit. The first audit-display run failed because the test used
+  getByLabel on the wrapped select; corrected to its accessible combobox role,
+  then all 3 passed. Auth/email operations mocked, not native live validation.
+- Requested lint passed with zero errors/warnings after correcting a test-only
+  next/image mock to use a native DOM factory (no rule suppression). Requested
+  production build passed, including TypeScript and 74 static pages. Version
+  manifests synchronized. No separate typecheck command claimed.
+- Fresh production server on port 3107: /api/health HTTP 200 configuration/ok;
+  /api/health?deep=true Accept application/json HTTP 200 deep-configuration/ok,
+  all five configured dependencies ready. /health?deep=true HTTP 200 and themed
+  card rendered in Chromium. Both production login forms HTTP 200 and visible.
+  Configuration health does NOT prove SMTP delivery, DB permissions or APIs.
+  Temporary production server was stopped after validation; pre-existing dev
+  server left untouched. Restored only the build-generated next-env.d.ts route
+  type path change; no tsconfig.tsbuildinfo was generated for removal.
+- Added emulator cutoff denial/read/write/anti-tamper/legacy-role cases to the
+  existing demo-only suite, but NOT executed: installed Java is 1.8.0_503, while
+  Firebase CLI requires Java 21. No Java/tools installed, live factor changed,
+  email sent, data mutation or deployment performed. Firestore rules MUST deploy
+  to ayursarga-connect along with app rollout before the cutoff is fully live.
+
+## Admin Settings navigation (28 October 2026)
+
+- v4.24.1 moves Account security from the profile menu into Settings, a separate
+  Admin sidebar/drawer item directly below Audit Logs with a gear icon. The
+  existing responsive/collapsed navigation and active-route handling are reused.
+- /admin/settings remains RequireRole admin protected and passes the same
+  server-only recovery flag into the existing security form. /admin/security
+  redirects to Settings for old bookmarks. No authentication, reset API, MFA,
+  audit or data behavior changed. Version manifests synchronized.
+- Passed three focused local route/navigation contracts (role wrapper, flag
+  forwarding, legacy redirect and source-level item ordering). No authenticated
+  browser session, build/lint/typecheck or deployment performed for this move.
+
+## Local login 404 recovery (28 October 2026)
+
+- Reproduced HTTP 404 on localhost:3000 /hospital/login and /admin/login while
+  / returned 200. Both source pages and generated app-paths manifest entries
+  existed; no rewrite or notFound call explained the failure.
+- Identified and stopped only this workspace's Next dev parent/worker processes,
+  then restarted npm run dev on port 3000. Attempted .next/dev cache rename was
+  denied by Windows; no cache was moved/deleted. Restart alone restored both
+  routes to HTTP 200. Evidence supports stale running dev state; exact Turbopack
+  internal cause not proven. First recompile took about 29 seconds and Next
+  warned of a slow filesystem (287ms benchmark).
+- Verified both pages in local headless Chromium: HTTP 200, matching login
+  heading and visible email/password inputs. No sign-in, email, live mutation,
+  build/lint or deployment performed. Replacement local dev server left running
+  at http://localhost:3000. No application fix/version bump required (4.24.0).
+
+## Flag-controlled Admin recovery and signed-in replacement (28 October 2026)
+
+- v4.24.0 adds server-only ADMIN_MFA_RECOVERY_ENABLED. Missing/false disables;
+  local .env.local enabled true, template defaults false. Hosting needs separate
+  flag and application redeploy. Login shows lost-access instructions/mailto help
+  only (not automatic sending or reset). Owner verification remains required.
+- Added RequireRole-protected /admin/security via Admin profile Account security.
+  Replacement requires password/current-code reauthentication and shared danger
+  confirmation; duplicate UI submissions blocked. /api/admin/authenticator uses
+  actual active Admin/MFA guard, recent auth, exact own single native TOTP factor,
+  allowlisted body and throttling. Server flag checked on every mutation.
+- Durable per-factor audit claim precedes native removal, then refresh tokens
+  revoked and append-only completed/unknown outcome recorded. Auth/Firestore
+  cannot be atomic: audit failures abort before removal; started claim survives
+  unknown/post-mutation audit failure. No automatic retries. Client signs out
+  after attempted POST even on lost/error response and directs to setup/check
+  login instructions. Current factor is removed first; QR re-enrollment happens
+  at next password sign-in, with Admin access blocked until native MFA succeeds.
+  Everyone sharing the account is affected. No operational data deletion.
+- Passed 24 focused unit/service/API contracts with cloud dependencies mocked,
+  including role/MFA denials, input injection, stale factors, concurrent retries,
+  audit failure, revocation failure and uncertain response handling. Passed 18
+  browser cases across desktop Chromium, 320px touch Chromium and mobile WebKit:
+  QR/manual setup, recovery off/on, no implicit recovery requests, disabled
+  replacement, viewport-fitting confirmation, cancel without mutation, duplicate
+  confirm suppression, inline failure and credential-field clearing. No real factor reset,
+  live email, deployment, build/lint/typecheck or emulator run authorized/performed.
+  No Firestore fields/rules/index changes needed; writes are server-only audit
+  records with existing metadata shape. Live native reset/re-enrollment remains
+  unverified; do not represent mocks as deployed permission or delivery proof.
+
+## Admin authenticator QR setup (28 October 2026)
+
+- v4.23.2 makes scanning the primary native TOTP setup method. Firebase's
+  generateQrCodeUrl supplies the account/issuer URI, encoded locally into a
+  black/white responsive SVG with a four-module quiet zone. No external QR
+  service, image request, persistence or logging of enrollment secrets added.
+- Added exact qrcode-generator 2.0.4 (zero runtime dependencies), dynamically
+  imported only after starting Admin setup. No other dependencies upgraded.
+  Manual key stays under an accessible details disclosure and opens if QR
+  loading/rendering fails; native six-digit verification remains mandatory.
+- Passed 19 focused unit/service tests and 12 browser cases across 320px
+  Chromium, desktop and mobile WebKit. Tests cover encoded-module geometry,
+  URI validation, native issuer/account generation, manual fallback, failed-code
+  retry, cancellation, authorization and responsive QR sizing. Cloud operations
+  mocked; real authenticator camera scanning/enrollment not performed. Matrix
+  tests verify renderer fidelity, not an independent QR decoder.
+- No build/lint/typecheck or deployment performed. Requires app redeployment;
+  existing deployed rules/native TOTP configuration remain unchanged. Hospital
+  and Consumer authentication unaffected. Package and lock versions synchronized.
+
+## Admin authenticator setup wording and account clarity (28 October 2026)
+
+- v4.23.1 removes implementation/operator notes from the normal enrollment and
+  challenge UI. Uses short account-focused guidance, one-time setup wording,
+  simple recovery help and explicitly spaced single-column setup/email actions.
+  Hospital/Consumer references and Firebase project-owner jargon are not shown
+  in normal setup content. Diagnostic configuration errors remain actionable.
+- The verification-email endpoint adds alreadyVerified=true only when the native
+  token email is already verified; the client uses it for honest continue-with-
+  setup feedback without implying an email was sent. No recipients, validation,
+  permissions, MFA guards, rules, native factor enrollment or account provisioning
+  behavior changed. Missing field stays backward compatible for older responses.
+- Clarified: enrollment is once per Firebase Admin account, not per visitor or
+  device. People sharing one Admin email cannot restart setup to bypass its
+  existing factor. Separate authorized Admin accounts enroll independently;
+  this change does not create new Admin accounts or a shared-authenticator flow.
+- Passed 17 focused native-MFA/authorization/verification contracts and 9 UI cases
+  across 320px Chromium, desktop and mobile WebKit. Includes button spacing,
+  user-facing wording, retries and already-verified server/client feedback.
+  Cloud account/email operations mocked. No build/lint/typecheck, deployment or
+  real account changes performed. Application redeployment needed for this polish;
+  the earlier v4.23.0 rules deployment remains valid and no new rules deploy needed.
+
+## Admin MFA production rollout / Firestore rules deployed (28 October 2026)
+
+- Owner requested making MFA live, deploying rules and setup guidance, then
+  reported pushing code to main. Verified production /admin/login HTTP 200 and
+  MFA challenge/setup strings in its referenced published JavaScript (12 chunks
+  checked). Verified /auth/verify-email HTTP 200 with correct page content and
+  unauthenticated POST /api/auth/admin-email-verification HTTP 401. No SMTP,
+  login, enrollment or data mutations were performed by these read-only checks.
+- Ran firebase deploy --only firestore:rules --project ayursarga-connect
+  --non-interactive successfully, exit 0. Remote compilation/release succeeded;
+  release PATCH HTTP 200. Ruleset 935b7bce-5025-491f-9c6f-a913da8bc5dc,
+  released 28/10/2026 at 20:21 IST (14:51 UTC). No indexes, Storage rules,
+  hospital records, accounts or factor enrollments were changed. Firebase CLI
+  refreshed the existing signed-in operator token normally. Initial tool approval
+  review timed out before execution; one allowed retry completed deployment.
+- Production code was published through the owner's main push, not by an agent
+  Vercel deployment. Do not claim an agent-run build/lint/typecheck or actual MFA
+  account enrollment passed. CLI account inspection succeeded eventually but
+  was unnecessary after the public production-code check. No local build/lint
+  or test suite rerun on this deployment-only continuation. Version stays 4.23.0.
+- Owner setup: open /admin/login, sign in with existing credentials, verify email
+  via branded link if needed, select Set up authenticator, use Google Authenticator
+  or compatible app's manual setup-key / Time based option, then enter the app's
+  six-digit code and Verify and enable MFA. A fresh password/code sign-in may be
+  required if the enrollment token lacks a native second-factor sign-in claim.
+  Never ask the owner to send keys/codes/screenshots. Hospital/Consumer mandatory
+  enrollment stays unchanged. Actual authenticated role/rule tests remain pending;
+  earlier emulator execution was blocked by Java 8 rather than Java 21.
+
 ## Firebase TOTP capability enabled after owner upgrade (28 October 2026)
 
 - Owner reported completing the Identity Platform upgrade. Read-only operator

@@ -7,3 +7,11 @@ export function hasAdminTotpSession(claims: Record<string, unknown>) {
 }
 
 export const isAuthenticatorCode = (code: string) => /^\d{6}$/.test(code);
+
+/** Optional server-managed cutoff: legacy profiles retain their existing behavior. */
+export function isAdminSessionAfterCutoff(claims: Record<string, unknown>, cutoff: unknown) {
+  if (cutoff === undefined || cutoff === 0) return true;
+  return typeof cutoff === "number" && Number.isSafeInteger(cutoff) && cutoff > 0
+    && typeof claims.auth_time === "number" && Number.isSafeInteger(claims.auth_time)
+    && claims.auth_time > cutoff;
+}

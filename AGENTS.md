@@ -84,6 +84,20 @@ to deploy, rerun maintenance scripts, or modify live data.
 
 ## Data preservation and audit
 
+- Admin authenticator recovery is opt-in through the server-only
+  `ADMIN_MFA_RECOVERY_ENABLED` flag. Lost-access Login UI provides instructions
+  and a mailto request only; it must never reset MFA from a password/email alone.
+  Signed-in self-replacement is the owner-approved exception: password/current
+  TOTP reauthentication, recent native MFA proof, own expected single factor,
+  confirmation, durable audit claim/outcome and refresh-token revocation are
+  required. Never allow selecting another Admin's account or automatic retries
+  after an ambiguous Auth result. Existing setup gates protect re-enrollment.
+  Record the server-only Admin profile adminSessionRevokedBefore cutoff and its
+  started audit atomically before native factor mutation. Enforce strictly newer
+  auth_time in Admin API authorization and Firestore MFA rules, including same-
+  second denial; refresh-token revocation alone does not invalidate every issued
+  ID token at Firestore. Never expose this cutoff in client write allowlists.
+
 - Never add `deleteDoc`, permanent-delete helpers, cascading deletion, TTL, or
   automatic data-removal behavior for operational or historical records.
 - Use audited archive/restore transitions. Preserve document IDs and the

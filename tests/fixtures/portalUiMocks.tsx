@@ -35,7 +35,7 @@ export const createInvoice = async (input: InvoiceInput) => {
 export async function verifyPasswordAction(code: string) {
   if (code !== "valid-test-code") throw new Error("Invalid link");
 }
-export async function prepareAdminMfaEnrollment() { return { key: "SYNTHETICTESTKEY", email: "admin@example.test" }; }
+export async function prepareAdminMfaEnrollment() { return { key: "SYNTHETICTESTKEY", email: "admin@example.test", qrUri: "otpauth://totp/Ayursarga:admin?secret=JBSWY3DPEHPK3PXP&issuer=Ayursarga" }; }
 export async function requestAdminEmailVerification() {}
 export async function completePasswordAction() {
   portalUiState.calls++;
@@ -99,7 +99,10 @@ export const listUsers = () => page(portalUiState.screen === "admin-users-empty"
 export const listConsultants = () => page(portalUiState.screen === "admin-consultants-empty" ? [] : [consultant]);
 export const listHospitalAvailabilityRequests = () => page(portalUiState.screen === "hospital-availability-empty" ? [] : availability);
 export const listAdminAvailabilityRequests = () => page(portalUiState.screen === "admin-availability-empty" ? [] : availability);
-export const listAuditLogs = () => page(portalUiState.screen === "admin-audits-empty" ? [] : [{ ...metadata, id: "audit", timestamp: now, action: "update", module: "hospitals", recordId: "centre", actorId: "actor", actorRole: "admin", previousValues: { name: "Centre" }, updatedValues: { name: hospital.name }, source: "server" }]);
+export const listAuditLogs = () => page(portalUiState.screen === "admin-audits-empty" ? [] : portalUiState.screen === "admin-security-audits" ? ["started", "completed", "unknown"].map(outcome => ({
+  ...metadata, id: `security-${outcome}`, timestamp: now, action: "update", module: "adminSecurity", recordId: "actor", actorId: "actor", actorRole: "admin", previousValues: null,
+  updatedValues: { event: "authenticator_replacement", outcome }, source: "web",
+})) : [{ ...metadata, id: "audit", timestamp: now, action: "update", module: "hospitals", recordId: "centre", actorId: "actor", actorRole: "admin", previousValues: { name: "Centre" }, updatedValues: { name: hospital.name }, source: "server" }]);
 export const getUserDisplayNames = async () => new Map([["actor", "Admin"]]);
 export const dashboardCountCalls: { path: string; filters: { field: string; operator: string; value: unknown }[] }[] = [];
 Object.assign(globalThis, { dashboardCountCalls });

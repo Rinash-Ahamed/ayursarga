@@ -710,6 +710,18 @@ test("destructive dialogs stay red, cancel stays neutral, and scroll is restored
   }
 });
 
+test("Account security audit outcomes are readable and filterable", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "admin-security-audits");
+  await expect(page.getByText("Authenticator replacement", { exact: true })).toHaveCount(3);
+  await expect(page.getByText("Started: previous Admin sessions blocked; replacement in progress", { exact: true })).toBeVisible();
+  await expect(page.getByText("Completed: sign in to set up the new authenticator", { exact: true })).toBeVisible();
+  await expect(page.getByText("Outcome unknown: project owner review required before retrying", { exact: true })).toBeVisible();
+  await page.getByRole("combobox", { name: "Area", exact: true }).selectOption("adminSecurity");
+  await expect(page.getByText("Authenticator replacement", { exact: true })).toHaveCount(3);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
 test("Admin audit clearing requires both password and authenticator code before reauthentication or deletion", async ({ page }) => {
   await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
   await mount(page, "admin-audits");

@@ -16,7 +16,7 @@ export async function POST(request: Request) {
       || decoded.firebase.sign_in_provider !== "password" || !Number.isFinite(age) || age < -60 || age > 300) {
       return apiJson({ error: "Sign in again with your Admin password before verifying your email." }, 403);
     }
-    if (decoded.email_verified) return apiJson({ ok: true });
+    if (decoded.email_verified) return apiJson({ ok: true, alreadyVerified: true });
     if (!allowRequest(`admin-email-verification:${uid}`, 3, 15 * 60 * 1000)) {
       return apiJson({ error: "Too many verification requests. Please wait before requesting another email." }, 429);
     }

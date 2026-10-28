@@ -1,9 +1,9 @@
-import { useSyncExternalStore, type ComponentProps } from "react";
+import { createElement, useSyncExternalStore, type ComponentProps } from "react";
 import { AuthenticationError } from "@/features/auth/errors";
 
 const listeners = new Set<() => void>();
 export const state = { enrolled: true, busy: false, error: null as AuthenticationError | null, authorized: false,
-  calls: { login: 0, verify: 0, prepare: 0, enroll: 0, email: 0, cancel: 0 }, rejectSetup: false };
+  calls: { login: 0, verify: 0, prepare: 0, enroll: 0, email: 0, cancel: 0 }, rejectSetup: false, invalidQr: false };
 let revision = 0;
 const emit = () => { revision++; listeners.forEach((listener) => listener()); };
 async function operation(action: () => unknown) {
@@ -26,12 +26,14 @@ export async function prepareAdminMfaEnrollment() {
   state.calls.prepare++;
   await new Promise((resolve) => setTimeout(resolve, 80));
   if (state.rejectSetup) throw new AuthenticationError("mfa-unavailable");
-  return { key: "SYNTHETICKEYFORLOCALTESTONLY", email: "admin@example.test" };
+  return { key: "SYNTHETICKEYFORLOCALTESTONLY", email: "admin@example.test",
+    qrUri: state.invalidQr ? "invalid" : "otpauth://totp/Ayursarga:admin%40example.test?secret=JBSWY3DPEHPK3PXP&issuer=Ayursarga" };
 }
 export async function requestAdminEmailVerification() { state.calls.email++; }
 export default function LinkOrImage(props: ComponentProps<"a"> & ComponentProps<"img"> & { priority?: boolean; unoptimized?: boolean }) {
   const { priority, unoptimized, ...rest } = props;
   void priority; void unoptimized;
-  return props.src ? <img {...rest} alt={props.alt ?? ""} /> : <a {...rest} />;
+  // Native DOM factory is intentional: this fixture replaces next/image itself.
+  return props.src ? createElement("img", { ...rest, alt: props.alt ?? "" }) : <a {...rest} />;
 }
 Object.assign(window, { adminMfaFixture: state });

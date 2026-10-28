@@ -50,6 +50,7 @@ const RECORD_LABELS: Record<string, string> = {
   consultationEmailEvents: "Consultation email",
   invoices: "Invoice",
   notificationInboxes: "Notification inbox",
+  adminSecurity: "Admin account security",
 };
 
 function formatDate(value: unknown) {
@@ -78,6 +79,7 @@ function areaLabel(module: string) {
     consultationEmailEvents: "Consultation email delivery",
     invoices: "Invoices & Billing",
     notificationInboxes: "Notifications",
+    adminSecurity: "Account security",
   };
   return labels[module] ?? formatStatus(module);
 }
@@ -107,6 +109,7 @@ function auditRecordLabel(item: DocumentRecord<AuditLogDocument>) {
 }
 
 function auditActivityLabel(item: DocumentRecord<AuditLogDocument>) {
+  if (item.module === "adminSecurity" && item.updatedValues?.event === "authenticator_replacement") return "Authenticator replacement";
   const subject = RECORD_LABELS[item.module] ?? areaLabel(item.module);
   if (item.action === "status_change") {
     const status = textValue(item.updatedValues, "status") ?? textValue(item.updatedValues, "treatmentStatus");
@@ -119,6 +122,14 @@ function auditActivityLabel(item: DocumentRecord<AuditLogDocument>) {
 }
 
 function auditChangeLabel(item: DocumentRecord<AuditLogDocument>) {
+  if (item.module === "adminSecurity" && item.updatedValues?.event === "authenticator_replacement") {
+    const labels: Record<string, string> = {
+      started: "Started: previous Admin sessions blocked; replacement in progress",
+      completed: "Completed: sign in to set up the new authenticator",
+      unknown: "Outcome unknown: project owner review required before retrying",
+    };
+    return labels[String(item.updatedValues.outcome)] ?? "Project owner review required";
+  }
   const previousStatus = textValue(item.previousValues, "status") ?? textValue(item.previousValues, "treatmentStatus");
   const updatedStatus = textValue(item.updatedValues, "status") ?? textValue(item.updatedValues, "treatmentStatus");
   if (previousStatus && updatedStatus && previousStatus !== updatedStatus) {
@@ -295,7 +306,7 @@ export function AdminAuditLogs() {
     </div>
     <div className="portal-card portal-audit-filters" aria-label="Filter audit activity">
       <label className="portal-filter-field portal-audit-search"><span>Search this page</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Hospital, person or activity" /></label>
-      <label className="portal-filter-field"><span>Area</span><select value={area} onChange={(event) => setArea(event.target.value)}><option value="">All areas</option><option value="hospitals">Hospitals</option><option value="availability">Availability</option><option value="services">Services</option><option value="bookings">Bookings</option><option value="consultationBookings">Online consultations</option><option value="users">Users</option><option value="consultants">Our Consultants</option><option value="invoices">Invoices &amp; Billing</option></select></label>
+      <label className="portal-filter-field"><span>Area</span><select value={area} onChange={(event) => setArea(event.target.value)}><option value="">All areas</option><option value="hospitals">Hospitals</option><option value="availability">Availability</option><option value="services">Services</option><option value="bookings">Bookings</option><option value="consultationBookings">Online consultations</option><option value="users">Users</option><option value="consultants">Our Consultants</option><option value="invoices">Invoices &amp; Billing</option><option value="adminSecurity">Account security</option></select></label>
       <label className="portal-filter-field"><span>Activity</span><select value={activity} onChange={(event) => setActivity(event.target.value)}><option value="">All activities</option>{Object.entries(ACTION_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
       <label className="portal-filter-field"><span>When</span><select value={dateRange} onChange={(event) => changeDateRange(event.target.value as DateRange)}><option value="">Any date</option><option value="today">Today</option><option value="7days">Last 7 days</option><option value="30days">Last 30 days</option><option value="custom">Custom date range</option></select></label>
       <div className="portal-filter-actions"><button className="portal-button secondary" type="button" disabled={!hasFilters} onClick={clearFilters}>Clear filters</button></div>

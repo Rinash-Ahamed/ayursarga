@@ -18,7 +18,7 @@ function fixture() {
     signOut: async () => { calls.signouts++; auth.currentUser = null; subscriber?.(null); },
     reauthenticateWithCredential: async () => { calls.reauths++; if (enrolled) throw nativeError(); return { user }; }, updatePassword: async () => {},
     multiFactor: () => ({ enrolledFactors: enrolled ? [{ factorId: "totp", uid: "factor" }] : [], getSession: async () => "session", enroll: async () => { calls.enrolls++; enrolled = true; } }),
-    TotpMultiFactorGenerator: { FACTOR_ID: "totp", generateSecret: async () => ({ secretKey: "SYNTHETICKEY", enrollmentCompletionDeadline: "2099-01-01" }),
+    TotpMultiFactorGenerator: { FACTOR_ID: "totp", generateSecret: async () => ({ secretKey: "SYNTHETICKEY", enrollmentCompletionDeadline: "2099-01-01", generateQrCodeUrl: () => "otpauth://totp/Ayursarga:admin?secret=JBSWY3DPEHPK3PXP&issuer=Ayursarga" }),
       assertionForEnrollment: (_secret, code) => ({ code }), assertionForSignIn: (_uid, code) => ({ code }) },
     getMultiFactorResolver: () => ({ hints: [{ factorId: "totp", uid: "factor" }], resolveSignIn: async ({ code }) => {
       calls.resolves++;

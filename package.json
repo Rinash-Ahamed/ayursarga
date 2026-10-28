@@ -1,6 +1,6 @@
 {
   "name": "ayursarga",
-  "version": "4.23.0",
+  "version": "4.24.2",
   "private": true,
   "engines": {
     "node": "24.x"
@@ -35,6 +35,7 @@
     "lenis": "^1.3.25",
     "next": "^16.2.11",
     "nodemailer": "^9.0.3",
+    "qrcode-generator": "2.0.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "sharp": "0.34.5"

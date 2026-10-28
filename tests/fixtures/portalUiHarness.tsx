@@ -37,6 +37,7 @@ const screens = {
   "admin-dashboard-consultations-zero": <AdminDashboard />,
   "admin-consultants": <ConsultantsManager />, "admin-users": <UsersList />, "admin-bookings": <AdminBookings />,
   "admin-availability": <AdminAvailability />, "admin-audits": <AdminAuditLogs />,
+  "admin-security-audits": <AdminAuditLogs />,
   "admin-hospitals-empty": <HospitalsManager />, "admin-consultants-empty": <ConsultantsManager />,
   "admin-users-empty": <UsersList />, "admin-bookings-empty": <AdminBookings />,
   "admin-availability-empty": <AdminAvailability />, "admin-audits-empty": <AdminAuditLogs />,

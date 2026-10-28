@@ -12,7 +12,7 @@ import { lockDocumentScroll } from "@/utils/documentScrollLock";
 import { ConsumerPortalFooter } from "@/components/consumer/ConsumerPortalFooter";
 import AyuBuddy from "@/components/AyuBuddy";
 
-type PortalNavigationIcon = "dashboard" | "hospitals" | "consultants" | "users" | "bookings" | "availability" | "audit" | "profile" | "services" | "password" | "search" | "person" | "support" | "billing";
+type PortalNavigationIcon = "dashboard" | "hospitals" | "consultants" | "users" | "bookings" | "availability" | "audit" | "profile" | "services" | "password" | "search" | "person" | "support" | "billing" | "settings";
 type NavigationItem = readonly [label: string, href: string, icon: PortalNavigationIcon, nested?: boolean];
 const SIDEBAR_STORAGE_KEY = "ayursarga-portal-sidebar-collapsed";
 const SIDEBAR_CHANGE_EVENT = "ayursarga-sidebar-change";
@@ -43,6 +43,7 @@ const NAVIGATION: Record<PortalRole, readonly NavigationItem[]> = {
     ["Availability", ROUTES.admin.availability, "availability"],
     ["Invoices & Billing", ROUTES.admin.billing, "billing"],
     ["Audit Logs", ROUTES.admin.audits, "audit"],
+    ["Settings", ROUTES.admin.settings, "settings"],
   ],
   hospital: [
     ["Dashboard", ROUTES.hospital.home, "dashboard"], ["Hospital Profile", ROUTES.hospital.profile, "profile"],
@@ -71,6 +72,7 @@ function PortalNavigationIcon({ name }: { name: PortalNavigationIcon }) {
     profile: <><path d="M4 21V6h16v15M8 6V3h8v3M3 21h18M9 10h6M12 7v6" /><circle cx="12" cy="17" r="2" /></>,
     services: <><path d="M4 6h16M4 12h16M4 18h16" /><circle cx="8" cy="6" r="2" /><circle cx="16" cy="12" r="2" /><circle cx="10" cy="18" r="2" /></>,
     password: <><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3" /></>,
+    settings: <><path d="m10 3-.5 2a7 7 0 0 0-2 1.2l-2-.6-2 3.4L5 10.5a7 7 0 0 0 0 3l-1.5 1.5 2 3.4 2-.6a7 7 0 0 0 2 1.2l.5 2h4l.5-2a7 7 0 0 0 2-1.2l2 .6 2-3.4-1.5-1.5a7 7 0 0 0 0-3L20.5 9l-2-3.4-2 .6a7 7 0 0 0-2-1.2L14 3Z" /><circle cx="12" cy="12" r="3" /></>,
     search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></>,
     person: <><circle cx="12" cy="8" r="4" /><path d="M4 21v-2a8 8 0 0 1 16 0v2" /></>,
     support: <><path d="M4 14v-2a8 8 0 0 1 16 0v2M4 12H3v6h4v-6zm16 0h1v6h-4v-6zM18 18v1a2 2 0 0 1-2 2h-4" /></>,

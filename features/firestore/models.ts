@@ -14,6 +14,8 @@ type AuditedDocument = {
 };
 
 export type UserDocument = AuditedDocument & {
+  /** Server-only security cutoff. Never add to client create/changed-field allowlists. */
+  adminSessionRevokedBefore?: number;
   uid: string;
   name: string;
   email: string;

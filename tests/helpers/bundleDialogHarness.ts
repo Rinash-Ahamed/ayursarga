@@ -15,6 +15,7 @@ export function bundleDialogHarness(fixture = "tests/fixtures/dialogHarness.tsx"
     "react-dom": productionModule("react-dom", "react-dom.production.js"),
     "react-dom/client": productionModule("react-dom", "react-dom-client.production.js"),
     scheduler: productionModule("scheduler", "scheduler.production.js"),
+    "qrcode-generator": localRequire.resolve("qrcode-generator"),
     "next/dynamic": path.join(root, "tests/fixtures/dynamicMock.tsx"),
   };
   const modules: Array<{ source: string; imports: Record<string, number> }> = [];

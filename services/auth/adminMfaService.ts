@@ -65,7 +65,8 @@ export async function prepareAdminMfaEnrollment() {
     throw error;
   }
   enrollment = { uid: user.uid, secret };
-  return { key: secret.secretKey, email: user.email ?? "", deadline: secret.enrollmentCompletionDeadline };
+  return { key: secret.secretKey, email: user.email ?? "", deadline: secret.enrollmentCompletionDeadline,
+    qrUri: secret.generateQrCodeUrl(user.email ?? "", "Ayursarga") };
 }
 export async function enrollAdminMfa(code: string) {
   const user = getClientAuth().currentUser;
@@ -83,6 +84,7 @@ export async function requestAdminEmailVerification() {
   const response = await fetch("/api/auth/admin-email-verification", {
     method: "POST", headers: { Authorization: `Bearer ${await user.getIdToken()}` }, cache: "no-store",
   });
-  const body = await response.json().catch(() => null) as { ok?: boolean; error?: string } | null;
+  const body = await response.json().catch(() => null) as { ok?: boolean; error?: string; alreadyVerified?: boolean } | null;
   if (!response.ok || body?.ok !== true) throw new Error(body?.error || "Email verification could not be sent. Please try again later.");
+  return body.alreadyVerified === true;
 }

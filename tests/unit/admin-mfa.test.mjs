@@ -4,7 +4,15 @@ import { loadTypeScript } from "../helpers/loadTypeScript.mjs";
 
 const verifiedClaims = { email_verified: true, firebase: { sign_in_provider: "password", sign_in_second_factor: "totp" } };
 const passwordClaims = { email_verified: true, firebase: { sign_in_provider: "password" } };
-const { hasAdminTotpSession } = loadTypeScript("features/auth/adminMfa.ts");
+const { hasAdminTotpSession, isAdminSessionAfterCutoff } = loadTypeScript("features/auth/adminMfa.ts");
+
+test("Admin cutoff denies pre-reset, same-second, missing and malformed claims while preserving legacy records", () => {
+  assert.equal(isAdminSessionAfterCutoff({}, undefined), true);
+  assert.equal(isAdminSessionAfterCutoff({}, 0), true);
+  for (const auth_time of [undefined, 99, 100, "101", NaN]) assert.equal(isAdminSessionAfterCutoff({ auth_time }, 100), false);
+  assert.equal(isAdminSessionAfterCutoff({ auth_time: 101 }, 100), true);
+  for (const cutoff of [null, -1, "100", NaN, 1.5]) assert.equal(isAdminSessionAfterCutoff({ auth_time: 101 }, cutoff), false);
+});
 
 test("Admin proof requires native TOTP, password sign-in and verified email, not client/profile flags", () => {
   assert.equal(hasAdminTotpSession(verifiedClaims), true);
@@ -29,6 +37,12 @@ test("real shared API guard rejects password-only Admin and leaves active Hospit
   await assert.rejects(authorization.requireActiveUser(request), (error) => error.status === 403);
   claims = verifiedClaims;
   assert.equal((await authorization.requireActiveAdmin(request)).role, "admin");
+  profile = { ...profile, adminSessionRevokedBefore: 100 };
+  claims = { ...verifiedClaims, auth_time: 100 };
+  await assert.rejects(authorization.requireActiveAdmin(request), error => error.status === 403);
+  claims = { ...verifiedClaims, auth_time: 101 };
+  assert.equal((await authorization.requireActiveAdmin(request)).role, "admin");
+  profile = { ...profile, adminSessionRevokedBefore: undefined };
   for (const role of ["hospital", "consumer"]) {
     profile = { ...profile, role }; claims = passwordClaims;
     assert.equal((await authorization.requireActiveUser(request, [role])).role, role);
@@ -47,7 +61,8 @@ function nativeFixture() {
   const user = { uid: "admin", email: "admin@example.test", emailVerified: true, reload: async () => calls.push("reload"),
     getIdTokenResult: async () => ({ claims }), getIdToken: async () => "token" };
   const auth = { currentUser: user };
-  const secret = { secretKey: "SYNTHETICPRIVATEKEY", enrollmentCompletionDeadline: "2099-01-01T00:00:00Z" };
+  const secret = { secretKey: "SYNTHETICPRIVATEKEY", enrollmentCompletionDeadline: "2099-01-01T00:00:00Z",
+    generateQrCodeUrl: (email, issuer) => { calls.push({ qr: { email, issuer } }); return `otpauth://totp/${issuer}:${email}?secret=JBSWY3DPEHPK3PXP&issuer=${issuer}`; } };
   const factor = { hints: [{ factorId: "totp", uid: "native-factor", displayName: "Authenticator" }], resolveSignIn: async (assertion) => {
     calls.push({ resolution: assertion });
     if (failResolution) throw Object.assign(new Error("invalid"), { code: "auth/invalid-verification-code" });
@@ -93,7 +108,10 @@ test("setup only generates a native secret for an active verified Admin; valid c
   await assert.rejects(f.prepareAdminMfaEnrollment(), /Verify your Admin email/);
   assert.equal(f.calls.some((call) => call.generate), false);
   f.user.emailVerified = true;
-  assert.equal((await f.prepareAdminMfaEnrollment()).key, "SYNTHETICPRIVATEKEY");
+  const setup = await f.prepareAdminMfaEnrollment();
+  assert.equal(setup.key, "SYNTHETICPRIVATEKEY");
+  assert.match(setup.qrUri, /^otpauth:\/\/totp\/Ayursarga:/);
+  assert.deepEqual(f.calls.find(call => call.qr).qr, { email: "admin@example.test", issuer: "Ayursarga" });
   await assert.rejects(f.enrollAdminMfa("12"), /six-digit/);
   f.auth.currentUser = { ...f.user, uid: "other" };
   await assert.rejects(f.enrollAdminMfa("123456"), /expired/);
@@ -159,7 +177,8 @@ test("verification-email exception requires an active Admin's matching identity 
   const result = await route.POST(request);
   assert.equal(result.status, 502); assert.doesNotMatch(await result.text(), /private-provider-error/);
   decoded.email_verified = true;
-  assert.equal((await route.POST(request)).status, 200); assert.equal(emails.length, 1);
+  const verified = await route.POST(request);
+  assert.equal(verified.status, 200); assert.deepEqual(await verified.json(), { ok: true, alreadyVerified: true }); assert.equal(emails.length, 1);
 });
 
 test("Admin verification mail uses branded server-owned fragment links without exposing generated codes in JSON", async () => {
@@ -176,4 +195,13 @@ test("Admin verification mail uses branded server-owned fragment links without e
     assert.match(emails[0].text, /https:\/\/www.ayursarga.com\/auth\/verify-email#oobCode=synthetic-code/);
     assert.doesNotMatch(emails[0].html, /firebase.test/);
   } finally { if (previous === undefined) delete process.env.APP_SITE_URL; else process.env.APP_SITE_URL = previous; }
+});
+
+test("verification client distinguishes an already verified email from a submitted delivery request", async (t) => {
+  const f = nativeFixture();
+  let result = { ok: true, alreadyVerified: true };
+  t.mock.method(globalThis, "fetch", async () => Response.json(result));
+  assert.equal(await f.requestAdminEmailVerification(), true);
+  result = { ok: true };
+  assert.equal(await f.requestAdminEmailVerification(), false);
 });
