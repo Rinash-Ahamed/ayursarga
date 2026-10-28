@@ -9,6 +9,7 @@ import { reserveBookingReference } from "@/services/bookings/bookingReferenceAdm
 import { consultationAdminRecipients, addConsultationNotification } from "@/services/consultations/consultationNotificationsAdmin";
 import { consultationService } from "@/features/consultations/catalog";
 import { publicConsultantProjection } from "@/features/consultations/publicProjection";
+import { getConsultantPricing } from "@/features/consultants/pricing";
 import { CONSULTANT_TIME_SLOTS, type ConsultantTimeSlot } from "@/features/consultants/validation";
 import { BOOKING_TERMS_VERSION, CUSTOMER_TERMS_VERSION, CONSUMER_PRIVACY_NOTICE_VERSION } from "@/features/consumers/privacyConsent";
 import { isValidPhoneNumber } from "@/utils/phone";
@@ -60,6 +61,9 @@ export async function POST(request: Request) {
       const admins = await consultationAdminRecipients(transaction, firestore);
       const bookingReference = await reserveBookingReference(transaction, firestore, id);
       const audit = firestore.collection("auditLogs").doc();
+      // Breakdown is Admin-only audit data, never a public projection or a
+      // Consumer-readable appointment field. Existing charge snapshots stay total.
+      const pricingSnapshot = getConsultantPricing(consultant.data()!.consultantCharge, consultant.data()!.ayursargaCommissionPercentage ?? 0);
       const now = FieldValue.serverTimestamp();
       const data = {
         bookingReference, consumerId: uid, consumerName: String(profile.name ?? "").trim(),
@@ -74,7 +78,7 @@ export async function POST(request: Request) {
       };
       transaction.create(reference, data);
       transaction.create(audit, { action: "create", module: "consultationBookings", recordId: id, actorId: uid, actorRole: "consumer",
-        previousValues: null, updatedValues: data, timestamp: now, source: "server", device: requestAuditDevice(request) });
+        previousValues: null, updatedValues: data, pricingSnapshot, timestamp: now, source: "server", device: requestAuditDevice(request) });
       queueConsultationEmail(transaction, firestore, { eventId: `confirmation-${id}`, bookingId: id, event: "confirmed",
         booking: data, consultant: consultant.data()!, actorId: uid, actorRole: "consumer", auditId: audit.id, now });
       for (const admin of admins) addConsultationNotification(transaction, firestore, { recipientId: admin, recipientRole: "admin", bookingId: id, bookingReference,

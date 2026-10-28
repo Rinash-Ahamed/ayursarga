@@ -2,14 +2,18 @@ import { CONSULTANT_TIME_SLOTS, CONSULTANT_TIME_SLOT_CONFIG, type ConsultantTime
 import { consultationService } from "@/features/consultations/catalog";
 import { readConsultantAvailability } from "@/features/consultations/availability";
 import type { PublicConsultant } from "@/features/consultations/types";
+import { getConsultantPricing } from "@/features/consultants/pricing";
 
 /** Whitelist only: no contact data, address, emergency details or audit metadata. */
 export function publicConsultantProjection(id: string, data: Record<string, unknown>, serviceId: string): PublicConsultant | null {
   if (!consultationService(serviceId) || data.status !== "active" || data.archivedAt != null
     || !Array.isArray(data.consultationServices) || !data.consultationServices.includes(serviceId)
-    || typeof data.name !== "string" || !data.name.trim()
-    || typeof data.consultantCharge !== "number" || !Number.isFinite(data.consultantCharge)
-    || data.consultantCharge < 0 || !Number.isSafeInteger(Math.round(data.consultantCharge * 100))) return null;
+    || typeof data.name !== "string" || !data.name.trim() || typeof data.consultantCharge !== "number"
+    || (data.ayursargaCommissionPercentage != null && typeof data.ayursargaCommissionPercentage !== "number")) return null;
+  // Legacy records without commission keep their existing price. Admin edits
+  // require an explicit commission; neither base nor percentage is public.
+  const pricing = getConsultantPricing(data.consultantCharge, data.ayursargaCommissionPercentage ?? 0);
+  if (!pricing) return null;
   const preferredTimeSlots: ConsultantTimeSlot[] = [];
   const availability = readConsultantAvailability(data);
   if (!availability) return null;
@@ -26,5 +30,5 @@ export function publicConsultantProjection(id: string, data: Record<string, unkn
   return { id, name: data.name.trim().slice(0, 120), designation: typeof data.designation === "string" ? data.designation.slice(0, 120) : "",
     qualification: typeof data.qualification === "string" ? data.qualification.slice(0, 200) : "",
     yearsExperience: typeof data.yearsExperience === "number" && Number.isFinite(data.yearsExperience) ? data.yearsExperience : 0,
-    consultantCharge: data.consultantCharge, ...availability, preferredTimeSlots, preferredSlotTimings };
+    consultantCharge: pricing.totalCharge, ...availability, preferredTimeSlots, preferredSlotTimings };
 }

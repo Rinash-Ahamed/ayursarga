@@ -2,6 +2,7 @@ import { isValidEmail, toTrimmedString } from "@/utils/text";
 import { isValidPhoneNumber } from "@/utils/phone";
 import { isIsoDate } from "@/utils/date";
 import { CONSULTATION_SERVICES, consultationService, type ConsultationServiceId } from "@/features/consultations/catalog";
+import { getConsultantPricing, parseConsultantCharge, parseConsultantCommission } from "@/features/consultants/pricing";
 
 export const CONSULTANT_TIME_SLOTS = ["morning", "noon", "evening"] as const;
 export const CONSULTANT_WEEK_DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
@@ -31,6 +32,7 @@ export type ConsultantFields = {
   name: string;
   designation: string;
   consultantCharge: number | null;
+  ayursargaCommissionPercentage: number | null;
   consultationServices: ConsultationServiceId[];
   preferredDays: ConsultantWeekDay[];
   availableDates: string[];
@@ -54,7 +56,8 @@ export function validateConsultantFields(input: Record<string, unknown>) {
     name: toTrimmedString(input.name, 120),
     designation: toTrimmedString(input.designation, 120),
     consultationServices: CONSULTATION_SERVICES.filter((service) => Array.isArray(input.consultationServices) && input.consultationServices.includes(service.id)).map((service) => service.id),
-    consultantCharge: input.consultantCharge == null || (typeof input.consultantCharge === "string" && !input.consultantCharge.trim()) ? null : Number(input.consultantCharge),
+    consultantCharge: parseConsultantCharge(input.consultantCharge),
+    ayursargaCommissionPercentage: parseConsultantCommission(input.ayursargaCommissionPercentage),
     preferredTimeSlots: CONSULTANT_TIME_SLOTS.filter((slot) => Array.isArray(input.preferredTimeSlots) && input.preferredTimeSlots.includes(slot)),
     preferredDays: CONSULTANT_WEEK_DAYS.filter((day) => Array.isArray(input.preferredDays) && input.preferredDays.includes(day)),
     availableDates: Array.isArray(input.availableDates) ? input.availableDates.filter((date): date is string => typeof date === "string").toSorted() : [],
@@ -84,12 +87,13 @@ export function validateConsultantFields(input: Record<string, unknown>) {
     || input.consultationServices.length > CONSULTATION_SERVICES.length
     || input.consultationServices.some((value: unknown) => !consultationService(value))
     || new Set(input.consultationServices).size !== input.consultationServices.length)) errors.consultationServices = "Select valid consultation services without duplicates.";
-  if (data.consultantCharge !== null && (
-    !["string", "number"].includes(typeof input.consultantCharge) ||
-    !/^\d+(\.\d{1,2})?$/.test(String(input.consultantCharge).trim()) ||
-    !Number.isFinite(data.consultantCharge) || data.consultantCharge < 0 ||
-    !Number.isSafeInteger(Math.round(data.consultantCharge * 100))
-  )) errors.consultantCharge = "Enter a valid non-negative charge with up to 2 decimal places.";
+  if (data.consultantCharge === null) errors.consultantCharge = input.consultantCharge == null || String(input.consultantCharge).trim() === ""
+    ? "Enter the consultant charge." : "Enter a valid non-negative charge with up to 2 decimal places.";
+  if (data.ayursargaCommissionPercentage === null) errors.ayursargaCommissionPercentage = input.ayursargaCommissionPercentage == null || String(input.ayursargaCommissionPercentage).trim() === ""
+    ? "Enter Ayursarga commission percentage." : "Enter a commission between 0 and 100 with up to 2 decimal places.";
+  if (data.consultantCharge !== null && data.ayursargaCommissionPercentage !== null && !getConsultantPricing(data.consultantCharge, data.ayursargaCommissionPercentage)) {
+    errors.consultantCharge = "The total consultation amount is outside the supported range.";
+  }
   const timings = input.preferredSlotTimings;
   if (timings != null && (typeof timings !== "object" || Array.isArray(timings) || Object.keys(timings).some((key) => !data.preferredTimeSlots.includes(key as ConsultantTimeSlot)))) {
     errors.preferredSlotTimings = "Provide timings only for the selected slots.";
@@ -127,6 +131,7 @@ export function consultantFormValues(form: FormData): Record<string, unknown> {
     name: form.get("name"),
     designation: form.get("designation"),
     consultantCharge: form.get("consultantCharge"),
+    ayursargaCommissionPercentage: form.get("ayursargaCommissionPercentage"),
     consultationServices: form.getAll("consultationServices"),
     preferredDays: form.getAll("preferredDays"),
     availableDates: form.getAll("availableDates"),

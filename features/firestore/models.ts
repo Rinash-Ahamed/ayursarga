@@ -182,6 +182,7 @@ export type ConsultantDocument = AuditedDocument & {
   consultationServices?: import("@/features/consultations/catalog").ConsultationServiceId[];
   designation?: string;
   consultantCharge?: number | null;
+  ayursargaCommissionPercentage?: number | null;
   preferredTimeSlots?: import("@/features/consultants/validation").ConsultantTimeSlot[];
   preferredDays?: import("@/features/consultants/validation").ConsultantWeekDay[];
   availableDates?: string[];

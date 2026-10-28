@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { loadTypeScript } from "../helpers/loadTypeScript.mjs";
 const { validateConsultantFields, consultantFormValues, formatConsultantTimeSlot } = loadTypeScript("features/consultants/validation.ts");
-const legacy = { name: "Doctor Sample", email: "doctor@example.com", contactNo: "9876543210", whatsappNo: "9876543210", qualification: "BAMS", yearsExperience: 3.5 };
+const legacy = { name: "Doctor Sample", email: "doctor@example.com", contactNo: "9876543210", whatsappNo: "9876543210", qualification: "BAMS", yearsExperience: 3.5, consultantCharge: 900.5, ayursargaCommissionPercentage: 0 };
 
 test("consultant update rules allow every validated profile field without broadening status or identity edits", () => {
   // Source-contract regression, not a substitute for emulator/deployed-rule tests.
@@ -18,12 +18,24 @@ test("consultant update rules allow every validated profile field without broade
   assert.match(consultantRules, /hasValidConsultantFields\(\)/);
   assert.match(consultantRules, /hasLinkedAudit\('consultants', consultantId\)/);
   assert.match(consultantRules, /allow delete: if false/);
+  assert.match(updateBranch, /hasRequiredConsultantPricing\(\)/);
+  const statusBranch = consultantRules.split("linkedAuditAction() == 'status_change'")[1];
+  assert.doesNotMatch(statusBranch, /hasRequiredConsultantPricing|ayursargaCommissionPercentage/);
+  const fieldValidator = rules.split("function hasValidConsultantFields()")[1].split("function ")[0];
+  assert.match(fieldValidator, /'ayursargaCommissionPercentage'/);
+  assert.match(fieldValidator, /ayursargaCommissionPercentage <= 100/);
+  assert.match(fieldValidator, /math\.round\(request\.resource\.data\.ayursargaCommissionPercentage \* 100\) \/ 100\.0/);
+  assert.match(rules, /math\.round\(request\.resource\.data\.consultantCharge \* 100\) \/ 100\.0/);
 });
-test("legacy consultants default to optional empty preferences", () => {
+test("optional preferences stay empty but legacy profile saves require explicit pricing", () => {
   const result = validateConsultantFields(legacy);
   assert.equal(result.isValid, true);
   assert.equal(result.data.designation, "");
-  assert.equal(result.data.consultantCharge, null);
+  assert.equal(result.data.consultantCharge, 900.5);
+  const unpriced = validateConsultantFields({ ...legacy, consultantCharge: undefined, ayursargaCommissionPercentage: undefined });
+  assert.equal(unpriced.isValid, false);
+  assert.ok(unpriced.errors.consultantCharge);
+  assert.ok(unpriced.errors.ayursargaCommissionPercentage);
   assert.deepEqual(result.data.preferredTimeSlots, []);
   assert.deepEqual(result.data.preferredDays, []);
   assert.deepEqual(result.data.availableDates, []);
@@ -71,10 +83,10 @@ test("specific dates validate strictly, sort, clear and survive form parsing", (
   assert.deepEqual(validateConsultantFields({ ...legacy, availableDates: [] }).data.availableDates, []);
 });
 
-test("consultant charges preserve blank, zero and decimal amounts through form validation", () => {
+test("consultant charges require an explicit value and preserve zero and decimal amounts", () => {
   for (const [raw, expected] of [[undefined, null], [null, null], ["", null], ["  ", null], ["0", 0], [0, 0], ["900.50", 900.5], [1250.75, 1250.75]]) {
     const result = validateConsultantFields({ ...legacy, consultantCharge: raw });
-    assert.equal(result.isValid, true);
+    assert.equal(result.isValid, expected !== null);
     assert.equal(result.data.consultantCharge, expected);
   }
   const form = new FormData();
@@ -101,23 +113,24 @@ test("consultant service sends validated charges and preserves atomic audited ed
   assert.equal(await service.createConsultant({ ...legacy, consultantCharge: "900.50", preferredDays: ["fri", "mon"], availableDates: ["2099-10-26"] }), "AS001");
   assert.deepEqual(calls[0].body.availableDates, ["2099-10-26"]);
   assert.equal(calls[0].body.consultantCharge, 900.5);
+  assert.equal(calls[0].body.ayursargaCommissionPercentage, 0);
   assert.deepEqual(calls[0].body.preferredDays, ["mon", "fri"]);
   await service.updateConsultant("AS001", { ...legacy, consultantCharge: 0, preferredDays: ["sun"], availableDates: ["2099-10-25"] }, {});
   assert.deepEqual(calls[1].args[2].availableDates, ["2099-10-25"]);
   assert.equal(calls[1].args[2].consultantCharge, 0);
+  assert.equal(calls[1].args[2].ayursargaCommissionPercentage, 0);
   assert.deepEqual(calls[1].args[2].preferredDays, ["sun"]);
   assert.deepEqual(calls[1].args[3], { action: "update", actorRole: "admin" });
-  await service.updateConsultant("AS001", { ...legacy, consultantCharge: "" }, {});
-  assert.equal(calls[2].args[2].consultantCharge, null);
-  assert.deepEqual(calls[2].args[2].preferredDays, []);
+  assert.throws(() => service.updateConsultant("AS001", { ...legacy, consultantCharge: "" }, {}));
+  assert.throws(() => service.updateConsultant("AS001", { ...legacy, ayursargaCommissionPercentage: "" }, {}));
   assert.throws(() => service.updateConsultant("AS001", { ...legacy, consultantCharge: -1 }, {}));
   await assert.rejects(service.createConsultant({ ...legacy, consultantCharge: -1 }));
-  assert.equal(calls.length, 3);
+  assert.equal(calls.length, 2);
 });
 
 test("creation API checks Admin access and charge validation before its atomic consultant/audit write", async () => {
   class AuthorizationError extends Error { constructor() { super("Denied"); this.status = 403; } }
-  for (const scenario of ["allowed", "invalid", "invalid-days", "invalid-dates", "denied"]) {
+  for (const scenario of ["allowed", "invalid", "invalid-days", "invalid-dates", "missing-charge", "missing-commission", "invalid-commission", "denied"]) {
     const writes = [];
     let commits = 0;
     const firestore = {
@@ -138,18 +151,20 @@ test("creation API checks Admin access and charge validation before its atomic c
       "@/services/firebase/adminAuthorization": { AdminAuthorizationError: AuthorizationError, requireActiveAdmin: async () => { if (scenario === "denied") throw new AuthorizationError(); return { uid: "admin", firestore }; } },
       "@/services/api/server": { apiJson: (body, status = 200) => Response.json(body, { status }) },
     });
-    const response = await POST(new Request("https://test.local/api/admin/consultants", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...legacy, consultationServices: ["lactation"], availableDates: scenario === "invalid-dates" ? ["2099-02-30"] : ["2099-10-26"], preferredDays: scenario === "invalid-days" ? ["bad-day"] : ["mon", "wed"], consultantCharge: scenario === "invalid" ? -1 : 900.5 }) }));
+    const response = await POST(new Request("https://test.local/api/admin/consultants", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...legacy, consultationServices: ["lactation"], availableDates: scenario === "invalid-dates" ? ["2099-02-30"] : ["2099-10-26"], preferredDays: scenario === "invalid-days" ? ["bad-day"] : ["mon", "wed"], consultantCharge: scenario === "missing-charge" ? undefined : scenario === "invalid" ? -1 : 900.5, ayursargaCommissionPercentage: scenario === "missing-commission" ? undefined : scenario === "invalid-commission" ? 101 : 12.5 }) }));
     assert.equal(response.status, scenario === "allowed" ? 201 : scenario === "denied" ? 403 : 400);
     assert.equal(commits, scenario === "allowed" ? 1 : 0);
     if (scenario === "allowed") {
       const consultant = writes.find((write) => write.path === "consultants/AS001");
       const audit = writes.find((write) => write.path === "auditLogs/audit");
       assert.equal(consultant.data.consultantCharge, 900.5);
+      assert.equal(consultant.data.ayursargaCommissionPercentage, 12.5);
       assert.deepEqual(consultant.data.consultationServices, ["lactation"]);
       assert.deepEqual(consultant.data.preferredDays, ["mon", "wed"]);
       assert.deepEqual(consultant.data.availableDates, ["2099-10-26"]);
       assert.deepEqual(audit.data.updatedValues.availableDates, ["2099-10-26"]);
       assert.equal(audit.data.updatedValues.consultantCharge, 900.5);
+      assert.equal(audit.data.updatedValues.ayursargaCommissionPercentage, 12.5);
       assert.deepEqual(audit.data.updatedValues.consultationServices, ["lactation"]);
       assert.deepEqual(audit.data.updatedValues.preferredDays, ["mon", "wed"]);
       assert.equal(audit.data.actorRole, "admin");

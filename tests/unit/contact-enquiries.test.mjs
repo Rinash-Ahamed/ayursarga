@@ -4,8 +4,8 @@ import sharp from "sharp";
 import { statSync } from "node:fs";
 import { loadTypeScript } from "../helpers/loadTypeScript.mjs";
 
-const input = { name: "Test Visitor", email: "visitor@example.com", phone: "9876543210", interest: "I need personal guidance", message: "How do I compare hospitals?", guidanceProfile: "Enquiry sent through Ayu, the Ayursarga website guide.", website: "" };
-const request = (body = input, contentType = "application/json") => new Request("https://test.local/api/contact", { method: "POST", headers: { "Content-Type": contentType }, body: typeof body === "string" ? body : JSON.stringify(body) });
+const input = { name: "Test Visitor", email: "visitor@gmail.com", phone: "9876543210", interest: "I need personal guidance", message: "How do I compare hospitals?", guidanceProfile: "Enquiry sent through Ayu, the Ayursarga website guide.", website: "" };
+const request = (body = input, contentType = "application/json", headers = {}) => new Request("https://test.local/api/contact", { method: "POST", headers: { "Content-Type": contentType, Origin: "https://test.local", ...headers }, body: typeof body === "string" ? body : JSON.stringify(body) });
 function fixture(options = {}) {
   const emails = [];
   const route = loadTypeScript("app/api/contact/route.ts", {
@@ -20,7 +20,10 @@ test("Ayu uses the existing validated contact route, server-owned recipient and 
   const f = fixture();
   const response = await f.POST(request({ ...input, message: "Question <script>unsafe</script>", to: "attacker@example.com", recipient: "attacker@example.com" }));
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { ok: true });
+  const result = await response.json();
+  assert.equal(result.ok, true);
+  assert.match(result.requestId, /^ENQ-[a-f0-9-]{36}$/);
+  assert.match(f.emails[0].subject, new RegExp(result.requestId));
   assert.equal(f.emails.length, 1);
   assert.equal(f.emails[0].to, process.env.CONTACT_TO_EMAIL?.trim() || "info@ayursarga.com");
   assert.equal(f.emails[0].replyTo, input.email);

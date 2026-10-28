@@ -36,6 +36,51 @@ test("consultation creation snapshots actual charge, provider, Consumer and cons
   assert.equal(f.values("bookings").length, 0); // Hospital booking schema/workflow stays independent.
 });
 
+test("consumer sees and books only the server-computed total, with private pricing audit and unchanged retry snapshots", async () => {
+  const f = fixture({ records: { "consultants/AS001": { ...consultant, ayursargaCommissionPercentage: 10 } } });
+  const body = { ...input, expectedCharge: 990.55, consultantCharge: 1, ayursargaCommissionPercentage: 0 };
+  const response = await create(f, body);
+  assert.equal(response.status, 201);
+  const { bookingId } = await response.json();
+  const record = f.records.get(`consultationBookings/${bookingId}`);
+  assert.equal(record.consultantCharge, 990.55);
+  assert.equal(Object.hasOwn(record, "ayursargaCommissionPercentage"), false);
+  assert.equal(Object.hasOwn(record, "consultantBaseCharge"), false);
+  const audit = f.records.get(`auditLogs/${record.lastAuditId}`);
+  assert.deepEqual(audit.pricingSnapshot, { baseCharge: 900.5, commissionPercentage: 10, commissionAmount: 90.05, totalCharge: 990.55 });
+  assert.equal(audit.updatedValues.consultantCharge, 990.55);
+  assert.ok(f.values("consultationEmailEvents").every((event) => event.payload.amount === 990.55));
+  assert.match(f.calls.smtp[0].text, /990\.55/);
+  f.records.set("consultants/AS001", { ...consultant, consultantCharge: 1200, ayursargaCommissionPercentage: 20 });
+  assert.equal((await create(f, body)).status, 200);
+  assert.equal(f.records.get(`consultationBookings/${bookingId}`).consultantCharge, 990.55);
+  assert.equal(f.values("consultationBookings").length, 1);
+  assert.equal(f.calls.smtp.length, 1);
+});
+
+test("stale base-only prices and changed commission are rejected before any booking write", async () => {
+  for (const ayursargaCommissionPercentage of [10, 20]) {
+    const f = fixture({ records: { "consultants/AS001": { ...consultant, ayursargaCommissionPercentage } } });
+    assert.equal((await create(f, { ...input, ayursargaCommissionPercentage: 0 })).status, 409);
+    assert.equal(f.values("consultationBookings").length, 0);
+    assert.equal(f.values("consultationEmailEvents").length, 0);
+    assert.equal(f.calls.smtp.length, 0);
+  }
+});
+
+test("public consultant prices include commission without leaking the Admin pricing breakdown", () => {
+  const { publicConsultantProjection } = loadTypeScript("features/consultations/publicProjection.ts");
+  const legacy = publicConsultantProjection("AS001", consultant, "prenatal-doctor");
+  const markedUp = publicConsultantProjection("AS001", { ...consultant, ayursargaCommissionPercentage: 10 }, "prenatal-doctor");
+  assert.equal(legacy.consultantCharge, 900.5);
+  assert.equal(markedUp.consultantCharge, 990.55);
+  assert.deepEqual(Object.keys(markedUp).sort(), Object.keys(legacy).sort());
+  assert.equal(Object.hasOwn(markedUp, "ayursargaCommissionPercentage"), false);
+  for (const value of [-1, 101, "10", true, NaN, Infinity, 10.001]) {
+    assert.equal(publicConsultantProjection("AS001", { ...consultant, ayursargaCommissionPercentage: value }, "prenatal-doctor"), null);
+  }
+});
+
 test("availability intersects configured weekdays and exact dates, with fail-closed malformed config", async () => {
   const { isConsultantDateAvailable } = loadTypeScript("features/consultations/availability.ts");
   assert.equal(isConsultantDateAvailable("2099-10-25", {}), true);

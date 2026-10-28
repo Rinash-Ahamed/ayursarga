@@ -2,6 +2,7 @@ import type { ConsultantSlotTimings, ConsultantTimeSlot } from "@/features/consu
 
 export type PublicConsultant = {
   id: string; name: string; designation: string; qualification: string;
+  // Public charge is the full consumer total, including Ayursarga commission.
   yearsExperience: number; consultantCharge: number;
   preferredTimeSlots: ConsultantTimeSlot[]; preferredSlotTimings: ConsultantSlotTimings;
   preferredDays?: import("@/features/consultants/validation").ConsultantWeekDay[];

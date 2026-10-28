@@ -160,7 +160,7 @@ export const markAllNotificationsRead = async () => {};
 export const markNotificationRead = async () => {};
 
 const consultationProfessional = { id: "AS001", name: "Assigned Consultation Professional", designation: "Ayurvedic physician", qualification: "BAMS, MD", yearsExperience: 3.5,
-  consultantCharge: 900.5, preferredTimeSlots: ["morning"], preferredSlotTimings: { morning: { startTime: "09:30", endTime: "11:45" } } };
+  consultantCharge: 990.55, preferredTimeSlots: ["morning"], preferredSlotTimings: { morning: { startTime: "09:30", endTime: "11:45" } } };
 const consultation = { ...metadata, id: "consultation-fixture", bookingReference: "AYURCONS01", serviceId: "prenatal-doctor", serviceName: "Prenatal doctor consultation",
   consultantId: "AS001", consultantName: consultationProfessional.name, consultantDesignation: consultationProfessional.designation, consultantCharge: 900.5,
   consumerId: "patient", consumerName: "Patient With a Longer Display Name", consumerEmail: "patient@example.com", consumerPhone: "9876543210",

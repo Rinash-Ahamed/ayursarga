@@ -2,6 +2,111 @@
 
 Updated: 28 October 2026 (Asia/Calcutta).
 
+## Contact/Ayu enquiry abuse checks and trace references (28 October 2026)
+
+- v4.22.1 responds to an email containing ZAP/zaproxy@example.com and a repeated
+  dummy phone. Format matches the enquiry template; scanner activity is an
+  inference, not attribution to any person/location. No matching ZAP payload was
+  found in inspected project scripts/tests. Prior successful contact requests had
+  no application correlation record: investigate old emails through hosting
+  access/runtime logs around the received time if those logs were retained. Email
+  headers for our SMTP sender do not establish the original website visitor.
+- Applied security-audit and API-audit skills to the bounded Contact/Ayu path.
+  Shared client/server validation now rejects reserved documentation/test email
+  domains, repeated-digit phone placeholders, malformed controls/types, invalid
+  interests and excessive user-editable fields. Supports Unicode names, plus
+  addresses and multiline messages; keeps Contact message optional and the
+  existing bounded guidance summary behavior. Ayu still requires a question.
+  This is syntax/placeholder validation, NOT email/phone ownership verification.
+- Contact POST requires a matching browser Origin (request origin or configured
+  APP_SITE_URL), rejects cross-site/opaque/absent origins, and retains bounded JSON
+  parsing and honeypot handling. Browser Origin behavior verified in Chromium and
+  WebKit. This guard is forgeable by scripts, not bot authentication. Other APIs
+  and portal authentication are unchanged. No CAPTCHA/provider/dependency added.
+- Contact's existing five-per-ten-minute in-process limiter no longer includes
+  User-Agent in its fingerprint, preventing trivial UA-only rotation. Existing
+  other-API fingerprints remain unchanged via default options. Limiter is still
+  process-local/bounded and depends on hosting's forwarding-header integrity;
+  it is not distributed rate limiting or durable replay protection. Dedicated
+  edge/WAF limits or a verified bot challenge need separately configured rollout.
+- Every processed contact request has a server-generated ENQ UUID, timestamp,
+  outcome/rejection reason and private hashed fingerprint in structured hosting
+  logs. Successful emails include that reference in subject/body, received time
+  in India DD/MM/YYYY, and an explicitly reported Contact/Ayu entry point. Source
+  is visitor-supplied, not verified origin/identity. Raw contacts, message, IP,
+  tokens and cookies are not included in these trace records. No new Firestore
+  records, collections, permission or retention/deletion changes introduced.
+- Existing server-owned recipients, escaped branded email, explicit API ack,
+  synchronous duplicate-submit guards and no automatic SMTP retry remain. Contact
+  now shows the actual validation/send error; safe ENQ references accompany server
+  errors in the shared client. No extra initial/background network calls, DNS/MX
+  checks or heavyweight scripts. New checks block the reported junk sample but
+  cannot guarantee prevention of bots using realistic/spoofed contact values.
+- Passed 14/14 focused local route/client/security contracts and 18/18 Ayu browser
+  cases on phone/desktop Chromium and WebKit phone. Includes exact junk sample,
+  origin denials, Unicode/optional genuine input, trace privacy/correlation,
+  UA rotation/rate behavior, SMTP failure, timeout uncertainty, modal lifecycle,
+  disabled flag and corrected input acceptance. SMTP/provider requests intercepted
+  or mocked; no real emails, live attacks, records or deployed permission tests.
+  git diff --check passed. No build, lint, typecheck or deployment requested/run.
+  IMPORTANT: this hardening needs an application deployment to protect live traffic;
+  the previous Firestore-only deployment does not deploy Next.js API/UI changes.
+
+## Consultant pricing Firestore rules deployed (28 October 2026)
+
+- Owner requested redeployment. Ran firebase deploy --only firestore:rules
+  --project ayursarga-connect --non-interactive. CLI confirmed successful remote
+  rules compilation and release; process exited 0. Release PATCH returned HTTP 200.
+  Active ruleset: 9fab108d-9d30-435d-a22a-4e98803302fc, released 28/10/2026.
+- Consultant commission field/full update allowlist and mandatory pricing rules
+  are now live. This does not prove actual role-based writes through the UI; no
+  live booking/profile mutation or permission test was performed.
+- Hosting/application code, Storage rules and indexes were NOT deployed/changed.
+  No index initialization applies to this rules-only deployment. No build/lint
+  run or version bump: remains v4.22.0. Generated CLI debug log removed afterward.
+
+## Mandatory consultant charge and Ayursarga commission (28 October 2026)
+
+- v4.22.0 makes Consultant Charge and Ayursarga Commission % mandatory on Admin
+  create/profile edits. Side-by-side controls use the existing shared form and
+  display a live Consumer total preview. Commission is ADDITIVE to the consultant
+  base charge: INR 1000 + 10% = INR 1100. Both fields accept explicit zero, up to
+  two decimals; percentage is 0-100. Blank is not silently converted to zero.
+  Shared pricing.ts uses integer paise/basis points and half-up paise rounding,
+  rejects overflow/non-round-trippable money and is reused throughout the flow.
+- Traced Admin form -> consultantFormValues -> validateConsultantFields ->
+  privileged POST creation / existing audited SDK profile update. Consultant model
+  includes optional legacy ayursargaCommissionPercentage; Admin cards show base,
+  percentage and total. Both Firestore full-field and changed-field allowlists
+  include it, bound/precision checks apply, and profile updates require pricing.
+  Legacy status-only updates retain the existing action-specific restriction and
+  do not require adding missing pricing fields. Create/delete remain client-denied,
+  raw consultant reads Admin-only and audit linkage/identity preservation remain.
+- Public consultantCharge is now the full consumer total, not the private base.
+  Public projection does not expose percentage, base or commission amount. Existing
+  Consumer form displays/sends expected total; booking transaction reprojects the
+  current consultant and rejects stale total prices. Consultation booking's
+  consultantCharge, history and email payloads snapshot the total. Detailed pricing
+  snapshot is only in the Admin-readable creation audit, not the Consumer-readable
+  booking record. Existing hospital bookings/Razorpay setup are untouched.
+- Existing consultant records with absent/null commission preserve their prior
+  base-only public price until Admin explicitly saves commission; no migration.
+  Existing bookings and retries retain their original total even after consultant
+  pricing changes. Old consultants without a charge remain unavailable as before.
+- Focused tests: 52/52 local pricing/validation/API/lifecycle contracts passed,
+  including missing/invalid fields, Admin authorization denial, atomic audits,
+  whitelist privacy, stale-price conflicts, duplicate/lost-response retries and
+  email amounts. Final pricing/rules subset also passed 16/16 after rule decimal
+  precision review. Source contracts cover BOTH consultant allowlists and legacy
+  status compatibility; these are not emulator/deployed-rule permission tests.
+- All 9 final local browser regression cases passed, covering mandatory legacy edits, charge/commission
+  adjacency and preview, save/reopen, availability preservation, Consumer displayed
+  total, consent and single submission on phone-320, desktop and WebKit phone.
+  No live bookings/emails, build, lint, typecheck or deployment requested/performed.
+  The required firestore.rules deployment was subsequently completed on
+  28/10/2026; see the deployment entry above. Application hosting was not deployed.
+  No new index is required. Firestore emulator/live permission coverage not run.
+
 ## Remove duplicate dashboard consultation link (28 October 2026)
 
 - v4.21.2 removes View bookings and details from the online consultation summary

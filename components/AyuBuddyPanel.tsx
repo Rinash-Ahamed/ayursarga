@@ -30,7 +30,7 @@ export default function AyuBuddyPanel({ busy, onBusyChange, onNavigate }: {
       await sendContactEnquiry({
         ...fields,
         interest: "I need personal guidance", guidanceProfile: "Enquiry sent through Ayu, the Ayursarga website guide.",
-      });
+      }, "ayu");
       form.reset();
       setSent(true);
     } catch (caught) {

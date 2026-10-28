@@ -267,7 +267,7 @@ service cloud.firestore {
     function hasValidConsultantFields() {
       return request.resource.data.keys().hasOnly([
           'employeeId', 'employeeSequence', 'name', 'email', 'contactNo', 'whatsappNo',
-          'qualification', 'yearsExperience', 'lastWorkedCompany', 'address', 'designation', 'consultantCharge', 'preferredTimeSlots', 'preferredSlotTimings', 'preferredDays', 'availableDates', 'consultationServices',
+          'qualification', 'yearsExperience', 'lastWorkedCompany', 'address', 'designation', 'consultantCharge', 'ayursargaCommissionPercentage', 'preferredTimeSlots', 'preferredSlotTimings', 'preferredDays', 'availableDates', 'consultationServices',
           'emergencyContactNo', 'status', 'createdAt', 'createdBy', 'updatedAt',
           'updatedBy', 'archivedAt', 'archivedBy', 'lastAuditId'
         ])
@@ -282,6 +282,12 @@ service cloud.firestore {
           request.resource.data.consultantCharge is number
           && request.resource.data.consultantCharge >= 0
           && request.resource.data.consultantCharge <= 90071992547409.9
+        ))
+        && (request.resource.data.get('ayursargaCommissionPercentage', null) == null || (
+          request.resource.data.ayursargaCommissionPercentage is number
+          && request.resource.data.ayursargaCommissionPercentage >= 0
+          && request.resource.data.ayursargaCommissionPercentage <= 100
+          && request.resource.data.ayursargaCommissionPercentage == math.round(request.resource.data.ayursargaCommissionPercentage * 100) / 100.0
         ))
         && validConsultantDates(request.resource.data.get('availableDates', []))
         && request.resource.data.get('preferredDays', []) is list
@@ -603,6 +609,12 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    function hasRequiredConsultantPricing() {
+      return request.resource.data.get('consultantCharge', null) is number
+        && request.resource.data.get('ayursargaCommissionPercentage', null) is number
+        && request.resource.data.consultantCharge == math.round(request.resource.data.consultantCharge * 100) / 100.0;
+    }
+
     match /consultants/{consultantId} {
       allow read: if isAdmin();
       allow create: if false;
@@ -618,10 +630,11 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time
         && request.resource.data.updatedBy == request.auth.uid
         && ((linkedAuditAction() == 'update'
+          && hasRequiredConsultantPricing()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name', 'email', 'contactNo', 'whatsappNo', 'qualification',
             'yearsExperience', 'lastWorkedCompany', 'address', 'emergencyContactNo',
-            'designation', 'consultantCharge', 'preferredTimeSlots', 'preferredSlotTimings', 'preferredDays', 'availableDates', 'consultationServices',
+            'designation', 'consultantCharge', 'ayursargaCommissionPercentage', 'preferredTimeSlots', 'preferredSlotTimings', 'preferredDays', 'availableDates', 'consultationServices',
             'updatedAt', 'updatedBy', 'lastAuditId'
           ])) || (linkedAuditAction() == 'status_change'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([

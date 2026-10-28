@@ -21,7 +21,7 @@ async function openForm(page: Page) {
   await page.getByRole("button", { name: "Ask Ayu, your Ayursarga guide" }).click();
   await page.getByRole("button", { name: "Send a question to our team" }).click();
   await page.getByLabel("Your name *", { exact: true }).fill("Test Visitor");
-  await page.getByLabel("Email address *", { exact: true }).fill("visitor@example.com");
+  await page.getByLabel("Email address *", { exact: true }).fill("visitor@gmail.com");
   await page.getByLabel("Phone number *", { exact: true }).fill("9876543210");
   await page.getByLabel("Your question *", { exact: true }).fill("How can I compare two hospitals?");
 }
@@ -93,6 +93,7 @@ test("questions submit once through the existing email API and never claim succe
   let complete!: () => void;
   const gate = new Promise<void>((resolve) => { complete = resolve; });
   await page.route("https://ayu.test/api/contact", async (route) => {
+    expect((await route.request().allHeaders()).origin).toBe("https://ayu.test");
     payloads.push(route.request().postDataJSON());
     await gate;
     await route.fulfill({ json: { ok: true } });
@@ -107,7 +108,8 @@ test("questions submit once through the existing email API and never claim succe
   await expect(dialog).toBeVisible();
   expect(payloads[0].interest).toBe("I need personal guidance");
   expect(payloads[0].guidanceProfile).toContain("Ayu");
-  expect(payloads[0].email).toBe("visitor@example.com");
+  expect(payloads[0].email).toBe("visitor@gmail.com");
+  expect(payloads[0].source).toBe("ayu");
   complete();
   await expect(dialog.getByRole("status")).toContainText("Your question has been submitted.");
   await page.getByRole("button", { name: "Close Ayu" }).click();
@@ -134,4 +136,24 @@ test("email failures stay visible, retain the question and allow an explicit ret
   await page.getByRole("button", { name: "Send to Ayursarga", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Your question has been submitted.");
   expect(requests).toBe(2);
+});
+
+test("Ayu rejects scanner placeholders before sending and accepts corrected visitor details", async ({ page }) => {
+  await mount(page);
+  let requests = 0;
+  await page.route("https://ayu.test/api/contact", (route) => { requests++; return route.fulfill({ json: { ok: true } }); });
+  await openForm(page);
+  await page.getByLabel("Email address *", { exact: true }).fill("zaproxy@example.com");
+  await page.getByLabel("Phone number *", { exact: true }).fill("9999999999");
+  await page.getByRole("button", { name: "Send to Ayursarga", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("real email address");
+  expect(requests).toBe(0);
+  await page.getByLabel("Email address *", { exact: true }).fill("visitor@gmail.com");
+  await page.getByRole("button", { name: "Send to Ayursarga", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("repeated-digit placeholder");
+  expect(requests).toBe(0);
+  await page.getByLabel("Phone number *", { exact: true }).fill("9876543210");
+  await page.getByRole("button", { name: "Send to Ayursarga", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("Your question has been submitted.");
+  expect(requests).toBe(1);
 });

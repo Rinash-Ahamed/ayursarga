@@ -13,6 +13,7 @@ type FormStatus = "idle" | "sending" | "sent" | "error";
 
 export default function Contact({ guidanceProfile = null, initialInterest = "" }: { guidanceProfile?: GuidanceProfile | null; initialInterest?: string }) {
   const [status, setStatus] = useState<FormStatus>("idle");
+  const [error, setError] = useState("");
   const submitting = useRef(false);
   const [interest, setInterest] = useState(initialInterest);
   const [storedGuidanceProfile, setStoredGuidanceProfile] = useState<GuidanceProfile | null>(null);
@@ -40,13 +41,15 @@ export default function Contact({ guidanceProfile = null, initialInterest = "" }
     submitting.current = true;
     const form = event.currentTarget;
     setStatus("sending");
+    setError("");
     try {
       await sendContactEnquiry(Object.fromEntries(new FormData(form).entries()));
       form.reset();
       clearGuidanceProfile();
       setStoredGuidanceProfile(null);
       setStatus("sent");
-    } catch {
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "We could not confirm your request was sent. Please email info@ayursarga.com.");
       setStatus("error");
     } finally {
       submitting.current = false;
@@ -77,8 +80,8 @@ export default function Contact({ guidanceProfile = null, initialInterest = "" }
         <h2>{isPartnership ? "Introduce your centre." : "How can we help?"}</h2>
         <p className="contact-form-intro">Complete the details below and the Ayursarga team will respond to your request.</p>
         {status === "sent" ? <FadeUp className="form-success"><span>&#10003;</span><h3>{isPartnership ? "Your partnership enquiry is on its way." : "Thank you. Your journey has begun."}</h3><p>{isPartnership ? "Our team will review your hospital details and contact you about approval and onboarding. Appointment requests begin after activation." : "Your request has been delivered to info@ayursarga.com."}</p></FadeUp> : <form className="contact-form" onSubmit={submit}>
-          <div className="form-row"><input name="name" aria-label="Your name" type="text" placeholder="Your name" required /><PhoneInput name="phone" aria-label="Phone number" autoComplete="tel" placeholder="10-digit phone number" required /></div>
-          <input name="email" aria-label="Email address" type="email" placeholder="Email address" required />
+          <div className="form-row"><input name="name" aria-label="Your name" type="text" placeholder="Your name" minLength={2} maxLength={100} required /><PhoneInput name="phone" aria-label="Phone number" autoComplete="tel" placeholder="10-digit phone number" required /></div>
+          <input name="email" aria-label="Email address" type="email" placeholder="Email address" maxLength={160} required />
           {displayedGuidanceProfile && <div className="captured-match" role="status">
             <span>Your guidance preferences</span>
             <strong>{displayedGuidanceProfile.wellnessPath}</strong>
@@ -105,9 +108,9 @@ export default function Contact({ guidanceProfile = null, initialInterest = "" }
               <option>I need personal guidance</option>
             </optgroup>
           </select>
-          <textarea name="message" aria-label="How can we help" placeholder={isPartnership ? "Hospital name, location, services, specialties, and how we can reach you" : "Anything you'd like us to know?"} rows={3} />
+          <textarea name="message" aria-label="How can we help" placeholder={isPartnership ? "Hospital name, location, services, specialties, and how we can reach you" : "Anything you'd like us to know?"} rows={3} maxLength={3000} />
           <input className="hp-field" name="website" type="text" tabIndex={-1} autoComplete="off" aria-hidden="true" />
-          {status === "error" && <p className="form-error" role="alert">We couldn&apos;t send your request. Please try again or email info@ayursarga.com.</p>}
+          {status === "error" && <p className="form-error" role="alert">{error}</p>}
           <MagneticButton className="form-submit btn-magnetic btn-primary" type="submit" disabled={status === "sending"}>
             <span className="submit-label">{status === "sending" ? "Sending..." : isPartnership ? "Send partnership enquiry" : "Request personal guidance"}</span>
             <span className="submit-arrow" aria-hidden="true">&rarr;</span>
