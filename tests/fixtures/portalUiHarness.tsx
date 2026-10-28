@@ -33,6 +33,8 @@ const screens = {
   "admin-billing": <AdminBilling />,
   "password-action": <PasswordActionForm />,
   "admin-dashboard": <AdminDashboard />, "admin-hospitals": <HospitalsManager />, "admin-details": <AdminHospitalDetails hospitalId="centre" />,
+  "admin-dashboard-consultations-unavailable": <AdminDashboard />,
+  "admin-dashboard-consultations-zero": <AdminDashboard />,
   "admin-consultants": <ConsultantsManager />, "admin-users": <UsersList />, "admin-bookings": <AdminBookings />,
   "admin-availability": <AdminAvailability />, "admin-audits": <AdminAuditLogs />,
   "admin-hospitals-empty": <HospitalsManager />, "admin-consultants-empty": <ConsultantsManager />,

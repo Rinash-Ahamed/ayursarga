@@ -2,6 +2,7 @@ import type { HospitalDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import { AYURSARGA_GSTIN, AYURSARGA_REGISTERED_OFFICE_PIN } from "@/features/hospitals/ayursargaCompanyDetails";
 import { formatDisplayDate } from "@/utils/date";
+import { AYURSARGA_PHONE } from "@/config/contact";
 
 const CONTRACT_BODY = `
       <h2><span class="contract-section-number">1.</span><span>Parties and term</span></h2>
@@ -17,7 +18,7 @@ const CONTRACT_BODY = `
           <strong>Ayursarga contacts</strong>
           <dl>
             <div><dt>Legal notice email:</dt><dd>support@ayursarga.com</dd></div>
-            <div><dt>Operational phone:</dt><dd>+91 97455 66687</dd></div>
+            <div><dt>Operational phone:</dt><dd>${AYURSARGA_PHONE.display}</dd></div>
           </dl>
         </section>
         <section class="contract-contact-card">

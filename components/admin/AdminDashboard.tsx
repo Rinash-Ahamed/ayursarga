@@ -21,6 +21,7 @@ type DashboardStats = {
   inactiveHospitals: number | null;
   consumers: number | null;
   monthlyBookings: number | null;
+  monthlyConsultations: number | null;
   monthlyCommission: number | null;
   pendingAvailability: number | null;
 };
@@ -31,6 +32,7 @@ const EMPTY_STATS: DashboardStats = {
   inactiveHospitals: null,
   consumers: null,
   monthlyBookings: null,
+  monthlyConsultations: null,
   monthlyCommission: null,
   pendingAvailability: null,
 };
@@ -63,6 +65,7 @@ export function AdminDashboard() {
       countDocuments(COLLECTIONS.bookings, createdThisMonth),
       sumDocuments(COLLECTIONS.bookings, "estimatedCommission", completedThisMonth),
       countDocuments(COLLECTIONS.availability, [{ field: "status", operator: "==", value: "pending" }]),
+      countDocuments(COLLECTIONS.consultationBookings, createdThisMonth),
     ]).then((results) => {
       if (!active) return;
       const resultValue = (result: PromiseSettledResult<number>) =>
@@ -75,6 +78,7 @@ export function AdminDashboard() {
         monthlyBookings: resultValue(results[4]),
         monthlyCommission: resultValue(results[5]),
         pendingAvailability: resultValue(results[6]),
+        monthlyConsultations: resultValue(results[7]),
       });
       setError(results.some((result) => result.status === "rejected")
         ? "Some dashboard totals are temporarily unavailable. The available figures are shown below."
@@ -105,7 +109,10 @@ export function AdminDashboard() {
         </div>
       </article>
       <article className="portal-card portal-stat"><strong>{value(stats.consumers)}</strong><span>Registered consumers</span></article>
-      <article className="portal-card portal-stat"><strong>{value(stats.monthlyBookings)}</strong><span>Bookings · {monthLabel}</span></article>
+      <article className="portal-card portal-stat"><strong>{value(stats.monthlyBookings)}</strong><span>Hospital bookings · {monthLabel}</span></article>
+      <article className="portal-card portal-stat" aria-label="Online consultation bookings">
+        <strong>{value(stats.monthlyConsultations)}</strong><span>Online consultations · {monthLabel}</span>
+      </article>
       <article className="portal-card portal-stat"><strong>{isLoading || stats.monthlyCommission === null ? "…" : formatCurrency(stats.monthlyCommission)}</strong><span>Estimated commission · {monthLabel}</span></article>
       <article className="portal-card portal-stat"><strong>{value(stats.pendingAvailability)}</strong><span>Pending availability requests</span></article>
     </div>
@@ -117,7 +124,11 @@ export function AdminDashboard() {
       </Link>
       <Link className="portal-quick-action" href={ROUTES.admin.bookings}>
         <span className="portal-quick-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" /></svg></span>
-        Manage bookings
+        Manage hospital bookings
+      </Link>
+      <Link className="portal-quick-action" href={ROUTES.admin.consultations}>
+        <span className="portal-quick-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="12" height="14" rx="2" /><path d="m15 10 6-4v12l-6-4M7 10h4m-4 4h4" /></svg></span>
+        Online consultation bookings
       </Link>
       <Link className="portal-quick-action" href={ROUTES.admin.availability}>
         <span className="portal-quick-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg></span>

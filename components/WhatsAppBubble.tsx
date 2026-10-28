@@ -1,6 +1,7 @@
 import Image from "next/image";
+import { AYURSARGA_PHONE } from "@/config/contact";
 
-const WHATSAPP_URL = "https://wa.me/918086070680?text=Hello%20Ayursarga%2C%20I%20would%20like%20guidance%20in%20finding%20Ayurvedic%20care.";
+const WHATSAPP_URL = `${AYURSARGA_PHONE.whatsappUrl}?text=Hello%20Ayursarga%2C%20I%20would%20like%20guidance%20in%20finding%20Ayurvedic%20care.`;
 
 export default function WhatsAppBubble() {
   return <a
@@ -8,7 +9,7 @@ export default function WhatsAppBubble() {
     href={WHATSAPP_URL}
     target="_blank"
     rel="noopener noreferrer"
-    aria-label="Chat with Ayursarga on WhatsApp at +91 80860 70680"
+    aria-label={`Chat with Ayursarga on WhatsApp at ${AYURSARGA_PHONE.display}`}
   >
     <span className="whatsapp-bubble-label" aria-hidden="true">
       <small>Personal guidance</small>

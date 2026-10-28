@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { portalUiBundle } from "../helpers/portalUiBundle";
 import { authEmail } from "../../lib/authEmail";
+import { getCalendarMonthRange } from "../../utils/date";
 const styles = ["node_modules/tailwindcss/lib/css/preflight.css", "app/globals.css", "app/portal.css"].map((file) => readFileSync(file, "utf8")).join("\n");
 const screens = ["admin-dashboard", "admin-hospitals", "admin-details", "admin-consultants", "admin-users", "admin-bookings", "admin-availability", "admin-audits", "hospital-dashboard", "hospital-profile", "hospital-services", "hospital-bookings", "hospital-availability", "hospital-password", "admin-login", "hospital-login", "admin-forgot", "hospital-forgot"];
 async function mount(page: Page, screen: string) {
@@ -25,6 +26,45 @@ async function mount(page: Page, screen: string) {
   }
   await page.waitForTimeout(120);
 }
+test("Admin dashboard separates online consultations and links to existing booking details", async ({ page }) => {
+  await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "admin-dashboard");
+  const card = page.getByRole("article", { name: "Online consultation bookings", exact: true });
+  await expect(card.locator("strong")).toHaveText("5");
+  await expect(card).toContainText("Online consultations");
+  await expect(card.locator("a")).toHaveCount(0);
+  await expect(page.getByText("View bookings and details", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /^Online consultation bookings/ })).toHaveAttribute("href", "/admin/bookings/consultations");
+  await expect(page.getByRole("link", { name: /^Manage hospital bookings/ })).toHaveAttribute("href", "/admin/bookings");
+  await expect(page.locator(".portal-stat").filter({ hasText: "Hospital bookings" }).locator("strong")).toHaveText("12");
+  const queries = await page.evaluate(() => (window as unknown as { dashboardCountCalls: { path: string; filters: { field: string; operator: string; value: { toDate: () => Date } }[] }[] }).dashboardCountCalls
+    .filter((call) => call.path === "consultationBookings").map((call) => call.filters.map((filter) => ({ field: filter.field, operator: filter.operator, value: filter.value.toDate().toISOString() }))));
+  const range = getCalendarMonthRange();
+  expect(queries).toEqual([[{ field: "createdAt", operator: ">=", value: range.start.toISOString() }, { field: "createdAt", operator: "<", value: range.end.toISOString() }]]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const bounds = await card.boundingBox();
+  expect(bounds!.height).toBeGreaterThanOrEqual(44);
+  await card.screenshot({ path: test.info().outputPath("dashboard-online-consultations.png") });
+  await mount(page, "admin-consultations");
+  await expect(page.getByRole("heading", { name: "Online consultations", exact: true })).toBeVisible();
+  await expect(page.getByText("Assigned Consultation Professional", { exact: false })).toBeVisible();
+  await expect(page.getByText("Booked on", { exact: true })).toBeVisible();
+  await expect(page.getByText("Scheduled appointment", { exact: true })).toBeVisible();
+});
+
+test("Admin dashboard online consultation zero is distinct from an unavailable total", async ({ page }) => {
+  await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "admin-dashboard-consultations-zero");
+  const card = page.getByRole("article", { name: "Online consultation bookings", exact: true });
+  await expect(card.locator("strong")).toHaveText("0");
+  await mount(page, "admin-dashboard-consultations-unavailable");
+  await expect(card.locator("strong")).toHaveText("…");
+  await expect(page.getByText("Some dashboard totals are temporarily unavailable. The available figures are shown below.", { exact: true }).first()).toBeVisible();
+  await expect(page.locator(".portal-stat").filter({ hasText: "Hospital bookings" }).locator("strong")).toHaveText("12");
+  await expect(page.getByRole("link", { name: /^Online consultation bookings/ })).toHaveAttribute("href", "/admin/bookings/consultations");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
 test("hospital cover badge follows the first photo and public galleries keep their four-photo minimum", async ({ page }) => {
   await page.route("https://images.test/**", (route) => route.fulfill({ status: 404 }));
   for (const screen of ["admin-details", "hospital-profile"]) {

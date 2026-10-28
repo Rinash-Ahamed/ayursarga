@@ -28,4 +28,8 @@ test("partner contract renders Ayursarga's confirmed GSTIN", () => {
   assert.equal(AYURSARGA_GSTIN, "32ABGCA7749G1ZL");
   assert.match(html, /GSTIN: 32ABGCA7749G1ZL/);
   assert.doesNotMatch(html, /GSTIN TO BE UPDATED/);
+  assert.match(html, /Operational phone:<\/dt><dd>\+91 97 455 666 97<\/dd>/);
+  assert.doesNotMatch(html, /97455 66687/);
+  assert.match(html, /9999999999/);
+  assert.match(html, /8888888888/);
 });

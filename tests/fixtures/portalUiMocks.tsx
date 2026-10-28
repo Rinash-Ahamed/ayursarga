@@ -58,6 +58,7 @@ export function useAuth() {
   }, reauthenticate: async () => {}, changePassword: async () => {} };
 }
 export function usePathname() {
+  if (portalUiState.screen.startsWith("admin-dashboard")) return "/admin";
   if (portalUiState.screen === "consumer-profile") return "/app/profile";
   if (portalUiState.screen === "consumer-support") return "/app/support";
   if (portalUiState.screen.startsWith("consumer-request")) return "/app/bookings/new";
@@ -96,7 +97,16 @@ export const listHospitalAvailabilityRequests = () => page(portalUiState.screen 
 export const listAdminAvailabilityRequests = () => page(portalUiState.screen === "admin-availability-empty" ? [] : availability);
 export const listAuditLogs = () => page(portalUiState.screen === "admin-audits-empty" ? [] : [{ ...metadata, id: "audit", timestamp: now, action: "update", module: "hospitals", recordId: "centre", actorId: "actor", actorRole: "admin", previousValues: { name: "Centre" }, updatedValues: { name: hospital.name }, source: "server" }]);
 export const getUserDisplayNames = async () => new Map([["actor", "Admin"]]);
-export const countDocuments = async () => 12;
+export const dashboardCountCalls: { path: string; filters: { field: string; operator: string; value: unknown }[] }[] = [];
+Object.assign(globalThis, { dashboardCountCalls });
+export const countDocuments = async (path: string, filters: { field: string; operator: string; value: unknown }[] = []) => {
+  dashboardCountCalls.push({ path, filters });
+  if (path === "consultationBookings") {
+    if (portalUiState.screen === "admin-dashboard-consultations-unavailable") throw new Error("Simulated unavailable total");
+    return portalUiState.screen === "admin-dashboard-consultations-zero" ? 0 : 5;
+  }
+  return 12;
+};
 export const sumDocuments = async () => 24000;
 export const readDocument = async () => hospital;
 export const emptyQueryPage = () => ({ documents: [], cursor: null, hasMore: false });

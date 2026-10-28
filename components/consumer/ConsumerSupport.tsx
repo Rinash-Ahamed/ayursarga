@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { ROUTES } from "@/config/routes";
+import { AYURSARGA_PHONE } from "@/config/contact";
 
 export function ConsumerSupport() {
   return <PortalShell role="consumer" title="Help & support">
@@ -9,7 +10,7 @@ export function ConsumerSupport() {
         <h2>How can we help?</h2>
         <p>Contact Ayursarga for help with your booking or using your account. Include your booking ID so our team can identify the right booking.</p>
         <a className="consumer-support-contact" href="mailto:info@ayursarga.com"><span>Email us</span><strong>info@ayursarga.com</strong></a>
-        <a className="consumer-support-contact" href="tel:+918086070680"><span>Call us</span><strong>+91 8086070680</strong></a>
+        <a className="consumer-support-contact" href={AYURSARGA_PHONE.href}><span>Call us</span><strong>{AYURSARGA_PHONE.display}</strong></a>
         <Link className="portal-button" href={ROUTES.public.contact}>Contact Ayursarga</Link>
       </section>
       <section className="portal-card consumer-support-card">

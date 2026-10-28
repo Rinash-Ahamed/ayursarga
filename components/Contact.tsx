@@ -7,6 +7,7 @@ import { clearGuidanceProfile, formatGuidanceProfile, loadGuidanceProfile, type 
 import { PhoneInput } from "@/components/forms/PhoneInput";
 import { formatDisplayDate } from "@/utils/date";
 import { sendContactEnquiry } from "@/services/contact/contactClient";
+import { AYURSARGA_PHONE } from "@/config/contact";
 
 type FormStatus = "idle" | "sending" | "sent" | "error";
 
@@ -66,7 +67,7 @@ export default function Contact({ guidanceProfile = null, initialInterest = "" }
 
         <div className="contact-direct">
           <span>Prefer to contact us directly?</span>
-          <a href="tel:+918086070680"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.2 3.5 10 8.2 7.9 10a15.5 15.5 0 0 0 6.1 6.1l1.8-2.1 4.7 2.8-.8 3.1c-.2.7-.8 1.1-1.5 1.1C10.1 20.6 3.4 13.9 3 5.8c0-.7.4-1.3 1.1-1.5l3.1-.8Z" /></svg>+91 8086070680</a>
+          <a href={AYURSARGA_PHONE.href}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.2 3.5 10 8.2 7.9 10a15.5 15.5 0 0 0 6.1 6.1l1.8-2.1 4.7 2.8-.8 3.1c-.2.7-.8 1.1-1.5 1.1C10.1 20.6 3.4 13.9 3 5.8c0-.7.4-1.3 1.1-1.5l3.1-.8Z" /></svg>{AYURSARGA_PHONE.display}</a>
           <a href="mailto:info@ayursarga.com"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5h17v11h-17z" /><path d="m4 7 8 6 8-6" /></svg>info@ayursarga.com</a>
         </div>
       </header>

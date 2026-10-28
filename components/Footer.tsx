@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
 import { ROUTES } from "@/config/routes";
+import { AYURSARGA_PHONE } from "@/config/contact";
 
 const reveal = {
   initial: { opacity: 0, y: 18 },
@@ -106,9 +107,9 @@ export default function Footer({ sectionPrefix = "", backToTopHref }: { sectionP
           </motion.span>
         </a>
         <div className="footer-contact">
-          <a href="tel:+918086070680">
+          <a href={AYURSARGA_PHONE.href}>
             <svg className="footer-contact-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.2 3.5 10 8.2 7.9 10a15.5 15.5 0 0 0 6.1 6.1l1.8-2.1 4.7 2.8-.8 3.1c-.2.7-.8 1.1-1.5 1.1C10.1 20.6 3.4 13.9 3 5.8c0-.7.4-1.3 1.1-1.5l3.1-.8Z" /></svg>
-            <span>+91 8086070680</span>
+            <span>{AYURSARGA_PHONE.display}</span>
           </a>
           <a href="mailto:info@ayursarga.com">
             <svg className="footer-contact-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5h17v11h-17z" /><path d="m4 7 8 6 8-6" /></svg>

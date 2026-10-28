@@ -1,6 +1,60 @@
 # Session handoff
 
-Updated: 27 October 2026 (Asia/Calcutta).
+Updated: 28 October 2026 (Asia/Calcutta).
+
+## Remove duplicate dashboard consultation link (28 October 2026)
+
+- v4.21.2 removes View bookings and details from the online consultation summary
+  card and makes it a non-link statistic like the other dashboard cards. Keeps
+  the existing Online consultation bookings quick action and count query intact.
+- All 4 focused local browser cases passed on phone-320 and desktop: count and
+  month query, no duplicate card link/text, retained quick action/details view,
+  zero/partial failure and no overflow. git diff --check passed. No build, lint,
+  typecheck, API changes, rules changes, live data or deployment.
+
+## Ayursarga contact-number correction (28 October 2026)
+
+- v4.21.1 replaces Ayursarga's old support/operational number with the owner's
+  +91 97 455 666 97. config/contact.ts centralizes display text, tel:+919745566697
+  and https://wa.me/919745566697. Footer, Contact page, Consumer support, WhatsApp
+  bubble/accessible label and newly generated partner contracts use it.
+- Four legal-page contact blocks now contain the same new number. Compared the
+  parsed file against its pre-edit snapshot: the only content differences are
+  those four phone entries. Preserved policy wording, document dates and consent
+  versions; JSON remains BOM-free. No existing downloaded/signed contract or
+  operational hospital/consumer record was changed.
+- Six focused local checks passed for shared display/link consistency, source
+  references, all legal contacts, existing cancellation copy/consent versions and
+  rendered contract contact/GSTIN plus unchanged Partner phone numbers.
+  No build, lint, typecheck, broad API checks, live calls/messages or deployment
+  requested/performed for this task.
+
+## Admin dashboard online consultation access (28 October 2026)
+
+- v4.21.0 adds a separate monthly online consultation count card linked to the
+  existing /admin/bookings/consultations listing/details workflow, plus a matching
+  dashboard quick action. Existing booking card/action labels now explicitly say
+  Hospital bookings to avoid mixing the two flows. Added ROUTES.admin.consultations;
+  preserved shared portal-card/quick-action styling without hover movement.
+- Uses one extra countDocuments aggregation on consultationBookings.createdAt,
+  in the existing parallel allSettled load with India month boundaries. Does not
+  load consultation documents for the dashboard or add listeners, polling or a
+  new API. Zero is displayed as zero; unavailable counts retain the existing
+  unavailable indicator/partial-failure feedback and do not hide other totals.
+- Traced Admin RequireRole, the existing count aggregation, consultation listing/
+  single-record detail loader and consultationBookings read rule. Admin read
+  access already permits this aggregation; own-record Consumer reads and denied
+  Hospital reads/direct writes remain unchanged. No persisted fields, audit/write
+  workflow, permissions or indexes changed; no Firebase deployment needed/performed.
+- Focused local checks passed: 8/8 Playwright cases on 320px phone, tablet,
+  desktop and WebKit phone. Verified separate totals, creation-month boundaries,
+  one consultation aggregate request, links/detail content, zero/partial failure,
+  touch target and no horizontal overflow. Reviewed narrow-card screenshot.
+  Existing rule/role source contract passed (1/1); this is not emulator/live
+  permission coverage. Initial browser run caught a test locator mismatch caused
+  by existing decorative CSS arrow text; corrected the locator and reran all eight.
+  git diff --check passed. Build, lint, typecheck, broad API checks, live queries/
+  mutations and deployment were not requested or performed for this task.
 
 ## Why Ayursarga image loading warning (27 October 2026)
 
