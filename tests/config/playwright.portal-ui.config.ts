@@ -1,7 +1,7 @@
 import { defineConfig } from "@playwright/test";
 import { testDir, testOutputDir } from "./paths";
 export default defineConfig({
-  testDir, testMatch: ["portal-ui.spec.ts", "date-format.spec.ts"], outputDir: testOutputDir("portal-ui"), workers: 2,
+  testDir, testMatch: ["portal-ui.spec.ts", "date-format.spec.ts", "admin-mfa.spec.ts"], outputDir: testOutputDir("portal-ui"), workers: 2,
   timeout: 120_000, use: { browserName: "chromium", actionTimeout: 10_000, reducedMotion: "reduce", screenshot: "only-on-failure" },
   projects: [
     { name: "phone-320", use: { viewport: { width: 320, height: 720 }, isMobile: true, hasTouch: true } },

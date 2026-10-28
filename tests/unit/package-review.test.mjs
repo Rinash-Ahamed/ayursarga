@@ -262,7 +262,7 @@ test("real shared authorization rejects missing/revoked tokens and derives roles
         assert.equal(token, "test-token");
         assert.equal(checkRevoked, true);
         if (rejectToken) throw new Error("Token revoked");
-        return { uid: "partner", role: "admin" }; // Untrusted custom role must not override the profile.
+        return { uid: "partner", role: "admin", email_verified: true, firebase: { sign_in_provider: "password", sign_in_second_factor: "totp" } }; // Untrusted custom role must not override the profile.
       } }),
       getFirebaseAdminFirestore: () => ({ collection: (name) => ({ doc: (uid) => ({ get: async () => {
         assert.equal(name, "users"); assert.equal(uid, "partner");

@@ -142,6 +142,7 @@ export function AdminAuditLogs() {
   const [message, setMessage, messageNotification] = useRepeatableMessage();
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
+  const [authenticatorCode, setAuthenticatorCode] = useState("");
   const [search, setSearch] = useState("");
   const [area, setArea] = useState("");
   const [activity, setActivity] = useState("");
@@ -262,15 +263,15 @@ export function AdminAuditLogs() {
 
   async function clearAudits() {
     if (busy) return;
-    if (!adminPassword) {
-      setActionError("Enter your Admin password to confirm this permanent action.");
+    if (!adminPassword || !/^\d{6}$/.test(authenticatorCode)) {
+      setActionError("Enter your Admin password and six-digit authenticator code to confirm this permanent action.");
       return;
     }
     setBusy(true);
     setActionError(null);
     setMessage(null);
     try {
-      await reauthenticate(adminPassword);
+      await reauthenticate(adminPassword, authenticatorCode);
       const deletedCount = await clearAllAuditLogs();
       setPageIndex(0);
       setPageCursors([null]);
@@ -278,6 +279,7 @@ export function AdminAuditLogs() {
       setMessage(`${deletedCount} audit ${deletedCount === 1 ? "record" : "records"} permanently cleared.`);
       setClearDialogOpen(false);
       setAdminPassword("");
+      setAuthenticatorCode("");
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : "We could not clear the audit log.");
     } finally {
@@ -322,8 +324,9 @@ export function AdminAuditLogs() {
       <span>Page {pageIndex + 1}</span>
       <button type="button" className="portal-button secondary" disabled={!hasMore || isLoading} onClick={nextPage}>Next</button>
     </div>}
-    <PortalDialog open={clearDialogOpen} tone="danger" title="Clear all audit history?" message="This permanently removes every audit record. Re-enter your Admin password to continue." confirmLabel="Clear audit history" busy={busy} onCancel={() => { setClearDialogOpen(false); setAdminPassword(""); }} onConfirm={() => void clearAudits()}>
+    <PortalDialog open={clearDialogOpen} tone="danger" title="Clear all audit history?" message="This permanently removes every audit record. Enter your Admin password and authenticator code to continue." confirmLabel="Clear audit history" busy={busy} onCancel={() => { setClearDialogOpen(false); setAdminPassword(""); setAuthenticatorCode(""); }} onConfirm={() => void clearAudits()}>
       <PasswordField label="Admin password" value={adminPassword} onChange={(event) => setAdminPassword(event.target.value)} autoComplete="current-password" />
+      <label>Authenticator code<input value={authenticatorCode} onChange={(event) => setAuthenticatorCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" maxLength={6} /></label>
       {actionError && <p className="portal-form-error" role="alert">{actionError}</p>}
     </PortalDialog>
   </PortalShell>;

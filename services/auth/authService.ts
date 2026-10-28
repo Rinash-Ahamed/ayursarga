@@ -20,6 +20,7 @@ import { isValidPassword } from "@/features/auth/password";
 import { verifyProfileRole } from "@/features/auth/roles";
 import { getClientAuth } from "@/services/auth/client";
 import { loadAuthorizedProfile, subscribeToAuthProfile, toAuthUser } from "@/services/auth/session";
+import { assertAdminMfaSession, captureAdminMfaChallenge, clearAdminMfaState, enrollAdminMfa, isNativeMfaChallenge, resolveAdminMfaChallenge, resolveMfaReauthentication } from "@/services/auth/adminMfaService";
 
 async function loadUserProfileService() {
   return import("@/services/users/userService");
@@ -36,34 +37,49 @@ async function restoreMissingAdminProfile(user: User) {
   clearUserProfileCache(user.uid);
 }
 
+async function finishPasswordLogin(user: User, expectedRole?: PortalRole) {
+  try {
+    let profile;
+    try {
+      profile = await loadAuthorizedProfile(user);
+    } catch (error) {
+      const profileError = toAuthenticationError(error);
+      if (expectedRole !== "admin" || profileError.code !== "profile-not-found") throw error;
+      await restoreMissingAdminProfile(user);
+      profile = await loadAuthorizedProfile(user);
+    }
+    return expectedRole ? verifyProfileRole(profile, expectedRole) : profile;
+  } catch (error) {
+    // An unenrolled Admin has only a password session for the narrow setup flow.
+    // APIs/rules still deny every operational Admin action.
+    if (expectedRole !== "admin" || toAuthenticationError(error).code !== "mfa-enrollment-required") {
+      await signOut(getClientAuth());
+      clearAdminMfaState();
+    }
+    throw error;
+  }
+}
+
 async function login(credentials: LoginCredentials, expectedRole?: PortalRole) {
+  clearAdminMfaState();
   try {
     const credential = await signInWithEmailAndPassword(
       getClientAuth(),
       credentials.email.trim(),
       credentials.password,
     );
-    try {
-      let profile;
-      try {
-        profile = await loadAuthorizedProfile(credential.user);
-      } catch (error) {
-        const profileError = toAuthenticationError(error);
-        if (expectedRole !== "admin" || profileError.code !== "profile-not-found") throw error;
-        await restoreMissingAdminProfile(credential.user);
-        profile = await loadAuthorizedProfile(credential.user);
-      }
-      return expectedRole ? verifyProfileRole(profile, expectedRole) : profile;
-    } catch (error) {
-      await signOut(getClientAuth());
-      throw error;
-    }
+    return await finishPasswordLogin(credential.user, expectedRole);
   } catch (error) {
+    if (expectedRole === "admin" && isNativeMfaChallenge(error)) {
+      captureAdminMfaChallenge(error);
+      throw new AuthenticationError("mfa-required");
+    }
     throw toAuthenticationError(error);
   }
 }
 
 async function loginConsumerWithGoogle() {
+  clearAdminMfaState();
   const auth = getClientAuth();
   const previousUser = auth.currentUser;
   try {
@@ -89,10 +105,19 @@ async function loginConsumerWithGoogle() {
 
 export const authService: AuthAdapter = {
   login,
+  async completeAdminMfa(code: string) {
+    try { return await finishPasswordLogin(await resolveAdminMfaChallenge(code), "admin"); }
+    catch (error) { throw toAuthenticationError(error); }
+  },
+  async completeAdminMfaEnrollment(code: string) {
+    try { return await finishPasswordLogin(await enrollAdminMfa(code), "admin"); }
+    catch (error) { throw toAuthenticationError(error); }
+  },
   loginConsumerWithGoogle,
   async logout() {
     try {
       const uid = getClientAuth().currentUser?.uid;
+      clearAdminMfaState();
       await signOut(getClientAuth());
       const { clearUserProfileCache } = await loadUserProfileService();
       clearUserProfileCache(uid);
@@ -113,15 +138,20 @@ export const authService: AuthAdapter = {
       throw toAuthenticationError(error);
     }
   },
-  async reauthenticate(currentPassword: string) {
+  async reauthenticate(currentPassword: string, authenticatorCode?: string) {
     try {
       const user = getClientAuth().currentUser;
       if (!user?.email) throw new AuthenticationError("unauthenticated");
-      await reauthenticateWithCredential(
-        user,
-        EmailAuthProvider.credential(user.email, currentPassword),
-      );
+      try {
+        await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, currentPassword));
+      } catch (error) {
+        if (!isNativeMfaChallenge(error)) throw error;
+        await resolveMfaReauthentication(error, authenticatorCode);
+      }
       await user.getIdToken(true);
+      const { getUserProfile } = await loadUserProfileService();
+      const profile = await getUserProfile(user.uid, user.email);
+      if (profile.role === "admin") await assertAdminMfaSession(user);
     } catch (error) {
       throw toAuthenticationError(error);
     }
@@ -149,7 +179,9 @@ export const authService: AuthAdapter = {
     if (!user) return null;
     try {
       const { getUserProfile } = await loadUserProfileService();
-      return await getUserProfile(user.uid, user.email ?? "", force);
+      const profile = await getUserProfile(user.uid, user.email ?? "", force);
+      if (profile.role === "admin") await assertAdminMfaSession(user);
+      return profile;
     } catch (error) {
       throw toAuthenticationError(error);
     }

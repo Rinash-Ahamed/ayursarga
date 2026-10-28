@@ -3,6 +3,7 @@ import "server-only";
 import type { DecodedIdToken } from "firebase-admin/auth";
 import type { PortalRole } from "@/features/auth/contracts";
 import { isPortalRole } from "@/features/auth/roles";
+import { hasAdminTotpSession } from "@/features/auth/adminMfa";
 import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from "@/services/firebase/admin";
 
 export class AdminAuthorizationError extends Error {
@@ -43,6 +44,9 @@ export async function requireActiveUser(request: Request, allowedRoles?: readonl
       throw new AdminAuthorizationError("Your Ayursarga account permissions are invalid.", 403);
     }
     const role: PortalRole = profile.role;
+    if (role === "admin" && !hasAdminTotpSession(decoded)) {
+      throw new AdminAuthorizationError("Sign in with your Admin authenticator before completing this action.", 403);
+    }
     if (!allowedRoles?.includes(role) && allowedRoles?.length) {
       throw new AdminAuthorizationError("You do not have permission to complete this action.", 403);
     }

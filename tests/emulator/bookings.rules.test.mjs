@@ -16,16 +16,17 @@ const encode = (value) => value === null ? { nullValue: null } : typeof value ==
   : typeof value === "boolean" ? { booleanValue: value } : Array.isArray(value) ? { arrayValue: { values: value.map(encode) } }
   : { mapValue: { fields: Object.fromEntries(Object.entries(value).map(([key, item]) => [key, encode(item)])) } };
 const fields = (data) => Object.fromEntries(Object.entries(data).map(([key, value]) => [key, encode(value)]));
-function token(role) {
+function token(role, claims = {}) {
   const uid = ids[role];
   const now = Math.floor(Date.now() / 1000);
   return [Buffer.from(JSON.stringify({ alg: "none", typ: "JWT" })).toString("base64url"), Buffer.from(JSON.stringify({
     sub: uid, user_id: uid, aud: project, iss: `https://securetoken.google.com/${project}`, iat: now, exp: now + 3600,
-    firebase: { sign_in_provider: role === "consumer" || role === "other" ? "google.com" : "password" },
+    email_verified: role === "admin", ...claims,
+    firebase: { sign_in_provider: role === "consumer" || role === "other" ? "google.com" : "password", ...(role === "admin" ? { sign_in_second_factor: "totp" } : {}), ...claims.firebase },
   })).toString("base64url"), ""].join(".");
 }
-async function call(path, { role, owner = false, method = "GET", body } = {}) {
-  return fetch(`${base}${path}`, { method, headers: { "Content-Type": "application/json", ...(owner || role ? { Authorization: `Bearer ${owner ? "owner" : token(role)}` } : {}) },
+async function call(path, { role, owner = false, method = "GET", body, claims } = {}) {
+  return fetch(`${base}${path}`, { method, headers: { "Content-Type": "application/json", ...(owner || role ? { Authorization: `Bearer ${owner ? "owner" : token(role, claims)}` } : {}) },
     ...(body ? { body: JSON.stringify(body) } : {}) });
 }
 async function seed(path, data) {
@@ -39,12 +40,12 @@ async function booking(name, overrides = {}) {
     bookingReference: "AYURLOCAL1", bookingTermsVersion: "2026-09-23", ...overrides }), bookingTermsAcceptedAt: timestamp };
   await seed(path, data); return { path, data };
 }
-async function auditedUpdate(path, previous, changes, role, module = "bookings", action = "status_change", transforms = []) {
+async function auditedUpdate(path, previous, changes, role, module = "bookings", action = "status_change", transforms = [], claims) {
   const auditId = `audit-${randomUUID()}`;
   const updated = { ...previous, ...fields(changes), ...fields({ updatedBy: ids[role], lastAuditId: auditId }) };
   const name = (record) => `projects/${project}/databases/(default)/documents/${record}`;
   const stamp = (fieldPath) => ({ fieldPath, setToServerValue: "REQUEST_TIME" });
-  return call(":commit", { role, method: "POST", body: { writes: [
+  return call(":commit", { role, claims, method: "POST", body: { writes: [
     { update: { name: name(path), fields: updated }, updateTransforms: [stamp("updatedAt"), ...transforms.map(stamp)] },
     { update: { name: name(`auditLogs/${auditId}`), fields: {
       ...fields({ action, module, recordId: path.split("/")[1], actorId: ids[role], actorRole: role === "other" ? "consumer" : role,
@@ -97,6 +98,29 @@ test("existing hospital bookings: scoped Consumer/Hospital/Admin reads and no an
   const { path } = await booking("reads");
   for (const role of ["admin", "consumer", "hospital"]) assert.equal((await call(`/${path}`, { role })).status, 200, role);
   for (const role of [undefined, "other", "otherHospital", "inactive"]) assert.equal((await call(`/${path}`, { role })).status, 403, String(role));
+});
+
+test("Admin operational reads/writes require native verified TOTP; own-profile setup and Hospital/Consumer scopes remain intact", async () => {
+  const { path } = await booking("mfa");
+  for (const claims of [
+    { firebase: { sign_in_second_factor: "" } },
+    { firebase: { sign_in_second_factor: "phone" } },
+    { firebase: { sign_in_provider: "google.com" } },
+    { email_verified: false },
+    { email_verified: "true" },
+    { firebase: { sign_in_second_factor: "" }, adminMfaVerified: true },
+  ]) {
+    assert.equal((await call(`/${path}`, { role: "admin", claims })).status, 403);
+    assert.equal((await call(`/users/${ids.consumer}`, { role: "admin", claims })).status, 403);
+    assert.equal((await call(`/users/${ids.admin}`, { role: "admin", claims })).status, 200);
+  }
+  for (const role of ["admin", "hospital", "consumer"]) assert.equal((await call(`/${path}`, { role })).status, 200);
+  const hospitalPath = `hospitals/admin-mfa-${suffix}`;
+  const hospital = { ...metadata, ...fields({ name: "Centre", description: "Existing description", email: "partner@example.test", phone: "9876543210", hospitalPhone1: "9876543210", address: "A complete centre address", city: "Palakkad", district: "Palakkad", state: "Kerala", commissionPercentage: 10, status: "pending", isPublic: false, imageUrls: [] }) };
+  await seed(hospitalPath, hospital);
+  assert.equal((await auditedUpdate(hospitalPath, hospital, { description: "Allowed update" }, "admin", "hospitals", "update")).status, 200);
+  const saved = (await (await call(`/${hospitalPath}`, { role: "admin" })).json()).fields;
+  assert.equal((await auditedUpdate(hospitalPath, saved, { description: "Denied update" }, "admin", "hospitals", "update", [], { firebase: { sign_in_second_factor: "" } })).status, 403);
 });
 
 test("existing hospital bookings: direct creation and permanent deletion stay denied for all roles", async () => {
@@ -169,7 +193,7 @@ test("consultant assignments: valid audited Admin edits succeed; unknown/duplica
   const path = `consultants/AS${Date.now()}`;
   const data = { ...metadata, ...fields({ employeeId: path.split("/")[1], employeeSequence: 1, name: "Local consultant", email: "local@example.test",
     contactNo: "9876543210", whatsappNo: "9876543210", qualification: "BAMS", yearsExperience: 3.5, lastWorkedCompany: "", address: "", emergencyContactNo: "",
-    status: "active", consultantCharge: 900, preferredTimeSlots: ["morning"], preferredSlotTimings: { morning: { startTime: "09:30", endTime: "11:45" } } }) };
+    status: "active", consultantCharge: 900, ayursargaCommissionPercentage: 0, preferredTimeSlots: ["morning"], preferredSlotTimings: { morning: { startTime: "09:30", endTime: "11:45" } } }) };
   await seed(path, data);
   const response = await auditedUpdate(path, data, { consultationServices: ["prenatal-doctor", "lactation"], preferredDays: ["mon", "wed", "sun"] }, "admin", "consultants", "update");
   assert.equal(response.status, 200, await response.text());

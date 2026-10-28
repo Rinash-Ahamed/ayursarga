@@ -2,6 +2,79 @@
 
 Updated: 28 October 2026 (Asia/Calcutta).
 
+## Firebase TOTP capability enabled after owner upgrade (28 October 2026)
+
+- Owner reported completing the Identity Platform upgrade. Read-only operator
+  check confirmed subtype IDENTITY_PLATFORM with MFA/TOTP initially disabled.
+  Under the owner's earlier explicit approval to enable TOTP after focused local
+  checks, ran scripts/configure-admin-mfa.mjs --enable successfully (exit 0).
+  Its post-update read and a separate fresh --check both confirmed
+  mfaEnabled=true and totpEnabled=true for ayursarga-connect.
+- This supersedes the cloud-upgrade blocker in the earlier entry. Only optional
+  project MFA capability changed; no users were enrolled or their factors reset,
+  no emails sent and no app/Firestore rules/index/Storage deployment performed.
+  Hospital/Consumer mandatory enrollment was not enabled. Admin-only application
+  enforcement still needs coordinated application + rules deployment and actual
+  enrollment verification. Do not describe project capability as live Admin MFA.
+- No build/lint/typecheck/tests rerun for this configuration-only continuation.
+  Earlier 43 local contracts/21 UI cases and Java 8 emulator limitation remain
+  the validation record; no live TOTP enrollment was tested. Version stays
+  v4.23.0; no second implementation/version bump.
+
+## Admin-only native Firebase authenticator MFA (28 October 2026)
+
+- v4.23.0 prepares native Firebase TOTP enrollment and login challenges for Admin
+  through the existing Auth service/context. Hospital password and Consumer
+  Google flows do not require enrollment. Firestore is not an authenticator:
+  Firebase Auth manages factors; neither setup keys nor codes go to Firestore,
+  browser storage, URLs, emails, logs or third-party QR services. Initial setup
+  uses the authenticator app's manual time-based setup-key entry; no new package.
+- Admin operational API authorization and Firestore hasActiveProfile/isAdmin
+  gates require verified email + password provider + native totp second-factor
+  token claim. Profile/client flags cannot substitute for it. Own-profile read
+  remains available for discovery/setup, but Admin own-profile updates, audit
+  writes, notifications and operational reads/writes require MFA. No persisted
+  profile fields/allowlists were added; existing booking/package data untouched.
+- Added enrollment/challenge/retry/cancel UI and safe in-memory native resolver
+  lifecycle. Token-less/native-enrollment-only sessions do not grant Admin access;
+  if enrollment does not issue a second-factor claim, a new password/TOTP sign-in
+  is required. Shared auth subscription now ignores stale profile loads after
+  token changes/sign-out. Clearing audit history reauthenticates with password
+  plus fresh OTP and preserves the server recent-auth/destructive checks.
+- Unverified active Admins can explicitly request a branded verification email
+  through /api/auth/admin-email-verification, a narrow recent-password-only setup
+  exception. It uses the server profile/token recipient, rate limits and existing
+  SMTP; no arbitrary address/return URL or operational permission. /auth/verify-email
+  keeps action codes in URL fragments and only applies native VERIFY_EMAIL codes.
+  Missing-Admin bootstrap remains the existing email-locked audited exception.
+- Native Auth enrollment cannot be atomic with Firestore audit records. No false
+  application audit guarantee is introduced: review Identity Platform/Cloud Auth
+  logging configuration and retention for native factor events before production.
+  No self-service factor removal, password/email MFA bypass or invented recovery
+  codes. Trusted project-owner recovery needs identity checks, recording and token
+  revocation under separate authority. See docs/ADMIN_MFA.md.
+- Passed 43 focused local route/service/security contracts and 21 UI cases on
+  desktop Chromium, 320px touch Chromium and mobile WebKit. Includes native-MFA
+  resolver retries, wrong-role/revoked/missing-proof denials, setup eligibility,
+  existing Hospital/Consumer auth, email/reset regression, stale subscription
+  races, modal cancellation, duplicate guards and audit-clear OTP requirements.
+  All account/email/destructive operations mocked. Added Firestore emulator
+  allowed/denied cases and updated Admin fixture claims; not executed because
+  only Java 8 is installed and CLI requires Java 21. No build/lint/typecheck,
+  live enrollment, live email or deployed-rule permission checks were run.
+- Owner explicitly approved enabling project TOTP after focused checks. Ran
+  scripts/configure-admin-mfa.mjs --enable using server credentials without
+  exposing values; Firebase returned auth/operation-not-allowed. Follow-up
+  read-only checks confirmed subtype FIREBASE_AUTH, mfaEnabled=false and
+  totpEnabled=false. Identity Platform upgrade remains owner console action;
+  no upgrade, account change or successful MFA config change occurred.
+  Operator tool --check is read-only; --enable now detects the unsupported tier.
+- ROLLOUT BLOCKER: MFA is NOT live. Do not deploy these guards/rules alone while
+  capability is disabled: local Admin operational access is intentionally denied
+  until setup works, and old live clients lack enrollment UI. Enable Identity
+  Platform/TOTP first, then validate and coordinate application + rules rollout.
+  No app/rules/index/Storage deployment or dependency changes were made.
+
 ## Turnstile protection for Contact and Ayu (28 October 2026)
 
 - v4.22.2 integrates the owner's Cloudflare Managed widget into both public

@@ -1,4 +1,4 @@
-type AuthEmailKind = "hospital-invitation" | "password-reset";
+type AuthEmailKind = "hospital-invitation" | "password-reset" | "email-verification";
 export type AuthEmailData = {
   kind: AuthEmailKind;
   name: string;
@@ -12,14 +12,15 @@ export function authEmail(data: AuthEmailData) {
   const url = new URL(data.actionUrl);
   if (url.protocol !== "https:") throw new Error("A secure password action link is required.");
   const invitation = data.kind === "hospital-invitation";
-  const subject = invitation ? "Your Ayursarga Hospital Portal invitation" : "Reset your Ayursarga password";
-  const title = invitation ? "Welcome to Ayursarga." : "A secure fresh start.";
+  const verification = data.kind === "email-verification";
+  const subject = verification ? "Verify your Ayursarga Admin email" : invitation ? "Your Ayursarga Hospital Portal invitation" : "Reset your Ayursarga password";
+  const title = verification ? "Secure your Admin access." : invitation ? "Welcome to Ayursarga." : "A secure fresh start.";
   const greeting = data.name.trim() ? `Hello ${data.name.trim()},` : "Hello,";
-  const introduction = invitation
+  const introduction = verification ? "Verify this email address before setting up your Ayursarga Admin authenticator. After verification, return to Admin login to finish setup." : invitation
     ? "Your hospital partner account is ready. Set your password to access the Ayursarga Hospital Portal. If you already have a password, this link lets you choose a new one."
     : "We received a request to reset the password for your Ayursarga account. Use the secure link below to choose a new password.";
-  const button = invitation ? "Set your password" : "Reset your password";
-  const safety = invitation
+  const button = verification ? "Verify Admin email" : invitation ? "Set your password" : "Reset your password";
+  const safety = verification ? "If you did not request this verification, do not use or forward this link. Contact the project owner. This email does not remove or bypass authenticator protection." : invitation
     ? "This invitation is for your hospital's official account. Do not forward this email. If you were not expecting it, contact Ayursarga before continuing."
     : "If you did not request a password reset, you can ignore this email. Your password will not change unless you complete the reset.";
   const actionUrl = escapeHtml(url.href);

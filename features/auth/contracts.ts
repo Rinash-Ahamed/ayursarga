@@ -41,10 +41,12 @@ type AuthStateListener = (snapshot: AuthSnapshot) => void;
 
 export interface AuthAdapter {
   login(credentials: LoginCredentials, expectedRole?: PortalRole): Promise<UserProfile>;
+  completeAdminMfa(code: string): Promise<UserProfile>;
+  completeAdminMfaEnrollment(code: string): Promise<UserProfile>;
   loginConsumerWithGoogle(): Promise<UserProfile>;
   logout(): Promise<void>;
   resetPassword(email: string): Promise<void>;
-  reauthenticate(currentPassword: string): Promise<void>;
+  reauthenticate(currentPassword: string, authenticatorCode?: string): Promise<void>;
   changePassword(currentPassword: string, newPassword: string): Promise<void>;
   getCurrentUser(): AuthUser | null;
   getCurrentProfile(force?: boolean): Promise<UserProfile | null>;

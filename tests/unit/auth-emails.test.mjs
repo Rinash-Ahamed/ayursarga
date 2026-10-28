@@ -198,7 +198,7 @@ test("contact enquiries preserve their existing recipient, reply-to and template
     assert.equal(messages[0].replyTo, "visitor@example.com");
     assert.equal(messages[0].senderName, "Ayursarga Website");
     assert.equal(messages[0].subject, "New Ayursarga Enquiry - Postnatal recovery");
-    assert.ok(messages[0].html.includes("A new journey begins."));
+    assert.ok(messages[0].html.includes("A question for the Ayursarga team."));
     assert.ok(messages[0].text.includes("Test enquiry"));
   } finally { if (oldRecipient === undefined) delete process.env.CONTACT_TO_EMAIL; else process.env.CONTACT_TO_EMAIL = oldRecipient; }
 });

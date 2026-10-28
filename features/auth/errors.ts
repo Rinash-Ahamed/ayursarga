@@ -17,6 +17,13 @@ type AuthErrorCode =
   | "unauthenticated"
   | "sign-in-cancelled"
   | "provider-conflict"
+  | "mfa-required"
+  | "mfa-enrollment-required"
+  | "mfa-sign-in-required"
+  | "mfa-invalid-code"
+  | "mfa-session-expired"
+  | "mfa-email-unverified"
+  | "mfa-unavailable"
   | "unknown";
 
 const MESSAGES: Record<AuthErrorCode, string> = {
@@ -38,6 +45,13 @@ const MESSAGES: Record<AuthErrorCode, string> = {
   unauthenticated: "Please sign in to continue.",
   "sign-in-cancelled": "Google sign-in was cancelled. Please try again when you are ready.",
   "provider-conflict": "This email is already connected to another Ayursarga sign-in method. Please contact support.",
+  "mfa-required": "Enter the six-digit code from your authenticator app.",
+  "mfa-enrollment-required": "Set up your Admin authenticator to continue. Admin access is locked until verification is complete.",
+  "mfa-sign-in-required": "Sign in again with your password and authenticator code to access Admin.",
+  "mfa-invalid-code": "Enter a valid six-digit authenticator code. If it has expired, use the next code in your app.",
+  "mfa-session-expired": "This verification session has expired. Please sign in again.",
+  "mfa-email-unverified": "Verify your Admin email before setting up your authenticator.",
+  "mfa-unavailable": "Authenticator setup is unavailable. Ask the project owner to enable Firebase Identity Platform and TOTP MFA.",
   unknown: "Authentication could not be completed. Please try again.",
 };
 
@@ -77,6 +91,14 @@ export function toAuthenticationError(error: unknown): AuthenticationError {
       "auth/cancelled-popup-request": "sign-in-cancelled",
       "auth/account-exists-with-different-credential": "provider-conflict",
       "auth/unauthorized-domain": "configuration",
+      "auth/invalid-verification-code": "mfa-invalid-code",
+      "auth/invalid-totp-code": "mfa-invalid-code",
+      "auth/code-expired": "mfa-session-expired",
+      "auth/invalid-multi-factor-session": "mfa-session-expired",
+      "auth/missing-multi-factor-session": "mfa-session-expired",
+      "auth/second-factor-already-in-use": "mfa-sign-in-required",
+      "auth/unverified-email": "mfa-email-unverified",
+      "auth/unsupported-first-factor": "mfa-unavailable",
       "auth/popup-blocked": "configuration",
     } as Record<string, AuthErrorCode>)[error.code] ?? "unknown";
 

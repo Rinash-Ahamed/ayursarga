@@ -37,3 +37,14 @@ export async function sendAuthEmail(auth: Auth, input: {
   const template = authEmail({ kind: input.invitation ? "hospital-invitation" : "password-reset", name: input.name, actionUrl: actionUrl.href });
   await sendEmail({ to: input.email, replyTo: "info@ayursarga.com", ...template });
 }
+
+/** Narrow Admin setup action; authentication/eligibility checks belong to the caller. */
+export async function sendAdminVerificationEmail(auth: Auth, email: string, name: string) {
+  const site = authEmailSiteUrl();
+  const generated = new URL(await auth.generateEmailVerificationLink(email, { url: `${site}/admin/login`, handleCodeInApp: false }));
+  const code = generated.searchParams.get("oobCode");
+  if (!code || generated.searchParams.get("mode") !== "verifyEmail") throw new Error("Verification action could not be prepared.");
+  const actionUrl = new URL("/auth/verify-email", site);
+  actionUrl.hash = new URLSearchParams({ oobCode: code }).toString();
+  await sendEmail({ to: email, replyTo: "info@ayursarga.com", ...authEmail({ kind: "email-verification", name, actionUrl: actionUrl.href }) });
+}

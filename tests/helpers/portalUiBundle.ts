@@ -9,6 +9,7 @@ const modules = [
   "@/services/hospitals/publicHospitalService",
   "@/services/consultations/consultationService",
   "@/services/auth/passwordActionService",
+  "@/services/auth/adminMfaService",
   "@/services/billing/invoiceService",
 ];
 export const portalUiBundle = bundleDialogHarness("tests/fixtures/portalUiHarness.tsx", Object.fromEntries(modules.map((name) => [name, "tests/fixtures/portalUiMocks.tsx"])), { NEXT_PUBLIC_AYU_ONLINE: "true" });

@@ -710,6 +710,22 @@ test("destructive dialogs stay red, cancel stays neutral, and scroll is restored
   }
 });
 
+test("Admin audit clearing requires both password and authenticator code before reauthentication or deletion", async ({ page }) => {
+  await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "admin-audits");
+  await page.getByRole("button", { name: "Clear all audits", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Admin password", { exact: true }).fill("synthetic-password1");
+  await dialog.getByRole("button", { name: "Clear audit history", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toContainText("six-digit authenticator code");
+  expect(await page.evaluate(() => (window as unknown as { auditMfaCalls: { clears: number } }).auditMfaCalls.clears)).toBe(0);
+  await dialog.getByLabel("Authenticator code", { exact: true }).fill("123456");
+  await dialog.getByRole("button", { name: "Clear audit history", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  const calls = await page.evaluate(() => (window as unknown as { auditMfaCalls: { reauth: string[][]; clears: number } }).auditMfaCalls);
+  expect(calls.reauth).toEqual([["synthetic-password1", "123456"]]); expect(calls.clears).toBe(1);
+});
+
 test("both portals pulse only for new notifications and stop when viewed without changing unread counts", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   for (const screen of ["admin-dashboard", "hospital-dashboard"]) {

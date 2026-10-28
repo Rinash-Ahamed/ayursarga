@@ -25,10 +25,12 @@ type AuthContextValue = {
   isLoading: boolean;
   error: AuthenticationError | null;
   login(credentials: LoginCredentials, expectedRole?: PortalRole, requestedPath?: string | null): Promise<UserProfile>;
+  completeAdminMfa(code: string, requestedPath?: string | null): Promise<UserProfile>;
+  completeAdminMfaEnrollment(code: string, requestedPath?: string | null): Promise<UserProfile>;
   loginConsumerWithGoogle(requestedPath?: string | null, stayOnPage?: boolean): Promise<UserProfile>;
   logout(): Promise<void>;
   resetPassword(email: string): Promise<void>;
-  reauthenticate(currentPassword: string): Promise<void>;
+  reauthenticate(currentPassword: string, authenticatorCode?: string): Promise<void>;
   changePassword(currentPassword: string, newPassword: string): Promise<void>;
   refreshUserProfile(): Promise<UserProfile | null>;
   clearError(): void;
@@ -89,6 +91,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return profile;
     }), [router, run]);
 
+  const finishAdminMfa = useCallback((code: string, enrollment: boolean, requestedPath?: string | null) => run(async () => {
+    const profile = await (enrollment ? authService.completeAdminMfaEnrollment(code) : authService.completeAdminMfa(code));
+    setSnapshot((current) => ({ ...current, profile }));
+    setStatus("authenticated"); setError(null);
+    router.replace(getSafeRoleRedirect(requestedPath, "admin"));
+    return profile;
+  }), [router, run]);
+  const completeAdminMfa = useCallback((code: string, requestedPath?: string | null) => finishAdminMfa(code, false, requestedPath), [finishAdminMfa]);
+  const completeAdminMfaEnrollment = useCallback((code: string, requestedPath?: string | null) => finishAdminMfa(code, true, requestedPath), [finishAdminMfa]);
+
   const logout = useCallback(() => run(async () => {
     await authService.logout();
     setSnapshot({ user: null, profile: null });
@@ -99,8 +111,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resetPassword = useCallback((email: string) =>
     run(() => authService.resetPassword(email)), [run]);
 
-  const reauthenticate = useCallback((currentPassword: string) =>
-    authService.reauthenticate(currentPassword), []);
+  const reauthenticate = useCallback((currentPassword: string, authenticatorCode?: string) =>
+    authService.reauthenticate(currentPassword, authenticatorCode), []);
 
   const changePassword = useCallback((currentPassword: string, newPassword: string) =>
     run(() => authService.changePassword(currentPassword, newPassword)), [run]);
@@ -135,6 +147,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading: status === "loading" || processing,
     error,
     login,
+    completeAdminMfa,
+    completeAdminMfaEnrollment,
     loginConsumerWithGoogle,
     logout,
     resetPassword,
@@ -142,7 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     changePassword,
     refreshUserProfile,
     clearError,
-  }), [changePassword, clearError, error, login, loginConsumerWithGoogle, logout, processing, reauthenticate, refreshUserProfile, resetPassword, snapshot, status]);
+  }), [changePassword, clearError, completeAdminMfa, completeAdminMfaEnrollment, error, login, loginConsumerWithGoogle, logout, processing, reauthenticate, refreshUserProfile, resetPassword, snapshot, status]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -5,6 +5,8 @@ import { validateInvoiceInput, INVOICE_ISSUER, invoiceParty, type InvoiceInput }
 export { buildBrandedDocumentPdf } from "../../features/hospitals/contractPdf";
 
 export const portalUiState = { screen: "admin-dashboard", calls: 0, bookingRequests: 0, bookingInputs: [] as unknown[], cancelledBookings: 0, navigatedTo: "", unavailablePackage: false, availabilityReviews: [] as string[], holdAvailability: false, failAvailability: false, consultantWrites: [] as unknown[], publicConsultantReads: 0, autoConfirmedTreatment: "not_started" as TreatmentStatus };
+export const auditMfaCalls = { reauth: [] as string[][], clears: 0 };
+Object.assign(globalThis, { auditMfaCalls });
 export let finishAvailabilityReview: (() => void) | undefined;
 Object.assign(globalThis, { finishAvailabilityReview: () => finishAvailabilityReview?.() });
 export class Timestamp {
@@ -33,6 +35,8 @@ export const createInvoice = async (input: InvoiceInput) => {
 export async function verifyPasswordAction(code: string) {
   if (code !== "valid-test-code") throw new Error("Invalid link");
 }
+export async function prepareAdminMfaEnrollment() { return { key: "SYNTHETICTESTKEY", email: "admin@example.test" }; }
+export async function requestAdminEmailVerification() {}
 export async function completePasswordAction() {
   portalUiState.calls++;
   await new Promise((resolve) => setTimeout(resolve, 100));
@@ -55,7 +59,7 @@ export function useAuth() {
     setAuthProcessing(true);
     try { await new Promise((resolve) => setTimeout(resolve, 100)); }
     finally { setAuthProcessing(false); }
-  }, reauthenticate: async () => {}, changePassword: async () => {} };
+  }, reauthenticate: async (...args: string[]) => { auditMfaCalls.reauth.push(args); }, changePassword: async () => {} };
 }
 export function usePathname() {
   if (portalUiState.screen.startsWith("admin-dashboard")) return "/admin";
@@ -155,7 +159,7 @@ export const createConsultant = async (input: unknown) => { portalUiState.consul
 export const updateConsultant = async (_id: string, input: unknown) => { portalUiState.consultantWrites.push(input); return {}; };
 export const updateUserProfile = async () => { portalUiState.calls++; };
 export const setConsultantStatus = async () => ({});
-export const clearAllAuditLogs = async () => 0;
+export const clearAllAuditLogs = async () => { auditMfaCalls.clears++; return 0; };
 export const markAllNotificationsRead = async () => {};
 export const markNotificationRead = async () => {};
 
