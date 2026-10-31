@@ -1,6 +1,7 @@
 "use client";
 
 import type { ConsultationCheckout } from "@/features/payments/checkout";
+import { CONSULTATION_PAYMENT_CHANGE_EVENT } from "@/features/payments/checkout";
 import { authorizedApiRequest, AuthorizedApiError } from "@/services/api/client";
 import { getClientAuth } from "@/services/auth/client";
 
@@ -33,7 +34,7 @@ export function consultationPaymentStatus(intentId: string) {
 
 function remember(intentId: string) {
   // Opaque request ID only, never financial breakdown, credentials, signatures or card data.
-  try { window.sessionStorage.setItem(`ayursarga-pending-consultation-payment:${getClientAuth().currentUser?.uid}`, intentId); } catch { /* Recovery still works through webhook/bookings. */ }
+  try { window.sessionStorage.setItem(`ayursarga-pending-consultation-payment:${getClientAuth().currentUser?.uid}`, intentId); window.dispatchEvent?.(new Event(CONSULTATION_PAYMENT_CHANGE_EVENT)); } catch { /* Recovery still works through webhook/bookings. */ }
 }
 export async function preparePaidConsultation(input: { requestId: string } & Record<string, unknown>) {
   const uid = getClientAuth().currentUser?.uid;
@@ -53,7 +54,7 @@ export async function preparePaidConsultation(input: { requestId: string } & Rec
     throw error;
   }
 }
-export function clearConsultationPaymentReminder() { try { window.sessionStorage.removeItem(`ayursarga-pending-consultation-payment:${getClientAuth().currentUser?.uid}`); } catch { /* No storage is required for payment verification. */ } }
+export function clearConsultationPaymentReminder() { try { window.sessionStorage.removeItem(`ayursarga-pending-consultation-payment:${getClientAuth().currentUser?.uid}`); window.dispatchEvent?.(new Event(CONSULTATION_PAYMENT_CHANGE_EVENT)); } catch { /* No storage is required for payment verification. */ } }
 
 export async function payForConsultation(checkout: ConsultationCheckout): Promise<ConsultationCheckout> {
   if (checkout.bookingId) return checkout;

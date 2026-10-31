@@ -2,6 +2,79 @@
 
 Updated: 31 October 2026 (Asia/Calcutta).
 
+## Requested build, lint and production health validation (31 October 2026)
+
+- Owner clarified EDD is the Search Center start reference. Search Center
+  cancellation work remains paused until its payment flow is implemented;
+  do not add exact clock times or advance/balance records from that note alone.
+- Initial lint found four synchronous-effect errors and one cleanup warning in
+  recent Finance/consultation UI. Fixed without rule suppression: one shared
+  subscribed portal clock (30 seconds plus focus/visibility updates), a UID-scoped
+  sessionStorage payment-reminder subscription, policy reset in user handlers,
+  and async Finance loading with effect-local cancellation/stale-response guards.
+  Shared payment helpers announce reminder changes in the same tab. No financial
+  or booking business rules changed. Compatible fix version is 4.26.1.
+- Rerun npm run lint exited 0 with no warnings/errors. Corrected v4.26.1
+  npm run build exited 0, including TypeScript and 82 generated pages. The first
+  pre-fix v4.26.0 build also succeeded; both builds received their own production
+  health checks. Do not mistake initial lint failure for the final outcome.
+- Fresh v4.26.1 production server on 127.0.0.1:56970: /api/health and
+  /api/health?deep=true with Accept: application/json returned 200, no-store,
+  status=ok, configuration/deep-configuration modes. All six deep dependencies
+  ready: Admin SDK, contact email, auth email, client Firebase, hospital images,
+  consultation payment configuration. /health?deep=true returned 200 with themed
+  markup/expanded checks; HTML API request redirected 307 to /health?deep=true.
+  Both temporary production servers were stopped; no user server was stopped.
+- Three focused checkout client tests and eight desktop/mobile-WebKit browser
+  regressions passed after lifecycle fixes. Cloud/provider services mocked for
+  these regression cases. Production health is configuration-only, not proof of
+  deployed permissions, payment capture, SMTP delivery or every API. No live
+  booking/payment/email/database probes, rules deployment or hosting deployment.
+- No root tsconfig.tsbuildinfo or debug log generated; restored Next's generated
+  next-env route-type import change to avoid unrelated source churn.
+
+## Consultation cancellation policy only (31 October 2026)
+
+- v4.26.0 adds Admin Settings → Consultation cancellation policy. Configurable
+  hours/days, refund percentage or fixed INR, early/late refund values, separate
+  cancellation cutoff, late-cancellation switch and special conditions. Saves
+  require native-MFA Admin authorization, current revision and atomic audit.
+  Defaults match published consultation policy: 48 hours / 100%, later 0%, late
+  cancellation before start allowed. Self-service stops at appointment start.
+- New private cancellationPolicies/consultation document stores current config.
+  Missing config uses the explicit published default; malformed config fails
+  closed. Direct client reads/writes denied, including Admin; safe authenticated
+  policy API serves Consumers. No new indexes needed for single-document reads.
+- New payment requests require the displayed expectedCancellationPolicyVersion.
+  Snapshot policy and IST window-start deadlines into the payment draft before
+  order creation; capture preserves that exact snapshot if Admin changes config.
+  Existing pre-feature intents retain old hash retry compatibility and their
+  original missing snapshot; no old record is assigned new terms retroactively.
+- My online consultations shows eligibility, last cancellation time, refund
+  eligibility and expandable agreed terms/refund deadlines. Server-confirmed
+  paid/refunded paise are safe booking fields; no commission exposed. UI refreshes
+  time every 30 seconds, but the backend transaction is authoritative. Expired
+  new-policy cancellation actions disappear. Legacy terms require support
+  verification and original cancellation behavior is preserved.
+- Cancellation outcome snapshots reference version/time and eligible/remaining
+  refund from verified private ledger; prior refunds are subtracted, percentage
+  rounding is half-up in integer paise. Unknown payments are never invented.
+  Cancellation still holds consultant settlement. Admin-caused cancellation
+  refund is manual-review/null rather than blindly applying Consumer penalties.
+  No automatic Razorpay refund, bank transfer or payout reversal added.
+- Admin reschedule retains the policy version and recalculates deadlines for
+  the newly confirmed exact IST time. Snapshot terms themselves do not change.
+  Search Center routes, cancellation behavior, policies and payments untouched.
+- Validation: 54 distinct focused local unit/route lifecycle tests passed, including new
+  boundary, amount, ownership, revision/audit, snapshot and legacy cases; the
+  final seven cancellation cases also confirm old payment retries do not revise
+  a pending confirmation email merely to backfill safe payment totals. Nine
+  browser cases passed desktop Chromium, 320px touch and mobile WebKit. All cloud
+  and provider services mocked. Not real-device or deployed-permissions proof.
+  Emulator collection-denial case extended but not run (Java 21 limitation).
+  Build/lint/typecheck/full API scans and deployment NOT requested/run. Explicit
+  deny rule added locally, not deployed. No live data, payments or email touched.
+
 ## WellnessPath consultant payments and Finance (31 October 2026)
 
 - v4.25.0 implements full-fee Razorpay checkout for NEW online consultations
@@ -90,7 +163,7 @@ Updated: 31 October 2026 (Asia/Calcutta).
 
 ## Resume here: current session snapshot
 
-- Application version: 4.25.0 locally (not deployed). Admin MFA uses native Firebase TOTP with local QR
+- Application version: 4.26.1 locally (not deployed). Admin MFA uses native Firebase TOTP with local QR
   generation and manual-key fallback; Hospital/Consumer sign-in stays unchanged.
 - Admin Settings is below Audit Logs. Account security lives at /admin/settings;
   old /admin/security bookmarks redirect there. Recovery help and signed-in

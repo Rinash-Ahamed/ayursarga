@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+export function ConsultationCancellationSettings() { return null; }
 
 const state = { calls: 0 };
 Object.assign(window, { adminSecurityFixture: state });

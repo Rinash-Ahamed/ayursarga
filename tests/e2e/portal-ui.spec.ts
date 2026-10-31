@@ -47,6 +47,47 @@ test("Consultant Finance presents private breakdown and confirms an external set
   expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { calls: number } }).consumerBookingFixture.calls)).toBe(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
+
+test("Consultation cancellation details show agreed deadlines and hide expired actions on consumer cards", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "consumer-consultations-policy");
+  const policy = page.getByRole("region", { name: "Cancellation policy", exact: true });
+  await expect(policy).toContainText("Cancellation available");
+  await expect(policy).toContainText("25/10/2099");
+  await expect(policy).toContainText("₹990.55");
+  await policy.getByText("Policy terms and refund deadlines", { exact: true }).click();
+  await expect(policy).toContainText("23/10/2099");
+  await expect(policy).toContainText("100% of the amount paid");
+  await expect(page.getByRole("button", { name: "Cancel appointment", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await mount(page, "consumer-consultations-expired");
+  await expect(page.getByText("Cancellation window expired", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cancel appointment", exact: true })).toHaveCount(0);
+  await mount(page, "consumer-consultations");
+  await expect(page.getByText(/current policies have not been applied/)).toBeVisible();
+});
+
+test("Admin edits consultation cancellation policy with confirmation and inline aligned fields", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "admin-cancellation-settings");
+  const windowField = page.getByRole("spinbutton", { name: "Refund window *", exact: true });
+  await expect(windowField).toBeDisabled();
+  await page.getByRole("button", { name: "Edit consultation policy", exact: true }).click();
+  await windowField.fill("3");
+  await page.getByRole("combobox", { name: "Refund window unit", exact: true }).selectOption("days");
+  await page.getByRole("button", { name: "Save consultation policy", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { calls: number } }).consumerBookingFixture.calls)).toBe(0);
+  await page.getByRole("button", { name: "Save consultation policy", exact: true }).click();
+  await dialog.getByRole("button", { name: "Save policy", exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(windowField).toBeDisabled();
+  await expect(windowField).toHaveValue("72");
+  expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { calls: number } }).consumerBookingFixture.calls)).toBe(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
 test("Admin dashboard separates online consultations and links to existing booking details", async ({ page }) => {
   await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
   await mount(page, "admin-dashboard");

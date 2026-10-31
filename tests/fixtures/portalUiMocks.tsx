@@ -1,4 +1,5 @@
 import { useSyncExternalStore, type ReactNode } from "react";
+import { DEFAULT_CONSULTATION_CANCELLATION_POLICY, snapshotConsultationCancellation } from "@/features/consultations/cancellationPolicy";
 import type { ServiceDocument, TreatmentStatus } from "@/features/firestore/models";
 import { CONSUMER_PRIVACY_NOTICE_VERSION, CUSTOMER_TERMS_VERSION } from "@/features/consumers/privacyConsent";
 import { validateInvoiceInput, INVOICE_ISSUER, invoiceParty, type InvoiceInput } from "@/features/billing/invoices";
@@ -183,6 +184,9 @@ export const getPublicConsultant = async () => portalUiState.screen.endsWith("-r
 export const consultationPaymentStatus = async () => ({ checkout: { intentId: "fixture", state: "ready", bookingId: null, totalPaise: 99055, currency: "INR" } });
 export const payForConsultation = async () => ({ bookingId: "consultation-fixture" });
 export const clearConsultationPaymentReminder = () => {};
+export const getConsultationCancellationPolicy = async () => ({ policy: { version: "consultation-published-48h-v1", refundWindowHours: 48, cancellationCutoffHours: 48,
+  allowAfterCutoff: true, refundType: "percentage", refundValue: 100, lateRefundValue: 0, conditions: "Exceptional circumstances require support review." } });
+export const saveConsultationCancellationPolicy = async (policy: object) => { portalUiState.calls++; return { policy: { ...policy, version: "saved-policy" } }; };
 const financeRecord = { id: "consultation-fixture", bookingId: "consultation-fixture", bookingReference: "AYURCONS01", consultantId: "AS001",
   consultantName: "Assigned Consultation Professional", consumerName: "Patient With a Longer Display Name", serviceName: "Prenatal doctor consultation",
   paymentId: "pay_Test", orderId: "order_Test", mode: "test", grossPaise: 99055, commissionPaise: 9005, consultantPayablePaise: 90050,
@@ -195,7 +199,11 @@ export const recordConsultantSettlement = async (input: { status: string; refere
   portalUiState.calls++; Object.assign(financeRecord, { settlementStatus: input.status, settlementReference: input.reference, settlementDate: input.date, settlementNotes: input.notes }); return { record: { ...financeRecord } };
 };
 export const createConsultationBooking = async (input: unknown) => { portalUiState.consultantWrites.push(input); return { ok: true, bookingId: "consultation-fixture", bookingReference: "AYURCONS01" }; };
-export const listConsultationBookings = () => page(portalUiState.screen === "consumer-consultations-empty" ? [] : [consultation]);
+export const listConsultationBookings = () => page(portalUiState.screen === "consumer-consultations-empty" ? [] : [{ ...consultation,
+  ...(portalUiState.screen === "consumer-consultations-policy" || portalUiState.screen === "consumer-consultations-expired" ? {
+    cancellationPolicy: snapshotConsultationCancellation(DEFAULT_CONSULTATION_CANCELLATION_POLICY, portalUiState.screen.endsWith("expired") ? "2000-01-01" : "2099-10-25", "09:30"),
+    paymentTotals: { paidPaise: 99055, refundedPaise: 0 },
+  } : {}) }]);
 export const getConsultationBooking = async () => consultation;
 export const updateConsultationBooking = async (_id: string, input: { action: string; confirmedDate?: string; confirmedTime?: string; adminNotes?: string }) => {
   portalUiState.consultantWrites.push(input);

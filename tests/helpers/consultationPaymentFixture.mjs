@@ -38,7 +38,7 @@ export function consultationPaymentFixture(options = {}) {
 }
 export const paymentRequest = (body, method = "POST", headers = {}) => new Request("https://test.local/api/consumer/consultations", { method, headers: { "Content-Type": "application/json", ...headers }, ...(method === "GET" ? {} : { body: JSON.stringify(body) }) });
 export async function prepare(f, body = paidInput) {
-  return f.load("app/api/consumer/consultations/route.ts").POST(paymentRequest(body));
+  return f.load("app/api/consumer/consultations/route.ts").POST(paymentRequest({ expectedCancellationPolicyVersion: "consultation-published-48h-v1", ...body }));
 }
 export async function verify(f, id, paymentId = "pay_Synthetic", signature = "synthetic-valid-signature") {
   return f.load("app/api/consumer/consultation-payments/[intentId]/route.ts").POST(paymentRequest({ paymentId, signature }), { params: Promise.resolve({ intentId: id }) });

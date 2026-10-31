@@ -204,6 +204,9 @@ export type ConsultantDocument = AuditedDocument & {
 };
 
 export type ConsultationBookingDocument = AuditedDocument & {
+  cancellationPolicy?: import("@/features/consultations/cancellationPolicy").ConsultationCancellationSnapshot;
+  cancellationOutcome?: import("@/features/consultations/cancellationPolicy").ConsultationCancellationOutcome;
+  paymentTotals?: import("@/features/consultations/cancellationPolicy").ConsultationPaymentTotals;
   paymentStatus?: "paid" | "partially_refunded" | "refunded";
   paymentReference?: string;
   paymentIntentId?: string;

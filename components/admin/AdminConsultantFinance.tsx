@@ -17,7 +17,7 @@ export function AdminConsultantFinance() {
   const [mode, setMode] = useState("live");
   const [page, setPage] = useState<ConsultantFinancePage | null>(null);
   const [items, setItems] = useState<ConsultantFinancialRecord[]>([]);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(true);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [error, setError, errorEvent] = useRepeatableMessage();
@@ -35,7 +35,16 @@ export function AdminConsultantFinance() {
     } catch (caught) { if (id === revision.current) setError(caught instanceof Error ? caught.message : "Finance could not be loaded."); }
     finally { if (id === revision.current) setBusy(false); }
   }, [mode, setError]);
-  useEffect(() => { setPage(null); setItems([]); void load(); return () => { revision.current++; }; }, [load]);
+  useEffect(() => {
+    let active = true;
+    const id = ++revision.current;
+    listConsultantFinance(mode).then(result => {
+      if (active && id === revision.current) { setPage(result); setItems(result.documents); }
+    }).catch(caught => {
+      if (active && id === revision.current) setError(caught instanceof Error ? caught.message : "Finance could not be loaded.");
+    }).finally(() => { if (active && id === revision.current) setBusy(false); });
+    return () => { active = false; };
+  }, [mode, setError]);
   function submit(event: FormEvent<HTMLFormElement>, item: ConsultantFinancialRecord) {
     event.preventDefault(); const data = new FormData(event.currentTarget);
     setPending({ id: item.id, expectedAuditId: item.lastAuditId, status: String(data.get("status")), reference: String(data.get("reference")),
@@ -58,7 +67,7 @@ export function AdminConsultantFinance() {
   return <PortalShell role="admin" title="Finance">
     <AdminFinanceNavigation active="consultants" />
     <section className="portal-flow-intro"><h2>Consultant Finance</h2><p>Verified WellnessPath collections, not total platform revenue. Consultant base fees are unchanged; Ayursarga bears gateway charges. Payouts are external bank transfers recorded manually.</p></section>
-    <div className="portal-actions portal-finance-toolbar"><label>Payment mode<select value={mode} disabled={busy} onChange={event => { setMode(event.target.value); setMessage(null); }}><option value="live">Live payments</option><option value="test">Test payments</option></select></label><button className="portal-button secondary" disabled={busy} onClick={() => void load()}>Refresh</button></div>
+    <div className="portal-actions portal-finance-toolbar"><label>Payment mode<select value={mode} disabled={busy} onChange={event => { setPage(null); setItems([]); setBusy(true); setError(null); setMode(event.target.value); setMessage(null); }}><option value="live">Live payments</option><option value="test">Test payments</option></select></label><button className="portal-button secondary" disabled={busy} onClick={() => void load()}>Refresh</button></div>
     {summary && <div className="portal-finance-stats">{[
       ["Gross collections", money(summary.grossPaise)], ["Ayursarga commission", money(summary.commissionPaise)],
       ["Gateway charges (including tax)", money(summary.gatewayFeePaise)], ["Consultant payouts pending", money(summary.pendingPayablePaise)],

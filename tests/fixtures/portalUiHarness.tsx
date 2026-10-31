@@ -28,9 +28,14 @@ import { ConsumerProfile } from "@/components/consumer/ConsumerProfile";
 import { ConsumerSupport } from "@/components/consumer/ConsumerSupport";
 import { ConsultationBookingForm } from "@/components/consumer/ConsultationBookingForm";
 import { ConsultationBookings } from "@/components/consultations/ConsultationBookings";
+import { ConsultationCancellationSettings } from "@/components/admin/ConsultationCancellationSettings";
+import { PortalShell } from "@/components/portal/PortalShell";
 
 declare global { interface Window { mountPortalUi: (screen: string) => void; unmountPortalUi?: () => void; } }
 const screens = {
+  "admin-cancellation-settings": <PortalShell role="admin" title="Settings"><ConsultationCancellationSettings /></PortalShell>,
+  "consumer-consultations-policy": <ConsultationBookings role="consumer" />,
+  "consumer-consultations-expired": <ConsultationBookings role="consumer" />,
   "admin-consultant-finance": <AdminConsultantFinance />,
   "admin-billing": <AdminBilling />,
   "password-action": <PasswordActionForm />,

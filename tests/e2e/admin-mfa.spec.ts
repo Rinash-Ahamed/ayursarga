@@ -8,6 +8,7 @@ const bundle = bundleDialogHarness("tests/fixtures/adminMfaHarness.tsx", Object.
 const securityBundle = bundleDialogHarness("tests/fixtures/adminSecurityHarness.tsx", {
   "@/components/portal/PortalShell": "tests/fixtures/adminSecurityMocks.tsx",
   "@/services/auth/adminMfaReplacementService": "tests/fixtures/adminSecurityMocks.tsx",
+  "@/components/admin/ConsultationCancellationSettings": "tests/fixtures/adminSecurityMocks.tsx",
 });
 async function mount(page: Page, enrolled = true, recoveryEnabled = false, security = false) {
   await page.setContent('<html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="fixture-root"></div></body></html>');

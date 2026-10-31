@@ -20,6 +20,11 @@ import { isIsoDate, toDateInputValue, formatDisplayDate } from "@/utils/date";
 import type { ConsultationCheckout } from "@/features/payments/checkout";
 import { useAuth } from "@/hooks/useAuth";
 import { ROUTES } from "@/config/routes";
+import { getConsultationCancellationPolicy } from "@/services/consultations/cancellationPolicyService";
+import { snapshotConsultationCancellation, type ConsultationCancellationPolicy } from "@/features/consultations/cancellationPolicy";
+import { ConsultationCancellationInfo } from "@/components/consultations/ConsultationCancellationInfo";
+import { usePortalClock } from "@/hooks/usePortalClock";
+import { useConsultationPaymentReminder } from "@/hooks/useConsultationPaymentReminder";
 
 export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
   const { firebaseUser } = useAuth();
@@ -32,8 +37,17 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
   const [date, setDate] = useState("");
   const [slot, setSlot] = useState<ConsultantTimeSlot | "">("");
   const [consent, setConsent] = useState(false);
+  const [cancellationPolicy, setCancellationPolicy] = useState<ConsultationCancellationPolicy | null>(null);
+  const [policyFailed, setPolicyFailed] = useState(false);
+  const clock = usePortalClock();
+  const [policyRetry, setPolicyRetry] = useState(0);
+  useEffect(() => {
+    let active = true;
+    getConsultationCancellationPolicy().then(result => { if (active) setCancellationPolicy(result.policy); }).catch(() => { if (active) setPolicyFailed(true); });
+    return () => { active = false; };
+  }, [policyRetry]);
   const [busy, setBusy] = useState(false);
-  const [pendingPayment, setPendingPayment] = useState<string | null>(null);
+  const pendingPayment = useConsultationPaymentReminder(firebaseUser?.uid);
   const [paymentDetails, setPaymentDetails] = useState<ConsultationCheckout | null>(null);
   const [error, setError, notification] = useRepeatableMessage();
   const submitting = useRef(false);
@@ -48,9 +62,6 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
   const hasConsultants = items.length > 0;
   const availableDates = consultant?.availableDates?.filter(dateAllowed).toSorted() ?? [];
   const noAvailableDates = Boolean(consultant?.availableDates?.length && !availableDates.length);
-  useEffect(() => {
-    try { setPendingPayment(firebaseUser ? window.sessionStorage.getItem(`ayursarga-pending-consultation-payment:${firebaseUser.uid}`) : null); } catch { /* Optional recovery hint only. */ }
-  }, [firebaseUser]);
   async function checkPayment(resume = false) {
     if (!pendingPayment || submitting.current) return;
     submitting.current = true; setBusy(true); setError(null);
@@ -60,7 +71,7 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
       setPaymentDetails(result);
       if (resume && result.state === "ready") result = await payForConsultation(result);
       if (result.bookingId) {
-        clearConsultationPaymentReminder(); setPendingPayment(null);
+        clearConsultationPaymentReminder();
         router.push(`/app/bookings/consultations?booking=${encodeURIComponent(result.bookingId)}`);
       } else setError(result.state === "paid_review" ? "Payment received; your appointment needs Ayursarga review. Contact support and do not pay again." : "Payment is not confirmed yet. Resume this payment or contact Ayursarga if money was debited.");
     } catch (failure) { setError(failure instanceof Error ? failure.message : "We could not check payment. Please contact support before paying again."); }
@@ -84,7 +95,7 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
   }, [reload]);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submitting.current || !service || pendingPayment) return;
+    if (submitting.current || !service || pendingPayment || !cancellationPolicy) return;
     const timing = slot && consultant?.preferredSlotTimings[slot];
     if (!consultant || !slot || !timing || !consultant.preferredTimeSlots.includes(slot) || !isIsoDate(date) || date < toDateInputValue() || !consent) {
       setError("Choose a consultant, date and preferred time window, and accept the booking terms."); return;
@@ -93,16 +104,15 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
       setError("Choose an available date and a time window that has not ended."); return;
     }
     const notes = String(new FormData(event.currentTarget).get("notes") ?? "").trim();
-    const key = JSON.stringify([service.id, consultantId, date, slot, notes, consultant.consultantCharge, timing.startTime, timing.endTime]);
+    const key = JSON.stringify([service.id, consultantId, date, slot, notes, consultant.consultantCharge, timing.startTime, timing.endTime, cancellationPolicy.version]);
     if (attempt.current?.key !== key) attempt.current = { key, id: globalThis.crypto.randomUUID() };
     submitting.current = true; setBusy(true); setError(null);
     try {
       const result = await createConsultationBooking({ consultantId, serviceId: service.id, preferredDate: date, preferredTimeSlot: slot,
         expectedSlotStartTime: timing.startTime, expectedSlotEndTime: timing.endTime,
-        consumerNotes: notes, expectedCharge: consultant.consultantCharge, bookingTermsAccepted: consent, requestId: attempt.current.id });
+        consumerNotes: notes, expectedCharge: consultant.consultantCharge, bookingTermsAccepted: consent, requestId: attempt.current.id, expectedCancellationPolicyVersion: cancellationPolicy.version });
       router.push(`/app/bookings/consultations?booking=${encodeURIComponent(result.bookingId)}`);
     } catch (failure) {
-      try { setPendingPayment(window.sessionStorage.getItem(`ayursarga-pending-consultation-payment:${firebaseUser?.uid}`)); } catch { /* Optional hint only. */ }
       setError(failure instanceof Error ? failure.message : "We could not book this consultation. Try again.");
     } finally { submitting.current = false; setBusy(false); }
   }
@@ -116,6 +126,7 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
       {pendingPayment && <section className="portal-card" aria-label="Pending consultation payment">
         <h2>Check your previous payment</h2><p>Resume or check the existing payment before starting another. A closed checkout does not confirm payment failure.</p>
         {paymentDetails && <p>{paymentDetails.consultantName} · {paymentDetails.serviceName} · {formatDisplayDate(paymentDetails.date)} · {paymentDetails.timeWindow} · {formatCurrency(paymentDetails.totalPaise / 100)}</p>}
+        {paymentDetails?.cancellationPolicy && <ConsultationCancellationInfo snapshot={paymentDetails.cancellationPolicy} status="confirmed" now={clock} />}
         {error && <p className="portal-form-error" role="alert">{error}</p>}
         <div className="portal-actions"><button type="button" className="portal-button secondary" disabled={busy} onClick={() => void checkPayment()}>Check payment status</button><button type="button" className="portal-button" disabled={busy} onClick={() => void checkPayment(true)}>Resume payment</button><Link className="portal-button secondary" href="/app/support">Contact support</Link></div>
       </section>}
@@ -143,13 +154,15 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
           })}
         </select></label>
         <label className="full">Notes (optional)<textarea name="notes" maxLength={500} disabled={busy} /></label>
+        {cancellationPolicy && consultant && slot && isIsoDate(date) && consultant.preferredSlotTimings[slot] && <div className="full"><ConsultationCancellationInfo snapshot={snapshotConsultationCancellation(cancellationPolicy, date, consultant.preferredSlotTimings[slot]!.startTime)} status="confirmed" now={clock} /></div>}
         <fieldset className="portal-consent full" disabled={busy}><legend>Booking confirmation *</legend>
           <p>Please review the <Link href={ROUTES.public.termsAndConditions} target="_blank">Customer Terms &amp; Conditions</Link>, <Link href={ROUTES.public.cancellationRefundPolicy} target="_blank">Cancellation &amp; Refund Policy</Link> and <Link href={ROUTES.public.patientServiceDisclaimer} target="_blank">Patient/Service Disclaimer &amp; Consent</Link>.</p>
           <label className="portal-consent-choice"><input type="checkbox" required checked={consent} onChange={(event) => setConsent(event.target.checked)} /><span>I have read and agree to the applicable terms and policies.</span></label>
         </fieldset>
         {error && <p className="portal-form-error full" role="alert">{error}</p>}
-        {error && <div className="portal-actions full"><button type="button" className="portal-button secondary" disabled={busy || isLoading} onClick={() => { setConsultantId(""); setSlot(""); setConsent(false); void reload(); }}>Refresh consultants</button></div>}
-        <div className="portal-actions full"><button className="portal-button" disabled={busy || Boolean(pendingPayment) || !consent || !consultant || !date || !dateAllowed(date) || !slot}>{busy ? "Processing payment..." : consultant ? `Pay ${formatCurrency(consultant.consultantCharge)} & book appointment` : "Pay & book appointment"}</button></div>
+        {error && <div className="portal-actions full"><button type="button" className="portal-button secondary" disabled={busy || isLoading} onClick={() => { setConsultantId(""); setSlot(""); setConsent(false); void reload(); }}>Refresh consultants</button><button type="button" className="portal-button secondary" disabled={busy || Boolean(pendingPayment)} onClick={() => { setConsent(false); setError(null); setCancellationPolicy(null); setPolicyFailed(false); setPolicyRetry(value => value + 1); }}>Reload cancellation terms</button></div>}
+        {!cancellationPolicy && <p className="full" role="status">{policyFailed ? "Cancellation terms could not be loaded. Please retry before paying." : "Loading agreed cancellation terms…"}{policyFailed && <button type="button" className="portal-button secondary" onClick={() => { setPolicyFailed(false); setPolicyRetry(value => value + 1); }}>Reload cancellation terms</button>}</p>}
+        <div className="portal-actions full"><button className="portal-button" disabled={busy || Boolean(pendingPayment) || !cancellationPolicy || !consent || !consultant || !date || !dateAllowed(date) || !slot}>{busy ? "Processing payment..." : consultant ? `Pay ${formatCurrency(consultant.consultantCharge)} & book appointment` : "Pay & book appointment"}</button></div>
       </form>}
     </>}
     </div>

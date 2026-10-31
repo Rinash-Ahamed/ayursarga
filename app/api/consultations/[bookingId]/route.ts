@@ -13,6 +13,7 @@ import { validConsultationSchedule } from "@/features/consultations/schedule";
 import { isConsultantDateAvailable } from "@/features/consultations/availability";
 import { queueConsultationEmail, deliverConsultationEmails } from "@/services/email/consultationEmailService";
 import { auditPayment } from "@/services/payments/consultationPaymentsAdmin";
+import { consultationCancellationEligibility, validCancellationSnapshot, snapshotConsultationCancellation } from "@/features/consultations/cancellationPolicy";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -71,6 +72,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
         if (!provider || !timing || time < timing.startTime || time >= timing.endTime) throw new ConsultationError("The consultant is no longer available in this appointment window.", 409);
         update.confirmedDate = date; update.confirmedTime = time;
         update.confirmedAt = booking.confirmedAt ?? now;
+        if (validCancellationSnapshot(booking.cancellationPolicy)) update.cancellationPolicy = snapshotConsultationCancellation(booking.cancellationPolicy.policy, date, time, true);
       }
       if (role === "admin" && action === "cancelled") {
         const consultant = await transaction.get(firestore.collection("consultants").doc(booking.consultantId));
@@ -80,6 +82,16 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
       const admins = role === "consumer" ? await consultationAdminRecipients(transaction, firestore) : [];
       const financialRef = booking.paymentIntentId === bookingId ? firestore.collection("consultationFinancials").doc(bookingId) : null;
       const financial = financialRef ? (await transaction.get(financialRef)).data() : null;
+      if (action === "cancelled") {
+        const hasPolicy = booking.cancellationPolicy != null;
+        if (hasPolicy && !validCancellationSnapshot(booking.cancellationPolicy)) throw new ConsultationError("The agreed cancellation terms need support review.", 409);
+        const totals = financial ? { paidPaise: financial.grossPaise, refundedPaise: financial.refundedPaise } : null;
+        const eligibility = hasPolicy ? consultationCancellationEligibility(booking.cancellationPolicy, booking.status, totals, now.toMillis()) : null;
+        if (role === "consumer" && eligibility && !eligibility.allowed) throw new ConsultationError("Online cancellation is no longer available under your agreed policy. Contact Ayursarga for exceptional circumstances.", 409);
+        update.cancellationOutcome = { requestedAt: now.toDate().toISOString(), policyVersion: hasPolicy ? booking.cancellationPolicy.policy.version : null,
+          eligibleRefundPaise: role === "consumer" ? eligibility?.eligibleRefundPaise ?? null : null,
+          remainingRefundPaise: role === "consumer" ? eligibility?.remainingRefundPaise ?? null : null };
+      }
       const audit = firestore.collection("auditLogs").doc();
       update.lastAuditId = audit.id;
       transaction.update(reference, update);

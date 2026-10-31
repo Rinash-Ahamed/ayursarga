@@ -992,6 +992,15 @@ body.portal-active .portal-toast-viewport{ top:var(--portal-toast-top,calc(150px
 .consultation-history-card>header{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
 .consultation-history-card>header>div{ min-width:0; overflow-wrap:anywhere; }
 .consultation-history-card h2{ margin:0 0 8px; font-size:clamp(18px,2vw,23px); }
+.consultation-cancellation{grid-column:1/-1;min-width:0;border-top:1px solid var(--portal-border,#cdd7cf);padding-top:14px;margin-top:14px;}
+.consultation-cancellation h3{font-size:15px;margin:0 0 8px;}
+.consultation-cancellation summary{font-size:12px;font-weight:700;cursor:pointer;min-height:44px;padding:12px 0;}
+.consultation-cancellation p{font-size:12px;line-height:1.6;margin:8px 0;overflow-wrap:anywhere;}
+.consultation-cancellation-details{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px;margin:12px 0;}
+.consultation-cancellation-details dt{font-size:11px;font-weight:700;}
+.consultation-cancellation-details dd{font-size:12px;margin:4px 0 0;overflow-wrap:anywhere;}
+.portal-policy-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;border:0;padding:0;margin:0;min-width:0;}
+@media(max-width:600px){.portal-policy-fields{grid-template-columns:minmax(0,1fr);}}
 .consultation-booking-details{ grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr)); }
 .consultation-booking-details>div{ min-width:0; }
 .consultation-booking-details dt{ font-size:11px; font-weight:700; margin-bottom:5px; }

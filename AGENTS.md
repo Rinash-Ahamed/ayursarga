@@ -241,6 +241,28 @@ to deploy, rerun maintenance scripts, or modify live data.
   confirmed and unaffected. Consumer reads/cancellation are
   own-record only; Hospitals cannot access these appointments. No client writes,
   automatic payouts, meeting links or consultant Auth accounts are implied.
+  Consultation cancellation settings are Admin-only under Settings, through
+  authenticated server endpoints and the private cancellationPolicies document.
+  The published default is 100% of verified amounts paid at least 48 hours before
+  the appointment reference, zero routine refund later, with late cancellation
+  allowed only before the appointment begins. Never substitute a 24-hour example.
+  Snapshot versioned terms/deadlines into new payment drafts before checkout and
+  retain that snapshot on confirmation. Consumers must review the current policy
+  version before a new payment request; existing intents keep their quoted terms.
+  Use the configured window start as cancellation reference, not an invented
+  exact appointment time. Rescheduling retains the agreed policy version and
+  recalculates IST deadlines from the new confirmed exact time. Backend Consumer
+  cancellation revalidates the snapshot, status and time inside the transaction;
+  record the eligible/remaining refund based on the private verified payment
+  ledger, capped to money paid and reduced by prior refunds. Consumer-readable
+  paymentTotals contain only paid/refunded paise, never commission. Refund
+  calculations do not initiate refunds, change payout splits or reverse bank
+  transfers. Admin cancellations require refund review rather than pretending
+  the Consumer cancellation schedule establishes an Admin-caused refund amount.
+  Never backfill today's policy onto legacy bookings/intents without snapshots;
+  show support verification and preserve their prior cancellation handling.
+  Search Center cancellation policies and advance/balance payments are separate
+  and were not introduced by this consultation-only feature.
   Configured consultant weekdays and optional ISO `availableDates` (maximum 31)
   restrict online booking dates: when both are set, both must match. Missing/
   empty date preferences preserve legacy unrestricted future days. Consumer

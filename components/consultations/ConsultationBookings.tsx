@@ -26,6 +26,9 @@ import { validConsultationSchedule } from "@/features/consultations/schedule";
 import { consultationEmailFeedback } from "@/features/consultations/email";
 import { formatBookingPlacedAt } from "@/features/bookings/display";
 import { AdminBookingNavigation } from "@/components/admin/AdminBookingNavigation";
+import { ConsultationCancellationInfo } from "@/components/consultations/ConsultationCancellationInfo";
+import { consultationCancellationEligibility } from "@/features/consultations/cancellationPolicy";
+import { usePortalClock } from "@/hooks/usePortalClock";
 
 type Appointment = DocumentRecord<ConsultationBookingDocument>;
 type Action = { booking: Appointment; status: "reschedule" | "completed" | "cancelled"; requestId: string };
@@ -33,6 +36,7 @@ const CONSULTATION_STATUSES: readonly ConsultationBookingDocument["status"][] = 
 
 export function ConsultationBookings({ role, bookingId }: { role: "admin" | "consumer"; bookingId?: string }) {
   const { firebaseUser } = useAuth();
+  const clock = usePortalClock();
   const home = role === "admin" ? "/admin/bookings" : "/app/bookings";
   const loader = useCallback(async (cursor: QueryPageOptions["cursor"]) => {
     if (!firebaseUser) return emptyQueryPage<ConsultationBookingDocument>();
@@ -175,10 +179,11 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
       </dl>
       </div>
       <div className="consumer-booking-meta"><span className="portal-status" data-status={booking.status}>{formatStatus(booking.status)}</span><div className="consumer-booking-cost"><span>Consultation charge</span><strong>{formatCurrency(booking.consultantCharge)}</strong></div></div>
+      {role === "consumer" && <ConsultationCancellationInfo snapshot={booking.cancellationPolicy} status={booking.status} totals={booking.paymentTotals} outcome={booking.cancellationOutcome} now={clock} />}
       <div className="operational-booking-actions"><div className="portal-actions">
         {role === "admin" && ["requested", "confirmed"].includes(booking.status) && <button className="portal-button secondary" disabled={busy} onClick={() => open(booking, "reschedule")}>Reschedule</button>}
         {role === "admin" && booking.status === "confirmed" && <button className="portal-button" disabled={busy} onClick={() => open(booking, "completed")}>Mark completed</button>}
-        {["requested", "confirmed"].includes(booking.status) && <button className="portal-button danger" disabled={busy} onClick={() => open(booking, "cancelled")}>Cancel appointment</button>}
+        {["requested", "confirmed"].includes(booking.status) && (role === "admin" || !booking.cancellationPolicy || (clock !== null && consultationCancellationEligibility(booking.cancellationPolicy, booking.status, booking.paymentTotals ?? null, clock).allowed)) && <button className="portal-button danger" disabled={busy} onClick={() => open(booking, "cancelled")}>Cancel appointment</button>}
       </div></div>
     </article>)}</div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />

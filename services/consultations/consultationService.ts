@@ -26,7 +26,7 @@ export async function getPublicConsultant(service: string, consultantId: string,
 export async function createConsultationBooking(input: {
   consultantId: string; serviceId: ConsultationServiceId; preferredDate: string;
   preferredTimeSlot: string; expectedSlotStartTime: string; expectedSlotEndTime: string;
-  consumerNotes: string; expectedCharge: number; bookingTermsAccepted: boolean; requestId: string;
+  consumerNotes: string; expectedCharge: number; bookingTermsAccepted: boolean; requestId: string; expectedCancellationPolicyVersion: string;
 }) {
   const { loadConsultationCheckout, preparePaidConsultation, payForConsultation } = await import("@/services/payments/consultationCheckout");
   await loadConsultationCheckout();

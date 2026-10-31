@@ -13,5 +13,6 @@ const modules = [
   "@/services/billing/invoiceService",
   "@/services/billing/consultantFinanceService",
   "@/services/payments/consultationCheckout",
+  "@/services/consultations/cancellationPolicyService",
 ];
 export const portalUiBundle = bundleDialogHarness("tests/fixtures/portalUiHarness.tsx", Object.fromEntries(modules.map((name) => [name, "tests/fixtures/portalUiMocks.tsx"])), { NEXT_PUBLIC_AYU_ONLINE: "true" });

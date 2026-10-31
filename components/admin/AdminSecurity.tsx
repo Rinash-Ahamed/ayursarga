@@ -6,6 +6,7 @@ import { PortalDialog } from "@/components/portal/PortalDialog";
 import { PasswordField } from "@/components/auth/PasswordField";
 import { replaceAdminAuthenticator } from "@/services/auth/adminMfaReplacementService";
 import { toAuthenticationError } from "@/features/auth/errors";
+import { ConsultationCancellationSettings } from "@/components/admin/ConsultationCancellationSettings";
 
 export function AdminSecurity({ enabled }: { enabled: boolean }) {
   const form = useRef<HTMLFormElement>(null);
@@ -36,5 +37,6 @@ export function AdminSecurity({ enabled }: { enabled: boolean }) {
       </form>}
     </section>
     <PortalDialog open={confirm} title="Replace your authenticator?" message="This invalidates the existing setup key for everyone sharing this Admin account and signs out existing sessions. Sign in again with your password to scan a new QR code. No password or account data will be changed." tone="danger" confirmLabel="Replace and sign out" busy={busy} onConfirm={() => void replace()} onCancel={() => { if (!busy) setConfirm(false); }} />
+    <ConsultationCancellationSettings />
   </PortalShell>;
 }

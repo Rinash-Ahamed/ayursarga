@@ -15,6 +15,8 @@ import type { ConsultationCheckout } from "@/features/payments/checkout";
 import { reserveBookingReference } from "@/services/bookings/bookingReferenceAdmin";
 import { consultationAdminRecipients, addConsultationNotification } from "@/services/consultations/consultationNotificationsAdmin";
 import { queueConsultationEmail } from "@/services/email/consultationEmailService";
+import { readConsultationCancellationPolicy } from "@/services/consultations/cancellationPolicyAdmin";
+import { snapshotConsultationCancellation } from "@/features/consultations/cancellationPolicy";
 import { createRazorpayOrder, fetchRazorpayOrder, fetchRazorpayPayment, fetchRazorpayOrderPayments, getRazorpayReadiness, razorpayCheckoutKey, rupeesToPaise, type RazorpayPayment, type RazorpayOrder } from "@/services/payments/razorpay";
 
 export class ConsultationPaymentError extends Error { constructor(message: string, public status = 409) { super(message); } }
@@ -42,6 +44,7 @@ export function consumerCheckout(id: string, value: Data): ConsultationCheckout 
   return { intentId: id, state: String(value.state), bookingId: typeof value.bookingId === "string" ? value.bookingId : null,
     bookingReference: typeof value.bookingReference === "string" ? value.bookingReference : null,
     totalPaise: Number(value.amountPaise), currency: "INR",
+    ...(value.draft?.cancellationPolicy ? { cancellationPolicy: value.draft.cancellationPolicy } : {}),
     ...(value.draft ? { consultantName: String(value.draft.consultantName), serviceName: String(value.draft.serviceName),
       date: String(value.draft.preferredDate), timeWindow: `${value.draft.slotStartTime} - ${value.draft.slotEndTime}` } : {}),
     ...(ready ? { keyId: razorpayCheckoutKey(), orderId: value.orderId } : {}) };
@@ -58,7 +61,8 @@ export async function prepareConsultationPayment(firestore: Firestore, uid: stri
     throw new ConsultationPaymentError("Choose a valid consultant, date, time window and fee.", 400);
   }
   const id = `consultation-${hashPaymentValue(`${uid}:${requestId}`)}`;
-  const inputHash = hashPaymentValue(JSON.stringify([service.id, consultantId, date, slot, expectedCharge, notes, body.expectedSlotStartTime, body.expectedSlotEndTime]));
+  const inputHash = hashPaymentValue(JSON.stringify([service.id, consultantId, date, slot, expectedCharge, notes, body.expectedSlotStartTime, body.expectedSlotEndTime, body.expectedCancellationPolicyVersion]));
+  const legacyInputHash = hashPaymentValue(JSON.stringify([service.id, consultantId, date, slot, expectedCharge, notes, body.expectedSlotStartTime, body.expectedSlotEndTime]));
   const ref = firestore.collection("consultationPaymentIntents").doc(id);
   const receipt = `cp_${hashPaymentValue(id).slice(0, 32)}`;
   const result = await firestore.runTransaction(async transaction => {
@@ -66,7 +70,8 @@ export async function prepareConsultationPayment(firestore: Firestore, uid: stri
       firestore.collection("consultationBookings").doc(id), firestore.collection("consultants").doc(consultantId), firestore.collection("users").doc(uid));
     if (!completedProfile(profile.data())) throw new ConsultationPaymentError("Complete your profile and consent before booking.");
     if (current.exists) {
-      if (current.data()!.consumerId !== uid || current.data()!.inputHash !== inputHash) throw new ConsultationPaymentError("This payment attempt belongs to different details. Review your original request.");
+      const saved = current.data()!;
+      if (saved.consumerId !== uid || (saved.inputHash !== inputHash && !(saved.draft?.cancellationPolicy == null && saved.inputHash === legacyInputHash))) throw new ConsultationPaymentError("This payment attempt belongs to different details. Review your original request.");
       return { intent: current.data()!, created: false };
     }
     if (priorBooking.exists) {
@@ -87,12 +92,15 @@ export async function prepareConsultationPayment(firestore: Firestore, uid: stri
     const amountPaise = rupeesToPaise(pricing.totalCharge);
     if (amountPaise < 100) throw new ConsultationPaymentError("This consultation fee is not configured for payment.");
     const consumer = profile.data()!;
+    const cancellationPolicy = await readConsultationCancellationPolicy(firestore, transaction);
+    if (body.expectedCancellationPolicyVersion !== cancellationPolicy.version) throw new ConsultationPaymentError("Cancellation terms changed. Reload and review them before paying.");
     const now = Timestamp.now();
     const draft = { consumerId: uid, consumerName: String(consumer.name ?? "").trim(), consumerEmail: String(consumer.email ?? "").trim().toLowerCase(),
       consumerPhone: consumer.phone.trim(), consumerAddress: typeof consumer.address === "string" ? consumer.address.trim() || null : null,
       consultantId, consultantName: provider.name, consultantDesignation: provider.designation, serviceId: service.id, serviceName: service.label,
       consultantCharge: pricing.totalCharge, preferredDate: date, preferredTimeSlot: slot, slotStartTime: timing.startTime, slotEndTime: timing.endTime,
-      consumerNotes: notes || null, bookingTermsAcceptedAt: now, bookingTermsVersion: BOOKING_TERMS_VERSION };
+      consumerNotes: notes || null, bookingTermsAcceptedAt: now, bookingTermsVersion: BOOKING_TERMS_VERSION,
+      cancellationPolicy: snapshotConsultationCancellation(cancellationPolicy, date, timing.startTime) };
     const intent = { consumerId: uid, consultantId, inputHash, receipt, amountPaise, pricing, draft, mode: readiness.mode,
       state: "creating", orderId: null, bookingId: null, bookingReference: null, createdAt: now, createdBy: uid,
       archivedAt: null, archivedBy: null };
@@ -219,6 +227,7 @@ async function commitPayment(firestore: Firestore, id: string, payment: Razorpay
       if (bookable) {
         const booking = { ...intent.draft, bookingReference, status: "confirmed", confirmedDate: intent.draft.preferredDate, confirmedTime: null,
           confirmedAt: now, completedAt: null, adminNotes: null, paymentStatus: "paid", paymentReference: payment.id, paymentIntentId: id,
+          paymentTotals: { paidPaise: grossPaise, refundedPaise },
           createdAt: now, createdBy: uid, archivedAt: null, archivedBy: null };
         const meta = auditPayment(transaction, firestore, "consultationBookings", id, null, booking, uid, "consumer");
         transaction.create(bookingRef, { ...booking, ...meta });
@@ -229,8 +238,9 @@ async function commitPayment(firestore: Firestore, id: string, payment: Razorpay
           event: "consultation_created", actorId: uid, auditId: meta.lastAuditId, now });
       }
       // A refund creates a new booking revision, superseding any unsent pre-refund confirmation.
-      if (bookingSnap.exists && bookingSnap.data()!.paymentStatus !== record.paymentStatus) {
-        const changes = { paymentStatus: record.paymentStatus };
+      if (bookingSnap.exists && (bookingSnap.data()!.paymentStatus !== record.paymentStatus
+        || (bookingSnap.data()!.paymentTotals != null && bookingSnap.data()!.paymentTotals.refundedPaise !== refundedPaise))) {
+        const changes = { paymentStatus: record.paymentStatus, paymentTotals: { paidPaise: grossPaise, refundedPaise } };
         transaction.update(bookingRef, { ...changes, ...auditPayment(transaction, firestore, "consultationBookings", id,
           { paymentStatus: bookingSnap.data()!.paymentStatus }, changes, uid, "consumer") });
       }

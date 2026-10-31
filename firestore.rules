@@ -672,6 +672,7 @@ service cloud.firestore {
     match /consultationPaymentReceipts/{id} { allow read, write: if false; }
     match /consultationFinancials/{id} { allow read, write: if false; }
     match /razorpayWebhookEvents/{id} { allow read, write: if false; }
+    match /cancellationPolicies/{id} { allow read, write: if false; }
 
     match /availability/{availabilityId} {
       allow read: if isAdmin() || hasOperationalHospitalAccess(resource.data.hospitalId);
