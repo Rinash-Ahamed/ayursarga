@@ -2,7 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 
 const PUBLIC_HOSPITAL_FIELDS = [
-  "name", "description", "email", "phone", "hospitalPhone1", "hospitalPhone2",
+  "name", "email", "phone", "hospitalPhone1", "hospitalPhone2",
   "address", "city", "district", "state", "imageUrl", "imageUrls",
   "ayursargaRating", "ayursargaReviewNote", "centreGuidelines", "additionalCentreRules",
   "facilities", "legalPolicies", "locationUrl", "additionalBystandersAllowed",
@@ -10,7 +10,7 @@ const PUBLIC_HOSPITAL_FIELDS = [
 ] as const;
 
 const PUBLIC_HOSPITAL_LIST_FIELDS = [
-  "name", "description", "address", "city", "district", "state",
+  "name", "address", "city", "district", "state",
   "imageUrl", "imageUrls", "ayursargaRating", "ayursargaReviewNote",
 ] as const;
 

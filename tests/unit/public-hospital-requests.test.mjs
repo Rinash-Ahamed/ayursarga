@@ -1,6 +1,28 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { loadTypeScript } from "../helpers/loadTypeScript.mjs";
+import { readFileSync } from "node:fs";
+
+test("hospital descriptions stay private while package descriptions remain public", () => {
+  const api = loadTypeScript("services/hospitals/publicProjection.ts");
+  const stored = { name: "Test centre", description: "Legacy private description", city: "Palakkad" };
+  for (const project of [api.publicHospitalProjection, api.publicHospitalListProjection]) {
+    const result = project("centre", stored);
+    assert.equal(result.name, stored.name);
+    assert.equal(result.city, stored.city);
+    assert.equal(Object.hasOwn(result, "description"), false);
+  }
+  assert.equal(stored.description, "Legacy private description");
+  assert.equal(api.publicServiceProjection("package", { description: "Included treatments" }).description, "Included treatments");
+});
+
+test("Add Hospital disables the shared description field and public views do not render it", () => {
+  const source = path => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
+  assert.match(source("components/admin/HospitalsManager.tsx"), /includeDescription=\{false\}/);
+  for (const path of ["components/PublicHospitalSearch.tsx", "components/PublicCentreDetails.tsx"]) {
+    assert.doesNotMatch(source(path), /hospital\.description/);
+  }
+});
 
 function service() {
   return loadTypeScript("services/hospitals/publicHospitalService.ts");

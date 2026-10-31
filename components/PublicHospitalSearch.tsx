@@ -132,7 +132,6 @@ const HospitalResultCard = memo(function HospitalResultCard({ hospital, detailQu
         <span className="public-center-stars" aria-hidden="true"><span>★★★★★</span><span style={{ width: `${hospital.ayursargaRating / 5 * 100}%` }}>★★★★★</span></span>
         <strong>{hospital.ayursargaRating.toFixed(1)}</strong>
       </div>}
-      {hospital.description && <p>{hospital.description}</p>}
       {hospital.ayursargaReviewNote && <div className="public-center-review"><p>{hospital.ayursargaReviewNote}</p></div>}
       <Link className="public-center-toggle" href={`/centers/${encodeURIComponent(hospital.id)}?${detailQuery}`} prefetch={false} aria-label={`View details for ${hospital.name}`}>View centre details <span aria-hidden="true">→</span></Link>
     </div>

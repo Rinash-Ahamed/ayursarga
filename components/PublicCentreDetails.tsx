@@ -187,7 +187,7 @@ export default function PublicCentreDetails({ hospitalId, searchContext, initial
         <main>
           <section id="overview" className="public-centre-content-section">
             <span className="eyebrow">Overview</span><h2>Care at {hospital.name}</h2>
-            <p>{hospital.description || "Explore the Ayurvedic treatments and practical centre information available through Ayursarga."}</p>
+            <p>Explore the Ayurvedic treatments and practical centre information available through Ayursarga.</p>
             {hospital.ayursargaReviewNote && <blockquote>{hospital.ayursargaReviewNote}</blockquote>}
           </section>
 

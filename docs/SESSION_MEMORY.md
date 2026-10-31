@@ -2,6 +2,20 @@
 
 Updated: 31 October 2026 (Asia/Calcutta).
 
+## Add Hospital description removal (31 October 2026)
+
+- v4.26.4 hides Description in Admin Add Hospital using the shared form's
+  includeDescription flag. Existing Admin/Hospital edit forms and persisted
+  legacy descriptions are preserved; optional validation/storage compatibility
+  and atomic create/audit paths are unchanged.
+- Removed hospital description from public list/detail API projections and
+  Search cards/centre details rendering. The centre overview retains its
+  existing generic introduction. Package descriptions remain unchanged.
+- Eight focused public-hospital tests passed, covering description exclusion,
+  unchanged package descriptions, availability dates, request deduplication,
+  failure retries and paginated package selection. No build/lint/typecheck,
+  deployment, live mutation or physical-device test was run for this change.
+
 ## Finance totals index correction (31 October 2026)
 
 - v4.26.3 adds the exact Firestore-required aggregate index ordering:
@@ -14,6 +28,10 @@ Updated: 31 October 2026 (Asia/Calcutta).
 - Read-only database checks identified totals as the only failed query in
   both Test and Live; the other six Finance queries passed in each mode.
   Post-deployment totals still awaited index readiness at the first check.
+- Continuation verified the corrected index is READY. All seven actual Finance
+  database queries now pass in both Test and Live (14 reads/checks total),
+  including previously failing totals. No authenticated hosted HTTP/browser
+  Finance request was tested; hosting configuration remains separate.
 - All 12 focused consultation payment/Finance tests passed with Node test
   isolation disabled after sandbox child-process spawn was denied. Added an
   index-order regression assertion; mocked tests do not prove deployed Auth.

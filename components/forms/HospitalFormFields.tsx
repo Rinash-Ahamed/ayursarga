@@ -19,11 +19,13 @@ export function HospitalFormFields({
   errors,
   includeCommission = false,
   includeLegalName = false,
+  includeDescription = true,
 }: {
   defaultValues?: HospitalFormDefaults;
   errors: HospitalValidationErrors;
   includeCommission?: boolean;
   includeLegalName?: boolean;
+  includeDescription?: boolean;
 }) {
   const initialCentreName = defaultValues.name ?? "";
   const initialLegalName = defaultValues.legalName ?? initialCentreName;
@@ -96,6 +98,6 @@ export function HospitalFormFields({
       <input name={sameAddress ? undefined : "address"} value={serviceAddress} onChange={(event) => setServiceAddress(event.target.value)} disabled={sameAddress} required minLength={10} maxLength={300} aria-invalid={Boolean(errors.address)} />
       <FieldError field="address" errors={errors} />
     </label>
-    <label className="full">Description<textarea name="description" defaultValue={defaultValues.description} maxLength={2000} /></label>
+    {includeDescription && <label className="full">Description<textarea name="description" defaultValue={defaultValues.description} maxLength={2000} /></label>}
   </>;
 }
