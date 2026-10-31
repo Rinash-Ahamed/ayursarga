@@ -97,7 +97,7 @@ test("configuration failure never authorizes Admin and cancellation remains avai
   await page.evaluate(() => { (window as unknown as { adminMfaFixture: { rejectSetup: boolean } }).adminMfaFixture.rejectSetup = true; });
   await password(page);
   await page.getByRole("button", { name: "Set up authenticator", exact: true }).click();
-  await expect(page.getByRole("alert")).toContainText("enable Firebase Identity Platform");
+  await expect(page.getByRole("alert")).toContainText("Contact the Ayursarga account owner");
   expect((await results(page)).authorized).toBe(false);
   await page.getByRole("button", { name: "Cancel sign-in", exact: true }).click();
   expect((await results(page)).calls.cancel).toBe(1);

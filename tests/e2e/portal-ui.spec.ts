@@ -27,6 +27,67 @@ async function mount(page: Page, screen: string) {
   await page.waitForTimeout(120);
 }
 
+test("Admin hospital cards show contacts created time and package approvals in a responsive three-column maximum", async ({ page }, testInfo) => {
+  await page.route("**/*", route => route.fulfill({status:204,body:""}));
+  await mount(page,"admin-hospital-cards");
+  const cards=page.locator(".admin-hospital-card");
+  await expect(cards).toHaveCount(6);
+  const first=cards.first();
+  await expect(first).toContainText("hospital.contact.with.long.address@example.com");
+  await expect(first).toContainText("9876543210");
+  await expect(first).toContainText("Package Approval Pending · 1");
+  await expect(first).toContainText("Packages Approved · 1");
+  await expect(cards.nth(1)).toContainText("No packages added");
+  await expect(first.locator("dt").filter({hasText:/^Created$/})).toHaveCount(1);
+  await expect(first.locator(".admin-card-facts")).toContainText(/\d{2}\/\d{2}\/\d{4},.*IST/);
+  await expect(first).toHaveAttribute("href","/admin/hospitals/centre-0");
+  const grid=page.locator(".admin-hospital-grid");
+  const width=await page.locator(".admin-card-layout").evaluate(element=>element.clientWidth);
+  const columns=await grid.evaluate(element=>getComputedStyle(element).gridTemplateColumns.split(" ").length);
+  expect(columns).toBe(width>=1000?3:width>=650?2:1);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  const overflow=await cards.locator("dd,.portal-status").evaluateAll(elements=>elements.filter(element=>element.scrollWidth>element.clientWidth+1).map(element=>element.textContent));
+  expect(overflow).toEqual([]);
+  await page.screenshot({path:testInfo.outputPath("hospital-cards.png"),fullPage:true});
+  await page.evaluate(()=>{(window as unknown as {packageSummaryFailure:boolean}).packageSummaryFailure=true;});
+  await page.getByRole("button",{name:"Refresh package status",exact:true}).click();
+  await expect(page.getByRole("alert")).toContainText("Package status could not be loaded");
+  await expect(first).toContainText("Package status unavailable");
+  await expect(first).not.toContainText("Packages Approved");
+  await page.evaluate(()=>{(window as unknown as {packageSummaryFailure:boolean}).packageSummaryFailure=false;});
+  await page.getByRole("button",{name:"Refresh package status",exact:true}).click();
+  await expect(first).toContainText("Package Approval Pending");
+});
+
+test("portal guidance stays readable and aligned across Admin Hospital and Consumer workflows", async ({ page }, testInfo) => {
+  await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
+  for (const screen of ["admin-consultants", "hospital-profile", "admin-cancellation-settings", "admin-consultant-finance", "consumer-consultation-new", "consumer-consultation-empty"]) {
+    await mount(page, screen);
+    if (screen === "admin-consultants") await page.getByRole("button", { name: "Add New", exact: true }).click();
+    if (screen === "hospital-profile") {
+      await expect(page.locator(".portal-help-list")).toContainText("Your first photo is the cover customers see");
+      await expect(page.locator(".portal-image-manager")).not.toContainText("publication minimum");
+      const fields = page.locator(".portal-guidelines-fields").first();
+      if (await fields.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(" ").length === 2)) {
+        const first = await fields.locator("textarea").nth(0).boundingBox();
+        const second = await fields.locator("textarea").nth(1).boundingBox();
+        expect(Math.abs(first!.y - second!.y)).toBeLessThanOrEqual(1);
+      }
+    }
+    if (screen === "consumer-consultation-new") {
+      await page.getByRole("radio", { name: /Assigned Consultation Professional/ }).check();
+      await expect(page.getByText("Choose an available date from the calendar.", { exact: false })).toBeVisible();
+    }
+    const overflow = await page.locator(".portal-form-note,.portal-help-list,.portal-field-error,.portal-form-error").evaluateAll(elements => elements.filter(element => {
+      const rect = element.getBoundingClientRect();
+      return rect.width > 0 && (rect.left < -1 || rect.right > innerWidth + 1 || element.scrollWidth > element.clientWidth + 1);
+    }).map(element => element.textContent));
+    expect(overflow, screen).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), screen).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath(`${screen}-guidance.png`), fullPage: true });
+  }
+});
+
 test("district fields offer only Kerala and Tamil Nadu and derive the selected state", async ({ page }) => {
   for (const screen of ["admin-hospitals", "hospital-profile"]) {
     await mount(page, screen);
@@ -205,7 +266,7 @@ test("hospital cover badge follows the first photo and public galleries keep the
   const warning = page.locator("#hospital-activation-images-error");
   await expect(warning).toBeVisible();
   await expect(warning).toContainText("Activation requires 5 hospital images.");
-  await expect(warning).toContainText("3 of 5 added. Upload 2 more images");
+  await expect(warning).toContainText("3 of 5 required photos added. Add 2 more photos");
   await expect(page.getByRole("button", { name: "Activate hospital", exact: true })).toHaveAttribute("aria-describedby", "hospital-activation-images-error");
   await expect(warning.getByRole("link", { name: "Go to hospital images" })).toHaveAttribute("href", "#hospital-images");
   await expect(page.getByRole("button", { name: "Upload images", exact: true })).toBeEnabled();
@@ -373,7 +434,7 @@ test("online consultation empty state is clear and does not show an unusable for
   await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
   await mount(page, "consumer-consultation-empty");
   await expect(page.getByRole("heading", { name: "Consultants are not available yet" })).toBeVisible();
-  await expect(page.getByText("No professionals are currently assigned to prenatal doctor consultation.", { exact: false })).toBeVisible();
+  await expect(page.getByText("No appointments are available for prenatal doctor consultation right now.", { exact: false })).toBeVisible();
   await expect(page.locator("form")).toHaveCount(0);
   await expect(page.getByRole("textbox", { name: "Preferred appointment date *", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Check availability again" })).toBeVisible();
@@ -713,6 +774,22 @@ test("availability review requires confirmation and prevents duplicate submissio
   await expect(dialog).toBeHidden();
 });
 
+test("Admin user cards show created date and time for both groups with a safe legacy fallback", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({status:204,body:""}));
+  for (const screen of ["admin-users", "admin-users-no-date"]) {
+    await mount(page, screen);
+    for (const group of ["Consumers", "Hospitals"]) {
+      await page.getByRole("button", {name:group, exact:true}).click();
+      const facts=page.locator(".admin-user-grid .admin-card-facts").first();
+      await expect(facts.locator("dt")).toHaveText("Created");
+      if (screen.endsWith("no-date")) await expect(facts.locator("dd")).toHaveText("Not recorded");
+      else await expect(facts.locator("dd")).toHaveText(/\d{2}\/\d{2}\/\d{4},.*\d{2}:\d{2}.*IST/);
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+      await expect(page.locator(".admin-user-grid").getByRole("button",{name:"Remove",exact:true})).toHaveCount(group==="Consumers"?1:0);
+    }
+  }
+});
+
 test("hospital user cards show account details without raw hospital IDs", async ({ page }) => {
   await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
   await mount(page, "admin-users");
@@ -873,9 +950,28 @@ test("portal screens fit the viewport with representative long data", async ({ p
   expect(findings).toEqual([]);
 });
 
+test("hospital deactivation replaces delete in the top card and preserves cancel and confirmation behavior", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({status:204,body:""}));
+  await mount(page,"admin-details");
+  const overview=page.locator("article.portal-card").first();
+  const deactivate=overview.getByRole("button",{name:"Deactivate hospital",exact:true});
+  await expect(deactivate).toHaveCount(1);
+  await expect(page.getByRole("button",{name:"Deactivate hospital",exact:true})).toHaveCount(1);
+  await expect(page.getByRole("button",{name:/Delete hospital|Remove hospital/})).toHaveCount(0);
+  await deactivate.click();
+  await page.getByRole("dialog").getByRole("button",{name:"Cancel",exact:true}).click();
+  await expect(overview.locator(".portal-status")).toHaveText("active");
+  await deactivate.click();
+  await page.getByRole("dialog").getByRole("button",{name:"Deactivate hospital",exact:true}).click();
+  await expect(overview.locator(".portal-status")).toHaveText("inactive");
+  await expect(page.getByRole("button",{name:"Deactivate hospital",exact:true})).toHaveCount(0);
+  await expect(page.getByRole("button",{name:"Reactivate hospital",exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+});
+
 test("destructive dialogs stay red, cancel stays neutral, and scroll is restored", async ({ page }) => {
   await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
-  for (const [screen, trigger] of [["admin-details", "Delete hospital"], ["hospital-services", "Delete"], ["hospital-profile", "Remove centre image 1"], ["admin-audits", "Clear all audits"]]) {
+  for (const [screen, trigger] of [["admin-details", "Deactivate hospital"], ["hospital-services", "Delete"], ["hospital-profile", "Remove centre image 1"], ["admin-audits", "Clear all audits"]]) {
     await mount(page, screen);
     await page.getByRole("button", { name: trigger, exact: true }).first().click();
     const dialog = page.getByRole("dialog");

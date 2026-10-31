@@ -195,131 +195,6 @@ service cloud.firestore {
         && request.resource.data.commissionPercentage <= 100;
     }
 
-    function validConsultantSlotTiming(timings, slot) {
-      return !(slot in timings) || (timings[slot] is map
-        && timings[slot].keys().hasOnly(['startTime', 'endTime'])
-        && timings[slot].get('startTime', '') is string
-        && timings[slot].get('endTime', '') is string
-        && timings[slot].get('startTime', '').matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')
-        && timings[slot].get('endTime', '').matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')
-        && timings[slot].startTime != timings[slot].endTime);
-    }
-
-    function validConsultantDateAt(dates, index) {
-      return dates.size() <= index || (dates[index] is string
-        && dates[index].matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$'));
-    }
-
-    function validConsultantDates(dates) {
-      // Rules have no list-every operation; check each entry in this bounded list.
-      return dates is list && dates.size() <= 31
-        && dates.toSet().size() == dates.size()
-        && validConsultantDateAt(dates, 0)
-        && validConsultantDateAt(dates, 1)
-        && validConsultantDateAt(dates, 2)
-        && validConsultantDateAt(dates, 3)
-        && validConsultantDateAt(dates, 4)
-        && validConsultantDateAt(dates, 5)
-        && validConsultantDateAt(dates, 6)
-        && validConsultantDateAt(dates, 7)
-        && validConsultantDateAt(dates, 8)
-        && validConsultantDateAt(dates, 9)
-        && validConsultantDateAt(dates, 10)
-        && validConsultantDateAt(dates, 11)
-        && validConsultantDateAt(dates, 12)
-        && validConsultantDateAt(dates, 13)
-        && validConsultantDateAt(dates, 14)
-        && validConsultantDateAt(dates, 15)
-        && validConsultantDateAt(dates, 16)
-        && validConsultantDateAt(dates, 17)
-        && validConsultantDateAt(dates, 18)
-        && validConsultantDateAt(dates, 19)
-        && validConsultantDateAt(dates, 20)
-        && validConsultantDateAt(dates, 21)
-        && validConsultantDateAt(dates, 22)
-        && validConsultantDateAt(dates, 23)
-        && validConsultantDateAt(dates, 24)
-        && validConsultantDateAt(dates, 25)
-        && validConsultantDateAt(dates, 26)
-        && validConsultantDateAt(dates, 27)
-        && validConsultantDateAt(dates, 28)
-        && validConsultantDateAt(dates, 29)
-        && validConsultantDateAt(dates, 30);
-    }
-
-    function hasValidConsultantFields() {
-      return request.resource.data.keys().hasOnly([
-          'employeeId', 'employeeSequence', 'name', 'email', 'contactNo', 'whatsappNo', 'imageUrl',
-          'qualification', 'yearsExperience', 'lastWorkedCompany', 'address', 'designation', 'consultantCharge', 'ayursargaCommissionPercentage', 'preferredTimeSlots', 'preferredSlotTimings', 'preferredDays', 'availableDates', 'consultationServices',
-          'emergencyContactNo', 'status', 'createdAt', 'createdBy', 'updatedAt',
-          'updatedBy', 'archivedAt', 'archivedBy', 'lastAuditId'
-        ])
-        && request.resource.data.employeeId is string
-        // Portraits are set only by the audited server upload endpoint. The
-        // client changed-field allowlist below deliberately excludes imageUrl.
-        && (request.resource.data.get('imageUrl', null) == null
-          || (request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() <= 1000))
-        && request.resource.data.get('designation', '') is string
-        && request.resource.data.get('designation', '').size() <= 120
-        && request.resource.data.get('consultationServices', []) is list
-        && request.resource.data.get('consultationServices', []).size() <= 7
-        && request.resource.data.get('consultationServices', []).hasOnly(['prenatal-doctor', 'prenatal-dietitian', 'prenatal-yoga', 'lactation', 'womens-wellness', 'cosmetologist', 'psychologist'])
-        && request.resource.data.get('consultationServices', []).toSet().size() == request.resource.data.get('consultationServices', []).size()
-        && (request.resource.data.get('consultantCharge', null) == null || (
-          request.resource.data.consultantCharge is number
-          && request.resource.data.consultantCharge >= 0
-          && request.resource.data.consultantCharge <= 90071992547409.9
-        ))
-        && (request.resource.data.get('ayursargaCommissionPercentage', null) == null || (
-          request.resource.data.ayursargaCommissionPercentage is number
-          && request.resource.data.ayursargaCommissionPercentage >= 0
-          && request.resource.data.ayursargaCommissionPercentage <= 100
-          && request.resource.data.ayursargaCommissionPercentage == math.round(request.resource.data.ayursargaCommissionPercentage * 100) / 100.0
-        ))
-        && validConsultantDates(request.resource.data.get('availableDates', []))
-        && request.resource.data.get('preferredDays', []) is list
-        && request.resource.data.get('preferredDays', []).size() <= 7
-        && request.resource.data.get('preferredDays', []).hasOnly(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'])
-        && request.resource.data.get('preferredDays', []).toSet().size() == request.resource.data.get('preferredDays', []).size()
-        && request.resource.data.get('preferredTimeSlots', []) is list
-        && request.resource.data.get('preferredTimeSlots', []).size() <= 3
-        && request.resource.data.get('preferredTimeSlots', []).hasOnly(['morning', 'noon', 'evening'])
-        && request.resource.data.get('preferredTimeSlots', []).toSet().size() == request.resource.data.get('preferredTimeSlots', []).size()
-        && request.resource.data.get('preferredSlotTimings', {}) is map
-        && request.resource.data.get('preferredSlotTimings', {}).keys().hasOnly(request.resource.data.get('preferredTimeSlots', []))
-        && validConsultantSlotTiming(request.resource.data.get('preferredSlotTimings', {}), 'morning')
-        && validConsultantSlotTiming(request.resource.data.get('preferredSlotTimings', {}), 'noon')
-        && validConsultantSlotTiming(request.resource.data.get('preferredSlotTimings', {}), 'evening')
-        && request.resource.data.employeeId.matches('AS[0-9]{3,}')
-        && request.resource.data.employeeSequence is int
-        && request.resource.data.employeeSequence > 0
-        && request.resource.data.name is string
-        && request.resource.data.name.size() >= 2
-        && request.resource.data.name.size() <= 120
-        && request.resource.data.email is string
-        && request.resource.data.email.size() >= 5
-        && request.resource.data.email.size() <= 160
-        && request.resource.data.contactNo is string
-        && request.resource.data.contactNo.size() >= 7
-        && request.resource.data.contactNo.size() <= 25
-        && request.resource.data.whatsappNo is string
-        && request.resource.data.whatsappNo.size() >= 7
-        && request.resource.data.whatsappNo.size() <= 25
-        && request.resource.data.qualification is string
-        && request.resource.data.qualification.size() >= 2
-        && request.resource.data.qualification.size() <= 200
-        && request.resource.data.yearsExperience is number
-        && request.resource.data.yearsExperience >= 0
-        && request.resource.data.yearsExperience <= 80
-        && request.resource.data.yearsExperience % 0.5 == 0
-        && request.resource.data.lastWorkedCompany is string
-        && request.resource.data.lastWorkedCompany.size() <= 160
-        && request.resource.data.address is string
-        && request.resource.data.address.size() <= 400
-        && request.resource.data.emergencyContactNo is string
-        && request.resource.data.emergencyContactNo.size() <= 25
-        && request.resource.data.status in ['active', 'inactive'];
-    }
 
 
     function isAuditedModule(module) {
@@ -578,38 +453,10 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    function hasRequiredConsultantPricing() {
-      return request.resource.data.get('consultantCharge', null) is number
-        && request.resource.data.get('ayursargaCommissionPercentage', null) is number
-        && request.resource.data.consultantCharge == math.round(request.resource.data.consultantCharge * 100) / 100.0;
-    }
-
     match /consultants/{consultantId} {
       allow read: if isAdmin();
-      allow create: if false;
-      allow update: if isAdmin()
-        && hasValidConsultantFields()
-        && hasLinkedAudit('consultants', consultantId)
-        && request.resource.data.employeeId == resource.data.employeeId
-        && request.resource.data.employeeSequence == resource.data.employeeSequence
-        && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.createdBy == resource.data.createdBy
-        && request.resource.data.archivedAt == resource.data.archivedAt
-        && request.resource.data.archivedBy == resource.data.archivedBy
-        && request.resource.data.updatedAt == request.time
-        && request.resource.data.updatedBy == request.auth.uid
-        && ((linkedAuditAction() == 'update'
-          && hasRequiredConsultantPricing()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'name', 'email', 'contactNo', 'whatsappNo', 'qualification',
-            'yearsExperience', 'lastWorkedCompany', 'address', 'emergencyContactNo',
-            'designation', 'consultantCharge', 'ayursargaCommissionPercentage', 'preferredTimeSlots', 'preferredSlotTimings', 'preferredDays', 'availableDates', 'consultationServices',
-            'updatedAt', 'updatedBy', 'lastAuditId'
-          ])) || (linkedAuditAction() == 'status_change'
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'status', 'updatedAt', 'updatedBy', 'lastAuditId'
-          ])));
-      allow delete: if false;
+      // All mutations use verified Admin server endpoints and atomic audits.
+      allow create, update, delete: if false;
     }
 
     match /consultationBookings/{bookingId} {

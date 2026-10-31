@@ -5,27 +5,11 @@ import { loadTypeScript } from "../helpers/loadTypeScript.mjs";
 const { validateConsultantFields, consultantFormValues, formatConsultantTimeSlot } = loadTypeScript("features/consultants/validation.ts");
 const legacy = { name: "Doctor Sample", email: "doctor@example.com", contactNo: "9876543210", whatsappNo: "9876543210", qualification: "BAMS", yearsExperience: 3.5, consultantCharge: 900.5, ayursargaCommissionPercentage: 0 };
 
-test("consultant update rules allow every validated profile field without broadening status or identity edits", () => {
-  // Source-contract regression, not a substitute for emulator/deployed-rule tests.
+test("consultant writes cannot bypass verified Admin endpoints", () => {
   const rules = readFileSync(new URL("../../firestore.rules", import.meta.url), "utf8");
-  const consultantRules = rules.split("match /consultants/{consultantId} {")[1]?.split("match /availability/")[0];
-  assert.ok(consultantRules, "Consultant rules must exist");
-  const updateBranch = consultantRules.split("linkedAuditAction() == 'update'")[1]?.split("linkedAuditAction() == 'status_change'")[0];
-  const allowed = [...updateBranch.matchAll(/'([^']+)'/g)].map((match) => match[1]);
-  const profileFields = Object.keys(validateConsultantFields(legacy).data);
-  assert.deepEqual(allowed.toSorted(), [...profileFields, "updatedAt", "updatedBy", "lastAuditId"].toSorted());
-  assert.match(consultantRules, /allow update: if isAdmin\(\)/);
-  assert.match(consultantRules, /hasValidConsultantFields\(\)/);
-  assert.match(consultantRules, /hasLinkedAudit\('consultants', consultantId\)/);
-  assert.match(consultantRules, /allow delete: if false/);
-  assert.match(updateBranch, /hasRequiredConsultantPricing\(\)/);
-  const statusBranch = consultantRules.split("linkedAuditAction() == 'status_change'")[1];
-  assert.doesNotMatch(statusBranch, /hasRequiredConsultantPricing|ayursargaCommissionPercentage/);
-  const fieldValidator = rules.split("function hasValidConsultantFields()")[1].split("function ")[0];
-  assert.match(fieldValidator, /'ayursargaCommissionPercentage'/);
-  assert.match(fieldValidator, /ayursargaCommissionPercentage <= 100/);
-  assert.match(fieldValidator, /math\.round\(request\.resource\.data\.ayursargaCommissionPercentage \* 100\) \/ 100\.0/);
-  assert.match(rules, /math\.round\(request\.resource\.data\.consultantCharge \* 100\) \/ 100\.0/);
+  const consultantRules = rules.split("match /consultants/{consultantId} {")[1].split("match /consultationBookings")[0];
+  assert.match(consultantRules, /allow read: if isAdmin\(\)/);
+  assert.match(consultantRules, /allow create, update, delete: if false/);
 });
 test("optional preferences stay empty but legacy profile saves require explicit pricing", () => {
   const result = validateConsultantFields(legacy);
@@ -108,7 +92,7 @@ test("consultant service sends validated charges and preserves atomic audited ed
   const service = loadTypeScript("services/consultants/consultantService.ts", {
     "@/services/firestore/firestoreService": { firestoreTimestamp: { server: () => "server-time" } },
     "@/services/firestore/auditService": { getAuditActorId: () => "admin", updateAuditedDocument: async (...args) => calls.push({ kind: "update", args }) },
-    "@/services/api/client": { authorizedApiRequest: async (url, options) => { calls.push({ kind: "create", url, body: JSON.parse(options.body) }); return { employeeId: "AS001" }; } },
+    "@/services/api/client": { authorizedApiRequest: async (url, options) => { calls.push({ kind: options.method === "POST" ? "create" : "update", url, body: JSON.parse(options.body) }); return { employeeId: "AS001", ok: true }; } },
   });
   assert.equal(await service.createConsultant({ ...legacy, consultantCharge: "900.50", preferredDays: ["fri", "mon"], availableDates: ["2099-10-26"] }), "AS001");
   assert.deepEqual(calls[0].body.availableDates, ["2099-10-26"]);
@@ -116,11 +100,12 @@ test("consultant service sends validated charges and preserves atomic audited ed
   assert.equal(calls[0].body.ayursargaCommissionPercentage, 0);
   assert.deepEqual(calls[0].body.preferredDays, ["mon", "fri"]);
   await service.updateConsultant("AS001", { ...legacy, consultantCharge: 0, preferredDays: ["sun"], availableDates: ["2099-10-25"] }, {});
-  assert.deepEqual(calls[1].args[2].availableDates, ["2099-10-25"]);
-  assert.equal(calls[1].args[2].consultantCharge, 0);
-  assert.equal(calls[1].args[2].ayursargaCommissionPercentage, 0);
-  assert.deepEqual(calls[1].args[2].preferredDays, ["sun"]);
-  assert.deepEqual(calls[1].args[3], { action: "update", actorRole: "admin" });
+  assert.equal(calls[1].url, "/api/admin/consultants/AS001");
+  assert.equal(calls[1].body.action, "update");
+  assert.deepEqual(calls[1].body.fields.availableDates, ["2099-10-25"]);
+  assert.equal(calls[1].body.fields.consultantCharge, 0);
+  assert.equal(calls[1].body.fields.ayursargaCommissionPercentage, 0);
+  assert.deepEqual(calls[1].body.fields.preferredDays, ["sun"]);
   assert.throws(() => service.updateConsultant("AS001", { ...legacy, consultantCharge: "" }, {}));
   assert.throws(() => service.updateConsultant("AS001", { ...legacy, ayursargaCommissionPercentage: "" }, {}));
   assert.throws(() => service.updateConsultant("AS001", { ...legacy, consultantCharge: -1 }, {}));

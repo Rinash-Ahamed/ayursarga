@@ -74,7 +74,7 @@ export function ConsumerProfile({ requestedPath, editing = false }: { requestedP
           <span>I have read and agree to the Ayursarga Customer Terms &amp; Conditions and Privacy Policy.</span>
         </label>
         {fieldErrors.privacyConsent && <span className="portal-field-error">{fieldErrors.privacyConsent}</span>}
-      </fieldset> : <p className="portal-consent-recorded full">Customer agreement and privacy consent are recorded for this Consumer profile. To withdraw consent, contact <a href="mailto:info@ayursarga.com">info@ayursarga.com</a>.</p>}
+      </fieldset> : <p className="portal-consent-recorded full">You have accepted the Customer Terms and Privacy Policy. To withdraw your consent, contact <a href="mailto:info@ayursarga.com">info@ayursarga.com</a>.</p>}
       <PortalToast message={error} notification={errorNotification} tone="error" />
       <PortalToast message={message} notification={messageNotification} />
       <div className="portal-actions full">{error && <p className="portal-form-error">{error}</p>}<button className="portal-button" disabled={busy || (needsPrivacyConsent && !privacyConsentAccepted)}>{busy ? "Saving..." : editing ? "Save changes" : "Save and continue"}</button></div>

@@ -2,6 +2,136 @@
 
 Updated: 31 October 2026 (Asia/Calcutta).
 
+## Hospital deactivation replaces the top Delete action (31 October 2026)
+
+- v4.28.2 removes Delete hospital and its now-unreachable archive confirmation
+  branch/import from Admin Hospital Details. Existing Deactivate hospital moves
+  beside Edit hospital in the top overview, only for active hospitals. Removed
+  its former duplicate in Contract and approval. Existing inactive reactivation,
+  deactivation service/permissions/audits and historical archive handling remain.
+- Four focused mocked browser cases passed desktop/mobile WebKit: top placement,
+  no Delete/Remove hospital action, cancel leaves active, confirm makes inactive,
+  reactivation remains available, destructive styling and scroll-lock restoration.
+  Initial new test expected title-case text rather than existing lowercase
+  status values; corrected expectation and reran the flow successfully.
+- No API/rules changes, build/lint/typecheck, deployment or live mutations.
+
+## Admin user creation timestamps (31 October 2026)
+
+- v4.28.1 adds a labelled Created date/time to both Consumer and Hospital cards
+  in Admin Users, using existing createdAt and shared DD/MM/YYYY formatting
+  with India Standard Time. Missing/invalid timestamps show Not recorded.
+  No extra reads, stored-field changes, permissions or action changes.
+- Six focused mocked browser tests passed desktop, tablet and mobile WebKit:
+  both groups, missing timestamps, responsive overflow, existing account details
+  and role-specific Remove controls. No build/lint/typecheck or deployment.
+
+## Admin hospital cards and package approval summaries (31 October 2026)
+
+- v4.28.0 adds labelled email, primary/secondary hospital phone, owner WhatsApp,
+  legal name when different, location, commission and created date/time (IST,
+  DD/MM/YYYY) to Admin Hospital cards. Full long values wrap rather than truncate.
+  Current package review counts show Package Approval Pending, Packages Approved,
+  Changes Requested and Package Drafts, or No packages added. Existing whole-card
+  details navigation and hospital list pagination/search/create are preserved.
+- Responsive shared Admin card container switches at available widths 650/1000px
+  to two/three columns, never more than three. Admin Users adopts the same grid;
+  role switching and Consumer archive controls remain unchanged. Dense consultant
+  edit forms and booking/action layouts were not forced into narrow cards.
+- New Admin/MFA-only POST /api/admin/hospitals/package-summary accepts at most 20
+  unique hospital IDs and returns only count summaries. Bounded aggregation
+  queries run in a read-only transaction for a consistent snapshot, four hospitals
+  concurrently. Excludes archived/status-archived packages and counts existing
+  packages without review metadata as approved. No package documents downloaded
+  or mutated. Client loads status after the cards, reuses fetched summaries during
+  pagination, cancels stale requests and offers a guarded refresh/retry action.
+  Failures show unavailable, never a false approval or empty-package state.
+- Added two services indexes (hospitalId/archivedAt/status, with reviewStatus on
+  the second). App and INDEX deployment are required; neither was deployed for
+  this task, and live index readiness is not verified. Rules/approval transitions,
+  audit writes, consumer publication and booking logic are unchanged.
+- Passed 15 focused route/unit/MFA checks, six responsive hospital-card cases
+  (desktop/wide, tablet, portrait/landscape Chromium, mobile WebKit), four existing
+  Users/package approval browser regressions and two final refresh/location UI
+  checks. Desktop screenshot inspected. A real local demo Firestore emulator
+  test passed for aggregate read-only transaction counts and unchanged records;
+  only authorization was stubbed in that persistence test. Shared MFA proof and
+  authorization denials were covered separately. Temporary emulator stopped.
+- No production data calls/mutations, build/lint/typecheck, broad API audit or
+  deployment. Existing unrelated working-tree changes preserved.
+
+## User-facing portal guidance and responsive alignment (31 October 2026)
+
+- v4.27.10 reviews Admin/Hospital/Consumer component and route copy and replaces
+  developer-oriented instructions in galleries, packages/approval, consultants,
+  availability, consumer support/profile, cancellation, Finance and security.
+  Rephrased sign-in/photo/Finance failure messages without changing codes or
+  validation. Kept warnings about uncertain payments, agreed policy retention,
+  manual bank transfers, MFA recovery and five-photo requirements accurate.
+  No booking, payment, permission, persistence or Firestore rule logic changed.
+- Shared portal help-list styling makes dense instructions scannable. Form
+  helper/error rows span the form and action-row errors sit above buttons.
+  Screenshot review found guideline textareas offset by wrapped labels: CSS
+  subgrid now aligns their rows, with the normal grid as an older-browser
+  fallback. Fixed shared checkbox-label sizing/alignment and shortened policy
+  select option labels to fit tablet columns; option values remain unchanged.
+- 29 focused unit/route checks passed for MFA, gallery/photo safeguards and
+  cancellation behavior. Responsive guidance checks exercised six screens on
+  320px Chromium, tablet, desktop and mobile WebKit. Final eight guidance/policy
+  checks passed after alignment changes; gallery and empty states also passed
+  all four configurations, MFA failure/cancel passed desktop/WebKit, and Finance
+  settlement controls passed tablet. An initial guidance test omitted consultant
+  selection; corrected the test prerequisite and reran successfully.
+- Tablet screenshots inspected for profile/galleries and cancellation settings;
+  images/fonts are stubbed in this UI harness. No horizontal overflow in tested
+  guidance screens. Not a physical-device, live delivery or exhaustive workflow
+  test. No build/lint/typecheck, broad audit or deployment requested/performed.
+  Existing unrelated HospitalDetails/next-env and prior consultant-save changes
+  were preserved. AGENTS now records end-user language and helper alignment.
+
+## Firestore rules deployment (31 October 2026)
+
+- Owner requested Firebase redeployment. Scoped non-interactive deployment of
+  firestore:rules to ayursarga-connect compiled and released successfully.
+  No indexes, Storage rules, application code or operational records changed.
+- Consultant direct-client writes are now denied in deployed rules. The new
+  server save endpoint/client code still require application deployment; a
+  Firebase rules deployment alone does not publish the consultant save fix.
+  Deploy the updated app and refresh Admin tabs before validating live saves.
+
+## Consultant edit permission failure reproduced and fixed locally (31 October 2026)
+
+- v4.27.9. Real Firestore emulator reproduced valid direct consultant saves
+  returning PERMISSION_DENIED with the maximum 1,000 evaluated expressions
+  reached. Prior mocked/source allowlist tests missed this runtime failure.
+  Attempts to reduce repeated expressions passed simpler records but still
+  failed fully populated availability; those experimental rule changes were
+  discarded, not shipped or used to weaken authorization.
+- Profile and Active/Inactive saves now use PATCH /api/admin/consultants/{id}
+  with shared requireActiveAdmin (native TOTP/cutoff), bounded JSON, shared
+  profile validation, strict status action, missing/archived handling and an
+  atomic transaction reading the current record before update/audit. Identity,
+  creation metadata, photo and unrelated stored fields remain untouched.
+  Status-only updates preserve legacy records without imposing new pricing.
+  Client service uses existing authenticated in-flight request sharing.
+- Firestore consultant reads remain Admin-only; all direct client mutations
+  are denied. Removed only the now-unused consultant-specific validators.
+  General authorization, other collections, public discovery, booking flows,
+  Storage and Auth configuration are unchanged. AGENTS records the decision.
+- Passed 20 focused route/unit checks plus 11 shared MFA tests. Passed 4 actual
+  local emulator cases: client denials/role isolation, Admin cutoff, creation
+  bypass denial and real API transaction/audit persistence (authorization stubbed
+  only in that persistence case). Full 31-date edits, repeated saves, immutable
+  identity/photo preservation, status, invalid input and failed commits covered.
+  Four mocked form browser checks passed desktop/mobile WebKit for availability
+  and designation edit/save/reopen. No live mutation or deployed-token test.
+- Portable checksum-verified Temurin Java 21 runtime was downloaded into a
+  temporary folder, not installed or added to the system PATH. Local demo-only
+  emulator was stopped and its generated workspace debug log removed.
+- NOT deployed. Deploy updated app and Firestore rules together (app first),
+  then refresh existing Admin tabs, which otherwise retain the obsolete SDK
+  writer. No index change. Build/lint/typecheck were not requested or run.
+
 ## District selection limited to Kerala and Tamil Nadu (31 October 2026)
 
 - v4.27.8 limits the shared Hospital district selector (Admin create/edit and

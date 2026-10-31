@@ -7,7 +7,6 @@ import type { HospitalDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import {
   activateHospital,
-  archiveHospital,
   confirmHospitalContractSigning,
   deactivateHospital,
   getHospital,
@@ -85,7 +84,7 @@ function ContractStepMarker({ step, done, active = false }: { step: number; done
   </span>;
 }
 
-type PendingHospitalAction = "archive" | "activate" | "setup" | "deactivate";
+type PendingHospitalAction = "activate" | "setup" | "deactivate";
 type ContractPreview = ReturnType<typeof buildHospitalContractPdf>;
 
 export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
@@ -167,7 +166,6 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
       setError(`Upload at least ${MIN_PUBLIC_HOSPITAL_IMAGES} different hospital images before activation.`);
       return;
     }
-    if (pendingAction === "archive") await runAction((record) => archiveHospital(record.id), "The hospital has been removed from the normal list. Its details and history are still safely stored.");
     if (pendingAction === "activate" && hospital.status === "pending" && !contractReady) {
       if (!contractUrl.trim()) {
         setContractUrlError("Add the signed contract URL before activating the hospital.");
@@ -380,9 +378,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   const activatedAt = hospital && hospital.status === "active" && signedAt && isOnOrAfter(hospital.activatedAt, signedAt)
     ? hospital.activatedAt
     : null;
-  const actionDialog = pendingAction === "archive"
-    ? { title: "Remove this hospital?", message: "It will be hidden from normal application views. Its protected history will remain stored.", confirmLabel: "Remove hospital", tone: "danger" as const }
-    : pendingAction === "activate"
+  const actionDialog = pendingAction === "activate"
       ? { title: hospital?.status === "inactive" ? "Reactivate this hospital?" : "Activate this hospital?", message: hospital?.status === "pending" && !contractReady ? "Add the secure link to the signed contract. Continuing will confirm the signing, activate the hospital, and send its login setup email." : "The hospital will become visible to consumers and receive a secure login setup email.", confirmLabel: hospital?.status === "inactive" ? "Reactivate hospital" : "Activate hospital", tone: "default" as const }
         : pendingAction === "setup"
           ? { title: "Send login setup link?", message: `A secure password setup/reset link will be sent to ${hospital?.email ?? "this hospital"}.`, confirmLabel: "Send setup link", tone: "default" as const }
@@ -416,7 +412,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
           <p><strong>Service address:</strong> {hospital.address}</p>
           {hospital.status !== "archived" && <div className="portal-actions">
             <button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditing(true); setError(null); setMessage(null); }}>Edit hospital</button>
-            <button className="portal-button danger" type="button" disabled={busy} onClick={() => setPendingAction("archive")}>Delete hospital</button>
+            {hospital.status === "active" && <button className="portal-button danger" type="button" disabled={busy} onClick={() => setPendingAction("deactivate")}>Deactivate hospital</button>}
           </div>}
         </>}
       </article>
@@ -480,7 +476,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         {hospital.contractUrl && <p>Signed contract: <a className="portal-inline-link" href={hospital.contractUrl} target="_blank" rel="noreferrer">View contract</a></p>}
         {hospital.status !== "active" && hospital.status !== "archived" && imagesMissing > 0 && <div id="hospital-activation-images-error" className="portal-form-error" role="status">
           <strong>Activation requires {MIN_PUBLIC_HOSPITAL_IMAGES} hospital images.</strong>
-          <p>{imageCount} of {MIN_PUBLIC_HOSPITAL_IMAGES} added. Upload {imagesMissing} more {imagesMissing === 1 ? "image" : "images"} to enable activation. Previewing the contract does not complete this requirement.</p>
+          <p>{imageCount} of {MIN_PUBLIC_HOSPITAL_IMAGES} required photos added. Add {imagesMissing} more {imagesMissing === 1 ? "photo" : "photos"} before activating this hospital, then return here to continue.</p>
           <a className="portal-inline-link" href="#hospital-images">Go to hospital images</a>
         </div>}
         <div className="portal-actions">
@@ -488,10 +484,8 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
           {hospital.status === "pending" && contractStatus !== "not_generated" && <button className="portal-button" type="button" disabled={busy || imagesMissing > 0} aria-describedby={imagesMissing > 0 ? "hospital-activation-images-error" : undefined} onClick={() => { setContractUrlError(null); setPendingAction("activate"); }}>Activate hospital</button>}
           {hospital.status === "inactive" && contractStatus === "signed" && contractReady && <button className="portal-button" type="button" disabled={busy || imagesMissing > 0} aria-describedby={imagesMissing > 0 ? "hospital-activation-images-error" : undefined} onClick={() => setPendingAction("activate")}>Reactivate hospital</button>}
           {hospital.status === "active" && <button className="portal-button" type="button" disabled={busy} onClick={() => setPendingAction("setup")}>Send login setup / reset</button>}
-          {hospital.status === "active" && <button className="portal-button danger" type="button" disabled={busy} onClick={() => setPendingAction("deactivate")}>Deactivate hospital</button>}
         </div>
         {hospital.status === "pending" && !contractParticularsComplete && <p className="portal-form-note">Complete and save all required contract particulars to enable Preview Contract.</p>}
-        <p>Preview and download the contract first. After the hospital returns the signed copy, select Activate hospital and add its secure link to complete signing and activation.</p>
       </article>
 
       <AdminHospitalPackages hospitalId={hospital.id} />
@@ -511,7 +505,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
 
       {hospital.status === "active" && <article className="portal-card portal-assessment-card">
         <div className="portal-row-heading"><h2>Public Ayursarga assessment</h2><span className="portal-status" data-status="active">Public</span></div>
-        <p>Use this for Ayursarga&apos;s own assessment and editorial note. It is identified publicly as Ayursarga content, not as verified patient feedback.</p>
+        <p>Add Ayursarga’s assessment of this centre. Customers will see it labelled as an Ayursarga review, not a patient review.</p>
         <form className="portal-form portal-edit-form" onSubmit={savePublicAssessment} noValidate>
           <fieldset className="portal-rating-field full">
             <legend>Ayursarga rating</legend>

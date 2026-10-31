@@ -79,9 +79,16 @@ export function HospitalImageManager({ hospitalId, hospitalName, imageUrls, onCh
   }
 
   return <div className="portal-image-manager" aria-busy={busy}>
-    <p className="portal-form-note">Upload at least {MIN_PUBLIC_HOSPITAL_IMAGES} different photos before your centre goes public, up to {MAX_HOSPITAL_IMAGES} photos in total. You can upload gradually. The first photo is the cover image shown on Search cards. JPG, PNG or WebP, up to 15 MB each. Images are automatically resized and cropped to a consistent 4:3 frame.</p>
-    {!minimumReached && <p className="portal-form-note">Add {MIN_PUBLIC_HOSPITAL_IMAGES - new Set(imageUrls).size} more photo(s) to meet the publication minimum.</p>}
-    {isPublic && !canRemove && <p className="portal-form-note">Upload a replacement before removing a photo. Public centres must keep at least {MIN_PUBLIC_HOSPITAL_IMAGES} different images.</p>}
+    <div className="portal-help-block">
+      <p className="portal-form-note">Help customers get to know your centre with clear photos of its rooms, facilities and surroundings.</p>
+      <ul className="portal-help-list">
+        <li>Add at least {MIN_PUBLIC_HOSPITAL_IMAGES} different photos so your centre is ready to appear in Search Hospitals. You can add them a few at a time, up to {MAX_HOSPITAL_IMAGES} in total.</li>
+        <li>Your first photo is the cover customers see in search results.</li>
+        <li>Choose JPG, PNG or WebP files, up to 15 MB each. Check the previews below to make sure important details are visible.</li>
+      </ul>
+    </div>
+    {!minimumReached && <p className="portal-form-note">Next step: add {MIN_PUBLIC_HOSPITAL_IMAGES - new Set(imageUrls).size} more {MIN_PUBLIC_HOSPITAL_IMAGES - new Set(imageUrls).size === 1 ? "photo" : "photos"} to complete your gallery.</p>}
+    {isPublic && !canRemove && <p className="portal-form-note">Add a new photo before removing one. Your centre needs to keep at least {MIN_PUBLIC_HOSPITAL_IMAGES} different photos while it appears in search results.</p>}
     {imageUrls.length > 0 && <div className="portal-hospital-gallery">
       {imageUrls.map((url, index) => <div className="portal-image-manager-item" key={url}>
         <a href={url} target="_blank" rel="noreferrer" aria-label={`View ${hospitalName} image ${index + 1}${index === 0 ? ", cover image" : ""}`}>

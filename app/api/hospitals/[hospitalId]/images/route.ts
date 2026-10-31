@@ -77,7 +77,7 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
     const image = await readImage(request);
     let bucket;
     try { bucket = getFirebaseAdminStorageBucket(); }
-    catch { throw new ImageError("Hospital image uploads are unavailable. Ask Admin to check the Storage configuration.", 503); }
+    catch { throw new ImageError("Photo uploads are unavailable right now. Contact Ayursarga support for help.", 503); }
     const imageId = randomUUID();
     const path = `hospitals/${actor.hospitalId}/images/${imageId}-1200.webp`;
     const token = randomUUID();

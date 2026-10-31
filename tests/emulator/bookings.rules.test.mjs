@@ -228,32 +228,52 @@ test("invoice records are Admin-readable and deny all direct client writes", asy
   }
 });
 
-test("consultant assignments: valid audited Admin edits succeed; unknown/duplicate services and cross-role writes fail", async () => {
+test("consultant records remain Admin-readable but every direct client mutation is denied", async () => {
   const path = `consultants/AS${Date.now()}`;
-  const data = { ...metadata, ...fields({ employeeId: path.split("/")[1], employeeSequence: 1, name: "Local consultant", email: "local@example.test",
-    contactNo: "9876543210", whatsappNo: "9876543210", qualification: "BAMS", yearsExperience: 3.5, lastWorkedCompany: "", address: "", emergencyContactNo: "", imageUrl: "https://firebasestorage.googleapis.com/v0/b/test/o/consultant.webp?alt=media&token=synthetic",
-    status: "active", consultantCharge: 900, ayursargaCommissionPercentage: 0, preferredTimeSlots: ["morning"], preferredSlotTimings: { morning: { startTime: "09:30", endTime: "11:45" } } }) };
+  const data = { ...metadata, ...fields({ employeeId: path.split("/")[1], employeeSequence: 1, name: "Local consultant",
+    status: "active", consultantCharge: 900, ayursargaCommissionPercentage: 0, preferredDays: ["mon"],
+    availableDates: ["2099-10-25"], imageUrl: "https://images.test/portrait.webp" }) };
   await seed(path, data);
-  assert.equal((await auditedUpdate(path, data, { imageUrl: "https://example.test/injected.webp" }, "admin", "consultants", "update")).status, 403);
-  const response = await auditedUpdate(path, data, { consultationServices: ["prenatal-doctor", "lactation"], preferredDays: ["mon", "wed", "sun"] }, "admin", "consultants", "update");
-  assert.equal(response.status, 200, await response.text());
-  const saved = (await (await call(`/${path}`, { role: "admin" })).json()).fields;
-  assert.deepEqual(saved.preferredDays.arrayValue.values.map((value) => value.stringValue), ["mon", "wed", "sun"]);
-  const dates = await auditedUpdate(path, saved, { availableDates: ["2099-10-25", "2099-10-26"] }, "admin", "consultants", "update");
-  assert.equal(dates.status, 200, await dates.text());
-  for (const availableDates of [["25/10/2099"], ["2099-13-25"], ["2099-10-25", "2099-10-25"], "2099-10-25", [1], Array(32).fill("2099-10-25")]) {
-    assert.equal((await auditedUpdate(path, saved, { availableDates }, "admin", "consultants", "update")).status, 403);
+  assert.equal((await call(`/${path}`, { role: "admin" })).status, 200);
+  for (const role of ["admin", "hospital", "consumer", "inactive"]) {
+    for (const changes of [{ name: "Changed" }, { status: "inactive" }, { imageUrl: "https://images.test/new.webp" }, { availableDates: [] }]) {
+      assert.equal((await auditedUpdate(path, data, changes, role, "consultants", "update")).status, 403);
+    }
+    assert.equal((await call(`/${path}`, { role, method: "DELETE" })).status, 403);
+    if (role !== "admin") assert.equal((await call(`/${path}`, { role })).status, 403);
   }
-  assert.equal((await auditedUpdate(path, saved, { availableDates: [] }, "admin", "consultants", "update")).status, 200);
-  const maximumDates = Array.from({ length: 31 }, (_, index) => `2099-10-${String(index + 1).padStart(2, "0")}`);
-  const maximum = await auditedUpdate(path, saved, { availableDates: maximumDates }, "admin", "consultants", "update");
-  assert.equal(maximum.status, 200, await maximum.text());
-  for (const preferredDays of [["invented"], ["mon", "mon"], "mon", [1]]) assert.equal((await auditedUpdate(path, saved, { preferredDays }, "admin", "consultants", "update")).status, 403);
-  assert.equal((await auditedUpdate(path, saved, { preferredDays: [] }, "admin", "consultants", "update")).status, 200);
-  for (const consultationServices of [["invented"], ["lactation", "lactation"]]) assert.equal((await auditedUpdate(path, saved, { consultationServices }, "admin", "consultants", "update")).status, 403);
-  for (const role of ["consumer", "hospital"]) {
-    assert.equal((await call(`/${path}`, { role })).status, 403);
-    assert.equal((await auditedUpdate(path, saved, { consultationServices: [], preferredDays: ["fri"] }, role, "consultants", "update")).status, 403);
-    assert.equal((await auditedUpdate(path, saved, { availableDates: ["2099-10-25"] }, role, "consultants", "update")).status, 403);
-  }
+  assert.equal((await call(`/${path}`, { role: "admin", claims: { firebase: { sign_in_second_factor: "" } } })).status, 403);
+});
+
+test("consultant API commits full edits and audits together in the local database", async () => {
+  const { initializeApp, deleteApp } = await import("firebase-admin/app");
+  const { getFirestore } = await import("firebase-admin/firestore");
+  const { loadTypeScript } = await import("../helpers/loadTypeScript.mjs");
+  const app = initializeApp({ projectId: project }, `consultant-route-${suffix}`);
+  try {
+    const firestore = getFirestore(app);
+    const consultantId = `AS${Date.now()}`;
+    const ref = firestore.collection("consultants").doc(consultantId);
+    await ref.set({ employeeId: consultantId, employeeSequence: 1, name: "Original Doctor", status: "active", imageUrl: "https://images.test/portrait.webp", archivedAt: null });
+    const { PATCH } = loadTypeScript("app/api/admin/consultants/[consultantId]/route.ts", {
+      // Authorization is tested separately; verify actual local persistence here.
+      "@/services/firebase/adminAuthorization": { requireActiveAdmin: async () => ({ uid: ids.admin, firestore }), AdminAuthorizationError: class extends Error {} },
+      "@/services/api/server": { apiJson: (body, status = 200) => Response.json(body, { status }) },
+    });
+    const input = { name: "Edited Doctor", designation: "Doctor", email: "local@example.test", contactNo: "9876543210", whatsappNo: "9876543210", qualification: "BAMS", yearsExperience: 3.5, consultantCharge: 900.5, ayursargaCommissionPercentage: 12.5,
+      preferredDays: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"], availableDates: Array.from({length:31}, (_, index) => `2099-10-${String(index+1).padStart(2,"0")}`), preferredTimeSlots: ["morning", "noon", "evening"], consultationServices: ["prenatal-doctor", "lactation"] };
+    for (const body of [{ action: "update", fields: input }, { action: "update", fields: { ...input, name: "Edited Again" } }, { action: "status_change", status: "inactive" }]) {
+      const before = (await ref.get()).data();
+      const response = await PATCH(new Request("https://local.test/api/admin/consultants", { method:"PATCH", headers:{"content-type":"application/json"}, body:JSON.stringify(body) }), {params:Promise.resolve({consultantId})});
+      assert.equal(response.status, 200, await response.text());
+      const after = (await ref.get()).data();
+      const audit = (await firestore.collection("auditLogs").doc(after.lastAuditId).get()).data();
+      assert.deepEqual(audit.previousValues, before);
+      assert.deepEqual(audit.updatedValues, after);
+      assert.equal(audit.actorId, ids.admin);
+      assert.equal(after.imageUrl, "https://images.test/portrait.webp");
+      assert.equal(after.availableDates.length, 31);
+      assert.equal(audit.timestamp.isEqual(after.updatedAt), true);
+    }
+  } finally { await deleteApp(app); }
 });

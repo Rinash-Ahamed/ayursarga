@@ -126,8 +126,8 @@ export function ConsultantsManager() {
     }}>{showCreateForm ? "Close form" : "Add New"}</button></div>
 
     {showCreateForm && <form className="portal-card portal-form" onSubmit={create} noValidate>
-      <p className="full portal-form-note">Fields marked * are mandatory. The employee ID is generated automatically after saving.</p>
-      <p className="full portal-form-note">Save the consultant first, then upload a consumer-visible profile photo from their card.</p>
+      <p className="full portal-form-note">Complete the fields marked *. We’ll assign a consultant ID when you save.</p>
+      <p className="full portal-form-note">After saving, choose Upload photo on the consultant’s card to add the photo customers will see.</p>
       <ConsultantFormFields errors={fieldErrors} />
       <div className="portal-actions full"><button className="portal-button" disabled={busyId === "create"}>{busyId === "create" ? "Adding..." : "Add consultant"}</button><button className="portal-button secondary" type="button" disabled={busyId === "create"} onClick={() => { setShowCreateForm(false); setFieldErrors({}); setActionError(null); }}>Cancel</button></div>
     </form>}

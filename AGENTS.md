@@ -17,6 +17,11 @@ to deploy, rerun maintenance scripts, or modify live data.
   modules into the public route unnecessarily.
 - Reuse the shared portal design system in `app/portal.css`. Maintain the
   existing cream, forest, clay, sage, rust, and Ayursarga botanical language.
+- Write portal guidance for the person using the screen: what to do, why it
+  matters and the next step. Avoid implementation terms in visible notices.
+  Keep warnings accurate about payments, permissions and policy limits; do not
+  simplify away an important condition. Use short paragraphs or shared help
+  lists, keep helper/error text aligned with fields, and verify mobile wrapping.
 - Portal hover feedback may change color or border. Do not move, scale, or lift
   cards, rows, navigation items, or buttons on hover because movement can cause
   visual collisions.
@@ -161,6 +166,11 @@ to deploy, rerun maintenance scripts, or modify live data.
   historical records. It must never delete the Firebase Authentication account
   or the Firestore user document.
 - Our Consultants is an Admin-only operational collection. Consultant records
+  use verified Admin server endpoints for creation, profile edits, status changes
+  and photos; direct client writes are denied. Keep shared server validation and
+  transactionally read current data for atomic audit snapshots. Do not restore
+  the complex direct-write validator: populated edits exceeded Firestore's
+  1,000-expression evaluation limit despite valid roles and fields. Consultants
   do not create authentication accounts. Their IDs use the sequential `AS001`
   format, and creates, profile edits, and Active/Inactive changes are audited.
   Admin explicitly assigns online service categories; never infer assignments
@@ -175,8 +185,8 @@ to deploy, rerun maintenance scripts, or modify live data.
   portraits to small metadata-free WebP files in Firebase Storage, audit the
   consultant URL update atomically and preserve old files. Public discovery
   exposes only validated tokenized portrait URLs; legacy records use initials.
-  The imageUrl field is server-managed: keep it out of client changed-field
-  allowlists while allowing existing photo-bearing records to be edited.
+  The imageUrl field is server-managed: exclude it from profile-edit payloads
+  and preserve it during server-side edits. Only the photo endpoint changes it.
 - Public centre discovery uses the bounded `/api/public/hospitals` server
   projection. Do not restore anonymous SDK reads of full `hospitals` or
   `services` documents: those records contain contract, commission, actor, and

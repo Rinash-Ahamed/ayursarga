@@ -28,7 +28,7 @@ export async function POST(request: Request, context: { params: Promise<{ consul
     assertCurrent((await ref.get()).data());
     let bucket;
     try { bucket = getFirebaseAdminStorageBucket(); }
-    catch { throw new PhotoError("Photo uploads are unavailable. Check the Storage configuration.", 503); }
+    catch { throw new PhotoError("Photo uploads are unavailable right now. Contact Ayursarga support for help.", 503); }
     const image = await readImageUpload(request, 384, 384, 8 * 1024 * 1024);
     const storagePath = `consultants/${consultantId}/images/${randomUUID()}.webp`;
     const token = randomUUID();

@@ -41,7 +41,7 @@ export function ConsultantFormFields({ defaultValues = {}, errors }: {
     <p className="full portal-form-note" aria-live="polite">Consumer total: <strong>{pricing ? formatCurrency(pricing.totalCharge) : "Enter charge and commission"}</strong>. Includes consultant charge plus Ayursarga commission.</p>
     <fieldset className="full consultant-preferences" aria-invalid={Boolean(errors.consultationServices)}>
       <legend>Online consultation services</legend>
-      <p>Assign services this consultant can provide. Public booking also requires a charge and preferred availability.</p>
+      <p>Choose the services customers can book with this consultant. Add a charge and available times to make booking available.</p>
       <div className="consultant-slot-options">{CONSULTATION_SERVICES.map((service) => <label className="portal-inline-check" key={service.id}>
         <input type="checkbox" name="consultationServices" value={service.id} defaultChecked={defaultValues.consultationServices?.includes(service.id)} />{service.label}
       </label>)}</div>
@@ -55,7 +55,7 @@ export function ConsultantFormFields({ defaultValues = {}, errors }: {
         </label>)}
       </div>
       <FieldError field="preferredDays" errors={errors} />
-      <p>Selected weekdays restrict online booking. Leave weekdays blank to allow any day.</p>
+      <p>Choose the days this consultant accepts appointments. Leave all days unchecked to allow any day.</p>
       <label><span className="portal-field-label">Specific available dates <small>(Optional)</small></span>
         <DateInput value={dateDraft} min={toDateInputValue()} onChange={(event) => setDateDraft(event.target.value)} aria-invalid={Boolean(errors.availableDates)} />
       </label>
@@ -66,7 +66,7 @@ export function ConsultantFormFields({ defaultValues = {}, errors }: {
         <input type="hidden" name="availableDates" value={date} />
         <button className="portal-button secondary" type="button" aria-label={`Remove available date ${formatDisplayDate(date)}`} onClick={() => setAvailableDates((dates) => dates.filter((value) => value !== date))}>{formatDisplayDate(date)} ×</button>
       </span>)}</div>
-      <p>Add up to 31 dates to limit booking to those dates. If weekdays are also selected, a date must match both. Leave both blank for unrestricted days. Existing appointments are not changed.</p>
+      <p>Add specific dates only if the consultant is available on those dates alone (up to 31). If you also choose weekdays, each date must fall on a chosen day. Leave both blank to allow any future date. Existing appointments stay unchanged.</p>
       <FieldError field="availableDates" errors={errors} />
       <div className="consultant-slot-options">{CONSULTANT_TIME_SLOTS.map((slot) => {
         const config = CONSULTANT_TIME_SLOT_CONFIG[slot];

@@ -64,7 +64,7 @@ export function AdminHospitalPackages({ hospitalId }: { hospitalId: string }) {
       </div>
       {!isLoading && <span className="portal-status">{items.length}{hasMore ? "+" : ""} listed</span>}
     </div>
-    <p className="portal-form-note">Review the submitted package details below. Approved versions stay public while changes await approval.</p>
+    <p className="portal-form-note">Check the submitted packages, then approve them individually or together. Customers will continue to see the last approved details until you approve any changes.</p>
     {pending.length > 0 && <div className="portal-card portal-package-review-toolbar">
       <label className="portal-checkbox-label"><input type="checkbox" checked={selectedPending.length === Math.min(pending.length, 20)} disabled={busy} onChange={(event) => setSelected(event.target.checked ? pending.slice(0, 20).map((item) => item.id) : [])} />Select up to 20 pending packages</label>
       <span className="portal-status" data-status="pending">{pending.length}{hasMore ? "+" : ""} pending review</span>
@@ -84,7 +84,7 @@ export function AdminHospitalPackages({ hospitalId }: { hospitalId: string }) {
         <div>
           {service.reviewStatus === "pending" && <label className="portal-checkbox-label"><input type="checkbox" aria-label={`Select ${packageTitle(service)} for approval`} checked={selected.includes(service.id)} disabled={busy || (!selected.includes(service.id) && selectedPending.length >= 20)} onChange={(event) => setSelected((current) => event.target.checked ? [...current, service.id] : current.filter((id) => id !== service.id))} />Select for approval</label>}
           <h3>{packageTitle(service)}</h3>
-          <p><strong>{packageReviewLabel(service)}</strong>{service.draftPackage && hasPublishedPackage(service) ? " · Showing proposed changes; the approved version remains unchanged." : ""}</p>
+          <p><strong>{packageReviewLabel(service)}</strong>{service.draftPackage && hasPublishedPackage(service) ? " · These are the proposed changes. Customers still see the last approved details." : ""}</p>
           {service.reviewNote && <p>Review feedback: {service.reviewNote}</p>}
           <p>{service.description || "No description provided."}</p>
           <div className="portal-card-meta">

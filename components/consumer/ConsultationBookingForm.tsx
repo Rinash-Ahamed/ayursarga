@@ -125,7 +125,7 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
         <nav className="portal-actions portal-flow-navigation" aria-label="Consultation navigation"><Link className="portal-button secondary" href="/#wellness">Choose another service</Link><Link className="portal-button secondary" href="/app/bookings/consultations">My online consultations</Link></nav>
       </section>
       {pendingPayment && <section className="portal-card" aria-label="Pending consultation payment">
-        <h2>Check your previous payment</h2><p>Resume or check the existing payment before starting another. A closed checkout does not confirm payment failure.</p>
+        <h2>Check your previous payment</h2><p>Check your payment status before paying again. Closing the payment window does not always mean the payment failed.</p>
         {paymentDetails && <p>{paymentDetails.consultantName} · {paymentDetails.serviceName} · {formatDisplayDate(paymentDetails.date)} · {paymentDetails.timeWindow} · {formatCurrency(paymentDetails.totalPaise / 100)}</p>}
         {paymentDetails?.cancellationPolicy && <ConsultationCancellationInfo snapshot={paymentDetails.cancellationPolicy} status="confirmed" now={clock} />}
         {error && <p className="portal-form-error" role="alert">{error}</p>}
@@ -134,8 +134,8 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
       <PortalToast message={error} notification={notification} tone="error" />
       <PortalToast message={loadError} notification={loadNotification} tone="error" />
       {loadError && !hasConsultants && <section className="portal-empty-state portal-state-card" role="alert"><span className="portal-empty-state-leaf" aria-hidden="true" /><h3>Consultants could not be loaded</h3><p>{loadError}</p><button className="portal-button secondary" type="button" onClick={() => void reload()} disabled={isLoading}>Try again</button></section>}
-      {isLoading && !hasConsultants && <section className="portal-empty-state portal-state-card" role="status"><span className="portal-empty-state-leaf" aria-hidden="true" /><h3>Finding available consultants</h3><p>Please wait while we check the current professionals for this service.</p></section>}
-      {!isLoading && !loadError && !hasConsultants && <section className="portal-empty-state portal-state-card" role="status"><span className="portal-empty-state-leaf" aria-hidden="true" /><h3>Consultants are not available yet</h3><p>No professionals are currently assigned to {service.label.toLowerCase()}. Please check again or <Link href="/contact">contact Ayursarga</Link> for assistance.</p><button className="portal-button secondary" type="button" onClick={() => void reload()} disabled={isLoading}>Check availability again</button></section>}
+      {isLoading && !hasConsultants && <section className="portal-empty-state portal-state-card" role="status"><span className="portal-empty-state-leaf" aria-hidden="true" /><h3>Finding available consultants</h3><p>We’re checking who is available for your consultation.</p></section>}
+      {!isLoading && !loadError && !hasConsultants && <section className="portal-empty-state portal-state-card" role="status"><span className="portal-empty-state-leaf" aria-hidden="true" /><h3>Consultants are not available yet</h3><p>No appointments are available for {service.label.toLowerCase()} right now. Check again later or <Link href="/contact">contact Ayursarga</Link> for help.</p><button className="portal-button secondary" type="button" onClick={() => void reload()} disabled={isLoading}>Check availability again</button></section>}
       {hasConsultants && <form className="portal-form portal-card consumer-consultation-form" onSubmit={submit}>
         <fieldset className="full consultation-professionals" disabled={busy}>
           <legend>Choose your consultant *</legend>
@@ -160,8 +160,8 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
           </label>)}</div>
           <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
         </fieldset>
-        {consultant && <p className="full portal-form-note">Available days/dates: {consultantAvailabilitySummary(consultant)}. Dates must match all configured restrictions.</p>}
-        {noAvailableDates && <p className="full portal-form-error" role="status">This consultant has no future available dates matching their configured weekdays. Choose another professional or contact Ayursarga.</p>}
+        {consultant && <p className="full portal-form-note">Availability: {consultantAvailabilitySummary(consultant)}. Choose an available date from the calendar.</p>}
+        {noAvailableDates && <p className="full portal-form-error" role="status">This consultant has no upcoming appointments available. Choose another consultant or contact Ayursarga for help.</p>}
         <label>Preferred appointment date *<DateInput value={date} min={availableDates[0] ?? toDateInputValue()} max={availableDates.at(-1)} isDateAllowed={dateAllowed} onChange={(event) => { setDate(event.target.value); setSlot(""); }} required disabled={busy || !consultant || noAvailableDates} /></label>
         <label>Preferred time *<select value={slot} onChange={(event) => setSlot(event.target.value as ConsultantTimeSlot)} required disabled={busy || !consultant}>
           <option value="">Select a preferred time</option>{consultant?.preferredTimeSlots.map((value) => {

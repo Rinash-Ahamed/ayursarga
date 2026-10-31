@@ -5,8 +5,7 @@ import type { ConsultantDocument } from "@/features/firestore/models";
 import type { ConsultantFields } from "@/features/consultants/validation";
 import { validateConsultantFields } from "@/features/consultants/validation";
 import { COLLECTIONS } from "@/constants/firestore";
-import { firestoreTimestamp, runFilteredQuery, type QueryPageOptions } from "@/services/firestore/firestoreService";
-import { getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
+import { runFilteredQuery, type QueryPageOptions } from "@/services/firestore/firestoreService";
 import { authorizedApiRequest } from "@/services/api/client";
 
 export function listConsultants(options: Pick<QueryPageOptions, "pageSize" | "cursor"> = {}, searchTerm = "") {
@@ -39,20 +38,22 @@ export async function createConsultant(input: ConsultantFields) {
   return response.employeeId;
 }
 
-export function updateConsultant(id: string, input: ConsultantFields, previous: DocumentData) {
+export function updateConsultant(id: string, input: ConsultantFields, _previous: DocumentData) {
+  void _previous;
   const validation = validateConsultantFields(input);
   if (!validation.isValid) throw new Error(Object.values(validation.errors)[0] ?? "Consultant details are invalid.");
-  return updateAuditedDocument(COLLECTIONS.consultants, id, {
-    ...validation.data,
-    updatedAt: firestoreTimestamp.server(),
-    updatedBy: getAuditActorId(),
-  }, { action: "update", actorRole: "admin" }, previous);
+  return saveConsultant(id, { action: "update", fields: validation.data });
 }
 
-export function setConsultantStatus(id: string, status: "active" | "inactive", previous: DocumentData) {
-  return updateAuditedDocument(COLLECTIONS.consultants, id, {
-    status,
-    updatedAt: firestoreTimestamp.server(),
-    updatedBy: getAuditActorId(),
-  }, { action: "status_change", actorRole: "admin" }, previous);
+export function setConsultantStatus(id: string, status: "active" | "inactive", _previous: DocumentData) {
+  void _previous;
+  return saveConsultant(id, { action: "status_change", status });
+}
+
+function saveConsultant(id: string, body: Record<string, unknown>) {
+  return authorizedApiRequest<{ ok: true }>(`/api/admin/consultants/${encodeURIComponent(id)}`, {
+    method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    signedOutMessage: "Sign in as Admin before updating a consultant.",
+    failureMessage: "We could not save the consultant. Refresh and try again.",
+  });
 }

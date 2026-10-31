@@ -88,5 +88,5 @@ export async function PATCH(request: Request) {
 }
 function failure(error: unknown) {
   if (error instanceof AdminAuthorizationError || error instanceof RequestBodyError || error instanceof ConsultationPaymentError) return apiJson({ error: error.message }, error.status);
-  return apiJson({ error: "Finance is temporarily unavailable. Check configuration and required indexes." }, 503);
+  return apiJson({ error: "Finance is unavailable right now. Refresh to try again, or contact Ayursarga support if this continues." }, 503);
 }

@@ -56,7 +56,7 @@ export function LoginForm({ role, requestedPath, recoveryEnabled = false, replac
   };
 
   return <AuthFormShell title={enrolling ? "Secure your Admin account" : verifying ? "Verify Admin sign-in" : copy.title} description={enrolling ? "Set up two-step verification for your account." : verifying ? "Enter the six-digit code from your authenticator app." : copy.description}>
-    {role === "admin" && stage === "password" && replacementNotice && <p role="status" className="portal-form-note">{replacementNotice === "setup" ? "Sign in with your password to set up your new authenticator." : "Replacement could not be confirmed. Sign in to check your authenticator setup. If you cannot continue, contact your trusted project owner before retrying."}</p>}
+    {role === "admin" && stage === "password" && replacementNotice && <p role="status" className="portal-form-note">{replacementNotice === "setup" ? "Sign in with your password to set up your new authenticator." : "We couldn’t confirm the replacement. Sign in to check your authenticator. If you can’t continue, contact the Ayursarga account owner before trying again."}</p>}
     {enrolling ? <AdminMfaEnrollment onCancel={logout} onComplete={async (code) => {
       setStage("enroll");
       try { return await completeAdminMfaEnrollment(code, requestedPath); }
@@ -81,9 +81,9 @@ export function LoginForm({ role, requestedPath, recoveryEnabled = false, replac
     </div>}
     {role === "admin" && recoveryEnabled && !enrolling && <details className="portal-mfa-manual">
       <summary>Lost access to your authenticator?</summary>
-      <p className="portal-mfa-help">Contact your trusted Firebase project owner to verify your identity and recover access. A password reset does not remove two-step verification.</p>
+      <p className="portal-mfa-help">Contact the Ayursarga account owner to verify your identity and recover access. Resetting your password won’t remove authenticator protection.</p>
       <a className="portal-button secondary" href="mailto:info@ayursarga.com?subject=Admin%20authenticator%20recovery%20request&body=I%20need%20help%20recovering%20my%20Admin%20authenticator.%20Please%20arrange%20identity%20verification.%20I%20will%20not%20send%20passwords%2C%20setup%20keys%20or%20codes.">Request recovery help by email</a>
-      <p className="portal-mfa-help">This opens your email app. No reset happens automatically. Never include passwords, setup keys or verification codes.</p>
+      <p className="portal-mfa-help">Send a recovery request using your email app. Your authenticator will not be reset automatically. Never share passwords, setup keys or verification codes.</p>
     </details>}
   </AuthFormShell>;
 }

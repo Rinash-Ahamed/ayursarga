@@ -81,7 +81,11 @@ export default function MockNextElement({ src, href, children, alt, width, heigh
 const coverGallery = Array.from({ length: 6 }, (_, index) => `https://images.test/centre-${index}.webp`);
 export const getHospital = async () => ({ ...hospital, imageUrls: portalUiState.screen === "admin-gallery-incomplete" ? coverGallery.slice(0, 3) : coverGallery, status: portalUiState.screen === "admin-gallery-incomplete" ? "pending" : hospital.status, isPublic: portalUiState.screen === "admin-gallery-incomplete" ? false : hospital.isPublic, facilities: "Free WiFi\nFree parking" });
 export const getHospitalCapacity = async () => ({ ...metadata, id: "centre", hospitalId: "centre", totalRooms: 10, occupiedRooms: 4, status: "active" });
-export const listAllHospitals = () => page(portalUiState.screen === "admin-hospitals-empty" ? [] : [hospital]);
+export const listAllHospitals = () => page(portalUiState.screen === "admin-hospitals-empty" ? [] : portalUiState.screen === "admin-hospital-cards" ? Array.from({ length: 6 }, (_, index) => ({ ...hospital, id: `centre-${index}`, name: `${hospital.name} ${index + 1}` })) : [hospital]);
+export const getHospitalPackageSummaries = async (ids: string[]) => {
+  if ((globalThis as unknown as { packageSummaryFailure?: boolean }).packageSummaryFailure) throw new Error("Unavailable");
+  return { summaries: Object.fromEntries(ids.map((id, index) => [id, { total: index === 1 ? 0 : 4, pending: index === 1 ? 0 : 1, approved: index === 1 ? 0 : 1, draft: index === 1 ? 0 : 1, changesRequested: index === 1 ? 0 : 1 }])) };
+};
 export const listHospitalServices = () => page(portalUiState.screen === "hospital-services-empty" ? [] : portalUiState.screen.endsWith("package-review") ? services.map((service) => ({ ...service, status: "inactive", reviewStatus: portalUiState.screen.startsWith("admin") ? "pending" : "draft", publishedAt: null, draftPackage: { name: service.name, description: service.description, packageDurationDays: service.packageDurationDays, procedures: service.procedures, otherProcedures: [], price: 28000 } })) : services);
 const operationalBookings = () => bookings.map((booking, index) => index === 0 ? { ...booking, hospitalName: undefined, serviceName: undefined, serviceId: "package-14" } : booking);
 export const listHospitalBookings = () => page(portalUiState.screen === "hospital-bookings-empty" ? [] : operationalBookings());
@@ -96,7 +100,7 @@ export const getPublicHospital = async () => ({ ...hospital, blockedDateRanges: 
 export const getPublicHospitalService = async () => portalUiState.unavailablePackage ? null : { ...services[1], packageVersion: "a".repeat(64) };
 export const listAdminBookings = () => page(portalUiState.screen === "admin-bookings-empty" ? [] : operationalBookings());
 export const readDocumentsByIds = async (collectionPath: string, ids: string[]) => collectionPath === "hospitals" ? [hospital].filter((item) => ids.includes(item.id)) : collectionPath === "services" ? services.filter((item) => ids.includes(item.id)) : [];
-export const listUsers = () => page(portalUiState.screen === "admin-users-empty" ? [] : [user]);
+export const listUsers = () => page(portalUiState.screen === "admin-users-empty" ? [] : [portalUiState.screen === "admin-users-no-date" ? { ...user, createdAt: undefined } : user]);
 export const listConsultants = () => page(portalUiState.screen === "admin-consultants-empty" ? [] : [consultant]);
 export const listHospitalAvailabilityRequests = () => page(portalUiState.screen === "hospital-availability-empty" ? [] : availability);
 export const listAdminAvailabilityRequests = () => page(portalUiState.screen === "admin-availability-empty" ? [] : availability);

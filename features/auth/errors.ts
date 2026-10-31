@@ -27,7 +27,7 @@ type AuthErrorCode =
   | "unknown";
 
 const MESSAGES: Record<AuthErrorCode, string> = {
-  configuration: "Authentication is not configured yet.",
+  configuration: "Sign-in is unavailable right now. Please try again later or contact Ayursarga for help.",
   "invalid-credentials": "The email address or password is incorrect.",
   "email-in-use": "An account already exists for this email address.",
   "weak-password": "Use at least 8 characters, including one letter and one digit.",
@@ -35,9 +35,9 @@ const MESSAGES: Record<AuthErrorCode, string> = {
   "too-many-requests": "Too many attempts. Please wait and try again.",
   network: "Unable to connect. Check your connection and try again.",
   "email-delivery": "Password reset email is temporarily unavailable. Please try again later or contact Ayursarga.",
-  "database-permission": "Your account is authenticated but its database access is not configured.",
+  "database-permission": "We couldn’t open your account. Sign in again, or contact Ayursarga if this continues.",
   "profile-not-found": "Your account profile could not be found.",
-  "profile-recovery": "Your Admin profile could not be restored. Check the server Firebase Admin configuration and try again.",
+  "profile-recovery": "We couldn’t restore access to your Admin account. Contact the Ayursarga account owner for help.",
   "profile-invalid": "Your account profile is incomplete.",
   "role-mismatch": "This account does not have access to this portal.",
   "account-inactive": "This account is currently inactive. Please contact support.",
@@ -51,7 +51,7 @@ const MESSAGES: Record<AuthErrorCode, string> = {
   "mfa-invalid-code": "Enter a valid six-digit authenticator code. If it has expired, use the next code in your app.",
   "mfa-session-expired": "This verification session has expired. Please sign in again.",
   "mfa-email-unverified": "Verify your Admin email before setting up your authenticator.",
-  "mfa-unavailable": "Authenticator setup is unavailable. Ask the project owner to enable Firebase Identity Platform and TOTP MFA.",
+  "mfa-unavailable": "Authenticator setup is unavailable right now. Contact the Ayursarga account owner for help signing in.",
   unknown: "Authentication could not be completed. Please try again.",
 };
 

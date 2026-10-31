@@ -12,6 +12,7 @@ import { PortalDialog } from "@/components/portal/PortalDialog";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { formatDisplayDateTime } from "@/utils/date";
 
 type UserGroup = "consumer" | "hospital";
 
@@ -65,8 +66,11 @@ export function UsersList() {
       : undefined} />
     <PortalToast message={message} notification={messageNotification} />
     <PortalToast message={actionError} notification={actionErrorNotification} tone="error" />
-    <div className="portal-list">{items.map((item) => <article className="portal-row" key={item.id}>
+    <div className="admin-card-layout"><div className="portal-list admin-card-grid admin-user-grid">{items.map((item) => {
+      const created = formatDisplayDateTime(item.createdAt);
+      return <article className="portal-row" key={item.id}>
       <div><h3>{item.name}</h3><p>{item.email}{item.phone ? ` · ${item.phone}` : ""}</p>{group === "consumer" && item.address && <p>{item.address}</p>}</div>
+      <dl className="admin-card-facts"><div><dt>Created</dt><dd>{created ? `${created} IST` : "Not recorded"}</dd></div></dl>
       <div className="portal-user-actions">
         <span className="portal-status" data-status={item.status}>{item.status}</span>
         {group === "consumer" && <button className="portal-button danger" type="button" disabled={busy} onClick={() => {
@@ -75,7 +79,8 @@ export function UsersList() {
           setMessage(null);
         }}>Remove</button>}
       </div>
-    </article>)}</div>
+    </article>;
+    })}</div></div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
     <PortalDialog
       open={Boolean(consumerToRemove)}

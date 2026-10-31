@@ -174,7 +174,7 @@ export function ServicesManager() {
       setHasPackageAmount(false);
       setCreateFormKey((current) => current + 1);
       await reload();
-      setActionMessage(saved.duplicate ? "This package was already saved. Review it below before making further changes." : "Draft saved. Submit the package for Admin approval before it appears publicly.");
+      setActionMessage(saved.duplicate ? "This package is already saved. You can review it below." : "Draft saved. Submit it for approval so customers can view and book it.");
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : "We could not add the package. Check the details and try again.");
       focusFirstInvalidField(form);
@@ -256,7 +256,7 @@ export function ServicesManager() {
   return <PortalShell role="hospital" title="Services">
     <PortalLoadGuard notification={loadErrorNotification} loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/hospital" loadingMessage="Loading hospital packages..." />
     <form className="portal-card portal-form portal-service-form" onSubmit={addService} noValidate key={createFormKey}>
-      <p className="portal-form-note full">Save your packages as drafts, then submit them for Admin approval. Only approved packages are shown to consumers.</p>
+      <p className="portal-form-note full">Add your package details and save a draft. When it’s ready, submit it to Ayursarga for approval. Customers can see only approved packages.</p>
       <PackageFields usedIn={usedInCreate} onAmountValidityChange={setHasPackageAmount} />
       <div className="portal-actions full"><button className="portal-button" disabled={busyId !== null || !hasPackageAmount}>{busyId === "create" ? "Saving..." : "Save draft"}</button></div>
     </form>
@@ -279,7 +279,7 @@ export function ServicesManager() {
           <div className="portal-service-content"><div className="portal-row-heading portal-service-heading"><h3>{packageTitle(item)}</h3><span className="portal-status portal-service-status" data-status={item.status}>{formatStatus(item.status)}</span></div><p>{packageProcedureEntries(item).length} procedures included</p>{typeof item.price === "number" && <p>₹{item.price.toLocaleString("en-IN")}</p>}{item.description && <p>{item.description}</p>}<ul className="portal-package-summary">{packageProcedureEntries(item).slice(0, 4).map((procedure) => <li key={procedure.id}>{procedure.label} {procedure.days !== null && <span>{procedure.days} days</span>}</li>)}</ul></div>
           <div className="portal-service-controls"><span className="portal-status" data-status={item.reviewStatus === "pending" ? "pending" : item.reviewStatus === "changes_requested" ? "rejected" : item.reviewStatus === "draft" ? "inactive" : "active"}>{packageReviewLabel(item)}</span>
             {item.reviewNote && <p className="portal-form-note">Admin feedback: {item.reviewNote}</p>}
-            {item.draftPackage && hasPublishedPackage(item) && <p className="portal-form-note">The current approved version remains {item.status === "active" ? "public" : "inactive"} until these changes are approved.</p>}
+            {item.draftPackage && hasPublishedPackage(item) && <p className="portal-form-note">{item.status === "active" ? "Customers still see the last approved package details while your changes are reviewed." : "This package stays inactive while your changes are reviewed."}</p>}
             <div className="portal-actions"><button className="portal-button secondary" type="button" disabled={busyId !== null} onClick={() => { setEditingId(item.id); setActionError(null); setActionMessage(null); }}>Edit package</button>
               {item.draftPackage && item.reviewStatus !== "pending" && <button className="portal-button" type="button" disabled={busyId !== null} onClick={() => void submitPackage(item)}>{busyId === item.id ? "Submitting..." : "Submit for approval"}</button>}
               {hasPublishedPackage(item) && <button className={`portal-button${item.status === "active" ? " danger" : ""}`} type="button" disabled={busyId !== null} onClick={() => void toggleStatus(item)}>{item.status === "active" ? "Deactivate" : "Activate"}</button>}

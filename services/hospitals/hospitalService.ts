@@ -10,6 +10,14 @@ import {
   type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
 import { authorizedApiRequest, authorizedMutationRequest } from "@/services/api/client";
+import type { HospitalPackageSummary } from "@/features/hospitals/packageSummary";
+
+export function getHospitalPackageSummaries(hospitalIds: string[], signal?: AbortSignal) {
+  return authorizedApiRequest<{ summaries: Record<string, HospitalPackageSummary> }>("/api/admin/hospitals/package-summary", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ hospitalIds }), signal,
+    signedOutMessage: "Sign in as Admin to review packages.", failureMessage: "Package status could not be loaded. Please try again.",
+  });
+}
 
 type HospitalAdminUpdate = Partial<HospitalFields & Pick<HospitalDocument,
   "status" | "isPublic" | "ayursargaRating" | "ayursargaReviewNote" | "imageUrls" | "locationUrl" |

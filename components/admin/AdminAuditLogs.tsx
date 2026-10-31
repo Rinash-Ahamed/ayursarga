@@ -126,7 +126,7 @@ function auditChangeLabel(item: DocumentRecord<AuditLogDocument>) {
     const labels: Record<string, string> = {
       started: "Started: previous Admin sessions blocked; replacement in progress",
       completed: "Completed: sign in to set up the new authenticator",
-      unknown: "Outcome unknown: project owner review required before retrying",
+      unknown: "Result not confirmed: ask the Ayursarga account owner to check before trying again",
     };
     return labels[String(item.updatedValues.outcome)] ?? "Project owner review required";
   }

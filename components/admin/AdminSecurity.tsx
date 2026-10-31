@@ -29,14 +29,14 @@ export function AdminSecurity({ enabled }: { enabled: boolean }) {
     <section className="portal-card">
       <h2>Account security</h2>
       <p className="portal-form-note">Use this only when you still have access to your current authenticator. Your existing key will stop working on every device using this account. You will be signed out and must set up a new authenticator at your next sign-in.</p>
-      {!enabled ? <p role="status">Authenticator replacement is currently disabled. Contact your trusted project owner if you need help.</p> : <form ref={form} className="portal-form portal-security-form" onSubmit={submit}>
+      {!enabled ? <p role="status">You can’t replace your authenticator here right now. Contact your account administrator for help.</p> : <form ref={form} className="portal-form portal-security-form" onSubmit={submit}>
         <div className="full"><PasswordField label="Current password" name="password" autoComplete="current-password" required disabled={busy} /></div>
         <label className="full">Current authenticator code<input name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" minLength={6} maxLength={6} required disabled={busy} /></label>
         {error && <p className="portal-form-error full" role="alert">{error}</p>}
         <div className="portal-actions full"><button type="submit" className="portal-button danger" disabled={busy}>Replace authenticator</button></div>
       </form>}
     </section>
-    <PortalDialog open={confirm} title="Replace your authenticator?" message="This invalidates the existing setup key for everyone sharing this Admin account and signs out existing sessions. Sign in again with your password to scan a new QR code. No password or account data will be changed." tone="danger" confirmLabel="Replace and sign out" busy={busy} onConfirm={() => void replace()} onCancel={() => { if (!busy) setConfirm(false); }} />
+    <PortalDialog open={confirm} title="Replace your authenticator?" message="The current authenticator will stop working on every device using this Admin account, and everyone will be signed out. Sign in again with your password and scan the new QR code. Your password and account details will stay unchanged." tone="danger" confirmLabel="Replace and sign out" busy={busy} onConfirm={() => void replace()} onCancel={() => { if (!busy) setConfirm(false); }} />
     <ConsultationCancellationSettings />
   </PortalShell>;
 }

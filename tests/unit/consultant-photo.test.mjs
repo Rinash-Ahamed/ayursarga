@@ -80,7 +80,7 @@ test("public portraits accept only tokenized consultant images; direct client ph
   assert.equal(consultantPhotoUrl(portrait, "AS001"), portrait);
   for (const value of ["javascript:alert(1)", "https://example.com/photo.png", portrait.replace("AS001", "AS002"), portrait.replace("&token=token", "")]) assert.equal(consultantPhotoUrl(value, "AS001"), null);
   const rules = readFileSync("firestore.rules", "utf8");
-  assert.match(rules.slice(rules.indexOf("function hasValidConsultantFields")), /'imageUrl'/);
   const changedFields = rules.slice(rules.indexOf("match /consultants/{consultantId}"), rules.indexOf("match /consultationBookings/{bookingId}"));
   assert.doesNotMatch(changedFields, /'imageUrl'/);
+  assert.match(changedFields, /allow create, update, delete: if false/);
 });
