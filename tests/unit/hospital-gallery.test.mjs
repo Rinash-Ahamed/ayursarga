@@ -5,7 +5,7 @@ import sharp from "sharp";
 import { loadTypeScript } from "../helpers/loadTypeScript.mjs";
 import { bookingFlowFixture, bookingTestRequest, BookingTestAuthorizationError } from "../helpers/bookingFlowFixture.mjs";
 
-const images = Array.from({ length: 5 }, (_, index) => `https://images.test/centre-${index}.webp`);
+const images = Array.from({ length: 6 }, (_, index) => `https://images.test/centre-${index}.webp`);
 const hospital = { status: "pending", isPublic: false, name: "Centre", email: "partner@example.com", phone: "9876543210", hospitalPhone1: "9876543210", address: "A complete centre address", city: "Palakkad", district: "Palakkad", state: "Kerala", commissionPercentage: 10, contractStatus: "signed", contractSignedAt: {}, contractUrl: "https://example.com/signed.pdf", imageUrls: images.slice(0, 4) };
 const context = { params: Promise.resolve({ hospitalId: "centre" }) };
 const imagePath = "app/api/hospitals/[hospitalId]/images/route.ts";
@@ -32,36 +32,36 @@ function fixture(data = {}, role = "admin", denied = false) {
   return { ...f, calls, load };
 }
 
-test("publication minimum counts four unique valid photos, not duplicates or insecure URLs", () => {
+test("publication minimum counts five unique valid photos, not duplicates or insecure URLs", () => {
   const { hasMinimumHospitalImages, getHospitalImageUrls, MIN_PUBLIC_HOSPITAL_IMAGES } = loadTypeScript("features/hospitals/images.ts");
-  assert.equal(MIN_PUBLIC_HOSPITAL_IMAGES, 4);
-  assert.equal(hasMinimumHospitalImages({ imageUrls: images.slice(0, 4) }), true);
-  assert.equal(hasMinimumHospitalImages({ imageUrls: images.slice(0, 3) }), false);
-  assert.equal(hasMinimumHospitalImages({ imageUrls: Array(4).fill(images[0]) }), false);
-  assert.equal(hasMinimumHospitalImages({ imageUrls: [...images.slice(0, 3), "http://images.test/insecure.jpg"] }), false);
+  assert.equal(MIN_PUBLIC_HOSPITAL_IMAGES, 5);
+  assert.equal(hasMinimumHospitalImages({ imageUrls: images.slice(0, 5) }), true);
+  assert.equal(hasMinimumHospitalImages({ imageUrls: images.slice(0, 4) }), false);
+  assert.equal(hasMinimumHospitalImages({ imageUrls: Array(5).fill(images[0]) }), false);
+  assert.equal(hasMinimumHospitalImages({ imageUrls: [...images.slice(0, 4), "http://images.test/insecure.jpg"] }), false);
   assert.equal(getHospitalImageUrls({ imageUrls: images })[0], images[0]);
 });
 
-test("activation refuses fewer than four photos before audit/auth side effects; four allows publication", async () => {
-  for (const imageUrls of [[], images.slice(0, 3), Array(4).fill(images[0]), images.slice(0, 4)]) {
+test("activation refuses fewer than five photos before audit/auth side effects; five allows publication", async () => {
+  for (const imageUrls of [[], images.slice(0, 4), Array(5).fill(images[0]), images.slice(0, 5)]) {
     const f = fixture({ imageUrls });
     const response = await f.load(activatePath).POST(bookingTestRequest("/api/admin/hospitals/centre/activate", {}), context);
-    const eligible = new Set(imageUrls).size >= 4;
+    const eligible = new Set(imageUrls).size >= 5;
     assert.equal(response.status, eligible ? 200 : 409);
     assert.equal(f.values("auditLogs").filter((item) => item.module === "hospitals").length, eligible ? 1 : 0);
     assert.equal(f.records.get("hospitals/centre").isPublic, eligible);
-    if (!eligible) assert.match((await response.json()).error, /at least 4/);
+    if (!eligible) assert.match((await response.json()).error, /at least 5/);
   }
 });
 
-test("public gallery removal is transactionally limited to four for both roles, preserving stored files", async () => {
+test("public gallery removal is transactionally limited to five for both roles, preserving stored files", async () => {
   for (const role of ["admin", "hospital"]) {
     const f = fixture({ status: "active", isPublic: true, imageUrls: images }, role);
     const { PATCH } = f.load(imagePath);
     assert.equal((await PATCH(bookingTestRequest("/api/hospitals/centre/images", { imageUrl: images[0] }), context)).status, 200);
     assert.equal(f.records.get("hospitals/centre").imageUrls[0], images[1]);
     assert.equal((await PATCH(bookingTestRequest("/api/hospitals/centre/images", { imageUrl: images[1] }), context)).status, 409);
-    assert.equal(f.records.get("hospitals/centre").imageUrls.length, 4);
+    assert.equal(f.records.get("hospitals/centre").imageUrls.length, 5);
     assert.equal(f.values("auditLogs").length, 1);
     assert.equal(f.calls.uploads.length, 0);
   }
@@ -86,7 +86,7 @@ test("private galleries allow gradual uploads/removal, and old public galleries 
 
 test("Admin general image updates cannot bypass the minimum; unauthorized activation/upload stays denied", async () => {
   const f = fixture({ status: "active", isPublic: true });
-  const response = await f.load("app/api/admin/hospitals/[hospitalId]/route.ts").PATCH(bookingTestRequest("/api/admin/hospitals/centre", { action: "update", data: { imageUrls: images.slice(0, 3) } }), context);
+  const response = await f.load("app/api/admin/hospitals/[hospitalId]/route.ts").PATCH(bookingTestRequest("/api/admin/hospitals/centre", { action: "update", data: { imageUrls: images.slice(0, 4) } }), context);
   assert.equal(response.status, 409);
   assert.equal(f.values("auditLogs").length, 0);
   for (const path of [activatePath, imagePath]) {
@@ -100,6 +100,6 @@ test("rules cover publication and image changed-field bypasses without hiding ex
   const rules = readFileSync("firestore.rules", "utf8");
   const hospitalBlock = rules.slice(rules.indexOf("match /hospitals/{hospitalId}"), rules.indexOf("match /consultants/{consultantId}"));
   assert.match(hospitalBlock, /hasAny\(\['imageUrls', 'imageUrl'\]\)/);
-  assert.match(hospitalBlock, /toSet\(\)\.size\(\) >= 4/);
+  assert.match(hospitalBlock, /toSet\(\)\.size\(\) >= 5/);
   assert.match(hospitalBlock, /resource\.data\.get\('isPublic', false\) == true/);
 });

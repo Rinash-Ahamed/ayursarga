@@ -1,6 +1,7 @@
 import type { ConsultantSlotTimings, ConsultantTimeSlot } from "@/features/consultants/validation";
 
 export type PublicConsultant = {
+  imageUrl?: string | null;
   id: string; name: string; designation: string; qualification: string;
   // Public charge is the full consumer total, including Ayursarga commission.
   yearsExperience: number; consultantCharge: number;

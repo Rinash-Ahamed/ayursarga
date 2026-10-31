@@ -91,8 +91,8 @@ test("Admin revocation cutoff blocks old native-MFA reads/writes and cannot be c
   }
 });
 
-test("hospital publication requires four images; live gallery changes cannot drop below four", async () => {
-  const images = Array.from({ length: 4 }, (_, index) => `https://images.test/centre-${index}.webp`);
+test("hospital publication requires five images; live gallery changes cannot drop below five", async () => {
+  const images = Array.from({ length: 5 }, (_, index) => `https://images.test/centre-${index}.webp`);
   const data = { ...metadata, ...fields({ name: "Centre", description: "Care", email: "partner@example.com", phone: "9876543210", hospitalPhone1: "9876543210", address: "A complete centre address", city: "Palakkad", district: "Palakkad", state: "Kerala", commissionPercentage: 10, status: "active", isPublic: true, contractStatus: "signed", contractUrl: "https://example.com/signed.pdf", imageUrls: images }), contractSignedAt: timestamp };
   const path = `hospitals/gallery-${suffix}`;
   await seed(path, data);
@@ -101,12 +101,12 @@ test("hospital publication requires four images; live gallery changes cannot dro
   const legacy = { ...data, ...fields({ imageUrls: images.slice(0, 3) }) };
   await seed(legacyPath, legacy);
   assert.equal((await auditedUpdate(legacyPath, legacy, { description: "Updated care description" }, "admin", "hospitals", "update")).status, 200);
-  for (const count of [3, 4]) {
+  for (const count of [4, 5]) {
     const pendingPath = `hospitals/gallery-pending-${count}-${suffix}`;
     const pending = { ...data, ...fields({ status: "pending", isPublic: false, imageUrls: images.slice(0, count), activatedAt: null, activatedBy: null }) };
     await seed(pendingPath, pending);
     const result = await auditedUpdate(pendingPath, pending, { status: "active", isPublic: true, activatedBy: ids.admin }, "admin", "hospitals", "hospital_activated", ["activatedAt"]);
-    assert.equal(result.status, count === 4 ? 200 : 403);
+    assert.equal(result.status, count === 5 ? 200 : 403);
   }
 });
 
@@ -222,9 +222,10 @@ test("invoice records are Admin-readable and deny all direct client writes", asy
 test("consultant assignments: valid audited Admin edits succeed; unknown/duplicate services and cross-role writes fail", async () => {
   const path = `consultants/AS${Date.now()}`;
   const data = { ...metadata, ...fields({ employeeId: path.split("/")[1], employeeSequence: 1, name: "Local consultant", email: "local@example.test",
-    contactNo: "9876543210", whatsappNo: "9876543210", qualification: "BAMS", yearsExperience: 3.5, lastWorkedCompany: "", address: "", emergencyContactNo: "",
+    contactNo: "9876543210", whatsappNo: "9876543210", qualification: "BAMS", yearsExperience: 3.5, lastWorkedCompany: "", address: "", emergencyContactNo: "", imageUrl: "https://firebasestorage.googleapis.com/v0/b/test/o/consultant.webp?alt=media&token=synthetic",
     status: "active", consultantCharge: 900, ayursargaCommissionPercentage: 0, preferredTimeSlots: ["morning"], preferredSlotTimings: { morning: { startTime: "09:30", endTime: "11:45" } } }) };
   await seed(path, data);
+  assert.equal((await auditedUpdate(path, data, { imageUrl: "https://example.test/injected.webp" }, "admin", "consultants", "update")).status, 403);
   const response = await auditedUpdate(path, data, { consultationServices: ["prenatal-doctor", "lactation"], preferredDays: ["mon", "wed", "sun"] }, "admin", "consultants", "update");
   assert.equal(response.status, 200, await response.text());
   const saved = (await (await call(`/${path}`, { role: "admin" })).json()).fields;

@@ -76,9 +76,9 @@ const router = { replace: (path: string) => { portalUiState.navigatedTo = path; 
 export function useRouter() { return router; }
 export default function MockNextElement({ src, href, children, alt, width, height, ...props }: { src?: string; href?: string; children?: ReactNode; alt?: string; width?: number; height?: number; [key: string]: unknown }) {
   // eslint-disable-next-line @next/next/no-img-element
-  return src ? <img src={src} alt={alt ?? ""} width={width} height={height} /> : <a href={href} {...props}>{children}</a>;
+  return src ? <img src={src} alt={alt ?? ""} width={width} height={height} onError={props.onError as () => void} /> : <a href={href} {...props}>{children}</a>;
 }
-const coverGallery = Array.from({ length: 5 }, (_, index) => `https://images.test/centre-${index}.webp`);
+const coverGallery = Array.from({ length: 6 }, (_, index) => `https://images.test/centre-${index}.webp`);
 export const getHospital = async () => ({ ...hospital, imageUrls: portalUiState.screen === "admin-gallery-incomplete" ? coverGallery.slice(0, 3) : coverGallery, status: portalUiState.screen === "admin-gallery-incomplete" ? "pending" : hospital.status, isPublic: portalUiState.screen === "admin-gallery-incomplete" ? false : hospital.isPublic, facilities: "Free WiFi\nFree parking" });
 export const getHospitalCapacity = async () => ({ ...metadata, id: "centre", hospitalId: "centre", totalRooms: 10, occupiedRooms: 4, status: "active" });
 export const listAllHospitals = () => page(portalUiState.screen === "admin-hospitals-empty" ? [] : [hospital]);
@@ -122,7 +122,9 @@ let notificationReceiver: ((items: unknown[], snapshot: { fromCache: boolean }) 
 export const subscribeToNotifications = (_id: string, receive: (items: unknown[], snapshot: { fromCache: boolean }) => void) => { notificationReceiver = receive; const inject = (event: Event) => receive((event as CustomEvent).detail, { fromCache: false }); window.addEventListener('portal-test-notifications', inject); receive([{ ...metadata, id: "notification", title: "New booking AYUR000000", message: "Patient With a Longer Display Name · 14-day package · Booked, awaiting hospital confirmation", actionHref: `/${portalUiState.screen.startsWith("hospital") ? "hospital" : "admin"}/bookings?booking=booking-0`, readAt: null }], { fromCache: false }); return () => { notificationReceiver = null; window.removeEventListener('portal-test-notifications', inject); }; };
 export const clearAllNotifications = async () => { portalUiState.calls++; notificationReceiver?.([], { fromCache: false }); return { ok: true, clearedThrough: { seconds: now.seconds + 1, nanoseconds: 0 } }; };
 export const buildHospitalContractPdf = () => ({ html: "<h1>Contract fixture</h1>", filename: "contract.pdf", blob: new Blob() });
-export const authorizedApiRequest = async (url?: string, options?: RequestInit) => { portalUiState.calls++; return { imageUrls: url?.endsWith("/images") && options?.method === "PATCH" ? coverGallery.filter((image) => image !== JSON.parse(String(options.body)).imageUrl) : [] }; };
+export const authorizedApiRequest = async (url?: string, options?: RequestInit) => { portalUiState.calls++; return {
+  ...(url?.endsWith("/image") ? { imageUrl: "https://images.test/consultant.webp" } : {}),
+  imageUrls: url?.endsWith("/images") && options?.method === "PATCH" ? coverGallery.filter((image) => image !== JSON.parse(String(options.body)).imageUrl) : [] }; };
 export const updateHospital = async () => ({});
 export const recordHospitalContractGeneration = async () => ({});
 export const confirmHospitalContractSigning = async () => ({});
@@ -175,6 +177,7 @@ const consultation = { ...metadata, id: "consultation-fixture", bookingReference
   preferredDate: "2099-10-25", preferredTimeSlot: "morning", slotStartTime: "09:30", slotEndTime: "11:45", status: "confirmed", confirmedDate: "2099-10-25", confirmedTime: null, confirmedAt: now,
   consumerNotes: "Guidance about pregnancy lifestyle", adminNotes: null };
 export const listPublicConsultants = () => {
+  if (portalUiState.screen === "consumer-consultation-photo") return page([{ ...consultationProfessional, name: "Shafna", designation: "BAMS", qualification: "BAMS", yearsExperience: 3, consultantCharge: 300, imageUrl: "https://images.test/consultant.webp" }]);
   const staleFirstRead = portalUiState.screen === "consumer-consultation-refresh" && portalUiState.publicConsultantReads++ === 0;
   return page(portalUiState.screen === "consumer-consultation-empty" || staleFirstRead ? [] : [portalUiState.screen.endsWith("-restricted")
     ? { ...consultationProfessional, preferredDays: ["sun"], availableDates: ["2099-10-25"] } : consultationProfessional]);

@@ -277,12 +277,16 @@ service cloud.firestore {
 
     function hasValidConsultantFields() {
       return request.resource.data.keys().hasOnly([
-          'employeeId', 'employeeSequence', 'name', 'email', 'contactNo', 'whatsappNo',
+          'employeeId', 'employeeSequence', 'name', 'email', 'contactNo', 'whatsappNo', 'imageUrl',
           'qualification', 'yearsExperience', 'lastWorkedCompany', 'address', 'designation', 'consultantCharge', 'ayursargaCommissionPercentage', 'preferredTimeSlots', 'preferredSlotTimings', 'preferredDays', 'availableDates', 'consultationServices',
           'emergencyContactNo', 'status', 'createdAt', 'createdBy', 'updatedAt',
           'updatedBy', 'archivedAt', 'archivedBy', 'lastAuditId'
         ])
         && request.resource.data.employeeId is string
+        // Portraits are set only by the audited server upload endpoint. The
+        // client changed-field allowlist below deliberately excludes imageUrl.
+        && (request.resource.data.get('imageUrl', null) == null
+          || (request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() <= 1000))
         && request.resource.data.get('designation', '') is string
         && request.resource.data.get('designation', '').size() <= 120
         && request.resource.data.get('consultationServices', []) is list
@@ -602,7 +606,7 @@ service cloud.firestore {
           || (resource.data.get('isPublic', false) == true
             && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['imageUrls', 'imageUrl']))
           || (request.resource.data.get('imageUrls', []) is list
-            && request.resource.data.get('imageUrls', []).toSet().size() >= 4))
+            && request.resource.data.get('imageUrls', []).toSet().size() >= 5))
         && ((isAdmin()
           && validAdminHospitalUpdate()
           && (!(linkedAuditAction() in ['update', 'hospital_activated'])

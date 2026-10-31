@@ -364,6 +364,8 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   }
 
   const contractStatus = hospital?.contractStatus ?? "not_generated";
+  const imageCount = hospital ? new Set(getHospitalImageUrls(hospital)).size : 0;
+  const imagesMissing = Math.max(0, MIN_PUBLIC_HOSPITAL_IMAGES - imageCount);
   const defaultContractEffectiveDate = hospital?.contractEffectiveDate ?? toDateInputValue();
   const defaultContractExpiryDate = hospital?.contractExpiryDate ?? addYearsToDateInput(defaultContractEffectiveDate, 3);
   const contractParticularsComplete = Boolean(
@@ -421,7 +423,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         </>}
       </article>
 
-      <article className="portal-card portal-hospital-media-card">
+      <article id="hospital-images" className="portal-card portal-hospital-media-card">
         <div className="portal-row-heading"><h2>Hospital images and map</h2><span className="portal-status" data-status={hospital.locationUrl || getHospitalImageUrls(hospital).length ? "active" : "pending"}>{hospital.locationUrl || getHospitalImageUrls(hospital).length ? "Added" : "Not added"}</span></div>
         {editingMedia ? <form className="portal-form portal-edit-form" onSubmit={saveHospitalMedia} noValidate>
           <HospitalLocationField defaultValue={hospital.locationUrl} error={locationError} />
@@ -478,16 +480,20 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
           {editingContractParticulars && <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save contract particulars"}</button></div>}
         </form>}
         {hospital.contractUrl && <p>Signed contract: <a className="portal-inline-link" href={hospital.contractUrl} target="_blank" rel="noreferrer">View contract</a></p>}
+        {hospital.status !== "active" && hospital.status !== "archived" && imagesMissing > 0 && <div id="hospital-activation-images-error" className="portal-form-error" role="status">
+          <strong>Activation requires {MIN_PUBLIC_HOSPITAL_IMAGES} hospital images.</strong>
+          <p>{imageCount} of {MIN_PUBLIC_HOSPITAL_IMAGES} added. Upload {imagesMissing} more {imagesMissing === 1 ? "image" : "images"} to enable activation. Previewing the contract does not complete this requirement.</p>
+          <a className="portal-inline-link" href="#hospital-images">Go to hospital images</a>
+        </div>}
         <div className="portal-actions">
           {hospital.status === "pending" && <button className="portal-button secondary" type="button" disabled={busy || !contractParticularsComplete} title={!contractParticularsComplete ? "Complete and save all contract particulars to enable the preview." : undefined} onClick={previewContract}>{contractStatus === "not_generated" ? "Preview Contract" : "Preview Contract Again"}</button>}
-          {hospital.status === "pending" && contractStatus !== "not_generated" && <button className="portal-button" type="button" disabled={busy || !hasMinimumHospitalImages(hospital)} onClick={() => { setContractUrlError(null); setPendingAction("activate"); }}>Activate hospital</button>}
-          {hospital.status === "inactive" && contractStatus === "signed" && contractReady && <button className="portal-button" type="button" disabled={busy || !hasMinimumHospitalImages(hospital)} onClick={() => setPendingAction("activate")}>Reactivate hospital</button>}
+          {hospital.status === "pending" && contractStatus !== "not_generated" && <button className="portal-button" type="button" disabled={busy || imagesMissing > 0} aria-describedby={imagesMissing > 0 ? "hospital-activation-images-error" : undefined} onClick={() => { setContractUrlError(null); setPendingAction("activate"); }}>Activate hospital</button>}
+          {hospital.status === "inactive" && contractStatus === "signed" && contractReady && <button className="portal-button" type="button" disabled={busy || imagesMissing > 0} aria-describedby={imagesMissing > 0 ? "hospital-activation-images-error" : undefined} onClick={() => setPendingAction("activate")}>Reactivate hospital</button>}
           {hospital.status === "active" && <button className="portal-button" type="button" disabled={busy} onClick={() => setPendingAction("setup")}>Send login setup / reset</button>}
           {hospital.status === "active" && <button className="portal-button danger" type="button" disabled={busy} onClick={() => setPendingAction("deactivate")}>Deactivate hospital</button>}
         </div>
         {hospital.status === "pending" && !contractParticularsComplete && <p className="portal-form-note">Complete and save all required contract particulars to enable Preview Contract.</p>}
         <p>Preview and download the contract first. After the hospital returns the signed copy, select Activate hospital and add its secure link to complete signing and activation.</p>
-        {hospital.status !== "active" && hospital.status !== "archived" && !hasMinimumHospitalImages(hospital) && <p className="portal-form-note">Upload at least {MIN_PUBLIC_HOSPITAL_IMAGES} different hospital images to enable activation.</p>}
       </article>
 
       <AdminHospitalPackages hospitalId={hospital.id} />

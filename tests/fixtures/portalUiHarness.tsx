@@ -60,6 +60,7 @@ const screens = {
   "consumer-bookings": <ConsumerBookings />,
   "consumer-bookings-empty": <ConsumerBookings />,
   "consumer-consultation-new": <ConsultationBookingForm serviceId="prenatal-doctor" />,
+  "consumer-consultation-photo": <ConsultationBookingForm serviceId="prenatal-doctor" />,
   "consumer-consultation-restricted": <ConsultationBookingForm serviceId="prenatal-doctor" />,
   "consumer-consultation-empty": <ConsultationBookingForm serviceId="prenatal-doctor" />,
   "consumer-consultation-refresh": <ConsultationBookingForm serviceId="prenatal-doctor" />,

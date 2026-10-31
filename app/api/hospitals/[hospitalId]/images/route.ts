@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
+import { readImageUpload } from "@/services/images/readImageUpload";
 import { Timestamp } from "firebase-admin/firestore";
 import { AdminAuthorizationError, requireActiveUser } from "@/services/firebase/adminAuthorization";
 import { getFirebaseAdminStorageBucket, isFirebaseAdminStorageReady } from "@/services/firebase/admin";
@@ -34,30 +35,7 @@ async function authorize(request: Request, context: { params: Promise<{ hospital
 }
 
 async function readImage(request: Request) {
-  if (!["image/webp", "image/jpeg", "image/png"].includes(request.headers.get("content-type") ?? "")) throw new ImageError("Choose a JPG, PNG or WebP image.", 415);
-  if (Number(request.headers.get("content-length") ?? 0) > MAX_UPLOAD_BYTES) throw new ImageError("This image is too large to upload.", 413);
-  if (!request.body) throw new ImageError("Choose an image to upload.", 400);
-  const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > MAX_UPLOAD_BYTES) {
-      await reader.cancel();
-      throw new ImageError("This image is too large to upload.", 413);
-    }
-    chunks.push(value);
-  }
-  try {
-    const processor = sharp(Buffer.concat(chunks), { limitInputPixels: 25_000_000, animated: false });
-    const metadata = await processor.metadata();
-    if (!["jpeg", "png", "webp"].includes(metadata.format ?? "") || (metadata.pages ?? 1) > 1) throw new Error("Invalid format");
-    return await processor.rotate().resize(1200, 900, { fit: "cover", position: "attention" }).webp({ quality: 84 }).toBuffer();
-  } catch {
-    throw new ImageError("This image could not be processed. Choose another JPG, PNG or WebP image.", 400);
-  }
+  return readImageUpload(request, 1200, 900, MAX_UPLOAD_BYTES);
 }
 
 type Actor = Awaited<ReturnType<typeof authorize>>;

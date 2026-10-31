@@ -84,6 +84,12 @@ test("Consultation cancellation details show agreed deadlines and hide expired a
   await policy.getByText("Policy terms and refund deadlines", { exact: true }).click();
   await expect(policy).toContainText("23/10/2099");
   await expect(policy).toContainText("100% of the amount paid");
+  const terms = policy.getByRole("table");
+  await expect(terms.getByRole("columnheader")).toHaveCount(3);
+  await expect(terms.getByRole("columnheader", { name: "Cancellation period", exact: true })).toBeVisible();
+  await expect(terms).toContainText("48 hours before the appointment reference time");
+  await expect(terms).toContainText("0% of the amount paid");
+  await expect(terms).toContainText("Cancellation does not issue a refund automatically");
   await expect(page.getByRole("button", { name: "Cancel appointment", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await mount(page, "consumer-consultations-expired");
@@ -153,7 +159,7 @@ test("Admin dashboard online consultation zero is distinct from an unavailable t
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test("hospital cover badge follows the first photo and public galleries keep their four-photo minimum", async ({ page }) => {
+test("hospital cover badge follows the first photo and public galleries keep their five-photo minimum", async ({ page }) => {
   await page.route("https://images.test/**", (route) => route.fulfill({ status: 404 }));
   for (const screen of ["admin-details", "hospital-profile"]) {
     await mount(page, screen);
@@ -166,7 +172,7 @@ test("hospital cover badge follows the first photo and public galleries keep the
     await page.getByRole("button", { name: "Remove centre image 1", exact: true }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByRole("button", { name: "Remove image", exact: true }).click();
-    await expect(gallery.locator("a")).toHaveCount(4);
+    await expect(gallery.locator("a")).toHaveCount(5);
     await expect(gallery.locator("a").first()).toHaveAttribute("href", "https://images.test/centre-1.webp");
     await expect(gallery.getByText("Cover image", { exact: true })).toHaveCount(1);
     for (const button of await gallery.getByRole("button", { name: /Remove centre image/ }).all()) await expect(button).toBeDisabled();
@@ -176,7 +182,12 @@ test("hospital cover badge follows the first photo and public galleries keep the
   }
   await mount(page, "admin-gallery-incomplete");
   await expect(page.getByRole("button", { name: "Activate hospital", exact: true })).toBeDisabled();
-  await expect(page.getByText("Upload at least 4 different hospital images to enable activation.", { exact: true })).toBeVisible();
+  const warning = page.locator("#hospital-activation-images-error");
+  await expect(warning).toBeVisible();
+  await expect(warning).toContainText("Activation requires 5 hospital images.");
+  await expect(warning).toContainText("3 of 5 added. Upload 2 more images");
+  await expect(page.getByRole("button", { name: "Activate hospital", exact: true })).toHaveAttribute("aria-describedby", "hospital-activation-images-error");
+  await expect(warning.getByRole("link", { name: "Go to hospital images" })).toHaveAttribute("href", "#hospital-images");
   await expect(page.getByRole("button", { name: "Upload images", exact: true })).toBeEnabled();
 });
 
@@ -245,6 +256,28 @@ test("Hospital bookings go directly from start to complete with treatment badges
   await expect(page.locator(".portal-status")).toHaveText("confirmed");
 });
 
+test("consultant photos and labeled professional details stay readable without duplicate qualifications", async ({ page }) => {
+  await page.route("https://images.test/**", route => route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72"><rect width="72" height="72" fill="#dce9df"/></svg>' }));
+  await mount(page, "consumer-consultation-photo");
+  const card = page.locator(".consultation-professional");
+  await expect(card.locator(".consultation-professional-name")).toHaveText("Shafna");
+  expect((await card.innerText()).match(/\bBAMS\b/g)).toHaveLength(1);
+  await expect(card.locator(".consultation-professional-detail").filter({ hasText: "Qualification" })).toContainText("BAMS");
+  await expect(card.locator(".consultation-professional-detail").filter({ hasText: "Experience" })).toContainText("3 years");
+  await expect(card.locator(".consultation-professional-fee")).toContainText("₹300.00");
+  await expect(card.locator(".consultant-photo img")).toBeVisible();
+  await card.getByRole("radio").check();
+  await expect(card.getByRole("radio")).toBeChecked();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await card.screenshot({ path: test.info().outputPath("consultant-details.png") });
+  await card.locator("img").dispatchEvent("error");
+  await expect(card.locator(".consultant-photo")).toHaveText("S");
+  await mount(page, "admin-consultants");
+  await page.getByLabel("Consultant photo", { exact: true }).setInputFiles({ name: "portrait.png", mimeType: "image/png", buffer: Buffer.from("mock browser upload") });
+  await expect(page.getByRole("button", { name: "Replace photo", exact: true })).toBeVisible();
+  await expect(page.locator(".consultant-photo img")).toBeVisible();
+});
+
 test("online consultation form uses assigned charges and custom windows, requires consent and submits once", async ({ page }, testInfo) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -261,7 +294,7 @@ test("online consultation form uses assigned charges and custom windows, require
   expect((await page.getByRole("radio", { name: /Assigned Consultation Professional/ }).boundingBox())!.width).toBeLessThan(25);
   await page.getByRole("textbox", { name: "Preferred appointment date *", exact: true }).fill("25/10/2099");
   await expect(page.getByRole("option", { name: /Morning: 9:30 AM/ })).toContainText("11:45 AM");
-  await page.getByRole("combobox", { name: "Preferred time window *", exact: true }).selectOption("morning");
+  await page.getByRole("combobox", { name: "Preferred time *", exact: true }).selectOption("morning");
   await expect(submit).toBeDisabled();
   await page.getByRole("checkbox", { name: "I have read and agree to the applicable terms and policies.", exact: true }).check();
   await expect(submit).toBeEnabled();

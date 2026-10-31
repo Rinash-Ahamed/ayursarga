@@ -19,6 +19,8 @@ import { formatCurrency } from "@/utils/currency";
 import { formatDisplayDate } from "@/utils/date";
 import { consultationService } from "@/features/consultations/catalog";
 import { getConsultantPricing } from "@/features/consultants/pricing";
+import { ConsultantPhoto } from "@/components/consultants/ConsultantPhoto";
+import { ConsultantPhotoUpload } from "@/components/admin/ConsultantPhotoUpload";
 
 export function ConsultantsManager() {
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -121,6 +123,7 @@ export function ConsultantsManager() {
 
     {showCreateForm && <form className="portal-card portal-form" onSubmit={create} noValidate>
       <p className="full portal-form-note">Fields marked * are mandatory. The employee ID is generated automatically after saving.</p>
+      <p className="full portal-form-note">Save the consultant first, then upload a consumer-visible profile photo from their card.</p>
       <ConsultantFormFields errors={fieldErrors} />
       <div className="portal-actions full"><button className="portal-button" disabled={busyId === "create"}>{busyId === "create" ? "Adding..." : "Add consultant"}</button><button className="portal-button secondary" type="button" disabled={busyId === "create"} onClick={() => { setShowCreateForm(false); setFieldErrors({}); setActionError(null); }}>Cancel</button></div>
     </form>}
@@ -132,7 +135,8 @@ export function ConsultantsManager() {
     <PortalFeedback error={error} notification={actionError ? actionErrorNotification : loadErrorNotification} emptyTitle={deferredSearch.trim() ? "No matching consultants" : "No consultants yet"} empty={!error && !isLoading && items.length === 0 ? (deferredSearch.trim() ? "No consultants match your search." : "Select Add New to create the first consultant record.") : undefined} />
     <PortalToast message={message} notification={messageNotification} />
     <div className="portal-list consultant-list">{items.map((consultant) => <article className="portal-card" key={consultant.id}>
-      <div className="portal-row-heading"><div><h3>{consultant.name}</h3>{consultant.designation && <p>{consultant.designation}</p>}<strong className="consultant-employee-id">{consultant.employeeId}</strong></div><span className="portal-status" data-status={consultant.status}>{formatStatus(consultant.status)}</span></div>
+      <div className="portal-row-heading"><div className="consultant-profile-heading"><ConsultantPhoto name={consultant.name} imageUrl={consultant.imageUrl} /><div><h3>{consultant.name}</h3>{consultant.designation && <p>{consultant.designation}</p>}<strong className="consultant-employee-id">{consultant.employeeId}</strong></div></div><span className="portal-status" data-status={consultant.status}>{formatStatus(consultant.status)}</span></div>
+      <ConsultantPhotoUpload consultantId={consultant.id} imageUrl={consultant.imageUrl} disabled={Boolean(busyId) || editingId === consultant.id} onChange={imageUrl => patchItem(consultant.id, { imageUrl })} />
       {editingId === consultant.id ? <form className="portal-form portal-edit-form" onSubmit={(event) => void edit(event, consultant)} noValidate>
         <ConsultantFormFields key={consultant.id} defaultValues={consultant} errors={fieldErrors} />
         <div className="portal-actions full"><button className="portal-button" disabled={busyId === consultant.id}>{busyId === consultant.id ? "Saving..." : "Save changes"}</button><button className="portal-button secondary" type="button" disabled={busyId === consultant.id} onClick={resetEditor}>Cancel</button></div>

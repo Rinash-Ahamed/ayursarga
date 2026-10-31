@@ -20,12 +20,19 @@ export function ConsultationCancellationInfo({ snapshot, status, totals, outcome
       <div><dt>Refund eligibility</dt><dd>{outcome ? remaining === null ? "Support review required" : `At cancellation: ${formatCurrency(remaining / 100)} remaining eligible refund` : eligibility?.allowed ? remaining === null ? "Payment verification required before calculating a refund" : `${formatCurrency(remaining / 100)} remaining eligible refund` : "No online refund quote available; contact support for exceptions"}</dd></div>
     </dl>
     <details><summary>Policy terms and refund deadlines</summary>
-    <p>{rate(p.refundValue)} refundable when cancelled at least {p.refundWindowHours} hours before the appointment reference time. Later cancellations: {rate(p.lateRefundValue)}.</p>
-    <p>Refund-rate deadline: {formatDisplayDateTime(snapshot.refundDeadlineAt)} IST (inclusive).</p>
-    <p>Cancellation cutoff: {formatDisplayDateTime(snapshot.cancellationCutoffAt)} IST. {p.allowAfterCutoff ? "Late cancellation allowed until the appointment begins." : "No online cancellation after this cutoff."}</p>
-    <p>{snapshot.reference === "window_start" ? "The configured window start is the cancellation reference; it is not an exact appointment time." : "The confirmed appointment time is the cancellation reference."} All deadlines use India Standard Time.</p>
-    {p.conditions && <p>{p.conditions}</p>}
+    <div className="consultation-policy-table-wrap" role="region" aria-label="Consultation cancellation terms" tabIndex={0}>
+      <table className="consultation-policy-table">
+        <thead><tr><th scope="col">Cancellation period</th><th scope="col">Refund position</th><th scope="col">Important conditions</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">At least {p.refundWindowHours} hours before the appointment reference time</th><td>{rate(p.refundValue)}</td><td>Refund-rate deadline: {formatDisplayDateTime(snapshot.refundDeadlineAt)} IST (inclusive).</td></tr>
+          <tr><th scope="row">Later cancellations</th><td>{rate(p.lateRefundValue)}</td><td>{p.allowAfterCutoff ? "Late cancellation allowed until the appointment begins." : "No online cancellation after this cutoff."}</td></tr>
+          <tr><th scope="row">Cancellation cutoff</th><td colSpan={2}>{formatDisplayDateTime(snapshot.cancellationCutoffAt)} IST. {p.allowAfterCutoff ? "Late cancellation allowed until the appointment begins." : "No online cancellation after this cutoff."}</td></tr>
+          <tr><th scope="row">Appointment reference</th><td colSpan={2}>{snapshot.reference === "window_start" ? "The configured window start is the cancellation reference; it is not an exact appointment time." : "The confirmed appointment time is the cancellation reference."} All deadlines use India Standard Time.</td></tr>
+          {p.conditions && <tr><th scope="row">Special conditions</th><td colSpan={2}>{p.conditions}</td></tr>}
+          <tr><th scope="row">Cancellation instructions</th><td colSpan={2}>Use Cancel appointment below when available. Cancellation does not issue a refund automatically. Eligible refunds require processing through the original payment method; any refund already issued is deducted from the remaining amount. <Link href="/app/support">Contact Ayursarga</Link> for assistance or exceptional circumstances.</td></tr>
+        </tbody>
+      </table>
+    </div>
     </details>
-    <p>Use Cancel appointment below when available. Cancellation does not issue a refund automatically. Eligible refunds require processing through the original payment method; any refund already issued is deducted from the remaining amount. <Link href="/app/support">Contact Ayursarga</Link> for assistance or exceptional circumstances.</p>
   </section>;
 }

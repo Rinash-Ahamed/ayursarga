@@ -1,4 +1,5 @@
 "use client";
+import { ConsultantPhoto } from "@/components/consultants/ConsultantPhoto";
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
@@ -140,15 +141,22 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
           <legend>Choose your consultant *</legend>
           <div className="consultation-professional-grid">{items.map((item) => <label className="consultation-professional" key={item.id} data-selected={item.id === consultantId}>
             <input type="radio" name="consultant" value={item.id} checked={item.id === consultantId} required onChange={() => { setConsultantId(item.id); setDate(""); setSlot(""); }} />
-            <span><strong>{item.name}</strong><span>{item.designation || item.qualification}</span><span>{item.qualification} · {item.yearsExperience} years of experience</span><strong>{formatCurrency(item.consultantCharge)}</strong></span>
+            <span className="consultation-professional-info">
+              <ConsultantPhoto name={item.name} imageUrl={item.imageUrl} />
+              <strong className="consultation-professional-name">{item.name}</strong>
+              {item.designation && item.designation.trim().toLowerCase() !== item.qualification.trim().toLowerCase() && <span className="consultation-professional-role">{item.designation}</span>}
+              {item.qualification && <span className="consultation-professional-detail"><small>Qualification</small>{item.qualification}</span>}
+              <span className="consultation-professional-detail"><small>Experience</small>{item.yearsExperience} {item.yearsExperience === 1 ? "year" : "years"}</span>
+              <span className="consultation-professional-detail consultation-professional-fee"><small>Consultation fee</small><strong>{formatCurrency(item.consultantCharge)}</strong></span>
+            </span>
           </label>)}</div>
           <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
         </fieldset>
         {consultant && <p className="full portal-form-note">Available days/dates: {consultantAvailabilitySummary(consultant)}. Dates must match all configured restrictions.</p>}
         {noAvailableDates && <p className="full portal-form-error" role="status">This consultant has no future available dates matching their configured weekdays. Choose another professional or contact Ayursarga.</p>}
         <label>Preferred appointment date *<DateInput value={date} min={availableDates[0] ?? toDateInputValue()} max={availableDates.at(-1)} isDateAllowed={dateAllowed} onChange={(event) => { setDate(event.target.value); setSlot(""); }} required disabled={busy || !consultant || noAvailableDates} /></label>
-        <label>Preferred time window *<select value={slot} onChange={(event) => setSlot(event.target.value as ConsultantTimeSlot)} required disabled={busy || !consultant}>
-          <option value="">Select a preferred window</option>{consultant?.preferredTimeSlots.map((value) => {
+        <label>Preferred time *<select value={slot} onChange={(event) => setSlot(event.target.value as ConsultantTimeSlot)} required disabled={busy || !consultant}>
+          <option value="">Select a preferred time</option>{consultant?.preferredTimeSlots.map((value) => {
             const window = consultant.preferredSlotTimings[value];
             return <option key={value} value={value} disabled={!date || !dateAllowed(date) || !window || !validConsultationSchedule(date, window.startTime, window.endTime)}>{formatConsultantTimeSlot(value, consultant.preferredSlotTimings)}</option>;
           })}

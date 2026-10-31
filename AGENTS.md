@@ -145,10 +145,10 @@ to deploy, rerun maintenance scripts, or modify live data.
   download-token URLs are public. Configure the server-only
   `FIREBASE_STORAGE_BUCKET` in local and hosting environments.
   The first gallery photo is the Search-card cover; label it in image management.
-  Allow gradual uploads but require at least four distinct valid image URLs
+  Allow gradual uploads but require at least five distinct valid image URLs
   before activation/publication. Live public centres cannot remove/replace
-  their gallery below four photos. Preserve existing live legacy centres below
-  the minimum without silently hiding them; allow top-ups and require four
+  their gallery below five photos. Preserve existing live legacy centres below
+  the minimum without silently hiding them; allow top-ups and require five
   before reactivation. Enforce the minimum server-side and in direct-client
   rules, without deleting Storage files or changing booking availability.
 - Admin alone controls centre location, commission,
@@ -170,6 +170,13 @@ to deploy, rerun maintenance scripts, or modify live data.
   A bookable consultant must be active, non-archived, assigned to the service and
   have a configured charge and at least one preferred window. Legacy consultants
   without assignments remain private and unavailable for online booking.
+  Admin may upload or replace one consumer-visible consultant portrait through
+  the authenticated server image endpoint after saving the consultant. Re-encode
+  portraits to small metadata-free WebP files in Firebase Storage, audit the
+  consultant URL update atomically and preserve old files. Public discovery
+  exposes only validated tokenized portrait URLs; legacy records use initials.
+  The imageUrl field is server-managed: keep it out of client changed-field
+  allowlists while allowing existing photo-bearing records to be edited.
 - Public centre discovery uses the bounded `/api/public/hospitals` server
   projection. Do not restore anonymous SDK reads of full `hospitals` or
   `services` documents: those records contain contract, commission, actor, and

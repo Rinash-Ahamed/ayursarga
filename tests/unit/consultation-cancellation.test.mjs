@@ -3,12 +3,27 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { loadTypeScript } from "../helpers/loadTypeScript.mjs";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { consultationPaymentFixture, prepare, verify, paymentRequest, paidInput } from "../helpers/consultationPaymentFixture.mjs";
 
 const helpers = loadTypeScript("features/consultations/cancellationPolicy.ts");
 const { DEFAULT_CONSULTATION_CANCELLATION_POLICY: policy, parseConsultationCancellationPolicy: parse, snapshotConsultationCancellation: snapshot,
   consultationCancellationEligibility: eligibility, validCancellationSnapshot: valid } = helpers;
 const paid = { paidPaise: 99055, refundedPaise: 0 };
+
+test("Consumer cancellation table renders the agreed policy values, deadlines and conditions without substituting defaults", () => {
+  const { ConsultationCancellationInfo } = loadTypeScript("components/consultations/ConsultationCancellationInfo.tsx", {
+    "next/link": { __esModule: true, default: ({ href, children }) => createElement("a", { href }, children) },
+  });
+  const configured = { ...policy, refundWindowHours: 72, refundValue: 75, lateRefundValue: 10, conditions: "Agreed special conditions" };
+  const terms = snapshot(configured, "2099-10-25", "09:30");
+  const html = renderToStaticMarkup(createElement(ConsultationCancellationInfo, { snapshot: terms, status: "confirmed", totals: paid, now: Date.parse("2099-10-20T00:00:00Z") }));
+  assert.match(html, /<table/);
+  assert.equal((html.match(/scope="col"/g) ?? []).length, 3);
+  for (const value of ["72 hours", "75% of the amount paid", "10% of the amount paid", "Agreed special conditions", "Cancellation does not issue a refund automatically", "IST"]) assert.ok(html.includes(value), value);
+  assert.doesNotMatch(html, /100% of the amount paid/);
+});
 const context = id => ({ params: Promise.resolve({ bookingId: id }) });
 async function booked(f) { const checkout = (await (await prepare(f)).json()).checkout; f.capture(checkout); await verify(f, checkout.intentId); return checkout.intentId; }
 

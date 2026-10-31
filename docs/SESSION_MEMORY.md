@@ -2,6 +2,76 @@
 
 Updated: 31 October 2026 (Asia/Calcutta).
 
+## Consumer consultation cancellation table and time label (31 October 2026)
+
+- v4.27.1 replaces paragraph-based consultation policy terms with a compact
+  three-column Cancellation period / Refund position / Important conditions
+  table inside the existing expandable policy section. Uses the agreed snapshot
+  rates, IST deadlines, cutoff, reference, special conditions and instructions;
+  no policy, refund, eligibility, legacy handling or Search Center API change.
+  Table scrolls within its bounded container on narrow screens.
+- Preferred time window label is now Preferred time; empty option reads Select
+  a preferred time. Existing slot IDs, actual timing windows and booking/payment
+  validation are unchanged.
+- Eight focused cancellation unit/route/render checks passed, including custom
+  nondefault rates rendered in the table. Six browser regressions passed desktop
+  Chromium, 320px touch and mobile WebKit for policy table/deadlines/expired
+  cancellation actions and existing consent/checkout form with the new label.
+  No build/lint/typecheck, deployment or live records/emails/payments were run.
+
+## Consultant portraits and readable Consumer selection cards (31 October 2026)
+
+- v4.27.0 adds Admin Upload/Replace photo on saved Our Consultants cards.
+  New consultants are saved first, then photographed. Uploads use the shared
+  authenticated API client and a native-MFA Admin-only server endpoint at
+  /api/admin/consultants/{consultantId}/image; no consultant Auth accounts.
+- Server bounds JPG/PNG/WebP inputs to 8 MB/25M pixels, strips metadata and
+  writes 384px square WebP portraits with immutable token URLs to the existing
+  Storage bucket. Shared bounded image decoding is reused by hospital uploads
+  without changing their 1200x900 output, variants or 15MB limit.
+- URL update and audit commit atomically; expected-image checks run before
+  upload and inside the transaction. Conflicts/failures do not overwrite newer
+  portraits. Old/orphaned Storage files remain preserved; no automatic deletion.
+- imageUrl is optional in consultant models and safe public projections, which
+  accept only tokenized consultant-namespace image URLs. Contacts, commission,
+  private financials and booking snapshots remain unchanged. Consumer cards use
+  fixed-size lazy portraits with an initials/error fallback, separated labeled
+  qualification/experience/total-fee rows, and no duplicate designation when it
+  equals the qualification. Tightened narrow-layout sizing after browser tests.
+- Firestore full-document allowlist accepts existing imageUrl while the client
+  changed-field allowlist still excludes it; edits/status updates after upload
+  remain supported only AFTER deploying these rules. Storage client deny-all
+  remains unchanged. No new index. RULES AND APP MUST ROLL OUT TOGETHER.
+- 46 focused local photo, hospital-gallery and consultation booking/API tests
+  passed. Final photo/gallery rerun (10 tests) passed after size-bound coverage
+  was added. Six mocked browser checks passed desktop, 320px touch and mobile
+  WebKit: Admin upload, Consumer photo/fallback, separated nonduplicated details,
+  no overflow and existing consent/checkout form. Narrow screenshot inspected.
+  Emulator cases extended for existing photo-bearing edits and direct-write
+  denial but not executed (Java 8; emulator requires Java 21). No physical-device
+  or live Storage/Auth/booking/email tests, deployment, build/lint/typecheck.
+
+## Five-image publication minimum and visible activation validation (31 October 2026)
+
+- v4.26.6 raises MIN_PUBLIC_HOSPITAL_IMAGES from 4 to 5. Shared gallery UI,
+  activation/re-activation endpoint, image removal endpoint and Admin general
+  image updates use this constant. Matching Firestore changed-field/publication
+  rule now requires 5 unique URLs. Existing live legacy centres stay visible;
+  uploads remain gradual, and files/history are preserved.
+- Contract and approval now shows a prominent inline status before its actions:
+  required total, current count, remaining images and a gallery anchor. Disabled
+  Activate/Reactivate buttons reference that explanation with aria-describedby.
+  Explicitly explains why repeated contract previews do not satisfy images.
+- Six focused gallery/server/role-denial regression checks passed, including
+  four-image rejection and five-image acceptance. Emulator tests updated but
+  not run: installed Java 8 cannot run the required Firestore emulator.
+- Two focused mocked Playwright cases passed desktop Chromium and phone WebKit:
+  cover badge, five-image removal limit, visible 3/5 warning, remaining count,
+  disabled activation description and gallery link. Not physical-device proof.
+- No build/lint/typecheck, live data mutations or deployment for this task.
+  The updated Firestore rule is LOCAL and requires owner-authorized deployment;
+  the application changes also require normal rollout.
+
 ## Firebase browser authentication persistence fix (31 October 2026)
 
 - v4.26.5 pins firebase to 12.19.0 (previously ^12.17.1), installing Auth

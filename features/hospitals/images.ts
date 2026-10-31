@@ -1,5 +1,5 @@
 export const MAX_HOSPITAL_IMAGES = 10;
-export const MIN_PUBLIC_HOSPITAL_IMAGES = 4;
+export const MIN_PUBLIC_HOSPITAL_IMAGES = 5;
 
 /** Responsive versions exist only for images written by our upload endpoint. */
 export function hospitalImageSrcSet(url: string) {

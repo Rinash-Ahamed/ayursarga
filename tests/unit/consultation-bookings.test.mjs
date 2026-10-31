@@ -528,7 +528,7 @@ test("cancellation reads the assigned consultant's current email and never targe
 test("public consultant projection is an explicit whitelist, excludes private records and supports zero charges", () => {
   const { publicConsultantProjection } = loadTypeScript("features/consultations/publicProjection.ts");
   const projected = publicConsultantProjection("AS001", consultant, "prenatal-doctor");
-  assert.deepEqual(Object.keys(projected).sort(), ["id", "name", "designation", "qualification", "yearsExperience", "consultantCharge", "preferredTimeSlots", "preferredSlotTimings", "preferredDays", "availableDates"].sort());
+  assert.deepEqual(Object.keys(projected).sort(), ["id", "imageUrl", "name", "designation", "qualification", "yearsExperience", "consultantCharge", "preferredTimeSlots", "preferredSlotTimings", "preferredDays", "availableDates"].sort());
   assert.equal(publicConsultantProjection("AS001", { ...consultant, consultationServices: undefined }, "prenatal-doctor"), null);
   assert.equal(publicConsultantProjection("AS001", { ...consultant, consultantCharge: 0 }, "prenatal-doctor").consultantCharge, 0);
   assert.equal(publicConsultantProjection("AS001", { ...consultant, preferredSlotTimings: { morning: { startTime: "25:00", endTime: "26:00" } } }, "prenatal-doctor"), null);
