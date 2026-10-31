@@ -22,6 +22,16 @@
       "collectionGroup": "consultationFinancials", "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "mode", "order": "ASCENDING" },
+        { "fieldPath": "commissionPaise", "order": "ASCENDING" },
+        { "fieldPath": "gatewayFeePaise", "order": "ASCENDING" },
+        { "fieldPath": "grossPaise", "order": "ASCENDING" },
+        { "fieldPath": "refundedPaise", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "consultationFinancials", "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mode", "order": "ASCENDING" },
         { "fieldPath": "settlementStatus", "order": "ASCENDING" },
         { "fieldPath": "settlementHold", "order": "ASCENDING" },
         { "fieldPath": "consultantPayablePaise", "order": "ASCENDING" }

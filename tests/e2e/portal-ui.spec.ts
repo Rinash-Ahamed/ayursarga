@@ -31,7 +31,25 @@ test("Consultant Finance presents private breakdown and confirms an external set
   await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
   await mount(page, "admin-consultant-finance");
   await expect(page.getByRole("heading", { name: "Consultant Finance", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Consultant Finance", exact: true })).toHaveCSS("font-size", "28px");
   await expect(page.getByRole("link", { name: "Invoices & Billing", exact: true })).toBeVisible();
+  const filters = page.getByRole("region", { name: "Consultant finance filters", exact: true });
+  const searchField = filters.getByRole("searchbox");
+  const statusField = filters.getByRole("combobox");
+  const paymentMode = page.getByRole("combobox", { name: "Payment mode", exact: true });
+  for (const field of [searchField, statusField, paymentMode]) {
+    await expect(field).toHaveCSS("border-radius", "10px");
+    expect((await field.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  }
+  await expect(searchField).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  for (const select of [statusField, paymentMode]) {
+    await expect(select).toHaveCSS("appearance", "none");
+    await expect(select).toHaveCSS("background-color", /rgba\(31, 61, 43, 0\.0\d+\)/);
+  }
+  const columns = await filters.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(" ").length);
+  expect(columns).toBe((page.viewportSize()?.width ?? 1440) > 600 ? 2 : 1);
+  if (columns === 2) expect(Math.abs((await searchField.boundingBox())!.y - (await statusField.boundingBox())!.y)).toBeLessThan(2);
+  await filters.screenshot({ path: test.info().outputPath("finance-styled-filters.png") });
   await page.getByText("View financial breakdown", { exact: true }).click();
   await expect(page.getByText("Consultant payable", { exact: true })).toBeVisible();
   await page.getByLabel("Transfer reference *", { exact: true }).fill("UTR-EXTERNAL-123");
@@ -45,6 +63,14 @@ test("Consultant Finance presents private breakdown and confirms an external set
   await expect(dialog).not.toBeVisible();
   await expect(page.locator(".portal-finance-row .portal-status")).toHaveText("paid");
   expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { calls: number } }).consumerBookingFixture.calls)).toBe(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
+
+test("Finance invoice section uses the shared portal heading style", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "admin-billing");
+  await expect(page.getByRole("heading", { name: "Invoices & Billing", exact: true })).toHaveCSS("font-size", "28px");
+  await expect(page.getByRole("button", { name: "New commission invoice", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
 

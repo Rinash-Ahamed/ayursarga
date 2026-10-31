@@ -4,6 +4,15 @@ import { readFileSync } from "node:fs";
 import { consultationPaymentFixture, paidInput, paidConsultant, paymentRequest, prepare, verify } from "../helpers/consultationPaymentFixture.mjs";
 import { loadTypeScript } from "../helpers/loadTypeScript.mjs";
 
+test("Finance totals index preserves Firestore's required aggregate field ordering", () => {
+  const { indexes } = JSON.parse(readFileSync(new URL("../../firestore.indexes.json", import.meta.url), "utf8"));
+  const fields = ["mode", "commissionPaise", "gatewayFeePaise", "grossPaise", "refundedPaise"];
+  assert.ok(indexes.some(index => index.collectionGroup === "consultationFinancials"
+    && index.queryScope === "COLLECTION"
+    && JSON.stringify(index.fields) === JSON.stringify(fields.map(fieldPath => ({ fieldPath, order: "ASCENDING" })))),
+  "The totals query needs the exact composite index returned by Firestore, not just the same fields in another order.");
+});
+
 test("payment preparation snapshots private commission, returns only total, creates no booking/email and reuses one provider order", async () => {
   const f = consultationPaymentFixture();
   const response = await prepare(f); assert.equal(response.status, 200);

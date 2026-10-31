@@ -94,7 +94,7 @@ export function AdminBilling() {
 
   return <PortalShell role="admin" title="Finance">
     <AdminFinanceNavigation active="invoices" />
-    <h2>Invoices &amp; Billing</h2>
+    <div className="portal-section-heading"><h2>Invoices &amp; Billing</h2></div>
     <div className="portal-actions portal-page-actions"><button className="portal-button" onClick={newInvoice}>New commission invoice</button></div>
     <p className="portal-form-note">Generate hospital commission invoices. Review the commission amount and tax treatment before issuing.</p>
     {creating && <form className="portal-card portal-form billing-form" onSubmit={showPreview} noValidate>

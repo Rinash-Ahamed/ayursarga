@@ -2,6 +2,69 @@
 
 Updated: 31 October 2026 (Asia/Calcutta).
 
+## Finance totals index correction (31 October 2026)
+
+- v4.26.3 adds the exact Firestore-required aggregate index ordering:
+  mode/commissionPaise/gatewayFeePaise/grossPaise/refundedPaise, all ascending.
+  The earlier same-field/different-order index was READY but did not satisfy
+  the totals query. Retained existing indexes; no permissions or data changed.
+- Owner-authorized firestore:indexes-only deployment to ayursarga-connect
+  succeeded. Initial readback shows the new index CREATING; all previous
+  Finance indexes READY. No application, rules or Storage deployment.
+- Read-only database checks identified totals as the only failed query in
+  both Test and Live; the other six Finance queries passed in each mode.
+  Post-deployment totals still awaited index readiness at the first check.
+- All 12 focused consultation payment/Finance tests passed with Node test
+  isolation disabled after sandbox child-process spawn was denied. Added an
+  index-order regression assertion; mocked tests do not prove deployed Auth.
+  No build/lint/typecheck or live booking/payment/email mutation was run.
+
+## Finance styling correction (31 October 2026)
+
+- v4.26.2 connects Payment mode, transaction search and settlement status to
+  portal-filter-field, restoring shared borders, padding, rounded corners,
+  focus styles, select arrows and mobile control sizing. Finance filters use
+  two filled columns on wider screens and one below 600px; toolbar wraps cleanly
+  on phones. No generic booking filter layout or public styles changed.
+- Consultant Finance and Invoices & Billing section headings now reuse the
+  existing portal-section-heading style rather than unthemed heading resets.
+  No redesign, API, authorization, payment mode, amounts or settlement changes.
+- Eight focused mocked browser cases passed desktop Chromium, 768px tablet,
+  320px touch and mobile WebKit: field styling, grid columns, row alignment,
+  44px controls, no horizontal overflow, shared section headings and unchanged
+  confirmed/cancelled manual-settlement interactions. Filter screenshots checked.
+  These fixtures do not prove deployed CSS, Finance API availability or physical
+  device behavior. Build/lint/typecheck not requested/run; no deployment.
+- Finance still initially selects Live; fixing the mode default and selecting
+  matching Test-mode server credentials remain separate work. Last deployed
+  Finance indexes were CREATING, not rechecked by this styling-only task.
+
+## Firestore rules and Finance index deployment (31 October 2026)
+
+- Owner reauthenticated Firebase and authorized redeployment. Scoped command
+  deploy --only firestore:rules,firestore:indexes --project ayursarga-connect
+  --non-interactive exited 0 after retry outside network sandbox. Initial attempt
+  failed contacting the remote rule compiler; authenticated retry compiled,
+  uploaded and released rules and accepted the configured indexes.
+- Active released ruleset: fc2372f6-56fd-4e08-ad6b-7e14abd8ffc0. No Storage
+  rules, Hosting deployment, operational records or Auth accounts changed.
+- Metadata readback twice confirmed all five new indexes still CREATING:
+  consultationFinancials mode/createdAt; mode/gross/commission/fee/refund sums;
+  mode/settlementStatus/payable; mode/settlementStatus/hold/payable; and
+  consultationPaymentIntents mode/state/createdAt. Existing indexes READY.
+  Finance may continue returning 503 until these finish building. Do not claim
+  the authenticated Finance endpoint or all deployed permissions were tested.
+- Earlier diagnostic, before the styling fix above, found Finance initial mode hardcoded live and missing
+  shared portal-filter-field classes / four-column filters for two fields.
+  At deployment time these UI fixes had not been implemented or deployed. A safe mode-only check
+  also found local server Razorpay keys configured LIVE despite the owner
+  reporting Test mode in the Razorpay dashboard; no secrets were printed/changed.
+  Firebase deployment does not select Test credentials or fix that UI markup.
+- Application rollout remains separate: firebase.json Hosting serves static out/
+  without a Node API rewrite. Do not deploy that target over the Next.js app;
+  use the owner's Node-capable hosting workflow. No build/lint rerun or version
+  bump for deployment-only work; version remains 4.26.1. CLI debug log removed.
+
 ## Requested build, lint and production health validation (31 October 2026)
 
 - Owner clarified EDD is the Search Center start reference. Search Center
@@ -163,7 +226,7 @@ Updated: 31 October 2026 (Asia/Calcutta).
 
 ## Resume here: current session snapshot
 
-- Application version: 4.26.1 locally (not deployed). Admin MFA uses native Firebase TOTP with local QR
+- Application version: 4.26.2 locally (not deployed). Admin MFA uses native Firebase TOTP with local QR
   generation and manual-key fallback; Hospital/Consumer sign-in stays unchanged.
 - Admin Settings is below Audit Logs. Account security lives at /admin/settings;
   old /admin/security bookmarks redirect there. Recovery help and signed-in
