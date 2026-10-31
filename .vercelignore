@@ -1,0 +1,32 @@
+# Local credentials and environment files must never be uploaded as source.
+.env*
+!.env.example
+.secrets/
+secrets/
+.aws/
+serviceAccount*.json
+*service-account*.json
+*firebase-adminsdk*.json
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local/generated output; Vercel builds from source.
+.git/
+node_modules/
+.next/
+out/
+.vercel/
+.firebase/
+.agents
+.codex
+*.log
+*.log.*
+*.tsbuildinfo
+test-results/
+playwright-report/
+coverage/
+firebase-export-*/
+firebase-emulator-data/
+firestore-export/

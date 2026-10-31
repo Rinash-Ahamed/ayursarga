@@ -287,7 +287,6 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         city: validation.data.city,
         district: validation.data.district,
         state: validation.data.state,
-        description: validation.data.description,
       });
       setHospital((current) => current ? { ...current, ...changes } : current);
       setEditing(false);
@@ -409,7 +408,6 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
           <HospitalFormFields defaultValues={hospital} errors={fieldErrors} includeLegalName />
           <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save details"}</button><button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditing(false); setFieldErrors({}); setError(null); }}>Cancel</button></div>
         </form> : <>
-          <p>{hospital.description || "No description provided."}</p>
           <div className="portal-card-meta">
             <span>{hospital.email}</span><span>Owner WhatsApp: {hospital.phone}</span><span>Hospital Phone 1: {hospital.hospitalPhone1 || "Not added"}</span>{hospital.hospitalPhone2 && <span>Hospital Phone 2: {hospital.hospitalPhone2}</span>}
           </div>

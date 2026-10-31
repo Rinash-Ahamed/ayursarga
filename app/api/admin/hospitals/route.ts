@@ -5,6 +5,7 @@ import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
 import { apiHealth, apiJson } from "@/services/api/server";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
+import { assertUniqueCreationEmail, DuplicateCreationEmailError } from "@/services/admin/uniqueCreationEmail";
 
 export const runtime = "nodejs";
 
@@ -58,28 +59,34 @@ export async function POST(request: Request) {
       lastAuditId: auditReference.id,
     };
 
-    const batch = firestore.batch();
-    batch.set(hospitalReference, hospitalData);
-    batch.set(auditReference, {
-      action: "create",
-      module: "hospitals",
-      recordId: hospitalReference.id,
-      actorId: adminUid,
-      actorRole: "admin",
-      previousValues: null,
-      updatedValues: hospitalData,
-      timestamp: now,
-      source: "server",
-      device: {
-        userAgent: request.headers.get("user-agent")?.slice(0, 500) || null,
-        platform: null,
-        ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
-      },
+    await firestore.runTransaction(async (batch) => {
+      const counterReference = firestore.collection("systemSettings").doc("hospitalCreationSequence");
+      const counter = await batch.get(counterReference);
+      await assertUniqueCreationEmail(batch, firestore, "hospitals", validation.data.email);
+      batch.set(counterReference, { value: Number(counter.data()?.value ?? 0) + 1,
+        updatedAt: now, updatedBy: adminUid, lastAuditId: auditReference.id }, { merge: true });
+      batch.create(hospitalReference, hospitalData);
+      batch.set(auditReference, {
+        action: "create",
+        module: "hospitals",
+        recordId: hospitalReference.id,
+        actorId: adminUid,
+        actorRole: "admin",
+        previousValues: null,
+        updatedValues: hospitalData,
+        timestamp: now,
+        source: "server",
+        device: {
+          userAgent: request.headers.get("user-agent")?.slice(0, 500) || null,
+          platform: null,
+          ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
+        },
+      });
     });
-    await batch.commit();
 
     return apiJson({ ok: true, hospitalId: hospitalReference.id }, 201);
   } catch (error) {
+    if (error instanceof DuplicateCreationEmailError) return apiJson({ error: error.message, field: "email" }, error.status);
     if (error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
     if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
     console.error("Hospital creation failed", error instanceof Error ? error.message : error);

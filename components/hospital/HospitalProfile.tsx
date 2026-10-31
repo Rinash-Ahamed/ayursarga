@@ -67,7 +67,6 @@ export function HospitalProfile() {
         city: validation.data.city,
         district: validation.data.district,
         state: validation.data.state,
-        description: validation.data.description,
         centreGuidelines: guidelines.centreGuidelines,
         additionalCentreRules: guidelines.additionalCentreRules,
         facilities: guidelines.facilities,

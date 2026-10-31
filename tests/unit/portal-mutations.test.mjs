@@ -53,6 +53,20 @@ function fixture(records = {}, options = {}) {
 const request = (body) => new Request("https://test.local/api/test", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
 const context = (key, value) => ({ params: Promise.resolve({ [key]: value }) });
 
+test("Hospital profile saves without a description preserve legacy text and remain atomically audited", async () => {
+  const profile = { name: "Centre", email: "hospital@example.test", phone: "9876543210", hospitalPhone1: "9876543210", hospitalPhone2: null,
+    address: "A complete centre address", registeredAddress: "A complete registered address", city: "Palakkad", district: "Palakkad", state: "Kerala",
+    centreGuidelines: {}, additionalCentreRules: "", facilities: "", legalPolicies: "", additionalBystandersAllowed: false };
+  const f = fixture({ "hospitals/centre": { ...profile, description: "Legacy description retained", status: "active", commissionPercentage: 10 } });
+  const response = await f.load("app/api/hospital/profile/route.ts").PATCH(request(profile));
+  assert.equal(response.status, 200);
+  const changes = f.calls.writes.find(([kind, ref]) => kind === "update" && ref.path === "hospitals/centre")[2];
+  assert.equal(Object.hasOwn(changes, "description"), false);
+  assert.equal(f.calls.writes.length, 2);
+  const audit = f.calls.writes.find(([kind, ref]) => kind === "set" && ref.path.startsWith("auditLogs/"))[2];
+  assert.equal(audit.updatedValues.description, "Legacy description retained");
+});
+
 test("capacity batches independent reads and returns committed fields with atomic audit", async () => {
   const f = fixture({ "hospitals/centre": { status: "active" }, "hospitalCapacity/centre": { hospitalId: "centre", totalRooms: 4, occupiedRooms: 1 } });
   const response = await f.load("app/api/hospital/capacity/route.ts").PATCH(request({ totalRooms: 9, occupiedRooms: 2 }));

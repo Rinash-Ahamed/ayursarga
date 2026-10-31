@@ -91,6 +91,15 @@ test("Admin revocation cutoff blocks old native-MFA reads/writes and cannot be c
   }
 });
 
+test("hospital and consultant creation cannot bypass the server duplicate-email checks", async () => {
+  for (const module of ["hospitals", "consultants"]) {
+    for (const role of ["admin", "hospital", "consumer"]) {
+      const response = await call(`/${module}/create-${role}-${suffix}`, { role, method: "PATCH", body: { fields: fields({ name: "Duplicate", email: "existing@example.test" }) } });
+      assert.equal(response.status, 403);
+    }
+  }
+});
+
 test("hospital publication requires five images; live gallery changes cannot drop below five", async () => {
   const images = Array.from({ length: 5 }, (_, index) => `https://images.test/centre-${index}.webp`);
   const data = { ...metadata, ...fields({ name: "Centre", description: "Care", email: "partner@example.com", phone: "9876543210", hospitalPhone1: "9876543210", address: "A complete centre address", city: "Palakkad", district: "Palakkad", state: "Kerala", commissionPercentage: 10, status: "active", isPublic: true, contractStatus: "signed", contractUrl: "https://example.com/signed.pdf", imageUrls: images }), contractSignedAt: timestamp };

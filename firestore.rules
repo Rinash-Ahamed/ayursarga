@@ -65,25 +65,6 @@ service cloud.firestore {
       ]);
     }
 
-    function hasExactHospitalFields() {
-      return request.resource.data.keys().hasOnly([
-        'name', 'description', 'email', 'phone', 'hospitalPhone1', 'hospitalPhone2',
-        'registeredAddress', 'address', 'city', 'district', 'state',
-        'imageUrl', 'imageUrls', 'ayursargaRating', 'ayursargaReviewNote',
-        'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies', 'locationUrl',
-        'additionalBystandersAllowed', 'maxAdditionalBystanders', 'additionalBystanderCharge',
-        'blockedDateRanges',
-        'status', 'isPublic', 'commissionPercentage',
-        'ayursargaPinCode', 'ayursargaGstin', 'legalEntityType', 'registrationNumber', 'cinNumber', 'panNumber', 'gstin',
-        'contractEffectiveDate', 'contractExpiryDate', 'emergencyContact', 'emergencyReferralHospital',
-        'contractStatus', 'contractGeneratedAt', 'contractGeneratedBy',
-        'contractSignedAt', 'contractSignedBy', 'contractUrl',
-        'contractSignedAt2', 'contractSignedBy2', 'contractUrl2', 'activatedAt', 'activatedBy',
-        'createdAt', 'createdBy', 'updatedAt', 'updatedBy',
-        'archivedAt', 'archivedBy', 'lastAuditId'
-      ]);
-    }
-
     function hasValidCentreGuidelines() {
       let guidelines = request.resource.data.get('centreGuidelines', {});
       let additionalRules = request.resource.data.get('additionalCentreRules', '');
@@ -194,15 +175,6 @@ service cloud.firestore {
           && request.resource.data.locationUrl.matches('https://(maps\\.app\\.goo\\.gl|maps\\.google\\.com|maps\\.google\\.co\\.in|goo\\.gl|www\\.google\\.com|www\\.google\\.co\\.in|www\\.openstreetmap\\.org|openstreetmap\\.org)/.*')
         ))
         && hasValidCentreGuidelines();
-    }
-
-    function hasRequiredHospitalContactFields() {
-      return request.resource.data.hospitalPhone1 is string
-        && request.resource.data.hospitalPhone1.size() >= 7
-        && request.resource.data.hospitalPhone1.size() <= 25
-        && request.resource.data.district is string
-        && request.resource.data.district.size() >= 2
-        && request.resource.data.district.size() <= 80;
     }
 
     function hasValidRequiredHospitalFields() {
@@ -578,27 +550,8 @@ service cloud.firestore {
 
     match /hospitals/{hospitalId} {
       allow read: if isAdmin() || hasOperationalHospitalAccess(hospitalId);
-      allow create: if isAdmin()
-        && hasExactHospitalFields()
-        && hasValidRequiredHospitalFields()
-        && hasRequiredHospitalContactFields()
-        && request.resource.data.status == 'pending'
-        && request.resource.data.isPublic == false
-        && request.resource.data.contractStatus == 'not_generated'
-        && request.resource.data.contractGeneratedAt == null
-        && request.resource.data.contractGeneratedBy == null
-        && request.resource.data.contractSignedAt == null
-        && request.resource.data.contractSignedBy == null
-        && request.resource.data.contractUrl == null
-        && request.resource.data.activatedAt == null
-        && request.resource.data.activatedBy == null
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.createdBy == request.auth.uid
-        && request.resource.data.updatedAt == request.time
-        && request.resource.data.updatedBy == request.auth.uid
-        && request.resource.data.archivedAt == null
-        && request.resource.data.archivedBy == null
-        && hasCreateAudit('hospitals', hospitalId);
+      // Creation is server-only so direct SDK writes cannot bypass email uniqueness.
+      allow create: if false;
       allow update: if hasLinkedAudit('hospitals', hospitalId)
         && request.resource.data.updatedAt == request.time
         && request.resource.data.updatedBy == request.auth.uid

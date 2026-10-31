@@ -104,7 +104,7 @@ export async function PATCH(request: Request) {
 
     const changes = {
       name: validation.data.name,
-      description: validation.data.description,
+      ...(Object.hasOwn(body, "description") ? { description: validation.data.description } : {}),
       email: validation.data.email,
       phone: validation.data.phone,
       hospitalPhone1: validation.data.hospitalPhone1,

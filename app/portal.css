@@ -199,9 +199,6 @@ html[data-theme="dark"] .portal-toast[data-tone="error"],body[data-theme="dark"]
 .consumer-booking-notes p,.consumer-booking-note p{ white-space:pre-wrap; overflow-wrap:anywhere; }
 .consumer-booking-notes>summary:focus-visible,.consumer-request-navigation a:focus-visible{ outline:2px solid var(--forest); outline-offset:3px; border-radius:3px; }
 .portal-row.consumer-booking-row .consumer-booking-pending{ margin-top:16px; font-size:12px; }
-.consumer-booking-copy .portal-treatment-trail{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); align-items:start; margin-top:12px; gap:12px; }
-.consumer-booking-copy .portal-treatment-step{ display:grid; gap:5px; justify-items:center; }
-.consumer-booking-copy .portal-treatment-step>span{ color:var(--sage); font-size:10px; text-align:center; overflow-wrap:anywhere; }
 .operational-booking-actions{ grid-column:1/-1; min-width:0; padding-top:16px; border-top:1px solid rgba(31,61,43,.13); }
 .operational-booking-actions .portal-actions{ margin-top:0; }
 .operational-booking-card .operational-booking-commission strong{ font-size:17px; }
@@ -836,11 +833,6 @@ html[data-theme="dark"] .portal-toast[data-tone="error"],body[data-theme="dark"]
 .portal-toast-mark svg{ width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
 
 /* --- Booking treatment progress ----------------------------------------- */
-.portal-treatment-trail{ display:flex; align-items:center; gap:0; margin-top:8px; }
-.portal-treatment-step{ display:flex; align-items:center; gap:0; }
-.portal-treatment-dot{ width:10px; height:10px; flex:0 0 10px; border-radius:50%; background:rgba(31,61,43,.15); border:2px solid rgba(31,61,43,.2); }
-.portal-treatment-dot[data-done="true"]{ background:var(--forest); border-color:var(--forest); }
-.portal-treatment-dot[data-active="true"]{ background:var(--gold); border-color:var(--gold); }
 .portal-treatment-line{ width:28px; height:2px; background:rgba(31,61,43,.12); }
 .portal-treatment-line[data-done="true"]{ background:var(--forest); }
 .portal-treatment-labels{ display:flex; gap:24px; margin-top:4px; }
@@ -999,15 +991,15 @@ body.portal-active .portal-toast-viewport{ top:var(--portal-toast-top,calc(150px
 .consultant-photo-upload{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:12px 0;}
 .consultant-photo-upload small{font-size:11px;color:var(--sage);}
 .portal-form .consultation-professional-info{display:block;min-width:0;line-height:1.5;}
-.consultation-professional-banner{display:grid;grid-template-columns:minmax(0,1fr) 100px;align-items:center;min-height:100px;background:linear-gradient(110deg,#f8edcf,#f3e4bb);}
+.consultation-professional-banner{display:grid;grid-template-columns:minmax(0,1fr) 100px;align-items:center;min-height:100px;background:linear-gradient(110deg,var(--forest,#1f3d2b),#16583f);}
 .consultation-professional-banner>.consultant-photo{width:100px;height:100px;align-self:end;border-radius:0;background:transparent;font-size:20px;}
 .consultation-professional-banner>.consultant-photo img{object-fit:contain;object-position:bottom;}
 .consultation-professional-banner>.consultant-photo>span{display:grid;place-items:center;width:52px;height:52px;border-radius:50%;background:var(--portal-surface-soft,#f2f6f1);}
 .consultation-professional-identity{display:grid;gap:4px;min-width:0;padding:14px 12px 18px 40px;}
 .consultation-professional-footer{position:relative;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px;margin-top:-8px;padding:10px 14px;border-radius:12px 12px 0 0;background:var(--portal-surface,#fff);}
 .consultation-professional-credentials{display:flex;flex-wrap:wrap;gap:4px 12px;min-width:0;}
-.consultation-professional-name{font-size:16px;color:var(--forest);letter-spacing:normal;}
-.consultation-professional-role{font-size:13px;color:var(--sage);}
+.consultation-professional-name{font-size:16px;color:#fff;letter-spacing:normal;}
+.consultation-professional-role{font-size:13px;color:#e3eee7;}
 .consultation-professional-detail{display:inline-flex;gap:4px;font-size:13px;}
 .portal-form .consultation-professional-detail>small{display:block;font-size:11px;color:var(--sage);font-weight:600;text-transform:none;}
 .consultation-professional-detail>small.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0;}

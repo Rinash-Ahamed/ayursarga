@@ -3,8 +3,8 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { ROUTES } from "@/config/routes";
-import type { BookingDocument, TreatmentStatus } from "@/features/firestore/models";
-import { getTreatmentProgress, getTreatmentStatus, TREATMENT_PROGRESS_STEPS } from "@/features/bookings/treatmentStatus";
+import type { BookingDocument } from "@/features/firestore/models";
+import { getTreatmentProgress, getTreatmentStatus } from "@/features/bookings/treatmentStatus";
 import { emptyQueryPage, type DocumentRecord, type QueryPageOptions } from "@/services/firestore/firestoreService";
 import { cancelConsumerBooking, getConsumerBookingDetails, getPortalBooking, listConsumerBookings } from "@/services/bookings/bookingService";
 import { bookingDateFacts, bookingReferenceLabel, bookingStatusLabel } from "@/features/bookings/display";
@@ -19,16 +19,6 @@ import { PortalPagination } from "@/components/portal/PortalPagination";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
-
-function TreatmentTrail({ status }: { status: TreatmentStatus }) {
-  const { index: currentIndex, label } = getTreatmentProgress(status);
-  return <div className="portal-treatment-trail" role="group" aria-label={`Treatment progress: ${label}`}>
-    {TREATMENT_PROGRESS_STEPS.map((step, index) => <div className="portal-treatment-step" key={step} aria-current={currentIndex === index ? "step" : undefined}>
-      <div className="portal-treatment-dot" aria-hidden="true" data-done={currentIndex > index ? "true" : undefined} data-active={currentIndex === index ? "true" : undefined} />
-      <span>{step}</span>
-    </div>)}
-  </div>;
-}
 
 export function ConsumerBookings({ bookingId }: { bookingId?: string } = {}) {
   const { firebaseUser } = useAuth();
@@ -107,7 +97,6 @@ export function ConsumerBookings({ bookingId }: { bookingId?: string } = {}) {
           {(booking.status === "confirmed" || booking.status === "completed") && <>
             {booking.status === "confirmed" && <p className="consumer-booking-treatment">Your booking is confirmed.</p>}
             <p className="consumer-booking-treatment">Treatment: {getTreatmentProgress(getTreatmentStatus(booking)).label}</p>
-            <TreatmentTrail status={getTreatmentStatus(booking)} />
           </>}
         </div>
         <div className="consumer-booking-meta">

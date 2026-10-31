@@ -3,6 +3,7 @@ import { validateConsultantFields } from "@/features/consultants/validation";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { apiJson } from "@/services/api/server";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
+import { assertUniqueCreationEmail, DuplicateCreationEmailError } from "@/services/admin/uniqueCreationEmail";
 
 export const runtime = "nodejs";
 
@@ -18,6 +19,7 @@ export async function POST(request: Request) {
     const auditReference = firestore.collection("auditLogs").doc();
     const result = await firestore.runTransaction(async (transaction) => {
       const counter = await transaction.get(counterReference);
+      await assertUniqueCreationEmail(transaction, firestore, "consultants", validation.data.email);
       const latest = await transaction.get(firestore.collection("consultants").orderBy("employeeSequence", "desc").limit(1));
       const currentSequence = Math.max(
         Number(counter.data()?.value ?? 0),
@@ -56,6 +58,7 @@ export async function POST(request: Request) {
     });
     return apiJson({ ok: true, employeeId: result }, 201);
   } catch (error) {
+    if (error instanceof DuplicateCreationEmailError) return apiJson({ error: error.message, field: "email" }, error.status);
     if (error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
     if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
     console.error("Consultant creation failed", error instanceof Error ? error.message : error);

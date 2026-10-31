@@ -62,6 +62,10 @@ export function ConsultantsManager() {
       await reload();
       setMessage(`${employeeId} has been added to Our Consultants.`);
     } catch (caught) {
+      if (caught instanceof Error && "status" in caught && caught.status === 409) {
+        setFieldErrors({ email: caught.message });
+        focusFirstInvalidField(form);
+      }
       setActionError(caught instanceof Error ? caught.message : "We could not add the consultant. Try again.");
     } finally {
       setBusyId(null);

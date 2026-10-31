@@ -142,37 +142,32 @@ test("new automatically confirmed bookings display consistently without hospital
   }
 });
 
-test("consumer treatment timeline follows Hospital start and completion without a separate ongoing action", async ({ page }) => {
+test("consumer bookings omit the timeline while Hospital treatment actions still update status", async ({ page }) => {
   await mount(page, "consumer-auto-confirmed");
   const timeline = page.locator(".portal-treatment-trail");
-  const checkStage = async (index: number, label: string) => {
-    await expect(timeline).toHaveAttribute("aria-label", `Treatment progress: ${label}`);
-    await expect(timeline.locator('[aria-current="step"]')).toHaveText(label);
-    await expect(timeline.locator('.portal-treatment-dot[data-active="true"]')).toHaveCount(1);
-    await expect(timeline.locator('.portal-treatment-step').nth(index).locator('.portal-treatment-dot')).toHaveAttribute("data-active", "true");
+  const checkStage = async (label: string, cancellable = false) => {
+    await expect(timeline).toHaveCount(0);
     await expect(page.getByText(`Treatment: ${label}`, { exact: true })).toBeVisible();
-    const dots = await timeline.locator(".portal-treatment-dot").evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().top));
-    expect(Math.max(...dots) - Math.min(...dots)).toBeLessThanOrEqual(1);
+    await expect(page.getByRole("button", { name: "Cancel booking", exact: true })).toHaveCount(cancellable ? 1 : 0);
     await checkLayout(page);
   };
   const switchPortal = async (screen: string) => page.evaluate((name) => {
     window.unmountPortalUi?.();
     window.mountPortalUi(name);
   }, screen);
-  await checkStage(0, "Yet to be started");
+  await checkStage("Yet to be started", true);
   await switchPortal("hospital-auto-confirmed");
   await page.getByRole("button", { name: "Start treatment", exact: true }).click();
   await expect(page.locator(".portal-status")).toHaveText("Treatment Started");
   await expect(page.getByRole("button", { name: "Mark ongoing", exact: true })).toHaveCount(0);
   await switchPortal("consumer-auto-confirmed");
-  await checkStage(1, "Ongoing");
+  await checkStage("Ongoing");
   await switchPortal("hospital-auto-confirmed");
   await page.getByRole("button", { name: "Complete treatment", exact: true }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Complete treatment", exact: true }).click();
   await expect(page.locator(".portal-status")).toHaveText("Treatment completed");
   await switchPortal("consumer-auto-confirmed");
-  await checkStage(2, "Completed");
-  await expect(timeline.locator('.portal-treatment-dot[data-done="true"]')).toHaveCount(2);
+  await checkStage("Completed");
 });
 
 test("one canonical reference identifies the selected booking in every portal", async ({ page }) => {

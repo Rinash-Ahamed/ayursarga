@@ -27,6 +27,26 @@ async function mount(page: Page, screen: string) {
   await page.waitForTimeout(120);
 }
 
+test("district fields offer only Kerala and Tamil Nadu and derive the selected state", async ({ page }) => {
+  for (const screen of ["admin-hospitals", "hospital-profile"]) {
+    await mount(page, screen);
+    if (screen === "admin-hospitals") await page.getByRole("button", { name: "Add Hospital", exact: true }).click();
+    const district = page.getByPlaceholder("Search district or state");
+    const listId = await district.getAttribute("list");
+    const options = await page.locator(`datalist[id="${listId}"] option`).evaluateAll(elements => elements.map(element => (element as HTMLOptionElement).value));
+    expect(options).toHaveLength(52);
+    expect(options.every(option => option.endsWith(", Kerala") || option.endsWith(", Tamil Nadu"))).toBe(true);
+    await district.fill("Coimbatore, Tamil Nadu");
+    await expect(page.locator('input[name="district"]')).toHaveValue("Coimbatore");
+    await expect(page.locator('input[name="state"]')).toHaveValue("Tamil Nadu");
+    await district.fill("Palakkad");
+    await expect(page.locator('input[name="state"]')).toHaveValue("Kerala");
+    await district.fill("Mumbai");
+    await expect(page.locator('input[name="district"]')).toHaveValue("");
+    await expect(page.locator('input[name="state"]')).toHaveValue("");
+  }
+});
+
 test("Consultant Finance presents private breakdown and confirms an external settlement responsively", async ({ page }) => {
   await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
   await mount(page, "admin-consultant-finance");
@@ -256,13 +276,48 @@ test("Hospital bookings go directly from start to complete with treatment badges
   await expect(page.locator(".portal-status")).toHaveText("confirmed");
 });
 
+test("Admin creation duplicate emails remain inline and focus the email field without closing either form", async ({ page }) => {
+  for (const module of ["hospitals", "consultants"]) {
+    await mount(page, `admin-${module}`);
+    await page.evaluate(() => Object.assign(window, { duplicateCreation: true }));
+    await page.getByRole("button", { name: module === "hospitals" ? "Add Hospital" : "Add New", exact: true }).click();
+    const form = page.locator("form").first();
+    const values = module === "hospitals"
+      ? { legalName: "Example hospital", name: "Example hospital", email: "existing@example.test", phone: "9876543210", hospitalPhone1: "9876543210", city: "Palakkad", commission: "10", registeredAddress: "A complete registered address", address: "A complete service address" }
+      : { name: "Example consultant", email: "existing@example.test", contactNo: "9876543210", whatsappNo: "9876543210", qualification: "BAMS", yearsExperience: "3", consultantCharge: "300", ayursargaCommissionPercentage: "10" };
+    for (const [name, value] of Object.entries(values)) await form.locator(`input[name="${name}"]`).fill(value);
+    if (module === "hospitals") await form.getByPlaceholder("Search district or state").fill("Palakkad, Kerala");
+    await form.getByRole("button", { name: module === "hospitals" ? "Create hospital" : "Add consultant", exact: true }).click();
+    const email = form.locator('input[name="email"]');
+    await expect(email).toHaveAttribute("aria-invalid", "true");
+    await expect(form.locator(".portal-field-error")).toContainText("This email is already used");
+    await expect(email).toBeFocused();
+    await expect(form).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  }
+});
+
+test("existing Admin and Hospital edit forms no longer display hospital descriptions", async ({ page }) => {
+  await page.route("https://images.test/**", route => route.fulfill({ status: 404 }));
+  await mount(page, "admin-details");
+  await expect(page.getByText("Care centre description", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Edit hospital", exact: true }).click();
+  await expect(page.locator('textarea[name="description"]')).toHaveCount(0);
+  await expect(page.locator('input[name="name"]')).toBeVisible();
+  await mount(page, "hospital-profile");
+  await expect(page.locator('textarea[name="description"]')).toHaveCount(0);
+  await expect(page.locator('input[name="name"]')).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save profile", exact: true })).toBeEnabled();
+});
+
 test("consultant photos and labeled professional details stay readable without duplicate qualifications", async ({ page }) => {
   await page.route("https://images.test/**", route => route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72"><rect width="72" height="72" fill="#dce9df"/></svg>' }));
   await mount(page, "consumer-consultation-photo");
   const card = page.locator(".consultation-professional");
   await expect(card.locator(".consultation-professional-name")).toHaveText("Shafna");
   expect((await card.textContent())?.match(/BAMS/g)).toHaveLength(1);
-  await expect(card.locator(".consultation-professional-detail").filter({ hasText: "Qualification" })).toContainText("BAMS");
+  await expect(card.locator(".consultation-professional-role")).toHaveText("BAMS");
+  await expect(card.locator(".consultation-professional-name")).toHaveCSS("color", "rgb(255, 255, 255)");
   await expect(card.locator(".consultation-professional-detail").filter({ hasText: "Experience" })).toContainText("3 years");
   await expect(card.locator(".consultation-professional-fee")).toContainText("₹300.00");
   await expect(card.locator(".consultant-photo img")).toBeVisible();

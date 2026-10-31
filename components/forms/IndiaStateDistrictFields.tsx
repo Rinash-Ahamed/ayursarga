@@ -1,10 +1,9 @@
 "use client";
 
 import { useId, useState } from "react";
-import { INDIA_STATES_AND_UNION_TERRITORIES } from "@/constants/indiaStates";
-import { INDIA_DISTRICTS_BY_STATE, isDistrictInIndiaState } from "@/constants/indiaDistricts";
+import { INDIA_DISTRICTS_BY_STATE } from "@/constants/indiaDistricts";
 
-const DISTRICT_OPTIONS = INDIA_STATES_AND_UNION_TERRITORIES.flatMap((state) =>
+const DISTRICT_OPTIONS = (["Kerala", "Tamil Nadu"] as const).flatMap((state) =>
   INDIA_DISTRICTS_BY_STATE[state].map((district) => ({
     district,
     state,
@@ -27,7 +26,6 @@ export function IndiaStateDistrictFields({
   const [state, setState] = useState(defaultState);
   const [district, setDistrict] = useState(defaultDistrict);
   const [districtSearch, setDistrictSearch] = useState(defaultDistrict);
-  const hasLegacyDistrict = Boolean(state && district && !isDistrictInIndiaState(state, district));
 
   function selectDistrict(value: string) {
     setDistrictSearch(value);
@@ -60,7 +58,6 @@ export function IndiaStateDistrictFields({
         onChange={(event) => selectDistrict(event.target.value)}
       />
       <datalist id={districtListId}>
-        {hasLegacyDistrict && <option value={`${district}, ${state}`} />}
         {DISTRICT_OPTIONS.map((option) => <option value={option.label} key={option.label} />)}
       </datalist>
       <input type="hidden" name="district" value={district} />

@@ -16,9 +16,12 @@ test("hospital descriptions stay private while package descriptions remain publi
   assert.equal(api.publicServiceProjection("package", { description: "Included treatments" }).description, "Included treatments");
 });
 
-test("Add Hospital disables the shared description field and public views do not render it", () => {
+test("all hospital forms omit description without overwriting legacy stored text, and public views do not render it", () => {
   const source = path => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
-  assert.match(source("components/admin/HospitalsManager.tsx"), /includeDescription=\{false\}/);
+  assert.doesNotMatch(source("components/forms/HospitalFormFields.tsx"), /name="description"|includeDescription/);
+  for (const path of ["components/admin/HospitalDetails.tsx", "components/hospital/HospitalProfile.tsx"]) {
+    assert.doesNotMatch(source(path), /description: validation\.data\.description|hospital\.description/);
+  }
   for (const path of ["components/PublicHospitalSearch.tsx", "components/PublicCentreDetails.tsx"]) {
     assert.doesNotMatch(source(path), /hospital\.description/);
   }

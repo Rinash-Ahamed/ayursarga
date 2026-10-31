@@ -7,7 +7,7 @@ import type { HospitalField, HospitalValidationErrors } from "@/features/hospita
 import { PhoneInput } from "@/components/forms/PhoneInput";
 
 type HospitalFormDefaults = Partial<Pick<HospitalDocument,
-  "legalName" | "name" | "email" | "phone" | "hospitalPhone1" | "hospitalPhone2" | "city" | "district" | "state" | "registeredAddress" | "address" | "description" | "commissionPercentage"
+  "legalName" | "name" | "email" | "phone" | "hospitalPhone1" | "hospitalPhone2" | "city" | "district" | "state" | "registeredAddress" | "address" | "commissionPercentage"
 >>;
 
 function FieldError({ field, errors }: { field: HospitalField; errors: HospitalValidationErrors }) {
@@ -19,13 +19,11 @@ export function HospitalFormFields({
   errors,
   includeCommission = false,
   includeLegalName = false,
-  includeDescription = true,
 }: {
   defaultValues?: HospitalFormDefaults;
   errors: HospitalValidationErrors;
   includeCommission?: boolean;
   includeLegalName?: boolean;
-  includeDescription?: boolean;
 }) {
   const initialCentreName = defaultValues.name ?? "";
   const initialLegalName = defaultValues.legalName ?? initialCentreName;
@@ -98,6 +96,5 @@ export function HospitalFormFields({
       <input name={sameAddress ? undefined : "address"} value={serviceAddress} onChange={(event) => setServiceAddress(event.target.value)} disabled={sameAddress} required minLength={10} maxLength={300} aria-invalid={Boolean(errors.address)} />
       <FieldError field="address" errors={errors} />
     </label>
-    {includeDescription && <label className="full">Description<textarea name="description" defaultValue={defaultValues.description} maxLength={2000} /></label>}
   </>;
 }

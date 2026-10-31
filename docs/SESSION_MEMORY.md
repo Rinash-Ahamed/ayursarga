@@ -2,6 +2,130 @@
 
 Updated: 31 October 2026 (Asia/Calcutta).
 
+## District selection limited to Kerala and Tamil Nadu (31 October 2026)
+
+- v4.27.8 limits the shared Hospital district selector (Admin create/edit and
+  Hospital Profile) to Kerala and Tamil Nadu. State still derives from the
+  selected district. Existing saved locations remain populated without rewriting
+  records; out-of-region locations are no longer offered as suggestions. The
+  national mapping and server/rules validation remain intact for legacy records.
+- Two focused mocked browser tests passed on desktop and mobile WebKit for
+  Admin creation and Hospital Profile: all 52 offered districts belong to those
+  states, Tamil Nadu/Kerala selection derives state, and unmatched text clears
+  submitted district/state. No build/lint, deployment or live data mutation.
+
+## Consumer booking timeline removal (31 October 2026)
+
+- v4.27.7 removes the treatment-step timeline from Consumer My Bookings and
+  selected booking details, plus its unused component/imports and CSS. The
+  plain treatment status and booking status remain; Hospital/Admin treatment
+  actions, cancellation eligibility, APIs, stored data and rules are unchanged.
+- Six focused mocked browser checks passed on desktop, narrow Chromium phone
+  and mobile WebKit: no timeline before/during/after treatment, status updates
+  through Hospital Start/Complete, cancellation only before treatment, shared
+  auto-confirmed booking summaries and no horizontal overflow. No live mutations,
+  build/lint/typecheck or deployment were performed for this task.
+
+## Duplicate creation emails within Admin lists (31 October 2026)
+
+- v4.27.6 prevents new duplicate hospital emails and new duplicate consultant
+  emails separately. Owner explicitly chose within-list uniqueness; one hospital
+  and one consultant may share an email. Existing app-normalized lowercase email
+  equality includes inactive/archived records. No existing records were merged,
+  archived or rewritten; existing edit workflows are unchanged.
+- Shared server-only bounded query (limit 1) runs in each creation transaction.
+  Consultant creation already advances its sequence counter; Hospital creation
+  now advances systemSettings/hospitalCreationSequence in the same transaction
+  as new record and audit. Shared counter conflicts serialize simultaneous empty
+  query results so retries cannot both create. No email reservation documents,
+  background jobs, full collection scan, Auth-account changes or new indexes.
+- Duplicate returns Admin-only HTTP 409 and field=email. Both create forms show
+  the error inline on email, retain the form and use shared focus/highlight.
+  Hospital direct-client creation is now denied (Consultants already denied),
+  so SDK creation cannot bypass server validation. Removed only the two rule
+  helpers made unused by that create-path closure. Edit/status rules unchanged.
+- 29 focused local route/unit checks passed: normalized duplicate creation,
+  inactive/archived records, simultaneous creates, lost responses, atomic audit/
+  counter rollback, role denials, cross-list reuse, preferences and gallery
+  regressions. Two mocked browser tests passed desktop/mobile WebKit for both
+  forms' inline errors/focus. Emulator denial cases extended but NOT run (Java 8;
+  required Java 21 unavailable). These tests do not prove deployed permissions.
+- No build/lint/typecheck, deployment or live data mutations for this task.
+  App and updated Firestore rules require deployment; no index change.
+
+## Production deployment and consultant permission investigation (31 October 2026)
+
+- Owner requested redeployment. Scoped Firebase rules/index deployment to
+  ayursarga-connect succeeded; all consultation/Finance index readbacks READY.
+  No Storage, Auth, operational records or files changed. No Firebase Hosting
+  deploy (that target is static out/ and cannot serve this Next.js application).
+- Authenticated Vercel project listing confirmed ayursarga under
+  rinash-ahameds-projects, production www.ayursarga.com. Source-manifest review
+  caught firebase-debug.log; added .vercelignore for credentials/logs/local
+  agent/generated output, removed only the generated CLI log. Final upload
+  manifest had no sensitive matched paths. No env.local values were uploaded,
+  printed or changed; no production env variables were synced from local.
+- Vercel production deployment dpl_Gy6kyMaqACMjdQgnoxw3YUrviGqy completed READY
+  and aliased www.ayursarga.com. Unique URL:
+  https://ayursarga-oc3wr1epl-rinash-ahameds-projects.vercel.app
+  Remote production build and TypeScript passed, 82 pages, version 4.27.5.
+  No local build/lint rerun or application version bump for deployment work.
+- Post-deployment production /api/health JSON returned 200 configuration/ok.
+  /api/health?deep=true returned 503 deep-configuration/degraded: consultation
+  payments unavailable; other five configuration dependencies ready. Themed
+  /health?deep=true rendered 200 with expanded checks and attention state.
+  This is configuration-only, not payment/provider/email/live permission proof.
+- Owner reported consultant Edit/Save permission denied during deployment.
+  Bounded read-only schema check of both current consultants found no unknown
+  fields, invalid shared validation, missing immutable metadata or price-rounding
+  mismatch. Both have valid-length imageUrl. Deployed full-record allowlist
+  includes imageUrl; changed-field allowlist still excludes photo mutation.
+  Actual failed browser request/token was not captured or reproduced. Requested
+  fresh-page retry after deployment, then consultant ID/changed field if it
+  persists. Do not claim the denied-save issue was reproduced/fixed by a new
+  code change, or weaken rules/bypass audits on speculation.
+
+## Hospital description removal from existing edits (31 October 2026)
+
+- v4.27.5 removes Description from the shared hospital form entirely (including
+  Admin and Hospital edits) and removes the Admin details description/fallback.
+  The earlier removal was intentionally scoped to Add Hospital/public views.
+- Both edit callers now omit description from their mutation payloads. Hospital
+  profile API updates it only when explicitly supplied by a legacy caller;
+  omitted fields no longer become an empty string. Existing Firestore text and
+  atomic audits are preserved. No schema/rule permissions or package descriptions
+  changed; no data migration/deletion. Existing public exclusions remain.
+- Twenty focused unit/route contracts and two mocked desktop/mobile-WebKit
+  browser cases passed, including legacy-value preservation in the profile
+  handler and absence from both edit forms. No build/lint/typecheck, deployment
+  or live data mutation. No rule/index deployment needed for this change.
+
+## Ayursarga consultant banner colors and designation (31 October 2026)
+
+- v4.27.4 replaces the reference gold header with Ayursarga forest/emerald,
+  white consultant name and light designation directly below. Always display
+  the configured designation; if qualification matches it, omit only the
+  duplicate qualification in the footer. Do not infer missing designations.
+- Portrait, compact layout, fee, selection and booking logic remain unchanged.
+  No persisted fields, API or rules changes. No build/lint/typecheck or deploy.
+- Six focused mocked browser checks passed desktop Chromium, 320px touch and
+  mobile WebKit for visible designation, white name contrast, duplicate-free
+  details, photos/fallback, compact layout and unchanged consent/checkout form.
+  Desktop screenshot visually reviewed.
+
+## Reference-style consumer consultant banners (31 October 2026)
+
+- v4.27.3 follows the owner's supplied visual reference: soft gold/cream name
+  and designation banner, uploaded portrait at right with contain/bottom fit,
+  and compact white qualification/experience/fee strip below. Retains full-width
+  compact selection and existing native radio; supports keyboard focus, initials
+  fallback and long text wrapping on phones. No third-party photo was copied.
+- Six focused mocked browser checks passed desktop Chromium, 320px touch and
+  mobile WebKit for compact sizing, selection, photos/fallback and existing
+  consent/checkout behavior. Narrow screenshot inspected. No booking, photo
+  storage, API or pricing change. Owner's unrelated working edits preserved.
+- No build/lint/typecheck, deployment or live data mutation was run.
+
 ## Compact consumer consultant selection rows (31 October 2026)
 
 - v4.27.2 replaces tall consumer selection cards with full-width compact rows:

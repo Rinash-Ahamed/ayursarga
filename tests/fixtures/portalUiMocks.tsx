@@ -131,7 +131,10 @@ export const confirmHospitalContractSigning = async () => ({});
 export const activateHospital = async () => ({});
 export const deactivateHospital = async () => ({ status: "inactive" });
 export const archiveHospital = async () => ({ status: "archived" });
-export const createHospital = async () => ({});
+export const createHospital = async () => {
+  if ((globalThis as unknown as { duplicateCreation?: boolean }).duplicateCreation) throw Object.assign(new Error("This email is already used by a hospital. Open the existing record or use a different email."), { status: 409 });
+  return {};
+};
 export const sendHospitalLoginSetup = async () => "test@example.com";
 export const updateHospitalProfile = async () => ({});
 export const saveHospitalCapacity = async () => ({});
@@ -161,7 +164,10 @@ export const updateTreatmentProgress = async (_id: string, treatmentStatus: Trea
   return { treatmentStatus, status: treatmentStatus === "completed" ? "completed" : "confirmed" };
 };
 export const archiveConsumer = async () => ({});
-export const createConsultant = async (input: unknown) => { portalUiState.consultantWrites.push(input); return "AS002"; };
+export const createConsultant = async (input: unknown) => {
+  if ((globalThis as unknown as { duplicateCreation?: boolean }).duplicateCreation) throw Object.assign(new Error("This email is already used by a consultant. Open the existing record or use a different email."), { status: 409 });
+  portalUiState.consultantWrites.push(input); return "AS002";
+};
 export const updateConsultant = async (_id: string, input: unknown) => { portalUiState.consultantWrites.push(input); return {}; };
 export const updateUserProfile = async () => { portalUiState.calls++; };
 export const setConsultantStatus = async () => ({});

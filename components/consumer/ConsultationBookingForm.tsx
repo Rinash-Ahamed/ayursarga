@@ -145,14 +145,14 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
               <span className="consultation-professional-banner">
                 <span className="consultation-professional-identity">
                   <strong className="consultation-professional-name">{item.name}</strong>
-                  {item.designation && item.designation.trim().toLowerCase() !== item.qualification.trim().toLowerCase() && <span className="consultation-professional-role">{item.designation}</span>}
+                  {item.designation && <span className="consultation-professional-role">{item.designation}</span>}
                 </span>
                 <ConsultantPhoto name={item.name} imageUrl={item.imageUrl} />
               </span>
               <span className="consultation-professional-footer">
                 <span className="consultation-professional-credentials">
-                {item.qualification && <span className="consultation-professional-detail"><small className="sr-only">Qualification</small>{item.qualification}</span>}
-                <span className="consultation-professional-detail"><small className="sr-only">Experience</small>{item.yearsExperience} {item.yearsExperience === 1 ? "year" : "years"} experience</span>
+                  {item.qualification && item.qualification.trim().toLowerCase() !== item.designation.trim().toLowerCase() && <span className="consultation-professional-detail"><small className="sr-only">Qualification</small>{item.qualification}</span>}
+                  <span className="consultation-professional-detail"><small className="sr-only">Experience</small>{item.yearsExperience} {item.yearsExperience === 1 ? "year" : "years"} experience</span>
                 </span>
                 <span className="consultation-professional-detail consultation-professional-fee"><small>Consultation fee</small><strong>{formatCurrency(item.consultantCharge)}</strong></span>
               </span>

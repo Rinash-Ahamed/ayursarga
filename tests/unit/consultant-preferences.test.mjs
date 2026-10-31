@@ -134,7 +134,7 @@ test("creation API checks Admin access and charge validation before its atomic c
     const writes = [];
     let commits = 0;
     const firestore = {
-      collection: (name) => ({ doc: (id = "audit") => ({ path: `${name}/${id}` }), orderBy: () => ({ limit: () => ({ query: true }) }) }),
+      collection: (name) => ({ doc: (id = "audit") => ({ path: `${name}/${id}` }), orderBy: () => ({ limit: () => ({ query: true }) }), where: () => ({ limit: () => ({ query: true }) }) }),
       runTransaction: async (callback) => {
         const pending = [];
         const result = await callback({

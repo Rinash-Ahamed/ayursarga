@@ -127,7 +127,7 @@ to deploy, rerun maintenance scripts, or modify live data.
   archive controls, and platform settings.
 - The Hospital Profile may edit only hospital name, official email, owner
   WhatsApp number, required primary hospital phone, optional secondary hospital
-  phone, city/locality, district, state, complete address, optional description, the default
+  phone, city/locality, district, state, complete address, the default
   centre-guideline wording, additional centre rules, facilities, and
   centre-specific legal/policy information. Active Hospitals may also upload and
   remove gallery images for their own centre through the authenticated server
@@ -189,8 +189,17 @@ to deploy, rerun maintenance scripts, or modify live data.
 
 ## Hospital and booking workflow
 
-- New hospitals start `pending` and private. Description and the secondary
-  hospital phone are optional; required creation fields are hospital name,
+- Admin hospital/consultant creation rejects a normalized duplicate email within
+  its own collection, including inactive/archived records. The same email may
+  belong to one hospital and one consultant. Reuse the shared bounded duplicate
+  check inside the transaction that advances the collection's creation counter
+  so simultaneous submissions cannot both pass. Create/audit/counter commit
+  atomically; direct client hospital/consultant creation stays denied. Preserve
+  existing records; do not silently merge, archive or rewrite duplicates.
+- New hospitals start `pending` and private. The secondary hospital phone is
+  optional. Hospital descriptions are no longer shown/collected in creation or
+  edit forms or exposed publicly; preserve legacy stored descriptions when
+  saving other details. Required creation fields are hospital name,
   official email, owner WhatsApp number, primary hospital phone, city/locality,
   district, state, complete address, and commission percentage.
 - Activation requires contract generation, signed-contract confirmation, and

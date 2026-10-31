@@ -51,6 +51,10 @@ export function HospitalsManager() {
       setShowCreateForm(false);
       setActionMessage("The hospital has been created with Pending status.");
     } catch (caught) {
+      if (caught instanceof Error && "status" in caught && caught.status === 409) {
+        setFieldErrors({ email: caught.message });
+        focusFirstInvalidField(form);
+      }
       setActionError(caught instanceof Error ? caught.message : "We could not create the hospital. Please try again.");
     } finally {
       setBusy(false);
@@ -76,7 +80,7 @@ export function HospitalsManager() {
 
     {showCreateForm && <form id="add-hospital-form" className="portal-card portal-form" onSubmit={submit} noValidate style={{ marginBottom: 26 }}>
       <p className="full portal-form-note">Complete every field marked with * before creating the hospital.</p>
-      <HospitalFormFields errors={fieldErrors} includeCommission includeLegalName includeDescription={false} />
+      <HospitalFormFields errors={fieldErrors} includeCommission includeLegalName />
       <div className="portal-actions full">
         <button className="portal-button" disabled={busy}>{busy ? "Creating..." : "Create hospital"}</button>
         <button className="portal-button secondary" type="button" disabled={busy} onClick={(event) => {
