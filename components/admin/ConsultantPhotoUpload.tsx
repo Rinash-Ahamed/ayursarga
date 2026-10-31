@@ -33,7 +33,7 @@ export function ConsultantPhotoUpload({ consultantId, imageUrl, disabled, onChan
   return <div className="consultant-photo-upload" aria-busy={busy}>
     <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" aria-label="Consultant photo" hidden disabled={busy || disabled} onChange={event => void upload(event.target.files?.[0])} />
     <button className="portal-button secondary" type="button" disabled={busy || disabled} onClick={() => input.current?.click()}>{busy ? "Uploading photo..." : imageUrl ? "Replace photo" : "Upload photo"}</button>
-    <small>Consumer-visible photo · JPG, PNG or WebP · up to 8 MB</small>
+    <small>JPG, PNG or WebP · up to 8 MB</small>
     {error && <p className="portal-form-error" role="alert">{error}</p>}
     <PortalToast message={error} notification={notification} tone="error" />
     <PortalToast message={message} notification={messageNotification} />

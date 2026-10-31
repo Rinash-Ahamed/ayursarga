@@ -261,11 +261,17 @@ test("consultant photos and labeled professional details stay readable without d
   await mount(page, "consumer-consultation-photo");
   const card = page.locator(".consultation-professional");
   await expect(card.locator(".consultation-professional-name")).toHaveText("Shafna");
-  expect((await card.innerText()).match(/\bBAMS\b/g)).toHaveLength(1);
+  expect((await card.textContent())?.match(/BAMS/g)).toHaveLength(1);
   await expect(card.locator(".consultation-professional-detail").filter({ hasText: "Qualification" })).toContainText("BAMS");
   await expect(card.locator(".consultation-professional-detail").filter({ hasText: "Experience" })).toContainText("3 years");
   await expect(card.locator(".consultation-professional-fee")).toContainText("₹300.00");
   await expect(card.locator(".consultant-photo img")).toBeVisible();
+  await expect(card.locator(".consultant-photo img")).toHaveCSS("object-fit", "contain");
+  const portraitBounds = await card.locator(".consultant-photo").boundingBox();
+  const nameBounds = await card.locator(".consultation-professional-name").boundingBox();
+  expect(portraitBounds!.x).toBeGreaterThan(nameBounds!.x);
+  const compactBounds = await card.boundingBox();
+  expect(compactBounds!.height).toBeLessThan(160);
   await card.getByRole("radio").check();
   await expect(card.getByRole("radio")).toBeChecked();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

@@ -2,6 +2,21 @@
 
 Updated: 31 October 2026 (Asia/Calcutta).
 
+## Compact consumer consultant selection rows (31 October 2026)
+
+- v4.27.2 replaces tall consumer selection cards with full-width compact rows:
+  small portrait, name/designation/qualification/experience and right-aligned
+  fee on desktop. Phone rows wrap naturally with a smaller portrait and fee
+  below details; no forced single-line clipping. Qualification/experience labels
+  remain screen-reader accessible without repetitive visible label text.
+- Selection, photos/fallbacks, date/slot resets, consent, prices and payment/API
+  behavior remain unchanged. Admin presentation and user edits to consultant
+  validation.ts are untouched. No persisted fields or rules changed this task.
+- Six focused mocked browser checks passed desktop Chromium, 320px touch and
+  mobile WebKit: compact fixture row under 160px, selection, photo/fallback,
+  no overflow, and existing consent/checkout form. Desktop screenshot reviewed.
+  No build/lint/typecheck, deployment or live data/payment/email changes.
+
 ## Consumer consultation cancellation table and time label (31 October 2026)
 
 - v4.27.1 replaces paragraph-based consultation policy terms with a compact

@@ -142,12 +142,20 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
           <div className="consultation-professional-grid">{items.map((item) => <label className="consultation-professional" key={item.id} data-selected={item.id === consultantId}>
             <input type="radio" name="consultant" value={item.id} checked={item.id === consultantId} required onChange={() => { setConsultantId(item.id); setDate(""); setSlot(""); }} />
             <span className="consultation-professional-info">
-              <ConsultantPhoto name={item.name} imageUrl={item.imageUrl} />
-              <strong className="consultation-professional-name">{item.name}</strong>
-              {item.designation && item.designation.trim().toLowerCase() !== item.qualification.trim().toLowerCase() && <span className="consultation-professional-role">{item.designation}</span>}
-              {item.qualification && <span className="consultation-professional-detail"><small>Qualification</small>{item.qualification}</span>}
-              <span className="consultation-professional-detail"><small>Experience</small>{item.yearsExperience} {item.yearsExperience === 1 ? "year" : "years"}</span>
-              <span className="consultation-professional-detail consultation-professional-fee"><small>Consultation fee</small><strong>{formatCurrency(item.consultantCharge)}</strong></span>
+              <span className="consultation-professional-banner">
+                <span className="consultation-professional-identity">
+                  <strong className="consultation-professional-name">{item.name}</strong>
+                  {item.designation && item.designation.trim().toLowerCase() !== item.qualification.trim().toLowerCase() && <span className="consultation-professional-role">{item.designation}</span>}
+                </span>
+                <ConsultantPhoto name={item.name} imageUrl={item.imageUrl} />
+              </span>
+              <span className="consultation-professional-footer">
+                <span className="consultation-professional-credentials">
+                {item.qualification && <span className="consultation-professional-detail"><small className="sr-only">Qualification</small>{item.qualification}</span>}
+                <span className="consultation-professional-detail"><small className="sr-only">Experience</small>{item.yearsExperience} {item.yearsExperience === 1 ? "year" : "years"} experience</span>
+                </span>
+                <span className="consultation-professional-detail consultation-professional-fee"><small>Consultation fee</small><strong>{formatCurrency(item.consultantCharge)}</strong></span>
+              </span>
             </span>
           </label>)}</div>
           <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
