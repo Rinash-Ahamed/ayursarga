@@ -2,7 +2,7 @@ import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-// Foundation only: no booking imports, database writes, checkout script or retries.
+// Provider adapter only: booking/ledger changes belong to the authenticated orchestration layer.
 const API_URL = "https://api.razorpay.com/v1";
 const REQUEST_TIMEOUT_MS = 20_000;
 const ORDER_ID = /^order_[A-Za-z0-9]{1,64}$/;
@@ -30,6 +30,9 @@ export function getRazorpayReadiness() {
     mode: config ? (config.keyId.startsWith("rzp_test_") ? "test" : "live") : null,
   };
 }
+
+/** Public checkout identifier only. Never return the API key secret. */
+export function razorpayCheckoutKey() { return requireConfiguration().keyId; }
 
 function requireConfiguration() {
   const config = apiConfiguration();
@@ -128,12 +131,30 @@ export type RazorpayPayment = {
   id: string; order_id: string | null; amount: number; currency: "INR";
   status: "created" | "authorized" | "captured" | "refunded" | "failed";
   captured: boolean; amount_refunded: number;
+  fee?: number | null; tax?: number | null;
 };
 
 export async function fetchRazorpayPayment(paymentId: string): Promise<RazorpayPayment> {
   if (typeof paymentId !== "string" || !PAYMENT_ID.test(paymentId)) throw new RazorpayError("VALIDATION", "Invalid Razorpay payment ID.");
-  const payment = object(await request(`/payments/${paymentId}`));
-  if (payment.entity !== "payment" || payment.id !== paymentId || payment.currency !== "INR"
+  return parsePayment(await request(`/payments/${paymentId}`), paymentId);
+}
+
+/** Recovery uses only the server-owned order, never a client-supplied payment claim. */
+export async function fetchRazorpayOrderPayments(orderId: string): Promise<RazorpayPayment[]> {
+  if (!ORDER_ID.test(orderId)) throw new RazorpayError("VALIDATION", "Invalid Razorpay order ID.");
+  const response = object(await request(`/orders/${orderId}/payments`));
+  if (response.entity !== "collection" || !Array.isArray(response.items) || response.items.length > 100
+    || response.count !== response.items.length) throw new RazorpayError("INVALID_RESPONSE", "Payment attempts require manual review.");
+  return response.items.map(value => {
+    const payment = parsePayment(value, String(object(value).id));
+    if (payment.order_id !== orderId) throw new RazorpayError("INVALID_RESPONSE", "Payment belongs to a different order.");
+    return payment;
+  });
+}
+
+function parsePayment(value: unknown, paymentId: string): RazorpayPayment {
+  const payment = object(value);
+  if (!PAYMENT_ID.test(paymentId) || payment.entity !== "payment" || payment.id !== paymentId || payment.currency !== "INR"
     || !nonNegativeInteger(payment.amount) || !nonNegativeInteger(payment.amount_refunded)
     || typeof payment.captured !== "boolean"
     || typeof payment.status !== "string" || !["created", "authorized", "captured", "refunded", "failed"].includes(payment.status)
@@ -142,7 +163,8 @@ export async function fetchRazorpayPayment(paymentId: string): Promise<RazorpayP
   }
   // Deliberately exclude provider customer/contact/card/bank details.
   return { id: paymentId, order_id: payment.order_id, amount: payment.amount, currency: "INR",
-    status: payment.status as RazorpayPayment["status"], captured: payment.captured, amount_refunded: payment.amount_refunded };
+    status: payment.status as RazorpayPayment["status"], captured: payment.captured, amount_refunded: payment.amount_refunded,
+    fee: nonNegativeInteger(payment.fee) ? payment.fee : null, tax: nonNegativeInteger(payment.tax) ? payment.tax : null };
 }
 
 function validSignature(payload: string | Uint8Array, signature: string | null, secret: string) {

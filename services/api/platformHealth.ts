@@ -5,6 +5,7 @@ import { isFirebaseAdminReady, isFirebaseAdminStorageReady } from "@/services/fi
 import { isContactEmailReady } from "@/services/contact/contactEmailService";
 import { isAuthEmailReady } from "@/services/auth/authEmailService";
 import { createApiHealthReport } from "@/services/api/server";
+import { getRazorpayReadiness } from "@/services/payments/razorpay";
 
 /** Configuration-only: never queries data, generates links or contacts SMTP. */
 export function platformHealthReport(deep = false) {
@@ -15,11 +16,13 @@ export function platformHealthReport(deep = false) {
     { name: "auth-email", ready: firebaseReady && isAuthEmailReady() },
   ];
   if (deep) {
+    const payments = getRazorpayReadiness();
     let clientReady = false;
     try { getFirebaseClientConfig(); clientReady = true; } catch { /* Report status only, never config values. */ }
     checks.push(
       { name: "firebase-client", ready: clientReady },
       { name: "hospital-images", ready: isFirebaseAdminStorageReady() },
+      { name: "consultation-payments", ready: firebaseReady && payments.apiConfigured && payments.webhookConfigured },
     );
   }
   return { ...createApiHealthReport("/api/health", checks), mode: deep ? "deep-configuration" : "configuration" };

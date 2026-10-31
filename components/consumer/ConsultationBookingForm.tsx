@@ -16,10 +16,13 @@ import { PortalToast } from "@/components/portal/PortalToast";
 import { PortalPagination } from "@/components/portal/PortalPagination";
 import { DateInput } from "@/components/forms/DateInput";
 import { formatCurrency } from "@/utils/currency";
-import { isIsoDate, toDateInputValue } from "@/utils/date";
+import { isIsoDate, toDateInputValue, formatDisplayDate } from "@/utils/date";
+import type { ConsultationCheckout } from "@/features/payments/checkout";
+import { useAuth } from "@/hooks/useAuth";
 import { ROUTES } from "@/config/routes";
 
 export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
+  const { firebaseUser } = useAuth();
   const service = consultationService(serviceId);
   const router = useRouter();
   const loader = useCallback((cursor: number | null) => service
@@ -30,6 +33,8 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
   const [slot, setSlot] = useState<ConsultantTimeSlot | "">("");
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [pendingPayment, setPendingPayment] = useState<string | null>(null);
+  const [paymentDetails, setPaymentDetails] = useState<ConsultationCheckout | null>(null);
   const [error, setError, notification] = useRepeatableMessage();
   const submitting = useRef(false);
   const attempt = useRef<{ key: string; id: string } | null>(null);
@@ -43,6 +48,24 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
   const hasConsultants = items.length > 0;
   const availableDates = consultant?.availableDates?.filter(dateAllowed).toSorted() ?? [];
   const noAvailableDates = Boolean(consultant?.availableDates?.length && !availableDates.length);
+  useEffect(() => {
+    try { setPendingPayment(firebaseUser ? window.sessionStorage.getItem(`ayursarga-pending-consultation-payment:${firebaseUser.uid}`) : null); } catch { /* Optional recovery hint only. */ }
+  }, [firebaseUser]);
+  async function checkPayment(resume = false) {
+    if (!pendingPayment || submitting.current) return;
+    submitting.current = true; setBusy(true); setError(null);
+    try {
+      const { consultationPaymentStatus, payForConsultation, clearConsultationPaymentReminder } = await import("@/services/payments/consultationCheckout");
+      let result = (await consultationPaymentStatus(pendingPayment)).checkout;
+      setPaymentDetails(result);
+      if (resume && result.state === "ready") result = await payForConsultation(result);
+      if (result.bookingId) {
+        clearConsultationPaymentReminder(); setPendingPayment(null);
+        router.push(`/app/bookings/consultations?booking=${encodeURIComponent(result.bookingId)}`);
+      } else setError(result.state === "paid_review" ? "Payment received; your appointment needs Ayursarga review. Contact support and do not pay again." : "Payment is not confirmed yet. Resume this payment or contact Ayursarga if money was debited.");
+    } catch (failure) { setError(failure instanceof Error ? failure.message : "We could not check payment. Please contact support before paying again."); }
+    finally { submitting.current = false; setBusy(false); }
+  }
   useEffect(() => {
     const refreshVisibleConsultants = () => {
       if (document.visibilityState !== "visible" || Date.now() - lastVisibilityRefresh.current < 1_500) return;
@@ -61,7 +84,7 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
   }, [reload]);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submitting.current || !service) return;
+    if (submitting.current || !service || pendingPayment) return;
     const timing = slot && consultant?.preferredSlotTimings[slot];
     if (!consultant || !slot || !timing || !consultant.preferredTimeSlots.includes(slot) || !isIsoDate(date) || date < toDateInputValue() || !consent) {
       setError("Choose a consultant, date and preferred time window, and accept the booking terms."); return;
@@ -79,6 +102,7 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
         consumerNotes: notes, expectedCharge: consultant.consultantCharge, bookingTermsAccepted: consent, requestId: attempt.current.id });
       router.push(`/app/bookings/consultations?booking=${encodeURIComponent(result.bookingId)}`);
     } catch (failure) {
+      try { setPendingPayment(window.sessionStorage.getItem(`ayursarga-pending-consultation-payment:${firebaseUser?.uid}`)); } catch { /* Optional hint only. */ }
       setError(failure instanceof Error ? failure.message : "We could not book this consultation. Try again.");
     } finally { submitting.current = false; setBusy(false); }
   }
@@ -86,9 +110,16 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
     <div className="portal-flow-page">
     {!service ? <><nav className="portal-actions portal-flow-navigation" aria-label="Consultation navigation"><Link className="portal-button secondary" href="/#wellness">Choose another service</Link><Link className="portal-button secondary" href="/app/bookings/consultations">My online consultations</Link></nav><p className="portal-form-error">Choose a valid service from Wellness Path.</p></> : <>
       <section className="portal-flow-intro" aria-label="Consultation guidance">
-        <p>Choose an available professional, date and time window. Your appointment is confirmed when booked. An exact time is shown if Ayursarga reschedules it. Online consultation is not an emergency service.</p>
+        <p>Choose an available professional, date and time window. Pay the full consultation fee securely through Razorpay. Your appointment is confirmed only after payment is verified. Online consultation is not an emergency service.</p>
         <nav className="portal-actions portal-flow-navigation" aria-label="Consultation navigation"><Link className="portal-button secondary" href="/#wellness">Choose another service</Link><Link className="portal-button secondary" href="/app/bookings/consultations">My online consultations</Link></nav>
       </section>
+      {pendingPayment && <section className="portal-card" aria-label="Pending consultation payment">
+        <h2>Check your previous payment</h2><p>Resume or check the existing payment before starting another. A closed checkout does not confirm payment failure.</p>
+        {paymentDetails && <p>{paymentDetails.consultantName} · {paymentDetails.serviceName} · {formatDisplayDate(paymentDetails.date)} · {paymentDetails.timeWindow} · {formatCurrency(paymentDetails.totalPaise / 100)}</p>}
+        {error && <p className="portal-form-error" role="alert">{error}</p>}
+        <div className="portal-actions"><button type="button" className="portal-button secondary" disabled={busy} onClick={() => void checkPayment()}>Check payment status</button><button type="button" className="portal-button" disabled={busy} onClick={() => void checkPayment(true)}>Resume payment</button><Link className="portal-button secondary" href="/app/support">Contact support</Link></div>
+      </section>}
+      <PortalToast message={error} notification={notification} tone="error" />
       <PortalToast message={loadError} notification={loadNotification} tone="error" />
       {loadError && !hasConsultants && <section className="portal-empty-state portal-state-card" role="alert"><span className="portal-empty-state-leaf" aria-hidden="true" /><h3>Consultants could not be loaded</h3><p>{loadError}</p><button className="portal-button secondary" type="button" onClick={() => void reload()} disabled={isLoading}>Try again</button></section>}
       {isLoading && !hasConsultants && <section className="portal-empty-state portal-state-card" role="status"><span className="portal-empty-state-leaf" aria-hidden="true" /><h3>Finding available consultants</h3><p>Please wait while we check the current professionals for this service.</p></section>}
@@ -116,10 +147,9 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
           <p>Please review the <Link href={ROUTES.public.termsAndConditions} target="_blank">Customer Terms &amp; Conditions</Link>, <Link href={ROUTES.public.cancellationRefundPolicy} target="_blank">Cancellation &amp; Refund Policy</Link> and <Link href={ROUTES.public.patientServiceDisclaimer} target="_blank">Patient/Service Disclaimer &amp; Consent</Link>.</p>
           <label className="portal-consent-choice"><input type="checkbox" required checked={consent} onChange={(event) => setConsent(event.target.checked)} /><span>I have read and agree to the applicable terms and policies.</span></label>
         </fieldset>
-        <PortalToast message={error} notification={notification} tone="error" />
         {error && <p className="portal-form-error full" role="alert">{error}</p>}
         {error && <div className="portal-actions full"><button type="button" className="portal-button secondary" disabled={busy || isLoading} onClick={() => { setConsultantId(""); setSlot(""); setConsent(false); void reload(); }}>Refresh consultants</button></div>}
-        <div className="portal-actions full"><button className="portal-button" disabled={busy || !consent || !consultant || !date || !dateAllowed(date) || !slot}>{busy ? "Booking appointment..." : "Book appointment"}</button></div>
+        <div className="portal-actions full"><button className="portal-button" disabled={busy || Boolean(pendingPayment) || !consent || !consultant || !date || !dateAllowed(date) || !slot}>{busy ? "Processing payment..." : consultant ? `Pay ${formatCurrency(consultant.consultantCharge)} & book appointment` : "Pay & book appointment"}</button></div>
       </form>}
     </>}
     </div>

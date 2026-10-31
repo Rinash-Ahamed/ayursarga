@@ -25,6 +25,7 @@ import { formatConsultantTimeSlot } from "@/features/consultants/validation";
 import { validConsultationSchedule } from "@/features/consultations/schedule";
 import { consultationEmailFeedback } from "@/features/consultations/email";
 import { formatBookingPlacedAt } from "@/features/bookings/display";
+import { AdminBookingNavigation } from "@/components/admin/AdminBookingNavigation";
 
 type Appointment = DocumentRecord<ConsultationBookingDocument>;
 type Action = { booking: Appointment; status: "reschedule" | "completed" | "cancelled"; requestId: string };
@@ -118,13 +119,14 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
     finally { submitting.current = false; setBusy(false); }
   }
   return <PortalShell role={role} title="Online consultations">
+    {role === "admin" && <AdminBookingNavigation active="consultation" detail={Boolean(bookingId)} />}
     <div className="portal-flow-page">
     <section className="portal-flow-intro" aria-label="Online consultation guidance">
       <p>{guidance}</p>
-      <nav className="portal-actions portal-flow-navigation" aria-label="Booking categories"><Link className="portal-button secondary" href={home}>{role === "consumer" ? "My hospital bookings" : "Hospital bookings"}</Link>
+      {role === "consumer" && <nav className="portal-actions portal-flow-navigation" aria-label="Booking categories"><Link className="portal-button secondary" href={home}>My hospital bookings</Link>
         {bookingId && <Link className="portal-button secondary" href={`${home}/consultations`}>All online consultations</Link>}
         {role === "consumer" && <Link className="portal-button" href="/#wellness">Explore wellness services</Link>}
-      </nav>
+      </nav>}
     </section>
     <PortalToast message={loadError} notification={errorNotification} tone="error" />
     <PortalToast message={error} notification={errorEvent} tone="error" />
@@ -163,6 +165,8 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
       <dl className="consumer-booking-facts consultation-booking-details">
         <div><dt>Booked on</dt><dd>{formatBookingPlacedAt(booking.createdAt)}</dd></div>
         <div><dt>Preferred date</dt><dd>{formatDisplayDate(booking.preferredDate)}</dd></div>
+        {booking.paymentStatus && <div><dt>Payment</dt><dd>{formatStatus(booking.paymentStatus)}{booking.paymentReference ? ` · ${booking.paymentReference}` : ""}</dd></div>}
+        {booking.paymentStatus && booking.status === "cancelled" && <div><dt>Refund information</dt><dd>Cancellation does not automatically refund payment. Contact Ayursarga for review under the cancellation policy.</dd></div>}
         <div><dt>Preferred window</dt><dd>{formatConsultantTimeSlot(booking.preferredTimeSlot, { [booking.preferredTimeSlot]: { startTime: booking.slotStartTime, endTime: booking.slotEndTime } })}</dd></div>
         {booking.confirmedDate && <div><dt>Scheduled appointment</dt><dd>{formatDisplayDate(booking.confirmedDate)} · {booking.confirmedTime ? `${booking.confirmedTime} IST` : `${booking.slotStartTime} - ${booking.slotEndTime} IST`}</dd></div>}
         {role === "admin" && <><div><dt>Consumer</dt><dd>{booking.consumerName}</dd></div><div><dt>Email</dt><dd>{booking.consumerEmail}</dd></div><div><dt>Phone</dt><dd>{booking.consumerPhone}</dd></div></>}

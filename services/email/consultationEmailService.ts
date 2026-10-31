@@ -15,6 +15,7 @@ export function queueConsultationEmail(transaction: Transaction, firestore: Fire
   eventId: string; bookingId: string; event: AppointmentEmailEvent; booking: Record<string, unknown>;
   previous?: Record<string, unknown>; actorId: string; actorRole: "admin" | "consumer"; auditId: string; now: unknown; payloadHash?: string;
   consultant?: Record<string, unknown>;
+  consultantFee?: number;
 }) {
   const { booking, previous = booking } = input;
   const payload = {
@@ -42,7 +43,7 @@ export function queueConsultationEmail(transaction: Transaction, firestore: Fire
       bookingAuditId: input.auditId,
       payloadHash: input.payloadHash ?? null, actorRole: input.actorRole, audience: "consultant", channel: "email",
       recipient: typeof input.consultant.email === "string" ? input.consultant.email.trim().toLowerCase() : "",
-      payload: { ...payload, providerName: String(input.consultant.name ?? booking.consultantName ?? "") },
+      payload: { ...payload, amount: input.consultantFee ?? null, providerName: String(input.consultant.name ?? booking.consultantName ?? "") },
       status: "pending", createdAt: input.now, createdBy: input.actorId, updatedAt: input.now, updatedBy: input.actorId,
       archivedAt: null, archivedBy: null, lastAuditId: input.auditId,
     });

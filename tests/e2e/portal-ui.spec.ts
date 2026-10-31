@@ -26,6 +26,27 @@ async function mount(page: Page, screen: string) {
   }
   await page.waitForTimeout(120);
 }
+
+test("Consultant Finance presents private breakdown and confirms an external settlement responsively", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "admin-consultant-finance");
+  await expect(page.getByRole("heading", { name: "Consultant Finance", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Invoices & Billing", exact: true })).toBeVisible();
+  await page.getByText("View financial breakdown", { exact: true }).click();
+  await expect(page.getByText("Consultant payable", { exact: true })).toBeVisible();
+  await page.getByLabel("Transfer reference *", { exact: true }).fill("UTR-EXTERNAL-123");
+  await page.getByRole("button", { name: "Record settlement", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { calls: number } }).consumerBookingFixture.calls)).toBe(0);
+  await page.getByRole("button", { name: "Record settlement", exact: true }).click();
+  await dialog.getByRole("button", { name: "Record settlement", exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.locator(".portal-finance-row .portal-status")).toHaveText("paid");
+  expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { calls: number } }).consumerBookingFixture.calls)).toBe(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
 test("Admin dashboard separates online consultations and links to existing booking details", async ({ page }) => {
   await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
   await mount(page, "admin-dashboard");
@@ -162,7 +183,7 @@ test("online consultation form uses assigned charges and custom windows, require
   page.on("pageerror", (error) => errors.push(error.message));
   await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
   await mount(page, "consumer-consultation-new");
-  const submit = page.getByRole("button", { name: "Book appointment", exact: true });
+  const submit = page.getByRole("button", { name: /Pay.*book appointment/i });
   await expect(submit).toBeDisabled();
   await page.getByRole("radio", { name: /Assigned Consultation Professional/ }).check();
   await expect(page.locator(".consultation-professional")).toContainText("₹990.55");
@@ -260,6 +281,28 @@ test("Hospital operational lists use clear, aligned empty states", async ({ page
     await expect(page.getByRole("heading", { name: heading })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   }
+});
+
+test("Admin booking categories use the Users-style segmented switch without changing Consumer navigation", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
+  for (const [screen, current] of [["admin-bookings", "Hospital bookings"], ["admin-consultations", "Online consultations"]]) {
+    await mount(page, screen);
+    const nav = page.getByRole("navigation", { name: "Booking categories", exact: true });
+    const control = nav.locator(".portal-segmented");
+    await expect(control.getByRole("link", { name: "Hospital bookings", exact: true })).toHaveAttribute("href", "/admin/bookings");
+    await expect(control.getByRole("link", { name: "Online consultations", exact: true })).toHaveAttribute("href", "/admin/bookings/consultations");
+    await expect(control.locator('[aria-current="page"]')).toHaveText(current);
+    const box = await control.boundingBox();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+    for (const link of await control.getByRole("link").all()) {
+      expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  }
+  await mount(page, "consumer-consultations");
+  await expect(page.locator(".portal-booking-switch")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "My hospital bookings", exact: true })).toBeVisible();
 });
 
 test("booking detail navigation stays separate from booking content", async ({ page }) => {
@@ -528,7 +571,7 @@ test("consultant date restrictions disable unavailable dates and keep nested cal
   const date = page.getByRole("textbox", { name: "Preferred appointment date *", exact: true });
   await date.fill("26/10/2099"); await date.blur();
   await expect(date).toHaveAttribute("aria-invalid", "true");
-  await expect(page.getByRole("button", { name: "Book appointment", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: /Pay.*book appointment/i })).toBeDisabled();
   await expect(page.getByText("The consultant is not available on this date. Choose an available date.", { exact: true })).toBeVisible();
   await date.fill("25/10/2099");
   await page.getByRole("button", { name: "Open calendar", exact: true }).click();

@@ -665,6 +665,14 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Payment snapshots, webhook journal and ledger are server-only. Consumer
+    // APIs explicitly project only the caller's total fee/payment/booking state.
+    // Complete financial breakdowns require the verified Admin Finance endpoint.
+    match /consultationPaymentIntents/{id} { allow read, write: if false; }
+    match /consultationPaymentReceipts/{id} { allow read, write: if false; }
+    match /consultationFinancials/{id} { allow read, write: if false; }
+    match /razorpayWebhookEvents/{id} { allow read, write: if false; }
+
     match /availability/{availabilityId} {
       allow read: if isAdmin() || hasOperationalHospitalAccess(resource.data.hospitalId);
       allow create, update, delete: if false;

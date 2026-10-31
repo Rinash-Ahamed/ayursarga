@@ -41,7 +41,7 @@ const NAVIGATION: Record<PortalRole, readonly NavigationItem[]> = {
     ["Our Consultants", ROUTES.admin.consultants, "consultants", true],
     ["Users", ROUTES.admin.users, "users"], ["Bookings", ROUTES.admin.bookings, "bookings"],
     ["Availability", ROUTES.admin.availability, "availability"],
-    ["Invoices & Billing", ROUTES.admin.billing, "billing"],
+    ["Finance", ROUTES.admin.finance, "billing"],
     ["Audit Logs", ROUTES.admin.audits, "audit"],
     ["Settings", ROUTES.admin.settings, "settings"],
   ],

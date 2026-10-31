@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { AdminBookingNavigation } from "@/components/admin/AdminBookingNavigation";
 import type { BookingDocument, BookingStatus, HospitalDocument } from "@/features/firestore/models";
 import { bookingStatusLabel } from "@/features/bookings/display";
 import type { DocumentRecord, QueryPageOptions } from "@/services/firestore/firestoreService";
@@ -93,10 +93,7 @@ export function AdminBookings({ bookingId }: { bookingId?: string } = {}) {
   }
 
   return <PortalShell role="admin" title="Bookings">
-    <nav className="portal-actions portal-booking-navigation" aria-label="Booking categories">
-      <Link className="portal-button secondary" href="/admin/bookings/consultations">Online consultations</Link>
-      {bookingId && <Link className="portal-button secondary" href="/admin/bookings">View all bookings</Link>}
-    </nav>
+    <AdminBookingNavigation active="hospital" detail={Boolean(bookingId)} />
     <PortalLoadGuard notification={loadErrorNotification} loading={isLoading} error={error} hasData={items.length > 0} fallbackHref="/admin" loadingMessage="Loading bookings…" />
     {!bookingId && <section className="portal-card portal-booking-filters" aria-label="Booking filters">
       <div className="portal-filter-field portal-hospital-filter">

@@ -218,14 +218,29 @@ to deploy, rerun maintenance scripts, or modify live data.
   preferred India care date/window, Consumer contacts and mandatory versioned
   booking consent; requests, audits and addressed bell notifications commit
   atomically. Stable request IDs prevent retries from duplicating appointments.
-  New online appointments are immediately `confirmed` for the selected date and
-  configured window, without inventing an exact appointment time. Admin can
+  New online appointments require full Razorpay payment verified server-side;
+  only a captured matching INR payment confirms the selected date and configured
+  window, without inventing an exact appointment time. Durable private payment
+  intents claim order creation before the provider POST; uncertain orders must
+  never be automatically recreated. Checkout returns alone cannot confirm a
+  booking. Validate raw webhook signatures and journal event IDs atomically.
+  Keep private commission/base-payable/settlement fields in server-only payment
+  and financial collections, never Consumer-readable booking documents, public
+  responses or checkout options. Consumers see only their total fee and safe
+  payment references/status. Legacy appointments are not retroactively charged.
+  Captured-but-unbookable payments require an Admin review hold, not a false
+  confirmation. Ayursarga bears gateway fees (reported fee includes tax); the
+  consultant's snapshotted base fee is unchanged. Unknown fees/net values remain
+  unknown. Admin Finance tracks external manual settlements as Pending,
+  Processed or Paid with reference/date/notes and revision-checked atomic audit;
+  this never initiates a bank transfer. Refund/cancellation holds require manual
+  review; no automatic refund allocation or payout reversal is implied. Admin can
   reschedule to a validated date/exact time, complete, or cancel; do not restore
   Confirm or Reject actions. Preserve legacy requested/rejected records without
   silently migrating them. Hospital package bookings remain immediately
   confirmed and unaffected. Consumer reads/cancellation are
   own-record only; Hospitals cannot access these appointments. No client writes,
-  automatic payments, meeting links or consultant Auth accounts are implied.
+  automatic payouts, meeting links or consultant Auth accounts are implied.
   Configured consultant weekdays and optional ISO `availableDates` (maximum 31)
   restrict online booking dates: when both are set, both must match. Missing/
   empty date preferences preserve legacy unrestricted future days. Consumer

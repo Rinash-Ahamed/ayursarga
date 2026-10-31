@@ -23,15 +23,17 @@ export async function getPublicConsultant(service: string, consultantId: string,
   return result.consultant;
 }
 
-export function createConsultationBooking(input: {
+export async function createConsultationBooking(input: {
   consultantId: string; serviceId: ConsultationServiceId; preferredDate: string;
   preferredTimeSlot: string; expectedSlotStartTime: string; expectedSlotEndTime: string;
   consumerNotes: string; expectedCharge: number; bookingTermsAccepted: boolean; requestId: string;
 }) {
-  return authorizedApiRequest<{ ok: true; bookingId: string; bookingReference: string; email?: ConsultationEmailResult }>("/api/consumer/consultations", {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
-    signedOutMessage: "Sign in before booking a consultation.", failureMessage: "We could not book your consultation. Try again.",
-  });
+  const { loadConsultationCheckout, preparePaidConsultation, payForConsultation } = await import("@/services/payments/consultationCheckout");
+  await loadConsultationCheckout();
+  const response = await preparePaidConsultation(input);
+  const paid = await payForConsultation(response.checkout);
+  if (!paid.bookingId) throw new Error("Payment has not been confirmed. Check status before paying again.");
+  return { ok: true as const, bookingId: paid.bookingId, bookingReference: paid.bookingReference ?? "" };
 }
 
 export function listConsultationBookings(consumerId: string | null, cursor?: QueryPageOptions["cursor"]) {

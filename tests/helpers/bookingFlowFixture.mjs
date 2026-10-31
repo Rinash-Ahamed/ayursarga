@@ -23,6 +23,10 @@ export function bookingFlowFixture(options = {}) {
   const profile = { name: "Patient", email: "patient@example.com", phone: "9876543210", hospitalId: actor.role === "hospital" ? "centre" : null,
     privacyConsentVersion: versions.CONSUMER_PRIVACY_NOTICE_VERSION, customerTermsVersion: versions.CUSTOMER_TERMS_VERSION,
     privacyConsentAt: {}, customerTermsAcceptedAt: {}, ...options.profile };
+  if (!records.has(`users/${actor.uid}`)) {
+    Object.assign(profile, { uid: actor.uid, role: actor.role, status: "active" });
+    records.set(`users/${actor.uid}`, profile);
+  }
   let sequence = Math.max(0, ...[...records.keys()].map((path) => Number(/\/auto-(\d+)$/.exec(path)?.[1] ?? 0)));
   let queue = Promise.resolve();
   let throwAfterCommit = options.throwAfterCommit ?? false;
@@ -30,12 +34,25 @@ export function bookingFlowFixture(options = {}) {
   const snapshot = (ref) => ({ id: ref.id, ref, exists: records.has(ref.path), data: () => records.get(ref.path), updateTime: Timestamp.now() });
   const firestore = {
     collection: (collection) => {
-      const buildQuery = (filters = [], maximum = 100) => ({
-        where: (field, operator, value) => buildQuery([...filters, { field, operator, value }], maximum),
-        limit: (value) => buildQuery(filters, value),
+      const buildQuery = (filters = [], maximum = 100, ordering = null, after = null) => ({
+        where: (field, operator, value) => buildQuery([...filters, { field, operator, value }], maximum, ordering, after),
+        limit: (value) => buildQuery(filters, value, ordering, after),
+        orderBy: (field, direction) => buildQuery(filters, maximum, { field, direction }, after),
+        startAfter: (doc) => buildQuery(filters, maximum, ordering, doc.id),
+        aggregate: (fields) => ({ get: async () => {
+          const { docs } = await buildQuery(filters, Number.MAX_SAFE_INTEGER).get();
+          return { data: () => Object.fromEntries(Object.entries(fields).map(([key, field]) => [key, field._field ? docs.reduce((sum, doc) => sum + (doc.data()[field._field] ?? 0), 0) : docs.length])) };
+        } }),
+        count: () => ({ get: async () => { const page = await buildQuery(filters, Number.MAX_SAFE_INTEGER).get(); return { data: () => ({ count: page.size }) }; } }),
         get: async () => {
-          const docs = [...records].filter(([path, data]) => path.startsWith(`${collection}/`) && filters.every(({ field, value }) => data[field] === value))
-            .slice(0, maximum).map(([path]) => snapshot({ id: path.split("/")[1], path }));
+          let entries = [...records].filter(([path, data]) => path.startsWith(`${collection}/`) && filters.every(({ field, operator, value }) => operator === "in" ? value.includes(data[field]) : data[field] === value));
+          if (ordering) entries.sort((a, b) => {
+            const left = a[1][ordering.field]?.toMillis?.() ?? a[1][ordering.field];
+            const right = b[1][ordering.field]?.toMillis?.() ?? b[1][ordering.field];
+            return (left < right ? -1 : left > right ? 1 : a[0].localeCompare(b[0])) * (ordering.direction === "desc" ? -1 : 1);
+          });
+          if (after) entries = entries.slice(entries.findIndex(([path]) => path.split("/")[1] === after) + 1);
+          const docs = entries.slice(0, maximum).map(([path]) => snapshot({ id: path.split("/")[1], path }));
           return { docs, size: docs.length };
         },
       });
@@ -71,7 +88,7 @@ export function bookingFlowFixture(options = {}) {
         for (const entry of pending) records.set(entry.ref.path, entry.type === "update" ? { ...records.get(entry.ref.path), ...entry.data } : entry.data);
         calls.writes.push(...pending);
         calls.commits++;
-        if (throwAfterCommit) { throwAfterCommit = false; throw new Error("Simulated lost commit response"); }
+        if (throwAfterCommit && (!options.deferInitialThrowUntilBooking || pending.some(entry => entry.ref.path.startsWith("consultationBookings/")))) { throwAfterCommit = false; throw new Error("Simulated lost commit response"); }
         return result;
       } finally { release(); }
     },
@@ -95,6 +112,10 @@ export function bookingFlowFixture(options = {}) {
       AdminAuthorizationError: BookingTestAuthorizationError,
       requireActiveUser: async (_request, allowed) => {
         if (options.denied || (allowed && !allowed.includes(actor.role))) throw new BookingTestAuthorizationError("Denied", 403);
+        return { ...actor, profile, firestore };
+      },
+      requireActiveAdmin: async () => {
+        if (options.denied || actor.role !== "admin") throw new BookingTestAuthorizationError("Denied", 403);
         return { ...actor, profile, firestore };
       },
     },

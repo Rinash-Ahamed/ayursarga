@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { AdminFinanceNavigation } from "@/components/admin/AdminFinanceNavigation";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalPagination } from "@/components/portal/PortalPagination";
@@ -91,7 +92,9 @@ export function AdminBilling() {
   const invoices = [...recent, ...list.items].filter((invoice, index, all) => all.findIndex((candidate) => candidate.id === invoice.id) === index);
   const fieldError = (field: keyof InvoiceInput) => fieldErrors[field] && <span className="portal-field-error" role="alert">{fieldErrors[field]}</span>;
 
-  return <PortalShell role="admin" title="Invoices & Billing">
+  return <PortalShell role="admin" title="Finance">
+    <AdminFinanceNavigation active="invoices" />
+    <h2>Invoices &amp; Billing</h2>
     <div className="portal-actions portal-page-actions"><button className="portal-button" onClick={newInvoice}>New commission invoice</button></div>
     <p className="portal-form-note">Generate hospital commission invoices. Review the commission amount and tax treatment before issuing.</p>
     {creating && <form className="portal-card portal-form billing-form" onSubmit={showPreview} noValidate>

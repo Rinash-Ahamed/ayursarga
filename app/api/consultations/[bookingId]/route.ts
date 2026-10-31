@@ -12,6 +12,7 @@ import type { ConsultantTimeSlot } from "@/features/consultants/validation";
 import { validConsultationSchedule } from "@/features/consultations/schedule";
 import { isConsultantDateAvailable } from "@/features/consultations/availability";
 import { queueConsultationEmail, deliverConsultationEmails } from "@/services/email/consultationEmailService";
+import { auditPayment } from "@/services/payments/consultationPaymentsAdmin";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -77,9 +78,16 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
       }
       if (action === "completed") update.completedAt = now;
       const admins = role === "consumer" ? await consultationAdminRecipients(transaction, firestore) : [];
+      const financialRef = booking.paymentIntentId === bookingId ? firestore.collection("consultationFinancials").doc(bookingId) : null;
+      const financial = financialRef ? (await transaction.get(financialRef)).data() : null;
       const audit = firestore.collection("auditLogs").doc();
       update.lastAuditId = audit.id;
       transaction.update(reference, update);
+      if (action === "cancelled" && financialRef && financial) {
+        const changes = { settlementHold: true, reviewReason: "booking_cancelled", netRevenuePaise: null };
+        transaction.update(financialRef, { ...changes, ...auditPayment(transaction, firestore, "consultationFinancials", bookingId,
+          { settlementHold: financial.settlementHold, reviewReason: financial.reviewReason }, changes, uid, role === "admin" ? "admin" : "consumer") });
+      }
       transaction.create(audit, { action: action === "reschedule" ? "update" : "status_change", module: "consultationBookings", recordId: bookingId,
         actorId: uid, actorRole: role,
         previousValues: { status: booking.status, confirmedDate: booking.confirmedDate ?? null, confirmedTime: booking.confirmedTime ?? null },
@@ -94,7 +102,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
       const emailEventId = role === "admin" && action !== "completed" ? eventId : null;
       if (emailEventId) queueConsultationEmail(transaction, firestore, { eventId: emailEventId, bookingId,
         event: action === "reschedule" ? "rescheduled" : "cancelled", booking: { ...booking, ...update }, previous: booking,
-        consultant: consultantContact, actorId: uid, actorRole: "admin", auditId: audit.id, now, payloadHash });
+        consultant: consultantContact, consultantFee: financial ? Number(financial.consultantPayablePaise) / 100 : undefined,
+        actorId: uid, actorRole: "admin", auditId: audit.id, now, payloadHash });
       return { changes: update, emailEventId };
     });
     const delivery = result.emailEventId ? await deliverConsultationEmails(firestore, result.emailEventId) : undefined;

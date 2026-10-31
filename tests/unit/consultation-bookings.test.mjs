@@ -1,19 +1,36 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { bookingFlowFixture } from "../helpers/bookingFlowFixture.mjs";
+import { consultationPaymentFixture, prepare, verify } from "../helpers/consultationPaymentFixture.mjs";
 import { loadTypeScript } from "../helpers/loadTypeScript.mjs";
 
 const consultant = { name: "Assigned Professional", designation: "Ayurvedic physician", qualification: "BAMS", yearsExperience: 3.5,
-  status: "active", employeeSequence: 1, archivedAt: null, consultationServices: ["prenatal-doctor"], consultantCharge: 900.5,
+  status: "active", employeeSequence: 1, archivedAt: null, consultationServices: ["prenatal-doctor"], consultantCharge: 900.5, ayursargaCommissionPercentage: 0,
   preferredTimeSlots: ["morning"], preferredSlotTimings: { morning: { startTime: "09:30", endTime: "11:45" } },
   email: "private@example.com", contactNo: "9876543210", address: "Private address", emergencyContactNo: "9876543210", lastAuditId: "secret-audit" };
 const input = { consultantId: "AS001", serviceId: "prenatal-doctor", preferredDate: "2099-10-25", preferredTimeSlot: "morning",
   expectedSlotStartTime: "09:30", expectedSlotEndTime: "11:45",
   bookingTermsAccepted: true, expectedCharge: 900.5, requestId: "consultation-attempt-0001", consumerNotes: "Please help with pregnancy lifestyle." };
-const fixture = (options = {}) => bookingFlowFixture({ ...options, records: { "consultants/AS001": consultant, ...options.records } });
+const fixture = (options = {}) => consultationPaymentFixture({ ...options, records: { "consultants/AS001": consultant, ...options.records } });
 const request = (body, method = "POST") => new Request("https://test.local/api/consumer/consultations", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-async function create(f, body = input) { return f.load("app/api/consumer/consultations/route.ts").POST(request(body)); }
+// Existing lifecycle tests now start from an actual prepared and verified synthetic payment.
+// New checkout tests separately assert that preparation alone cannot create a booking.
+async function create(f, body = input) {
+  const previous = f.values("consultationBookings").length;
+  const prepared = await prepare(f, { ...body, checkoutVersion: 1 });
+  if (!prepared.ok) return prepared;
+  let checkout = (await prepared.json()).checkout;
+  if (!checkout.bookingId) {
+    if (checkout.state !== "ready") return Response.json({ error: "Payment requires review" }, { status: 503 });
+    f.capture(checkout);
+    const verified = await verify(f, checkout.intentId);
+    if (!verified.ok) return verified;
+    checkout = (await verified.json()).checkout;
+  }
+  if (!checkout.bookingId) return Response.json({ error: "Payment requires review" }, { status: 409 });
+  const deliveries = await f.load("services/email/consultationEmailService.ts").deliverConsultationEmails(f.firestore, `confirmation-${checkout.bookingId}`);
+  return Response.json({ bookingId: checkout.bookingId, bookingReference: checkout.bookingReference, ...deliveries }, { status: f.values("consultationBookings").length > previous ? 201 : 200 });
+}
 async function update(f, id, body) { return f.load("app/api/consultations/[bookingId]/route.ts").PATCH(request(body, "PATCH"), { params: Promise.resolve({ bookingId: id }) }); }
 
 test("consultation creation snapshots actual charge, provider, Consumer and consent with one atomic audit and Admin bell", async () => {
@@ -47,9 +64,10 @@ test("consumer sees and books only the server-computed total, with private prici
   assert.equal(Object.hasOwn(record, "ayursargaCommissionPercentage"), false);
   assert.equal(Object.hasOwn(record, "consultantBaseCharge"), false);
   const audit = f.records.get(`auditLogs/${record.lastAuditId}`);
-  assert.deepEqual(audit.pricingSnapshot, { baseCharge: 900.5, commissionPercentage: 10, commissionAmount: 90.05, totalCharge: 990.55 });
+  const finance = f.records.get(`consultationFinancials/${bookingId}`);
+  assert.equal(finance.consultantPayablePaise, 90050); assert.equal(finance.commissionPaise, 9005); assert.equal(finance.grossPaise, 99055);
   assert.equal(audit.updatedValues.consultantCharge, 990.55);
-  assert.ok(f.values("consultationEmailEvents").every((event) => event.payload.amount === 990.55));
+  assert.ok(f.values("consultationEmailEvents").every((event) => event.payload.amount === (event.audience === "consultant" ? 900.5 : 990.55)));
   assert.match(f.calls.smtp[0].text, /990\.55/);
   f.records.set("consultants/AS001", { ...consultant, consultantCharge: 1200, ayursargaCommissionPercentage: 20 });
   assert.equal((await create(f, body)).status, 200);
@@ -227,7 +245,10 @@ test("duplicate, concurrent and lost-response retries create one appointment and
   for (const throwAfterCommit of [false, true]) {
     const f = fixture({ throwAfterCommit });
     const responses = await Promise.all([create(f), create(f)]);
-    assert.deepEqual(responses.map((value) => value.status), throwAfterCommit ? [503, 200] : [201, 200]);
+    // A simultaneous caller may observe the durable order claim before the
+    // provider POST finishes. It must not create another order or invent success.
+    assert.ok(responses.every(value => [201, 200, 503].includes(value.status)));
+    assert.equal((await create(f)).status, 200);
     assert.equal(f.values("consultationBookings").length, 1); assert.equal(f.values("auditLogs").filter((item) => item.module === "consultationBookings").length, 1); assert.equal(f.values("notifications").length, 1);
     assert.equal(f.calls.smtp.length, 1);
     assert.equal((await create(f, { ...input, preferredDate: "2099-10-26" })).status, 409);

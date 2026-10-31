@@ -11,6 +11,7 @@ function fixture(options = {}) {
     "@/services/firebase/admin": { isFirebaseAdminReady: () => !options.firebaseMissing, isFirebaseAdminStorageReady: () => { calls.storage++; return !options.storageMissing; } },
     "@/services/contact/contactEmailService": { isContactEmailReady: () => !options.emailMissing },
     "@/services/auth/authEmailService": { isAuthEmailReady: () => !options.authEmailMissing },
+    "@/services/payments/razorpay": { getRazorpayReadiness: () => ({ apiConfigured: !options.paymentsMissing, webhookConfigured: !options.webhookMissing }) },
   });
   return { calls, platformHealthReport };
 }
@@ -25,11 +26,11 @@ test("essential health covers Firebase, contact and auth emails without deep pro
 });
 
 test("deep health adds bounded configuration checks and reports missing settings without details", () => {
-  for (const options of [{}, { clientMissing: true }, { storageMissing: true }, { emailMissing: true }, { authEmailMissing: true }, { firebaseMissing: true }]) {
+  for (const options of [{}, { clientMissing: true }, { storageMissing: true }, { emailMissing: true }, { authEmailMissing: true }, { firebaseMissing: true }, { paymentsMissing: true }, { webhookMissing: true }]) {
     const f = fixture(options);
     const report = f.platformHealthReport(true);
     assert.equal(report.mode, "deep-configuration");
-    assert.equal(report.dependencies.length, 5);
+    assert.equal(report.dependencies.length, 6);
     assert.equal(report.status, Object.keys(options).length ? "degraded" : "ok");
     assert.deepEqual(f.calls, { storage: 1, client: 1 });
     assert.ok(!JSON.stringify(report).includes("secret-config"));

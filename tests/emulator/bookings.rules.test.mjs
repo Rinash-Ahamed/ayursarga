@@ -61,6 +61,17 @@ before(async () => {
   await seed(`hospitals/other-${centre}`, fields({ status: "active" }));
 });
 
+test("private payment intents, receipts, financials and webhook journals deny every client role", async () => {
+  for (const collection of ["consultationPaymentIntents", "consultationPaymentReceipts", "consultationFinancials", "razorpayWebhookEvents"]) {
+    const path = `${collection}/private-${suffix}`;
+    await seed(path, fields({ consumerId: ids.consumer, commissionPaise: 1000 }));
+    for (const role of [undefined, "consumer", "hospital", "admin"]) {
+      assert.equal((await call(`/${path}`, { role })).status, 403);
+      assert.equal((await call(`/${path}`, { role, method: "PATCH", body: { fields: fields({ commissionPaise: 0 }) } })).status, 403);
+    }
+  }
+});
+
 test("Admin revocation cutoff blocks old native-MFA reads/writes and cannot be cleared by client roles", async () => {
   const cutoff = Math.floor(Date.now() / 1000);
   const profile = fields({ uid: ids.admin, name: "Admin", phone: null, address: null, role: "admin", status: "active", hospitalId: null, adminSessionRevokedBefore: cutoff });

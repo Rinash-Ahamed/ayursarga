@@ -7,7 +7,7 @@ export class RequestBodyError extends Error {
   }
 }
 
-export async function readJsonBody(request: Request, maximumBytes: number) {
+export async function readRawJsonBody(request: Request, maximumBytes: number) {
   const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
   if (!contentType.includes("application/json")) throw new RequestBodyError("Send the request as JSON.", 415);
   const declaredLength = Number(request.headers.get("content-length") || 0);
@@ -30,6 +30,11 @@ export async function readJsonBody(request: Request, maximumBytes: number) {
   const combined = new Uint8Array(bytes);
   let offset = 0;
   chunks.forEach((chunk) => { combined.set(chunk, offset); offset += chunk.byteLength; });
+  return combined;
+}
+
+export async function readJsonBody(request: Request, maximumBytes: number) {
+  const combined = await readRawJsonBody(request, maximumBytes);
   try {
     return JSON.parse(new TextDecoder().decode(combined)) as unknown;
   } catch {

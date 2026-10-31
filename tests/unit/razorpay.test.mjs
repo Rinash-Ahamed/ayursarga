@@ -131,13 +131,21 @@ test("order/payment retrieval validates IDs before networking and checks provide
 test("payment retrieval returns only whitelisted fields, not customer/bank information", async () => {
   globalThis.fetch = async () => Response.json({ ...payment, email: "customer@example.com", card: { last4: "1234" }, notes: { private: "data" } });
   const result = await helpers.fetchRazorpayPayment(payment.id);
-  const safePayment = { ...payment };
+  const safePayment = { ...payment, fee: null, tax: null };
   delete safePayment.entity;
   assert.deepEqual(result, safePayment);
   for (const update of [{ id: "pay_Other" }, { order_id: "../bad" }, { currency: "USD" }, { captured: "true" }, { amount: "12345" }, { amount_refunded: -1 }, { status: "unexpected" }, { status: ["captured"] }]) {
     globalThis.fetch = async () => Response.json({ ...payment, ...update });
     await assert.rejects(helpers.fetchRazorpayPayment(payment.id), errorCode("INVALID_RESPONSE"));
   }
+});
+
+test("order payment recovery validates every returned attempt and never exposes provider contacts", async () => {
+  globalThis.fetch = async () => Response.json({ entity: "collection", count: 1, items: [{ ...payment, email: "private@example.test", fee: 100, tax: 15 }] });
+  const result = await helpers.fetchRazorpayOrderPayments(order.id);
+  assert.equal(result[0].id, payment.id); assert.equal(result[0].fee, 100); assert.equal(result[0].email, undefined);
+  globalThis.fetch = async () => Response.json({ entity: "collection", count: 1, items: [{ ...payment, order_id: "order_Other" }] });
+  await assert.rejects(helpers.fetchRazorpayOrderPayments(order.id), errorCode("INVALID_RESPONSE"));
 });
 
 test("checkout verification binds the server's saved order and payment with constant-time HMAC comparison", () => {
@@ -167,11 +175,11 @@ test("a valid signature is not payment success: captured status, amount, order a
   }
 });
 
-test("foundation remains server-only and disconnected from both existing booking endpoints", () => {
+test("provider adapter stays server-only and Search Center booking remains disconnected from payment integration", () => {
   const source = readFileSync("services/payments/razorpay.ts", "utf8");
   assert.match(source, /import "server-only"/);
   assert.doesNotMatch(source, /NEXT_PUBLIC_|firebase|firestore|setInterval|console\./);
-  for (const file of ["app/api/consumer/bookings/route.ts", "app/api/consumer/consultations/route.ts"]) {
+  for (const file of ["app/api/consumer/bookings/route.ts"]) {
     assert.doesNotMatch(readFileSync(file, "utf8"), /razorpay|services\/payments/);
   }
 });

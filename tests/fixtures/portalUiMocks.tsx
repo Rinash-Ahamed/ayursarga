@@ -180,6 +180,20 @@ export const listPublicConsultants = () => {
 };
 export const getPublicConsultant = async () => portalUiState.screen.endsWith("-restricted")
   ? { ...consultationProfessional, preferredDays: ["sun"], availableDates: ["2099-10-25"] } : consultationProfessional;
+export const consultationPaymentStatus = async () => ({ checkout: { intentId: "fixture", state: "ready", bookingId: null, totalPaise: 99055, currency: "INR" } });
+export const payForConsultation = async () => ({ bookingId: "consultation-fixture" });
+export const clearConsultationPaymentReminder = () => {};
+const financeRecord = { id: "consultation-fixture", bookingId: "consultation-fixture", bookingReference: "AYURCONS01", consultantId: "AS001",
+  consultantName: "Assigned Consultation Professional", consumerName: "Patient With a Longer Display Name", serviceName: "Prenatal doctor consultation",
+  paymentId: "pay_Test", orderId: "order_Test", mode: "test", grossPaise: 99055, commissionPaise: 9005, consultantPayablePaise: 90050,
+  commissionPercentage: 10, gatewayFeePaise: 234, gatewayTaxPaise: 36, refundedPaise: 0, netSettlementPaise: 98821, netRevenuePaise: 8771,
+  paymentStatus: "paid", settlementStatus: "pending", settlementHold: false, reviewReason: null, settlementReference: null,
+  createdAt: "2026-10-31T10:00:00Z", updatedAt: "2026-10-31T10:00:00Z", lastAuditId: "finance-audit" };
+export const listConsultantFinance = async () => ({ documents: [financeRecord], mode: "test", cursor: null, hasMore: false,
+  summary: { count: 1, grossPaise: 99055, commissionPaise: 9005, gatewayFeePaise: 234, refundedPaise: 0, pendingPayablePaise: financeRecord.settlementStatus === "paid" ? 0 : 90050, paidPayablePaise: financeRecord.settlementStatus === "paid" ? 90050 : 0, reviewCount: 0, unknownFeeCount: 0 } });
+export const recordConsultantSettlement = async (input: { status: string; reference: string; date: string; notes: string }) => {
+  portalUiState.calls++; Object.assign(financeRecord, { settlementStatus: input.status, settlementReference: input.reference, settlementDate: input.date, settlementNotes: input.notes }); return { record: { ...financeRecord } };
+};
 export const createConsultationBooking = async (input: unknown) => { portalUiState.consultantWrites.push(input); return { ok: true, bookingId: "consultation-fixture", bookingReference: "AYURCONS01" }; };
 export const listConsultationBookings = () => page(portalUiState.screen === "consumer-consultations-empty" ? [] : [consultation]);
 export const getConsultationBooking = async () => consultation;

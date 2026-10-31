@@ -46,6 +46,7 @@ export const ROUTES = {
     availability: "/admin/availability",
     audits: "/admin/audits",
     billing: "/admin/billing",
+    finance: "/admin/finance",
     security: "/admin/security",
     settings: "/admin/settings",
     login: "/admin/login",

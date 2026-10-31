@@ -1,10 +1,96 @@
 # Session handoff
 
-Updated: 28 October 2026 (Asia/Calcutta).
+Updated: 31 October 2026 (Asia/Calcutta).
+
+## WellnessPath consultant payments and Finance (31 October 2026)
+
+- v4.25.0 implements full-fee Razorpay checkout for NEW online consultations
+  only. Search Center /api/consumer/bookings and historical booking snapshots
+  remain unchanged. Existing unpaid online records are not migrated/charged.
+- Durable private intents/receipt mapping precede one non-idempotent order POST.
+  Backend fetches verify captured payment, paid order, INR, amount, ownership,
+  receipt and current availability; no booking/email until atomic confirmation.
+  Capture without current eligibility produces paid_review and a settlement hold.
+  Checkout interrupted/lost response recovery uses an opaque UID-scoped hint and
+  server-owned order payment lookup; no automatic uncertain order recreation.
+- Signed raw-body webhook receiver implemented at
+  /api/payments/razorpay/webhook for payment.captured/payment.failed and
+  refund.created/refund.processed/refund.failed; durable event-ID/digest dedup,
+  monotonic refund totals, late failure protection. Not deployed or live-tested.
+- Private consultationFinancials records snapshot gross, base consultant payable,
+  commission and percentage. Gateway fee includes tax, borne by Ayursarga, never
+  deducted from base consultant payable. Unknown fee/net remains null; refunded
+  platform earnings require manual reconciliation. Consumers receive only total,
+  safe payment status/reference and their own booking. Consultant email uses base
+  fee only, never internal commission. No consultant Auth/dashboard added.
+- Admin navigation is Finance: Invoices & Billing preserves existing invoice
+  generation; Consultant Finance has Test/Live isolation, aggregation summary,
+  bounded pagination, loaded-record search/status filters, breakdown and manual
+  Pending/Processed/Paid settlement with reference/date/notes, confirmation,
+  revision check and atomic audit. Legacy /admin/billing redirects to invoices.
+  Wellness Center Finance is an explicitly unimplemented future-phase section.
+  No bank transfer, Razorpay Route/payout or automatic refund is implemented.
+- Cancellation/refund holds block settlement. Paid transfer metadata survives
+  later fee/refund synchronization. Uncertain setup receipts are surfaced to
+  Admin (latest 10); missing order responses require trusted operator/provider
+  reconciliation, not an automatic retry or client-supplied successful claim.
+- Explicit deny-all client rules for payment intents/receipts/financials/webhook
+  journals, plus Finance indexes added locally; NOT deployed. Native MFA Admin
+  authorization remains in shared server guard. Emulator denial cases added but
+  not run (previous Java 8 limitation; Java 21 required). No permissions weakened.
+- Focused local tests: 77 unit/route/client contracts passed including existing
+  hospital booking and consultation lifecycle regression cases; 6 Playwright
+  Finance/consultation form cases passed desktop, 320px touch and mobile WebKit.
+  These use fake provider/Firestore/SMTP, not live capture, rules or delivery proof.
+  Build, lint, typecheck and broad API audit NOT requested/run for this feature.
+- Before release: owner-requested build/lint/typecheck, deploy rules/indexes and
+  wait for indexes ready, configure hosting API keys + separate webhook secret,
+  Razorpay automatic capture and this deployed webhook URL/events in Test mode,
+  controlled Razorpay test checkout/webhook replay/SMTP and real role checks.
+  Do not treat health readiness (new deep configuration check) as payment proof.
+  No credentials, deployment, live payments or external transfers performed.
+
+## Admin booking category switch (31 October 2026)
+
+- v4.24.3 reuses the Users page's portal-segmented styling for route-based
+  Hospital bookings / Online consultations navigation. Shared
+  components/admin/AdminBookingNavigation.tsx is used on both Admin lists and
+  detail views. Correct link gets aria-current=page; detail return links remain.
+  Existing routes, loaders, filters, booking actions and permissions unchanged.
+- Shared segmented CSS now supports links alongside existing Users buttons;
+  booking links retain 44px touch height, equal columns, focus indication and
+  compact mobile padding. Consumer consultation navigation remains unchanged.
+- No API, data, Firestore rules, payment or webhook changes. No build/lint or
+  deployment requested/performed for this UI update. Six focused browser cases
+  passed on desktop Chromium, 320px touch Chromium and mobile WebKit: active
+  category, correct route URLs, mobile bounds, 44px touch targets, preserved
+  Consumer navigation and detail return-link separation. Cloud data mocked;
+  not a live booking/permission test. Version manifests synchronized at 4.24.3.
+
+## Earlier webhook setup context (superseded by implementation above)
+
+- Owner is configuring Razorpay and asked to note the webhook requirement for
+  work next. Existing services/payments/razorpay.ts provides server-only helpers;
+  no payment/webhook API route exists as of this inspection.
+- Proposed, NOT implemented/deployed/ready URL:
+  https://www.ayursarga.com/api/payments/razorpay/webhook
+  Do not claim this URL works or ask the owner to enable it before deployment.
+- Owner subsequently reported enabling the Razorpay webhook; advised disabling
+  it until a receiver is deployed. Actual Dashboard enable/disable state is not
+  verified. Suggested events: payment.captured/payment.failed plus
+  refund.created/refund.processed/refund.failed, subject to implemented handlers.
+- RAZORPAY_WEBHOOK_SECRET must match the independently chosen Dashboard webhook
+  secret, not the API key secret. Never record actual secrets here. Use Test mode
+  first. Hosting needs the server-only configuration separately from local env.
+- Receiver needs raw-body signature validation, bounded input, explicit supported
+  events, durable event deduplication, safe outcomes/retries and local regression
+  checks. Confirm event scope and owner-defined payment/business rules before
+  wiring booking state or amounts; do not invent payment requirements, introduce
+  payments into either booking flow, deploy or mutate live data from this note.
 
 ## Resume here: current session snapshot
 
-- Application version: 4.24.2. Admin MFA uses native Firebase TOTP with local QR
+- Application version: 4.25.0 locally (not deployed). Admin MFA uses native Firebase TOTP with local QR
   generation and manual-key fallback; Hospital/Consumer sign-in stays unchanged.
 - Admin Settings is below Audit Logs. Account security lives at /admin/settings;
   old /admin/security bookmarks redirect there. Recovery help and signed-in

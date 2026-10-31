@@ -24,6 +24,7 @@ const dependencyLabels: Record<string, { title: string; description: string }> =
   "auth-email": { title: "Invitations & password resets", description: "Firebase Admin, email sender and password-link return URL configuration." },
   "firebase-client": { title: "Browser sign-in", description: "Required Firebase Web SDK configuration is present." },
   "hospital-images": { title: "Hospital image uploads", description: "Server SDK and Storage bucket configuration." },
+  "consultation-payments": { title: "Consultation payments", description: "Server payment and webhook configuration only; not proof of capture, delivery or settlement." },
 };
 
 export default async function HealthPage({ searchParams }: { searchParams: Promise<{ deep?: string }> }) {

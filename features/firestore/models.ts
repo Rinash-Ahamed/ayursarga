@@ -204,6 +204,9 @@ export type ConsultantDocument = AuditedDocument & {
 };
 
 export type ConsultationBookingDocument = AuditedDocument & {
+  paymentStatus?: "paid" | "partially_refunded" | "refunded";
+  paymentReference?: string;
+  paymentIntentId?: string;
   bookingReference: string; consumerId: string; consumerName: string; consumerEmail: string;
   consumerPhone: string; consumerAddress: string | null;
   consultantId: string; consultantName: string; consultantDesignation: string;
