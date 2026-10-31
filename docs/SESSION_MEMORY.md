@@ -2,6 +2,26 @@
 
 Updated: 31 October 2026 (Asia/Calcutta).
 
+## Firebase browser authentication persistence fix (31 October 2026)
+
+- v4.26.5 pins firebase to 12.19.0 (previously ^12.17.1), installing Auth
+  1.13.6 instead of 1.13.4. Upstream fixes remove the visibilitychange DB-close
+  regression and allow reconnection after pagehide before pageshow on iOS.
+  Source: https://firebase.google.com/support/release-notes/js
+- Install completed with lifecycle scripts disabled. Lockfile changes are
+  Firebase SDK packages and their Firestore re2js dependency only; Firebase
+  Admin and unrelated dependency versions remain unchanged. No app Auth code,
+  persistence selection, MFA/roles, credentials, Firebase rules or data changed.
+- All 36 focused local auth tests passed: Admin MFA/enrollment/replacement,
+  Hospital password/Consumer Google role separation, session cleanup, reset
+  code handling and branded email contracts. The added installed-SDK class
+  test exercises repeated pagehide/reopen cycles before pageshow and checks
+  visibilitychange is not registered. Browser/database services are isolated;
+  this is not a live OAuth popup, real IndexedDB or physical iOS test.
+- Build/lint/typecheck not requested/run. No deployment, real email or live
+  Auth mutation. Restart local dev server and reload tabs to discard the old
+  SDK; production requires normal application redeployment, not rules deploy.
+
 ## Add Hospital description removal (31 October 2026)
 
 - v4.26.4 hides Description in Admin Add Hospital using the shared form's
