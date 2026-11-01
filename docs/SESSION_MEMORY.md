@@ -2,6 +2,54 @@
 
 Updated: 1 November 2026 (Asia/Calcutta).
 
+## Package-status performance and API/security review (1 November 2026)
+
+- v4.30.6 optimizes Admin Hospitals' Checking package status path. Previously
+  four count queries per hospital ran in sequential groups of four hospitals:
+  80 queries/five waves for a full page. Normal reads now project only hospitalId
+  and reviewStatus, in up to two parallel chunks of ten hospital IDs, with two
+  operational statuses (20 disjunctions per query). Each projection is capped at
+  201 documents; reaching the cap triggers exact bounded-concurrency count
+  queries for that chunk, never truncated/false approved totals. All reads retain
+  one read-only transaction snapshot; no stale server cache or persisted counter.
+  Legacy approval classification and archived exclusion remain unchanged.
+  Tradeoff: projected reads may bill more document reads than aggregates on
+  package-dense lists; cap bounds transfer to 402 small projected records before
+  count fallback. No public projection or booking/review mutation changes.
+- Added per-authenticated-Admin summary throttling (60/minute/process), preserving
+  verified active Admin/native MFA authorization, 20-ID and 5KB body limits,
+  generic errors and shared no-store responses. No rules/index changes needed;
+  actual read-only Firestore execution used the existing index successfully.
+- New opt-in scripts/profile-package-summary.mjs compares the old count plan
+  against the actual new handler using real Firestore reads, no writes. Four
+  current hospitals, alternating plans and three warm samples after warmup:
+  old [206,234,210] ms; new [81,78,88] ms. Medians 210 -> 81ms (~61% lower),
+  identical counts. Probe logs no IDs, record contents or credentials. Excludes
+  browser, real authentication and hosted cold starts; not a site-wide speedup.
+- API/security review inventoried 42 route files and traced shared authorization,
+  package ownership/revision/approval checks, private/public boundaries, payment
+  signatures, client rules and audit preservation. All 313 local unit/API checks
+  passed after correcting an old source assertion that failed to recognize the
+  existing combined consultant create/update/delete deny rule. This was a test
+  correction, not a permission change. Eight summary checks include malformed,
+  oversized, unauthorized, throttled, archived, legacy and 200/201/230-record
+  fallback cases. Two desktop/mobile-WebKit package-status/failure/retry browser
+  checks passed. Four existing desktop/tablet performance checks passed on rerun:
+  simulated 150ms saves measured 156-159ms, zero post-save reads, one write/action.
+  First desktop setup timed out during concurrent unit workload; no timeout or
+  production behavior was changed to hide it.
+- npm audit --omit=dev reported 19 production dependency findings: 1 critical,
+  10 high, 8 moderate, including critical Next.js advisories. This is an audit
+  result, not demonstrated exploitation/reachability. No dependency changes made;
+  owner previously chose separate dependency remediation. Release security is
+  NOT cleared. Additional hardening: shared multi-instance abuse limits (current
+  limiter is process-local); assess CSP with payment/auth integrations before
+  enforcing it (no application CSP currently configured). Only .env.example is
+  tracked; secrets were not printed. No new production build, lint, typecheck,
+  Lighthouse, live authenticated workflow/security mutation, emulator run or
+  deployment. Browser checks are mocked; Firestore probe is read-only. Production
+  page/cold-start timings and deployed permissions are not claimed verified.
+
 ## Consultant Edit sibling keys (1 November 2026)
 
 - v4.30.5 fixes the exact reported Edit-form warning: ConsultantFormFields and

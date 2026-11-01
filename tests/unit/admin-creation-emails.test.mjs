@@ -68,7 +68,7 @@ test("one hospital and one consultant may use the same email; uniqueness stays w
 test("hospital and consultant direct client creation remain denied", () => {
   const rules = readFileSync("firestore.rules", "utf8");
   for (const module of ["hospitals", "consultants"]) {
-    const block = rules.slice(rules.indexOf(`match /${module}/{`));
-    assert.match(block.slice(0, block.indexOf("allow update:")), /allow create: if false;/);
+    const block = rules.slice(rules.indexOf(`match /${module}/{`)).split(/\n    match \//)[0];
+    assert.match(block, /allow create(?:, update, delete)?: if false;/);
   }
 });
