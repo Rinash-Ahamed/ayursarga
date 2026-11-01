@@ -2,6 +2,7 @@
 
 import { runFilteredQuery, type QueryPage, type QueryPageOptions } from "@/services/firestore/firestoreService";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "@/constants/firestore";
+import { uniqueRecords } from "@/utils/recordIdentity";
 
 export type StatusOrderedCursor = { phase: "current" | "inactive"; document: QueryPageOptions["cursor"] };
 export type StatusOrderedOptions = { pageSize?: number; cursor?: StatusOrderedCursor | null };
@@ -21,7 +22,7 @@ export async function runStatusOrderedQuery<T>(options: Omit<QueryPageOptions, "
   // A full current page needs only a bounded look-ahead into inactive records.
   const inactive = await load("inactive", remaining || 1);
   return {
-    documents: remaining ? [...first.documents, ...inactive.documents] : first.documents,
+    documents: uniqueRecords(remaining ? [...first.documents, ...inactive.documents] : first.documents),
     cursor: { phase: "inactive", document: remaining ? inactive.cursor : null },
     hasMore: remaining ? inactive.hasMore : inactive.documents.length > 0 || inactive.hasMore,
   };

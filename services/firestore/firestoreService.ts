@@ -58,7 +58,7 @@ export function emptyQueryPage<T>(): QueryPage<T> {
 
 export async function readDocument<T>(collectionPath: string, id: string) {
   const snapshot = await getDoc(doc(getClientFirestore(), collectionPath, id));
-  return snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as DocumentRecord<T>) : null;
+  return snapshot.exists() ? ({ ...snapshot.data(), id: snapshot.id } as DocumentRecord<T>) : null;
 }
 
 export async function readDocumentsByIds<T>(collectionPath: string, ids: string[], filters: QueryFilter[] = []) {
@@ -72,8 +72,8 @@ export async function readDocumentsByIds<T>(collectionPath: string, ids: string[
     ...filters.map((filter) => where(filter.field, filter.operator, filter.value)),
   ))));
   return snapshots.flatMap((snapshot) => snapshot.docs.map((item) => ({
-    id: item.id,
     ...item.data(),
+    id: item.id,
   } as DocumentRecord<T>)));
 }
 
@@ -94,7 +94,7 @@ export async function runFilteredQuery<T>(options: QueryPageOptions): Promise<Qu
     ? page
     : page.filter((item) => item.data().status !== "archived" && item.data().archivedAt == null);
   return {
-    documents: visible.map((item) => ({ id: item.id, ...item.data() } as DocumentRecord<T>)),
+    documents: visible.map((item) => ({ ...item.data(), id: item.id } as DocumentRecord<T>)),
     cursor: page.at(-1) ?? null,
     hasMore: snapshot.docs.length > pageSize,
   };

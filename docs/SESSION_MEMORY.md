@@ -2,6 +2,57 @@
 
 Updated: 1 November 2026 (Asia/Calcutta).
 
+## Consumer consultant-card alignment (1 November 2026)
+
+- v4.30.3 groups the existing large portrait beside the name and a visible
+  Designation label. A responsive auto-fill grid prevents one desktop card from
+  stretching across the whole form; narrow screens keep one column. Selection
+  radio sits at the top-right with reserved padding. Portrait sizes, stable
+  fallback, fee, availability and booking/payment behavior remain unchanged.
+- Six focused desktop, 320px phone and mobile WebKit checks passed for card spacing,
+  label, bounds, photo fallback, selection, consent, fee and single submission.
+  No backend, rules or stored-data changes; no build/lint or deployment requested.
+
+## Consultant duplicate-key warning (1 November 2026)
+
+- v4.30.2 fixes shared list identity handling behind the reported duplicate
+  AS002 React key warning. Status-ordered queries can overlap when a record
+  changes status between phase reads; pagination now deduplicates initial,
+  refreshed and appended responses. Appending preserves existing locally edited
+  records. Firestore adapters apply the canonical document ID after stored data
+  so a legacy stored id cannot override it. Separate documents with the same
+  employee label remain separate; no records are merged, deleted or rewritten.
+  These failure paths were reproduced locally; live document contents were not
+  inspected and the exact live trigger is not claimed.
+- A regression reproduced the duplicate before the fix. Eleven focused unit
+  checks passed for identity, status-query overlap and consultant updates. Four
+  mocked desktop/mobile-WebKit browser checks passed for duplicate responses,
+  edit/load-more preservation and staged Add/Edit photo workflows.
+- Final v4.30.2 production build passed, including TypeScript. A fresh production
+  server for that build returned HTTP 200 for /api/health?deep=true with JSON
+  Accept and /health?deep=true with the themed page rendered. Configuration
+  health reported deep-configuration, status ok and all six dependencies ready.
+  This is not proof of live permissions, email delivery or payment processing.
+  The temporary server was stopped. No lint, deployment, live workflow writes
+  or Firestore rule/index changes. Earlier v4.30.1 build also passed.
+
+## Larger consumer consultant portraits (1 November 2026)
+
+- v4.30.1 replaces the consumer selector's flush cut-out image with a rounded,
+  light-bordered portrait frame on the emerald banner: 136x152px desktop/tablet,
+  112x132px narrow mobile, versus 100px/80px prior widths. Cover cropping uses a
+  higher focal position. Name/designation remain left; fee/credentials stay below.
+  No negative footer overlap. Shared portrait accepts optional intrinsic size;
+  consumer uses 160, Admin default remains 72. Same small immutable uploaded
+  WebP, lazy loading and dimension-stable initials/error fallback are retained.
+- Eight distinct focused browser checks passed desktop, tablet, 320px phone and
+  mobile WebKit: portrait dimensions/crop, bounds, selection, fallback, unchanged
+  Admin sizing, fee, consent, appointment windows and one booking submission.
+  Initial fixture omitted Next Image's real loading attribute; forwarded it and
+  all four portrait cases passed on rerun. Updated the old idle Admin-upload
+  assertion to the already-approved Edit-only flow. Desktop/mobile card images
+  visually reviewed. No API/rule/data changes, build/lint/typecheck or deployment.
+
 ## Consultant Add/Edit photos and optional titles (1 November 2026)
 
 - v4.30.0 groups related consultant form features. Photo selection now lives in

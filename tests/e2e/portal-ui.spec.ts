@@ -6,6 +6,28 @@ import { getCalendarMonthRange } from "../../utils/date";
 const styles = ["node_modules/tailwindcss/lib/css/preflight.css", "app/globals.css", "app/portal.css"].map((file) => readFileSync(file, "utf8")).join("\n");
 const screens = ["admin-dashboard", "admin-hospitals", "admin-details", "admin-consultants", "admin-users", "admin-bookings", "admin-availability", "admin-audits", "hospital-dashboard", "hospital-profile", "hospital-services", "hospital-bookings", "hospital-availability", "hospital-password", "admin-login", "hospital-login", "admin-forgot", "hospital-forgot"];
 
+test("duplicate consultant responses stay unique through editing and loading another page", async ({ page }) => {
+  const warnings: string[] = [];
+  page.on("console", message => { if (/same key|unique.*key/i.test(message.text())) warnings.push(message.text()); });
+  await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "admin-consultants-duplicates");
+  const cards = page.locator(".consultant-list>article");
+  await expect(cards).toHaveCount(2);
+  const edited = cards.filter({ has: page.locator(".consultant-employee-id", { hasText: /^AS002$/ }) });
+  await expect(edited).toHaveCount(1);
+  await edited.getByRole("button", { name: "Edit", exact: true }).click();
+  await edited.locator('input[name="name"]').fill("Edited Consultant");
+  await edited.locator('input[name="consultantCharge"]').fill("300");
+  await edited.locator('input[name="ayursargaCommissionPercentage"]').fill("10");
+  await edited.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(edited.locator("h3")).toHaveText("Edited Consultant");
+  await page.getByRole("button", { name: /Load more/i }).click();
+  await expect(cards).toHaveCount(3);
+  await expect(edited.locator("h3")).toHaveText("Edited Consultant");
+  expect(await cards.locator(".consultant-employee-id").allTextContents()).toEqual(["AS002", "AS001", "AS003"]);
+  expect(warnings).toEqual([]);
+});
+
 test("consultant Add/Edit stages optional photos and saves the chosen title without exposing idle uploads", async ({ page }) => {
   await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
   await mount(page, "admin-consultants");
@@ -549,27 +571,35 @@ test("consultant photos and labeled professional details stay readable without d
   const card = page.locator(".consultation-professional");
   await expect(card.locator(".consultation-professional-name")).toHaveText("Shafna");
   expect((await card.textContent())?.match(/BAMS/g)).toHaveLength(1);
-  await expect(card.locator(".consultation-professional-role")).toHaveText("BAMS");
+  await expect(card.locator(".consultation-professional-role")).toHaveText("DesignationBAMS");
+  await expect(card.locator(".consultation-professional-role>small")).toBeVisible();
   await expect(card.locator(".consultation-professional-name")).toHaveCSS("color", "rgb(255, 255, 255)");
   await expect(card.locator(".consultation-professional-detail").filter({ hasText: "Experience" })).toContainText("3 years");
   await expect(card.locator(".consultation-professional-fee")).toContainText("₹300.00");
   await expect(card.locator(".consultant-photo img")).toBeVisible();
-  await expect(card.locator(".consultant-photo img")).toHaveCSS("object-fit", "contain");
+  await expect(card.locator(".consultant-photo img")).toHaveCSS("object-fit", "cover");
   const portraitBounds = await card.locator(".consultant-photo").boundingBox();
   const nameBounds = await card.locator(".consultation-professional-name").boundingBox();
-  expect(portraitBounds!.x).toBeGreaterThan(nameBounds!.x);
+  expect(nameBounds!.x - (portraitBounds!.x + portraitBounds!.width)).toBeGreaterThanOrEqual(10);
+  expect(nameBounds!.x - (portraitBounds!.x + portraitBounds!.width)).toBeLessThanOrEqual(20);
+  expect(portraitBounds!.width).toBe(page.viewportSize()!.width <= 480 ? 112 : 136);
+  expect(portraitBounds!.height).toBe(page.viewportSize()!.width <= 480 ? 132 : 152);
+  await expect(card.locator(".consultant-photo img")).toHaveAttribute("loading", "lazy");
   const compactBounds = await card.boundingBox();
-  expect(compactBounds!.height).toBeLessThan(160);
+  expect(compactBounds!.height).toBeLessThan(300);
+  const gridBounds = await page.locator(".consultation-professional-grid").boundingBox();
+  if (gridBounds!.width >= 772) expect(compactBounds!.width).toBeLessThanOrEqual(gridBounds!.width / 2);
+  expect(portraitBounds!.x + portraitBounds!.width).toBeLessThanOrEqual(compactBounds!.x + compactBounds!.width);
   await card.getByRole("radio").check();
   await expect(card.getByRole("radio")).toBeChecked();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await card.screenshot({ path: test.info().outputPath("consultant-details.png") });
   await card.locator("img").dispatchEvent("error");
   await expect(card.locator(".consultant-photo")).toHaveText("S");
+  expect((await card.locator(".consultant-photo").boundingBox())!.height).toBe(portraitBounds!.height);
   await mount(page, "admin-consultants");
-  await page.getByLabel("Consultant photo", { exact: true }).setInputFiles({ name: "portrait.png", mimeType: "image/png", buffer: Buffer.from("mock browser upload") });
-  await expect(page.getByRole("button", { name: "Replace photo", exact: true })).toBeVisible();
-  await expect(page.locator(".consultant-photo img")).toBeVisible();
+  expect((await page.locator(".consultant-photo").boundingBox())!.width).toBe(72);
+  await expect(page.getByLabel("Consultant photo", { exact: true })).toHaveCount(0);
 });
 
 test("online consultation form uses assigned charges and custom windows, requires consent and submits once", async ({ page }, testInfo) => {

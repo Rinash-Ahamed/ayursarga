@@ -145,9 +145,9 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
               <span className="consultation-professional-banner">
                 <span className="consultation-professional-identity">
                   <strong className="consultation-professional-name">{item.name}</strong>
-                  {item.designation && <span className="consultation-professional-role">{item.designation}</span>}
+                  {item.designation && <span className="consultation-professional-role"><small>Designation</small><span>{item.designation}</span></span>}
                 </span>
-                <ConsultantPhoto name={item.name} imageUrl={item.imageUrl} />
+                <ConsultantPhoto name={item.name} imageUrl={item.imageUrl} size={160} />
               </span>
               <span className="consultation-professional-footer">
                 <span className="consultation-professional-credentials">

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { inactiveLast } from "@/utils/statusOrder";
+import { appendUniqueRecords, uniqueRecords } from "@/utils/recordIdentity";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import type { DocumentRecord, QueryPage } from "@/services/firestore/firestoreService";
 
@@ -23,10 +24,7 @@ export function usePaginatedList<T, TCursor = NonNullable<QueryPage<T>["cursor"]
     try {
       const page = await loader(nextCursor);
       if (version !== requestVersion.current) return;
-      setItems((current) => replace ? page.documents : [
-        ...current,
-        ...page.documents.filter((item) => !current.some((existing) => existing.id === item.id)),
-      ]);
+      setItems((current) => replace ? uniqueRecords(page.documents) : appendUniqueRecords(current, page.documents));
       setCursor(page.cursor);
       setHasMore(page.hasMore);
       setError(null);

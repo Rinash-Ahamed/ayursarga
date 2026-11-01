@@ -76,3 +76,17 @@ test("all operational list query variants have matching declared Firestore index
     ["services", ["hospitalId:ASCENDING", "status:ASCENDING", "name:ASCENDING"]],
   ]) assert.ok(indexes.some(index => index.collectionGroup === collection && index.fields.map(field => `${field.fieldPath}:${field.order}`).join() === fields.join()), `${collection} ${fields}`);
 });
+
+test("a record moving inactive between phase reads appears only once with its latest state", async () => {
+  let calls = 0;
+  const { runStatusOrderedQuery } = loadTypeScript("services/firestore/statusOrderedQuery.ts", {
+    "@/services/firestore/firestoreService": { runFilteredQuery: async () => {
+      calls++;
+      return { documents: [{ id: "AS002", name: "Consultant", status: calls === 1 ? "active" : "inactive" }], cursor: { id: "AS002" }, hasMore: false };
+    } },
+  });
+  const result = await runStatusOrderedQuery({ collectionPath: "consultants", pageSize: 20 });
+  assert.equal(result.documents.length, 1);
+  assert.equal(result.documents[0].id, "AS002");
+  assert.equal(result.documents[0].status, "inactive");
+});

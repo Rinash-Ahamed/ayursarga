@@ -78,7 +78,7 @@ const router = { replace: (path: string) => { portalUiState.navigatedTo = path; 
 export function useRouter() { return router; }
 export default function MockNextElement({ src, href, children, alt, width, height, ...props }: { src?: string; href?: string; children?: ReactNode; alt?: string; width?: number; height?: number; [key: string]: unknown }) {
   // eslint-disable-next-line @next/next/no-img-element
-  return src ? <img src={src} alt={alt ?? ""} width={width} height={height} onError={props.onError as () => void} /> : <a href={href} {...props}>{children}</a>;
+  return src ? <img src={src} alt={alt ?? ""} width={width} height={height} loading={props.loading as "lazy" | "eager" | undefined} onError={props.onError as () => void} /> : <a href={href} {...props}>{children}</a>;
 }
 const coverGallery = Array.from({ length: 6 }, (_, index) => `https://images.test/centre-${index}.webp`);
 export const getHospital = async () => ({ ...hospital, imageUrls: portalUiState.screen === "admin-gallery-incomplete" ? coverGallery.slice(0, 3) : coverGallery, status: portalUiState.screen === "admin-gallery-incomplete" ? "pending" : hospital.status, isPublic: portalUiState.screen === "admin-gallery-incomplete" ? false : hospital.isPublic, facilities: "Free WiFi\nFree parking" });
@@ -103,7 +103,15 @@ export const getPublicHospitalService = async () => portalUiState.unavailablePac
 export const listAdminBookings = () => page(portalUiState.screen === "admin-bookings-empty" ? [] : operationalBookings());
 export const readDocumentsByIds = async (collectionPath: string, ids: string[]) => collectionPath === "hospitals" ? [hospital].filter((item) => ids.includes(item.id)) : collectionPath === "services" ? services.filter((item) => ids.includes(item.id)) : [];
 export const listUsers = (role: string) => page(portalUiState.screen === "admin-users-empty" ? [] : Array.from({ length: portalUiState.screen === "admin-user-cards" ? 10 : 1 }, (_, index) => ({ ...user, id: `${user.id}-${index}`, role, ...(portalUiState.screen === "admin-user-cards" ? { address: index === 0 ? `${hospital.address} ${"Long address and building details. ".repeat(12)}` : hospital.address } : {}), ...(portalUiState.screen === "admin-users-no-date" ? { createdAt: undefined } : {}) })));
-export const listConsultants = () => page(portalUiState.screen === "admin-consultants-empty" ? [] : [consultant]);
+export const listConsultants = (options?: { cursor?: unknown }) => {
+  if (portalUiState.screen === "admin-consultants-duplicates") {
+    const record = (id: string) => ({ ...consultant, id, employeeId: id });
+    return Promise.resolve(options?.cursor
+      ? { documents: [record("AS002"), record("AS003"), record("AS003")], cursor: null, hasMore: false }
+      : { documents: [record("AS002"), record("AS001"), record("AS002")], cursor: { phase: "current", document: null }, hasMore: true });
+  }
+  return page(portalUiState.screen === "admin-consultants-empty" ? [] : [consultant]);
+};
 export const listHospitalAvailabilityRequests = () => page(portalUiState.screen === "hospital-availability-empty" ? [] : availability);
 export const listAdminAvailabilityRequests = () => page(portalUiState.screen === "admin-availability-empty" ? [] : availability);
 export const listAuditLogs = () => page(portalUiState.screen === "admin-audits-empty" ? [] : portalUiState.screen === "admin-security-audits" ? ["started", "completed", "unknown"].map(outcome => ({
