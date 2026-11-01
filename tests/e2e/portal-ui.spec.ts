@@ -52,6 +52,52 @@ test("Admin consultant and both booking lists use aligned responsive card grids"
   }
 });
 
+test("Hospital booking and package grids reflow without overflow and retain full-width editing", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
+  for (const screen of ["hospital-bookings", "hospital-services"]) {
+    await mount(page, screen);
+    const grid = page.locator(".portal-record-grid");
+    const cards = grid.locator(":scope>article");
+    await expect(cards).toHaveCount(3);
+    const bounds = (await grid.boundingBox())!;
+    const first = (await cards.nth(0).boundingBox())!;
+    const second = (await cards.nth(1).boundingBox())!;
+    if (bounds.width >= 734) {
+      expect(Math.abs(first.y - second.y)).toBeLessThan(1);
+      expect(Math.abs(first.height - second.height)).toBeLessThan(1);
+      expect(second.x).toBeGreaterThanOrEqual(first.x + first.width + 13);
+    } else {
+      expect(second.y).toBeGreaterThanOrEqual(first.y + first.height + 13);
+    }
+    for (const card of await cards.all()) {
+      expect(await card.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+      const cardBounds = (await card.boundingBox())!;
+      for (const button of await card.getByRole("button").all()) {
+        const buttonBounds = (await button.boundingBox())!;
+        expect(buttonBounds.x).toBeGreaterThanOrEqual(cardBounds.x);
+        expect(buttonBounds.x + buttonBounds.width).toBeLessThanOrEqual(cardBounds.x + cardBounds.width);
+        expect(buttonBounds.height).toBeGreaterThanOrEqual(44);
+      }
+      if (screen === "hospital-bookings") {
+        const badge = (await card.locator(".portal-status").boundingBox())!;
+        expect(badge.y + badge.height).toBeLessThanOrEqual((await card.locator("h3").boundingBox())!.y);
+        await expect(card).not.toContainText("Estimated commission");
+      }
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await grid.screenshot({path:test.info().outputPath(`${screen}-grid.png`)});
+    if (screen === "hospital-services") {
+      expect(await cards.locator("h3").allTextContents()).toEqual(["7-day package", "14-day package", "21-day package"]);
+      await cards.first().getByRole("button", {name:"Edit package",exact:true}).click();
+      const editor = grid.locator(".portal-service-edit");
+      expect((await editor.boundingBox())!.width).toBeCloseTo(bounds.width,0);
+      expect(await editor.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+      await editor.getByRole("button", {name:"Cancel",exact:true}).click();
+      await expect(grid.locator(".portal-service-edit")).toHaveCount(0);
+    }
+  }
+});
+
 test("duplicate consultant responses stay unique through editing and loading another page", async ({ page }) => {
   const warnings: string[] = [];
   page.on("console", message => { if (/same key|unique.*key/i.test(message.text())) warnings.push(message.text()); });

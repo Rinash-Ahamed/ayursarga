@@ -177,7 +177,7 @@ export function HospitalBookings({ bookingId }: { bookingId?: string } = {}) {
     <PortalToast message={actionMessage} notification={actionMessageNotification} />
     <PortalToast message={actionError} notification={actionErrorNotification} tone="error" />
     {detailsError && <p className="portal-form-error" role="status">Some centre or package names could not be loaded. Booking details are still available. Refresh to retry.</p>}
-    <div className="portal-list consumer-booking-list">
+    <div className="portal-list consumer-booking-list portal-record-grid portal-booking-grid">
       {visible.map((item) => <PortalBookingSummary key={item.id} booking={item} showTreatmentBadge>
         <div className="portal-actions">
           {item.status === "requested" && <><button className="portal-button" disabled={busy === item.id} onClick={() => void act(item, "confirmed")}>Confirm</button><button className="portal-button danger" disabled={busy === item.id} onClick={() => void act(item, "rejected")}>Reject</button></>}

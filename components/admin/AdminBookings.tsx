@@ -136,7 +136,7 @@ export function AdminBookings({ bookingId }: { bookingId?: string } = {}) {
       ? (hasFilters ? "No bookings match these filters. Adjust or clear the filters and try again." : "No bookings yet. New appointments will appear here.")
       : undefined} />
     {detailsError && <p className="portal-form-error" role="status">Some centre or package names could not be loaded. Booking details are still available. Refresh to retry.</p>}
-    <div className="portal-list consumer-booking-list admin-record-grid admin-booking-grid">{items.map((item) => <PortalBookingSummary key={item.id} booking={item} showCommission />)}</div>
+    <div className="portal-list consumer-booking-list admin-record-grid admin-booking-grid portal-record-grid portal-booking-grid">{items.map((item) => <PortalBookingSummary key={item.id} booking={item} showCommission />)}</div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
   </PortalShell>;
 }

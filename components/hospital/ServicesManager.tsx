@@ -268,7 +268,7 @@ export function ServicesManager() {
     <PortalFeedback notification={loadErrorNotification} error={items.length > 0 ? loadError : null} emptyTitle={deferredSearch ? "No matching packages" : "No packages yet"} empty={!loadError && !isLoading && items.length === 0 ? (deferredSearch ? "No packages match this search." : "Complete the form above to add your first package.") : undefined} />
     <PortalToast message={actionMessage} notification={actionMessageNotification} />
     <PortalToast message={actionError} notification={actionErrorNotification} tone="error" />
-    <div className="portal-list">
+    <div className="portal-list portal-record-grid portal-package-grid">
       {orderedItems.map((item) => editingId === item.id
         ? <article className="portal-card portal-service-edit" key={item.id}>
           <div className="portal-row-heading"><h2>{packageTitle(item)}</h2><span className="portal-status portal-service-status" data-status={item.status}>{formatStatus(item.status)}</span></div>

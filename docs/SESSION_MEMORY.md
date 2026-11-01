@@ -2,6 +2,27 @@
 
 Updated: 1 November 2026 (Asia/Calcutta).
 
+## Shared Hospital responsive card grids (1 November 2026)
+
+- v4.30.7 extends the Admin card-grid layout to Hospital bookings and packages.
+  Neutral portal-record-grid/portal-booking-grid CSS now provides the shared
+  360px preferred minimum, auto-fill columns and one-column narrow layouts.
+  Existing Admin marker classes remain for test selectors; their components
+  explicitly opt into the shared layout. Consumer booking layouts are unchanged.
+  Hospital booking status remains top-right, financial summary/actions align at
+  the bottom, and no Admin commission or management data is added. Package cards
+  stretch per row with bottom-aligned controls; Edit spans the full grid. Existing
+  duration/status ordering, forms, approval rules and treatment actions remain.
+- Sixteen focused mocked browser checks passed across 320px/390px phones,
+  844px landscape, 768px/1024px tablets, 1440px/1920px desktops and mobile WebKit:
+  card alignment, no horizontal overflow, long booking text, 44px action buttons,
+  package order, full-width Edit/Cancel and Start/Complete treatment dialogs.
+  Desktop and narrow-mobile screenshots reviewed. Two shared-style Admin
+  regression checks also passed on desktop/mobile WebKit (18 total).
+  Web-quality audit guidance informed
+  the responsive sweep; these are browser simulations, not real-device claims.
+  No API, stored-data, permissions or rules changes; no build/lint or deployment.
+
 ## Package-status performance and API/security review (1 November 2026)
 
 - v4.30.6 optimizes Admin Hospitals' Checking package status path. Previously

@@ -162,7 +162,7 @@ export function ConsultantsManager() {
 
     <PortalFeedback error={error} notification={actionError ? actionErrorNotification : loadErrorNotification} emptyTitle={deferredSearch.trim() ? "No matching consultants" : "No consultants yet"} empty={!error && !isLoading && items.length === 0 ? (deferredSearch.trim() ? "No consultants match your search." : "Select Add New to create the first consultant record.") : undefined} />
     <PortalToast message={message} notification={messageNotification} />
-    <div className="portal-list consultant-list admin-record-grid">{items.map((consultant) => <article className="portal-card" key={consultant.id} data-editing={editingId === consultant.id}>
+    <div className="portal-list consultant-list admin-record-grid portal-record-grid">{items.map((consultant) => <article className="portal-card" key={consultant.id} data-editing={editingId === consultant.id}>
       <div className="portal-row-heading"><div className="consultant-profile-heading"><ConsultantPhoto name={consultantDisplayName(consultant)} imageUrl={consultant.imageUrl} /><div><h3>{consultantDisplayName(consultant)}</h3>{consultant.designation && <p>{consultant.designation}</p>}<strong className="consultant-employee-id">{consultant.employeeId}</strong></div></div><span className="portal-status" data-status={consultant.status}>{formatStatus(consultant.status)}</span></div>
       {editingId === consultant.id ? <form className="portal-form portal-edit-form" onSubmit={(event) => void edit(event, consultant)} noValidate>
         <ConsultantFormFields key={`fields-${consultant.id}`} defaultValues={consultant} errors={fieldErrors} />
