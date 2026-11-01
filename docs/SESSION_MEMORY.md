@@ -2,6 +2,20 @@
 
 Updated: 1 November 2026 (Asia/Calcutta).
 
+## Consultant Edit sibling keys (1 November 2026)
+
+- v4.30.5 fixes the exact reported Edit-form warning: ConsultantFormFields and
+  ConsultantPhotoUpload were siblings with the same consultant.id key. They now
+  use stable fields-/photo- prefixes, retaining per-consultant reset behavior.
+  The earlier list deduplication fix did not address this separate cause.
+- Portal browser harness now uses React development libraries by default to
+  expose key diagnostics; other shared harnesses retain production defaults.
+  Added an explicit no-key-warning assertion after Edit/photo selection. This
+  failed before the fix with the reported duplicate-child warning; four focused
+  desktop/mobile WebKit checks passed after the fix for edit/cancel, staged
+  photos, save and overlapping pagination. No data, API, permission or layout
+  changes; no build/lint or deployment requested.
+
 ## Responsive Admin consultant and booking grids (1 November 2026)
 
 - v4.30.4 groups the Admin consultant and booking-card layout updates. Shared
@@ -18,8 +32,10 @@ Updated: 1 November 2026 (Asia/Calcutta).
   multi-card alignment, text wrapping, overflow, full-width Edit/Cancel,
   duplicate-page preservation, staged photos and consultation reschedule dialogs.
   An initial spacing failure exposed an older gap rule; scoped grid specificity
-  was corrected and all eight grid/dialog checks passed on rerun. Final badge
-  and amount assertions are also checked on all four viewport configurations.
+  was corrected and all eight grid/dialog checks passed on rerun. Four final
+  viewport checks passed for top-right badges, badge/heading separation and
+  same-row amounts. Reviewed desktop and narrow-phone screenshots; longer
+  status badges have reserved header space to avoid crowding the heading.
   No persisted fields, permissions, rules/indexes or API changes. No build/lint
   or deployment requested.
 

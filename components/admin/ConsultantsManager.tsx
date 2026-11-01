@@ -165,8 +165,8 @@ export function ConsultantsManager() {
     <div className="portal-list consultant-list admin-record-grid">{items.map((consultant) => <article className="portal-card" key={consultant.id} data-editing={editingId === consultant.id}>
       <div className="portal-row-heading"><div className="consultant-profile-heading"><ConsultantPhoto name={consultantDisplayName(consultant)} imageUrl={consultant.imageUrl} /><div><h3>{consultantDisplayName(consultant)}</h3>{consultant.designation && <p>{consultant.designation}</p>}<strong className="consultant-employee-id">{consultant.employeeId}</strong></div></div><span className="portal-status" data-status={consultant.status}>{formatStatus(consultant.status)}</span></div>
       {editingId === consultant.id ? <form className="portal-form portal-edit-form" onSubmit={(event) => void edit(event, consultant)} noValidate>
-        <ConsultantFormFields key={consultant.id} defaultValues={consultant} errors={fieldErrors} />
-        <ConsultantPhotoUpload key={consultant.id} file={selectedPhoto} imageUrl={consultant.imageUrl} disabled={Boolean(busyId)} onChange={setSelectedPhoto} />
+        <ConsultantFormFields key={`fields-${consultant.id}`} defaultValues={consultant} errors={fieldErrors} />
+        <ConsultantPhotoUpload key={`photo-${consultant.id}`} file={selectedPhoto} imageUrl={consultant.imageUrl} disabled={Boolean(busyId)} onChange={setSelectedPhoto} />
         <div className="portal-actions full"><button className="portal-button" disabled={busyId === consultant.id}>{busyId === consultant.id ? "Saving..." : "Save changes"}</button><button className="portal-button secondary" type="button" disabled={busyId === consultant.id} onClick={resetEditor}>Cancel</button></div>
       </form> : <>
         <dl className="consultant-details">

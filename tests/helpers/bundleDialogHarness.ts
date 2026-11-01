@@ -9,12 +9,13 @@ export function bundleDialogHarness(fixture = "tests/fixtures/dialogHarness.tsx"
   const root = process.cwd();
   const localRequire = createRequire(path.join(root, "package.json"));
   const productionModule = (name: string, file: string) => path.join(path.dirname(localRequire.resolve(name)), "cjs", file);
+  const mode = environment.NODE_ENV === "development" ? "development" : "production";
   const libraries: Record<string, string> = {
-    react: productionModule("react", "react.production.js"),
-    "react/jsx-runtime": productionModule("react", "react-jsx-runtime.production.js"),
-    "react-dom": productionModule("react-dom", "react-dom.production.js"),
-    "react-dom/client": productionModule("react-dom", "react-dom-client.production.js"),
-    scheduler: productionModule("scheduler", "scheduler.production.js"),
+    react: productionModule("react", `react.${mode}.js`),
+    "react/jsx-runtime": productionModule("react", `react-jsx-runtime.${mode}.js`),
+    "react-dom": productionModule("react-dom", `react-dom.${mode}.js`),
+    "react-dom/client": productionModule("react-dom", `react-dom-client.${mode}.js`),
+    scheduler: productionModule("scheduler", `scheduler.${mode}.js`),
     "qrcode-generator": localRequire.resolve("qrcode-generator"),
     "next/dynamic": path.join(root, "tests/fixtures/dynamicMock.tsx"),
   };

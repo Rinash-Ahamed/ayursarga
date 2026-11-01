@@ -16,4 +16,5 @@ const modules = [
   "@/services/payments/consultationCheckout",
   "@/services/consultations/cancellationPolicyService",
 ];
-export const portalUiBundle = bundleDialogHarness("tests/fixtures/portalUiHarness.tsx", Object.fromEntries(modules.map((name) => [name, "tests/fixtures/portalUiMocks.tsx"])), { NEXT_PUBLIC_AYU_ONLINE: "true" });
+// Keep React diagnostics enabled so duplicate keys are caught by browser checks.
+export const portalUiBundle = bundleDialogHarness("tests/fixtures/portalUiHarness.tsx", Object.fromEntries(modules.map((name) => [name, "tests/fixtures/portalUiMocks.tsx"])), { NEXT_PUBLIC_AYU_ONLINE: "true", NODE_ENV: "development" });

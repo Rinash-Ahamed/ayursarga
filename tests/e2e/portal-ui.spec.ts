@@ -75,6 +75,8 @@ test("duplicate consultant responses stay unique through editing and loading ano
 });
 
 test("consultant Add/Edit stages optional photos and saves the chosen title without exposing idle uploads", async ({ page }) => {
+  const keyWarnings: string[] = [];
+  page.on("console", message => { if (/same key|unique.*key/i.test(message.text())) keyWarnings.push(message.text()); });
   await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
   await mount(page, "admin-consultants");
   const photo = { name: "portrait.png", mimeType: "image/png", buffer: Buffer.from("photo-fixture") };
@@ -82,6 +84,7 @@ test("consultant Add/Edit stages optional photos and saves the chosen title with
   await expect(page.getByLabel("Consultant photo", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Edit", exact: true }).click();
   await page.getByLabel("Consultant photo", { exact: true }).setInputFiles(photo);
+  expect(keyWarnings).toEqual([]);
   expect(await uploads()).toHaveLength(0);
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(page.getByLabel("Consultant photo", { exact: true })).toHaveCount(0);
