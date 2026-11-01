@@ -10,6 +10,7 @@ import { ConsultantsManager } from "@/components/admin/ConsultantsManager";
 import { UsersList } from "@/components/admin/UsersList";
 import { AdminBookings } from "@/components/admin/AdminBookings";
 import { AdminAvailability } from "@/components/admin/AdminAvailability";
+import { AdminSecurity } from "@/components/admin/AdminSecurity";
 import { AdminAuditLogs } from "@/components/admin/AdminAuditLogs";
 import { HospitalDashboard } from "@/components/hospital/HospitalDashboard";
 import { HospitalProfile } from "@/components/hospital/HospitalProfile";
@@ -33,6 +34,8 @@ import { PortalShell } from "@/components/portal/PortalShell";
 
 declare global { interface Window { mountPortalUi: (screen: string) => void; unmountPortalUi?: () => void; } }
 const screens = {
+  "admin-settings": <AdminSecurity enabled />,
+  "admin-settings-disabled": <AdminSecurity enabled={false} />,
   "admin-cancellation-settings": <PortalShell role="admin" title="Settings"><ConsultationCancellationSettings /></PortalShell>,
   "consumer-consultations-policy": <ConsultationBookings role="consumer" />,
   "consumer-consultations-expired": <ConsultationBookings role="consumer" />,
@@ -41,10 +44,16 @@ const screens = {
   "password-action": <PasswordActionForm />,
   "admin-dashboard": <AdminDashboard />, "admin-hospitals": <HospitalsManager />, "admin-details": <AdminHospitalDetails hospitalId="centre" />,
   "admin-hospital-cards": <HospitalsManager />,
+  "admin-hospitals-status-order": <HospitalsManager />,
+  "admin-consultants-status-order": <ConsultantsManager />,
+  "admin-users-status-order": <UsersList />,
+  "hospital-services-status-order": <ServicesManager />,
+  "admin-packages-status-order": <AdminHospitalDetails hospitalId="centre" />,
   "admin-dashboard-consultations-unavailable": <AdminDashboard />,
   "admin-dashboard-consultations-zero": <AdminDashboard />,
   "admin-consultants": <ConsultantsManager />, "admin-users": <UsersList />, "admin-bookings": <AdminBookings />,
   "admin-users-no-date": <UsersList />,
+  "admin-user-cards": <UsersList />,
   "admin-availability": <AdminAvailability />, "admin-audits": <AdminAuditLogs />,
   "admin-security-audits": <AdminAuditLogs />,
   "admin-hospitals-empty": <HospitalsManager />, "admin-consultants-empty": <ConsultantsManager />,

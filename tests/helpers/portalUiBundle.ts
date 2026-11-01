@@ -10,6 +10,7 @@ const modules = [
   "@/services/consultations/consultationService",
   "@/services/auth/passwordActionService",
   "@/services/auth/adminMfaService",
+  "@/services/auth/adminMfaReplacementService",
   "@/services/billing/invoiceService",
   "@/services/billing/consultantFinanceService",
   "@/services/payments/consultationCheckout",

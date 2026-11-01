@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useDeferredValue, useEffect, useRef, useState, type FormEvent } from "react";
 import type { HospitalDocument } from "@/features/firestore/models";
-import type { QueryPageOptions } from "@/services/firestore/firestoreService";
+import type { StatusOrderedCursor } from "@/services/firestore/statusOrderedQuery";
 import { createHospital, listAllHospitals, getHospitalPackageSummaries } from "@/services/hospitals/hospitalService";
 import type { HospitalPackageSummary } from "@/features/hospitals/packageSummary";
 import { formatDisplayDateTime } from "@/utils/date";
@@ -27,8 +27,8 @@ export function HospitalsManager() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const deferredSearch = useDeferredValue(searchTerm);
-  const loader = useCallback((cursor: QueryPageOptions["cursor"]) => listAllHospitals({ pageSize: 20, cursor }, deferredSearch), [deferredSearch]);
-  const { errorNotification: loadErrorNotification, items, error: loadError, isLoading, hasMore, reload, loadMore } = usePaginatedList<HospitalDocument>(loader, "We could not load the hospital list. Refresh the page and try again.");
+  const loader = useCallback((cursor: StatusOrderedCursor | null) => listAllHospitals({ pageSize: 20, cursor }, deferredSearch), [deferredSearch]);
+  const { errorNotification: loadErrorNotification, items, error: loadError, isLoading, hasMore, reload, loadMore } = usePaginatedList<HospitalDocument, StatusOrderedCursor>(loader, "We could not load the hospital list. Refresh the page and try again.");
   const error = actionError ?? loadError;
   const summaryCache = useRef<Record<string, HospitalPackageSummary>>(Object.create(null));
   const [summaries, setSummaries] = useState<Record<string, HospitalPackageSummary>>({});
@@ -124,17 +124,10 @@ export function HospitalsManager() {
     <PortalToast message={actionMessage} notification={actionMessageNotification} />
     {items.length > 0 && <div className="portal-actions portal-hospital-status-toolbar"><button className="portal-button secondary" type="button" disabled={summaryLoading} onClick={() => { summaryCache.current = Object.create(null); setSummaries({}); setSummaryError(false); setSummaryRetry(value => value + 1); }}>Refresh package status</button>{summaryError && <p className="portal-form-error" role="alert">Package status could not be loaded. Choose Refresh package status to try again.</p>}</div>}
     <div className="admin-card-layout"><div className="portal-list admin-card-grid admin-hospital-grid">{items.map((item) => <Link className="portal-card portal-card-link admin-hospital-card" href={`/admin/hospitals/${encodeURIComponent(item.id)}`} key={item.id}>
-      <div className="portal-row-heading"><h3>{item.name}</h3><span className="portal-status" data-status={item.status}>{formatStatus(item.status)}</span></div>
-      <dl className="admin-card-facts">
-        {item.legalName && item.legalName !== item.name && <div><dt>Legal name</dt><dd>{item.legalName}</dd></div>}
-        <div><dt>Location</dt><dd>{[...new Set([item.city, item.district, item.state].filter(Boolean))].join(", ") || "Not provided"}</dd></div>
-        <div><dt>Email</dt><dd>{item.email || "Not provided"}</dd></div>
-        <div><dt>Hospital phone</dt><dd>{item.hospitalPhone1 || item.phone || "Not provided"}{item.hospitalPhone2 && <span className="admin-card-secondary-contact">{item.hospitalPhone2}</span>}</dd></div>
-        <div><dt>Owner WhatsApp</dt><dd>{item.phone || "Not provided"}</dd></div>
-        <div><dt>Commission</dt><dd>{item.commissionPercentage}%</dd></div>
-        <div><dt>Created</dt><dd>{formatDisplayDateTime(item.createdAt, "Not recorded")}{item.createdAt && " IST"}</dd></div>
-      </dl>
-      <div className="admin-package-status" aria-label={`Package approval for ${item.name}`}>
+      <div className="admin-hospital-header">
+      <h3>{item.name}</h3>
+      <div className="admin-package-status" aria-label={`Hospital and package status for ${item.name}`}>
+        <span className="portal-status" data-status={item.status}>{formatStatus(item.status)}</span>
         {!Object.hasOwn(summaries, item.id) ? <span className="portal-status">{summaryError ? "Package status unavailable" : "Checking package status…"}</span> : summaries[item.id].total === 0 ? <span className="portal-status">No packages added</span> : <>
           {summaries[item.id].pending > 0 && <span className="portal-status" data-status="pending">Package Approval Pending · {summaries[item.id].pending}</span>}
           {summaries[item.id].approved > 0 && <span className="portal-status" data-status="active">Packages Approved · {summaries[item.id].approved}</span>}
@@ -142,6 +135,16 @@ export function HospitalsManager() {
           {summaries[item.id].draft > 0 && <span className="portal-status">Package Drafts · {summaries[item.id].draft}</span>}
         </>}
       </div>
+      </div>
+      <dl className="admin-card-facts">
+        {item.legalName && item.legalName !== item.name && <div className="admin-hospital-fact-wide"><dt>Legal name</dt><dd>{item.legalName}</dd></div>}
+        <div className="admin-hospital-fact-wide"><dt>Location</dt><dd>{[...new Set([item.city, item.district, item.state].filter(Boolean))].join(", ") || "Not provided"}</dd></div>
+        <div><dt>Email</dt><dd>{item.email || "Not provided"}</dd></div>
+        <div><dt>Owner WhatsApp</dt><dd>{item.phone || "Not provided"}</dd></div>
+        <div><dt>Hospital phone</dt><dd>{item.hospitalPhone1 || item.phone || "Not provided"}{item.hospitalPhone2 && <span className="admin-card-secondary-contact">{item.hospitalPhone2}</span>}</dd></div>
+        <div><dt>Created</dt><dd>{formatDisplayDateTime(item.createdAt, "Not recorded")}{item.createdAt && " IST"}</dd></div>
+        <div><dt>Commission</dt><dd>{item.commissionPercentage}%</dd></div>
+      </dl>
       <div className="portal-actions">
         <span className="portal-button">View details</span>
       </div>

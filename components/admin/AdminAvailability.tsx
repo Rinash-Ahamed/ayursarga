@@ -93,6 +93,7 @@ export function AdminAvailability() {
   }
 
   return <PortalShell role="admin" title="Availability">
+    <div className="portal-flow-page">
     <form className="portal-card portal-form" onSubmit={createBlock}>
       <div className="full portal-section-heading"><h2>Block hospital dates</h2><p>Use this when a hospital requests an availability block by phone. Portal requests can be approved below.</p></div>
       <label className="full portal-availability-hospital-search">Hospital *
@@ -125,6 +126,7 @@ export function AdminAvailability() {
       </article>)}
     </div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} page={page} canGoBack={canGoBack} onPrevious={previousPage} onLoadMore={nextPage} />
+    </div>
     <PortalDialog open={review !== null} title={review?.action === "reject" ? "Reject availability request" : "Approve availability request"}
       message={`Are you sure you want to ${review?.action ?? "approve"} this availability request?`}
       tone={review?.action === "reject" ? "danger" : "default"} confirmLabel="Confirm" busy={busy !== null}

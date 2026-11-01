@@ -42,6 +42,18 @@ test("capture verification atomically confirms exactly one booking and records a
   assert.equal(f.values("notifications").length, 1); assert.equal(f.values("bookings").length, 0);
 });
 
+test("new paid bookings snapshot the consultant title into booking finance and both recipient emails", async () => {
+  const f = consultationPaymentFixture();
+  f.records.set("consultants/AS001", { ...paidConsultant, title: "Dr.", name: "Shafna" });
+  const checkout = (await (await prepare(f)).json()).checkout;
+  assert.equal(f.values("consultationPaymentIntents")[0].draft.consultantName, "Dr. Shafna");
+  f.capture(checkout);
+  assert.equal((await verify(f, checkout.intentId)).status, 200);
+  assert.equal(f.values("consultationBookings")[0].consultantName, "Dr. Shafna");
+  assert.equal(f.values("consultationFinancials")[0].consultantName, "Dr. Shafna");
+  assert.ok(f.values("consultationEmailEvents").every(event => event.payload.providerName === "Dr. Shafna"));
+});
+
 test("unauthorized, forged, authorized-only, amount-mismatched payments cannot confirm a booking", async () => {
   for (const actor of [{ role: "hospital" }, { role: "admin" }]) assert.equal((await prepare(consultationPaymentFixture({ actor }))).status, 403);
   const f = consultationPaymentFixture(); const checkout = (await (await prepare(f)).json()).checkout;

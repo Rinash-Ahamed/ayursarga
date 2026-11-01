@@ -4,6 +4,7 @@ import { readConsultantAvailability } from "@/features/consultations/availabilit
 import type { PublicConsultant } from "@/features/consultations/types";
 import { getConsultantPricing } from "@/features/consultants/pricing";
 import { consultantPhotoUrl } from "@/features/consultants/photo";
+import { consultantDisplayName } from "@/features/consultants/name";
 
 /** Whitelist only: no contact data, address, emergency details or audit metadata. */
 export function publicConsultantProjection(id: string, data: Record<string, unknown>, serviceId: string): PublicConsultant | null {
@@ -28,7 +29,7 @@ export function publicConsultantProjection(id: string, data: Record<string, unkn
     preferredSlotTimings[slot] = { startTime: timing.startTime, endTime: timing.endTime };
   }
   if (!preferredTimeSlots.length) return null;
-  return { id, imageUrl: consultantPhotoUrl(data.imageUrl, id), name: data.name.trim().slice(0, 120), designation: typeof data.designation === "string" ? data.designation.slice(0, 120) : "",
+  return { id, imageUrl: consultantPhotoUrl(data.imageUrl, id), name: consultantDisplayName(data), designation: typeof data.designation === "string" ? data.designation.slice(0, 120) : "",
     qualification: typeof data.qualification === "string" ? data.qualification.slice(0, 200) : "",
     yearsExperience: typeof data.yearsExperience === "number" && Number.isFinite(data.yearsExperience) ? data.yearsExperience : 0,
     consultantCharge: pricing.totalCharge, ...availability, preferredTimeSlots, preferredSlotTimings };

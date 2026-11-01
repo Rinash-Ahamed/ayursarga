@@ -2,7 +2,9 @@
 
 import { useCallback, useMemo, useRef, useState, type FormEvent } from "react";
 import type { ServiceDocument } from "@/features/firestore/models";
-import { emptyQueryPage, type DocumentRecord, type QueryPageOptions } from "@/services/firestore/firestoreService";
+import type { DocumentRecord } from "@/services/firestore/firestoreService";
+import { inactiveLast } from "@/utils/statusOrder";
+import type { StatusOrderedCursor } from "@/services/firestore/statusOrderedQuery";
 import { archiveService, createService, listHospitalServices, updateService, submitService } from "@/services/hospitals/serviceService";
 import { hasPublishedPackage, workingPackage, packageReviewLabel } from "@/features/hospitals/packageReview";
 import {
@@ -145,15 +147,15 @@ export function ServicesManager() {
   const [createFormKey, setCreateFormKey] = useState(0);
   const [hasPackageAmount, setHasPackageAmount] = useState(false);
   const deferredSearch = useDebouncedValue(search.trim(), 300);
-  const loader = useCallback((cursor: QueryPageOptions["cursor"]) => hospitalId
+  const loader = useCallback((cursor: StatusOrderedCursor | null) => hospitalId
     ? listHospitalServices(hospitalId, { pageSize: 20, cursor }, deferredSearch)
-    : Promise.resolve(emptyQueryPage<ServiceDocument>()), [deferredSearch, hospitalId]);
-  const { errorNotification: loadErrorNotification, items, error: loadError, isLoading, hasMore, reload, loadMore, patchItem, removeItem } = usePaginatedList<ServiceDocument>(
+    : Promise.resolve({ documents: [], cursor: null, hasMore: false }), [deferredSearch, hospitalId]);
+  const { errorNotification: loadErrorNotification, items, error: loadError, isLoading, hasMore, reload, loadMore, patchItem, removeItem } = usePaginatedList<ServiceDocument, StatusOrderedCursor>(
     loader,
     "We could not load your packages. Refresh the page and try again.",
   );
   const usedInCreate = useMemo(() => usedProcedures(items.map(workingPackage)), [items]);
-  const orderedItems = useMemo(() => sortPackagesByDuration(items.map(workingPackage)), [items]);
+  const orderedItems = useMemo(() => inactiveLast(sortPackagesByDuration(items.map(workingPackage))), [items]);
 
   function beginAction(id: string) {
     setBusyId(id);

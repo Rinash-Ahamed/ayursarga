@@ -1,6 +1,220 @@
 # Session handoff
 
-Updated: 31 October 2026 (Asia/Calcutta).
+Updated: 1 November 2026 (Asia/Calcutta).
+
+## Consultant Add/Edit photos and optional titles (1 November 2026)
+
+- v4.30.0 groups related consultant form features. Photo selection now lives in
+  Add/Edit forms only, hidden on idle cards. Shared picker validates JPG/PNG/WebP
+  up to 8MB, stages the file and supports clearing selection without removing an
+  existing portrait. Cancel uploads nothing. Creation/profile edits complete
+  first, then the shared upload helper calls the unchanged Admin photo endpoint
+  with its expected-image URL header. Profile payloads never contain imageUrl.
+  Photo-only failures report the saved consultant/partial success, close the
+  completed form and refresh current state rather than recreating the record or
+  silently claiming photo success. A synchronous save guard prevents duplicate
+  Add/Edit/status submissions. Existing Storage files are never deleted.
+- Added optional title field Dr./Mr./Ms./Mrs. in Add/Edit, validated through the
+  existing server whitelist and included in atomic consultant/audit writes.
+  Omitted title preserves older clients/records; empty string clears selection.
+  Shared formatter prefixes Admin cards and safe public projection names without
+  duplicating manually entered prefixes. New payment drafts, booking details,
+  Finance and Consumer/Consultant emails inherit the titled snapshot. Historical
+  bookings keep original names; no retroactive data rewrite or extra name reads.
+  Designation spans its form row so charge/commission remain aligned as a pair.
+- Thirty-seven focused local tests passed: photo endpoint permission/encoding/
+  revision handling; title validation, server creation/update audit persistence,
+  privacy projections; new paid booking/finance/both email titled snapshots;
+  availability, pricing, payment and settlement regressions. Six focused mocked
+  desktop/320px-phone/mobile-WebKit browser cases passed: Edit-only uploads,
+  staged cancel, save photo/title, invalid file, create/photo partial failure
+  without duplicate creation, legacy validation and availability/pricing edits.
+  Initial legacy browser assertion matched both the price and new photo helper;
+  narrowed to the price helper and all six passed on rerun.
+- No build/lint/typecheck, emulator/deployed permission checks, live data changes,
+  emails or deployment. Existing Admin-only server endpoints/rules are reused;
+  no rule/index changes for these fields. App deployment is needed.
+
+## Compact booking cards across portals (1 November 2026)
+
+- v4.29.8 tightens shared hospital/consultation booking-card padding, section and
+  fact gaps, title/package/amount sizing and notes. Wide operational cards use
+  three fact columns; smaller layouts retain existing responsive structure.
+  Keep all details, cancellation guidance and 44px action controls. Empty online
+  action strips are hidden only when they contain no actions. No backend changes.
+- Screenshot review found mobile Admin commission and package amount occupying
+  the same grid row/cell. Added explicit commission row, bounded two-column mobile
+  metadata and wrapping for long amounts/badges. Added collision/overflow checks;
+  final mobile screenshot confirms amounts, commission and badge remain separate.
+- Nine distinct focused mocked browser checks passed across desktop, 320px phone
+  and mobile WebKit: five booking/consultation surfaces, compact spacing, controls,
+  metadata collisions, cancellation deadlines/actions and Hospital start/complete.
+  An existing cancellation test still expected superseded developer-style copy;
+  updated that assertion to the current unchanged legacy-policy guidance and all
+  three cancellation cases passed on rerun. Final three layout cases reran after
+  the commission fix. Desktop/mobile screenshots reviewed. No build/lint/typecheck,
+  live mutations, rules/index changes or deployment for this styling task.
+
+## Firestore indexes deployed; build pending (1 November 2026)
+
+- Following owner reauthentication and explicit redeploy approval, ran scoped
+  `firebase deploy --only firestore:indexes --project ayursarga-connect
+  --non-interactive` successfully. No rules, Storage or application deployment.
+- Read-only `firestore:indexes --pretty` checks confirm the new Users
+  role/status/createdAt index exists but remains CREATING, as do the five new
+  hospital/consultant ordering indexes and two earlier package-summary indexes.
+  Existing services hospitalId/status/name index is READY. Consumer/Hospital
+  Users and other affected queries may still fail until Firebase finishes builds.
+  Deployment success is not query-readiness or proof of live workflow success.
+- No operational records read/changed, build/lint/typecheck or app version bump.
+
+## Whole bell highlights for new notifications (1 November 2026)
+
+- v4.29.7 adds a steady forest/emerald background, white bell and subtle outer
+  ring to the shared notification button while data-attention is set. The whole
+  button remains highlighted through repeated snapshots until its existing
+  acknowledgement logic clears attention on opening/viewing. Existing icon/count
+  pulse, unread counts, silent history, no audio and reduced-motion outline stay.
+  No notification service, read/write or permission changes.
+- Three inbox lifecycle unit tests and two focused desktop/mobile WebKit browser
+  tests passed for both Admin and Hospital: new-arrival highlight, repeated
+  snapshots, click clears highlight without falsely marking read, subsequent
+  arrivals and reduced-motion styling. Initial new CSS assertion captured an
+  intermediate transition color; corrected to await the final brand color and
+  reran successfully. No build/lint/typecheck or deployment.
+
+## Inactive records last across operational lists (1 November 2026)
+
+- v4.29.6 adds shared bounded status-phase pagination for hospital, user,
+  consultant and operational package queries: exhaust active/pending records,
+  then page inactive records with the original within-group sort/search bounds.
+  Uses at most two bounded queries per page, including phase-boundary lookahead;
+  no whole-collection reads or stored-field migrations. Default archive exclusion
+  remains; consultant explicit archive visibility is preserved. Valid legacy
+  status records with absent archivedAt keep their previous visibility.
+- Shared usePaginatedList stably partitions loaded records so local inactive/
+  active changes move immediately. Both package managers apply the same partition
+  after duration sorting, retaining 7/10/14/etc order within each group. Booking
+  lifecycle states and public active-only eligibility remain unchanged.
+- Added six declared composite indexes: hospitals status+createdAt/name; users
+  role+status+createdAt; consultants status+employeeSequence/name/employeeId.
+  The operational services hospitalId+status+name index already exists locally.
+  These indexes have NOT been deployed: deploy/await readiness before releasing
+  the app change. No Firestore rule changes or new permissions.
+- Twenty-five focused local tests passed (phase cursors, boundaries, filters,
+  search, no duplicates, stable partition, index declarations, user access and
+  package/booking approval regressions). Four mocked desktop/mobile WebKit
+  browser cases passed covering all five operational list surfaces, both Users
+  groups, local status changes and package duration order. Four pagination tests
+  reran after tightening archive query filters. No build/lint/typecheck, emulator
+  or deployed-index/permission verification, live mutations or deployment.
+
+## Hospital contact facts aligned higher (1 November 2026)
+
+- v4.29.5 pairs Email / Owner WhatsApp in one facts row, then Hospital phone /
+  Created, with Commission below. Both right-hand details move up; long email
+  values continue wrapping. Header/badges, stored data and actions unchanged.
+- Three focused mocked browser tests passed desktop, 320px phone and mobile
+  WebKit, including paired label alignment, overflow and package-status refresh.
+  No build/lint/typecheck or deployment.
+
+## Hospital name and badges share a row (1 November 2026)
+
+- v4.29.4 refines the hospital header to a two-column row: name on the left,
+  right-aligned hospital/package badges on the right. Both begin at the same
+  vertical position; long names and badges wrap within their own columns without
+  overlap. Removed the superseded hospital heading flex rules. No logic changes.
+- Three focused mocked browser checks passed desktop, 320px phone and mobile
+  WebKit: same-row header positioning, no overflow, card data and status refresh.
+  No build/lint/typecheck or deployment.
+
+## Hospital badges at top right (1 November 2026)
+
+- v4.29.3 places hospital status and package-review badges together at the top
+  right of each Admin hospital card, before the name. Badges wrap within normal
+  document flow, without absolute positioning or overlap. Existing compact
+  facts, counts, links and refresh/error handling remain unchanged.
+- Three focused mocked browser checks passed desktop, 320px phone and mobile
+  WebKit, asserting top/right placement, wrapping/no overflow and package-status
+  refresh behavior. No build/lint/typecheck, backend changes or deployment.
+
+## Compact Admin hospital cards (1 November 2026)
+
+- v4.29.2 groups hospital Active/Pending/Inactive status with all package-review
+  badges directly below the hospital name, rather than separating approvals at
+  the bottom. Reduced padding, section gaps and title sizing; paired phone and
+  owner contact, commission and Created in two-column facts. Legal name, location
+  and email retain full width and wrap. All details, counts and navigation remain.
+- Four focused mocked browser checks passed desktop, tablet, 320px phone and
+  mobile WebKit: compact spacing, badge placement before facts, no overflow,
+  three-column maximum, package-summary failure/refresh and correct details href.
+  No backend/rules/data changes, build/lint/typecheck or deployment.
+
+## User-card contact disclosure (1 November 2026)
+
+- v4.29.1 keeps name, email, top-right status and Created visible on Admin Users
+  cards. Phone and address appear under native keyboard/touch-accessible Show
+  more / Show less in both groups, only when contact details exist. Each card
+  expands independently; group switches reset disclosure state. Long addresses
+  wrap fully without truncation. Existing equal-row grid and bottom actions stay.
+- Six focused mocked browser checks passed wide desktop, 320px phone and mobile
+  WebKit: five-column grid, overflow, both roles, collapsed defaults, independent
+  expansion, long address and keyboard collapse. No API/data/rules changes,
+  build/lint/typecheck or deployment. Existing unrelated changes preserved.
+
+## Admin Users reversible account status and compact grids (1 November 2026)
+
+- v4.29.0 replaces Consumer Remove/archive in Admin Users with Make inactive /
+  Make active and adds the same controls to Hospital accounts. Inactive accounts
+  stay in the list; profiles, Auth accounts, bookings and historical archives are
+  preserved. Hospital account access is separate from centre/publication status.
+- New Admin-only PATCH /api/admin/users/[userId]/status uses the existing native
+  MFA authorization, bounded input, transactionally read current profile, audit
+  revision check, atomic status/audit writes and no-op repeat handling. Rejects
+  Admin/self targets, archives and stale changes. Hospital reactivation requires
+  its active non-archived assigned centre and matching official email. Disabled
+  Auth accounts must use existing controlled setup/activation instead. No Auth
+  mutations, notification emails, booking updates or new client-write permission.
+- Shared PortalDialog confirms both directions; cancel makes no request, a
+  synchronous submission guard prevents repeats, failures remain in the dialog,
+  and successful changes patch the card without refetching the list. Removed
+  unused archiveConsumer client helper. Existing active-profile API/rules gates
+  deny inactive operational access; an already open UI may remain until refresh,
+  but its subsequent protected requests are denied. No claim of instant signout.
+- Both Users groups have compact, wrapping cards with full-width 44px action
+  controls, top-right status badges and container-based 1/2/3/4/5-column layouts. Five columns start at
+  1150px available content width; phone layouts retain readable single cards.
+  Hospital-centre grids and other screens are unchanged by this grid update.
+- Fifteen focused local backend/auth tests passed, including both status
+  directions, repeats, stale/archived/Admin denial, failed commits, centre and
+  email safeguards, and inactive profiles with otherwise valid tokens. Ten
+  focused mocked browser checks passed desktop/wide/tablet/narrow phone/WebKit
+  for status changes, cancel, retained cards, responsive grid gaps and overflow.
+  After the requested top-right badge adjustment, six final wide/narrow-phone/
+  mobile WebKit cases passed, including five-column and badge-position checks;
+  desktop and mobile grid screenshots were visually reviewed. Four status-route
+  tests reran successfully after the final input/legacy response refinements.
+- No build/lint/typecheck, deployed-permission/emulator tests, live data changes
+  or deployment requested/performed. Firestore rules/indexes unchanged; app must
+  be deployed for this UI and endpoint. Prior unrelated working-tree edits kept.
+
+## Admin Availability and Settings card spacing (1 November 2026)
+
+- v4.28.3 reproduces zero separation between the full Settings security and
+  cancellation-policy cards. Earlier settings fixtures covered only the policy
+  section, not the full page. Availability had independent outer/inner spacing.
+- Both pages now use the existing portal-flow-page section stack (20px desktop,
+  16px compact screens). Its availability list removes the competing top margin
+  and uses 20px between request cards. No fixed heights, positioning hacks,
+  business/API/permission changes or new scroll locks. Dialogs remain body-level.
+- Added full Settings enabled/disabled fixtures. Fifteen focused browser checks
+  passed desktop, tablet, narrow phone, mobile landscape and mobile WebKit: card
+  boundaries/gaps, top/middle/bottom scrolling, no horizontal overflow, policy
+  edit/cancel and availability confirmation/duplicate-submit behavior. Desktop
+  screenshots of both complete pages inspected. Baseline test failed on the
+  original zero-gap Settings layout, then passed after the shared-flow fix.
+- No physical-device/live workflow tests, build/lint/typecheck or deployment.
+  Existing unrelated next-env.d.ts changes preserved.
 
 ## Hospital deactivation replaces the top Delete action (31 October 2026)
 

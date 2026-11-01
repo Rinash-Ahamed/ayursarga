@@ -5,17 +5,29 @@ import type { ConsultantDocument } from "@/features/firestore/models";
 import type { ConsultantFields } from "@/features/consultants/validation";
 import { validateConsultantFields } from "@/features/consultants/validation";
 import { COLLECTIONS } from "@/constants/firestore";
-import { runFilteredQuery, type QueryPageOptions } from "@/services/firestore/firestoreService";
+import { runStatusOrderedQuery, type StatusOrderedOptions } from "@/services/firestore/statusOrderedQuery";
 import { authorizedApiRequest } from "@/services/api/client";
+import { consultantPhotoFileError } from "@/features/consultants/photo";
 
-export function listConsultants(options: Pick<QueryPageOptions, "pageSize" | "cursor"> = {}, searchTerm = "") {
+export async function uploadConsultantPhoto(consultantId: string, file: File, expectedImageUrl?: string | null) {
+  const error = consultantPhotoFileError(file);
+  if (error) throw new Error(error);
+  const result = await authorizedApiRequest<{ imageUrl: string }>(`/api/admin/consultants/${encodeURIComponent(consultantId)}/image`, {
+    method: "POST", headers: { "Content-Type": file.type, "X-Expected-Image-Url": expectedImageUrl ?? "" }, body: file,
+    signedOutMessage: "Sign in as Admin to upload a consultant photo.", failureMessage: "We could not save the consultant photo. Refresh to check the current photo before trying again.",
+  });
+  if (typeof result.imageUrl !== "string" || !result.imageUrl) throw new Error("Refresh to check whether the photo was saved before trying again.");
+  return result.imageUrl;
+}
+
+export function listConsultants(options: StatusOrderedOptions = {}, searchTerm = "") {
   const trimmedSearch = searchTerm.trim();
   const searchingByEmployeeId = /^as\d*/i.test(trimmedSearch);
   const prefix = searchingByEmployeeId
     ? trimmedSearch.toUpperCase()
     : trimmedSearch ? `${trimmedSearch.charAt(0).toUpperCase()}${trimmedSearch.slice(1)}` : "";
   const sortField = prefix ? (searchingByEmployeeId ? "employeeId" : "name") : "employeeSequence";
-  return runFilteredQuery<ConsultantDocument>({
+  return runStatusOrderedQuery<ConsultantDocument>({
     collectionPath: COLLECTIONS.consultants,
     sort: { field: sortField, direction: prefix ? "asc" : "desc" },
     startAtValues: prefix ? [prefix] : undefined,

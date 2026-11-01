@@ -25,7 +25,9 @@ const autoConfirmedBooking = { ...bookings[0], status: "confirmed", treatmentSta
 const availability = ["pending", "blocked", "rejected"].map((status, index) => ({ ...metadata, id: `availability-${index}`, hospitalId: "centre", hospitalName: hospital.name, startDate: now, endDate: now, reason: "Maintenance and scheduled treatment availability information", status, source: "hospital" }));
 const consultant = { ...metadata, id: "consultant", employeeId: "AS001", employeeSequence: 1, name: "Consultant With a Longer Name", email: hospital.email, contactNo: "9876543210", whatsappNo: "9876543210", qualification: "BAMS, MD", yearsExperience: 3.5, status: "active", lastWorkedCompany: "Ayurvedic Care Centre", address: hospital.address, emergencyContactNo: "9876543210" };
 const user = { ...metadata, id: "actor", uid: "actor", name: hospital.name, email: hospital.email, role: "consumer", status: "active", phone: "9876543210", hospitalId: "centre", privacyConsentAt: now, privacyConsentVersion: CONSUMER_PRIVACY_NOTICE_VERSION, customerTermsAcceptedAt: now, customerTermsVersion: CUSTOMER_TERMS_VERSION };
-const page = (documents: unknown[]) => Promise.resolve({ documents, cursor: null, hasMore: false });
+const page = (documents: unknown[]) => Promise.resolve({ documents: portalUiState.screen.endsWith("-status-order") && documents.length
+  ? Array.from({ length: 4 }, (_, index) => ({ ...documents[index % documents.length] as object, id: `order-${index}`, status: index % 2 ? "active" : "inactive" }))
+  : documents, cursor: null, hasMore: false });
 const firebaseUser = { uid: "patient" };
 export const listInvoices = async () => ({ documents: [], cursor: null, hasMore: false });
 export const createInvoice = async (input: InvoiceInput) => {
@@ -100,7 +102,7 @@ export const getPublicHospital = async () => ({ ...hospital, blockedDateRanges: 
 export const getPublicHospitalService = async () => portalUiState.unavailablePackage ? null : { ...services[1], packageVersion: "a".repeat(64) };
 export const listAdminBookings = () => page(portalUiState.screen === "admin-bookings-empty" ? [] : operationalBookings());
 export const readDocumentsByIds = async (collectionPath: string, ids: string[]) => collectionPath === "hospitals" ? [hospital].filter((item) => ids.includes(item.id)) : collectionPath === "services" ? services.filter((item) => ids.includes(item.id)) : [];
-export const listUsers = () => page(portalUiState.screen === "admin-users-empty" ? [] : [portalUiState.screen === "admin-users-no-date" ? { ...user, createdAt: undefined } : user]);
+export const listUsers = (role: string) => page(portalUiState.screen === "admin-users-empty" ? [] : Array.from({ length: portalUiState.screen === "admin-user-cards" ? 10 : 1 }, (_, index) => ({ ...user, id: `${user.id}-${index}`, role, ...(portalUiState.screen === "admin-user-cards" ? { address: index === 0 ? `${hospital.address} ${"Long address and building details. ".repeat(12)}` : hospital.address } : {}), ...(portalUiState.screen === "admin-users-no-date" ? { createdAt: undefined } : {}) })));
 export const listConsultants = () => page(portalUiState.screen === "admin-consultants-empty" ? [] : [consultant]);
 export const listHospitalAvailabilityRequests = () => page(portalUiState.screen === "hospital-availability-empty" ? [] : availability);
 export const listAdminAvailabilityRequests = () => page(portalUiState.screen === "admin-availability-empty" ? [] : availability);
@@ -134,6 +136,7 @@ export const recordHospitalContractGeneration = async () => ({});
 export const confirmHospitalContractSigning = async () => ({});
 export const activateHospital = async () => ({});
 export const deactivateHospital = async () => ({ status: "inactive" });
+export const replaceAdminAuthenticator = async () => { throw new Error("Authenticator replacement is not performed by this layout fixture."); };
 export const archiveHospital = async () => ({ status: "archived" });
 export const createHospital = async () => {
   if ((globalThis as unknown as { duplicateCreation?: boolean }).duplicateCreation) throw Object.assign(new Error("This email is already used by a hospital. Open the existing record or use a different email."), { status: 409 });
@@ -167,12 +170,25 @@ export const updateTreatmentProgress = async (_id: string, treatmentStatus: Trea
   if (_id === autoConfirmedBooking.id) portalUiState.autoConfirmedTreatment = treatmentStatus;
   return { treatmentStatus, status: treatmentStatus === "completed" ? "completed" : "confirmed" };
 };
-export const archiveConsumer = async () => ({});
+export const userStatusCalls: string[] = [];
+Object.assign(globalThis, { userStatusCalls });
+export const setUserAccountStatus = async (_user: unknown, status: string) => {
+  userStatusCalls.push(status);
+  if ((globalThis as unknown as { failUserStatus?: boolean }).failUserStatus) throw new Error("Account update failed. Try again.");
+  return { status, lastAuditId: `status-${userStatusCalls.length}` };
+};
 export const createConsultant = async (input: unknown) => {
   if ((globalThis as unknown as { duplicateCreation?: boolean }).duplicateCreation) throw Object.assign(new Error("This email is already used by a consultant. Open the existing record or use a different email."), { status: 409 });
   portalUiState.consultantWrites.push(input); return "AS002";
 };
 export const updateConsultant = async (_id: string, input: unknown) => { portalUiState.consultantWrites.push(input); return {}; };
+export const consultantPhotoUploads: { id: string; name: string; expected?: string | null }[] = [];
+Object.assign(globalThis, { consultantPhotoUploads });
+export const uploadConsultantPhoto = async (id: string, file: File, expected?: string | null) => {
+  consultantPhotoUploads.push({ id, name: file.name, expected });
+  if ((globalThis as unknown as { failConsultantPhoto?: boolean }).failConsultantPhoto) throw new Error("Photo unavailable.");
+  return `https://firebasestorage.googleapis.com/v0/b/test/o/consultants%2F${id}%2Fimages%2F00000000-0000-0000-0000-000000000001.webp?alt=media&token=test`;
+};
 export const updateUserProfile = async () => { portalUiState.calls++; };
 export const setConsultantStatus = async () => ({});
 export const clearAllAuditLogs = async () => { auditMfaCalls.clears++; return 0; };

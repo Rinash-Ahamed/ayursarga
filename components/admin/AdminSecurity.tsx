@@ -26,6 +26,7 @@ export function AdminSecurity({ enabled }: { enabled: boolean }) {
     finally { form.current?.reset(); submitting.current = false; setBusy(false); }
   }
   return <PortalShell role="admin" title="Settings">
+    <div className="portal-flow-page">
     <section className="portal-card">
       <h2>Account security</h2>
       <p className="portal-form-note">Use this only when you still have access to your current authenticator. Your existing key will stop working on every device using this account. You will be signed out and must set up a new authenticator at your next sign-in.</p>
@@ -38,5 +39,6 @@ export function AdminSecurity({ enabled }: { enabled: boolean }) {
     </section>
     <PortalDialog open={confirm} title="Replace your authenticator?" message="The current authenticator will stop working on every device using this Admin account, and everyone will be signed out. Sign in again with your password and scan the new QR code. Your password and account details will stay unchanged." tone="danger" confirmLabel="Replace and sign out" busy={busy} onConfirm={() => void replace()} onCancel={() => { if (!busy) setConfirm(false); }} />
     <ConsultationCancellationSettings />
+    </div>
   </PortalShell>;
 }

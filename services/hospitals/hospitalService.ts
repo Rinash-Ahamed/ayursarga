@@ -6,9 +6,9 @@ import type { HospitalFields } from "@/features/hospitals/validation";
 import { validateHospitalFields } from "@/features/hospitals/validation";
 import { COLLECTIONS } from "@/constants/firestore";
 import {
-  readDocument, runFilteredQuery,
-  type QueryPageOptions,
+  readDocument,
 } from "@/services/firestore/firestoreService";
+import { runStatusOrderedQuery, type StatusOrderedOptions } from "@/services/firestore/statusOrderedQuery";
 import { authorizedApiRequest, authorizedMutationRequest } from "@/services/api/client";
 import type { HospitalPackageSummary } from "@/features/hospitals/packageSummary";
 
@@ -32,12 +32,12 @@ type HospitalProfileInput = Pick<HospitalDocument,
 
 export const getHospital = (id: string) => readDocument<HospitalDocument>(COLLECTIONS.hospitals, id);
 
-export function listAllHospitals(options: Pick<QueryPageOptions, "pageSize" | "cursor"> = {}, searchTerm = "") {
+export function listAllHospitals(options: StatusOrderedOptions = {}, searchTerm = "") {
   const trimmedSearch = searchTerm.trim();
   const namePrefix = trimmedSearch
     ? `${trimmedSearch.charAt(0).toUpperCase()}${trimmedSearch.slice(1)}`
     : "";
-  return runFilteredQuery<HospitalDocument>({
+  return runStatusOrderedQuery<HospitalDocument>({
     collectionPath: COLLECTIONS.hospitals,
     sort: namePrefix
       ? { field: "name", direction: "asc" }

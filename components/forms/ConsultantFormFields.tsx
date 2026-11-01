@@ -10,6 +10,7 @@ import { formatDisplayDate, toDateInputValue } from "@/utils/date";
 import { CONSULTATION_SERVICES } from "@/features/consultations/catalog";
 import { getConsultantPricing } from "@/features/consultants/pricing";
 import { formatCurrency } from "@/utils/currency";
+import { CONSULTANT_TITLES } from "@/features/consultants/name";
 
 type ConsultantDefaults = Partial<ConsultantDocument>;
 
@@ -34,8 +35,9 @@ export function ConsultantFormFields({ defaultValues = {}, errors }: {
   const pricing = getConsultantPricing(charge, commission);
 
   return <>
+    <label><span className="portal-field-label">Title / Prefix <small>(Optional)</small></span><select name="title" defaultValue={defaultValues.title ?? ""} aria-invalid={Boolean(errors.title)}><option value="">No title</option>{CONSULTANT_TITLES.map(title => <option key={title} value={title}>{title}</option>)}</select><FieldError field="title" errors={errors} /></label>
     <label>Name *<input name="name" defaultValue={defaultValues.name} required minLength={2} maxLength={120} autoComplete="name" aria-invalid={Boolean(errors.name)} /><FieldError field="name" errors={errors} /></label>
-    <label><span className="portal-field-label">Designation <small>(Optional)</small></span><input name="designation" defaultValue={defaultValues.designation} maxLength={120} aria-invalid={Boolean(errors.designation)} /><FieldError field="designation" errors={errors} /></label>
+    <label className="full"><span className="portal-field-label">Designation <small>(Optional)</small></span><input name="designation" defaultValue={defaultValues.designation} maxLength={120} aria-invalid={Boolean(errors.designation)} /><FieldError field="designation" errors={errors} /></label>
     <label>Consultant Charge (₹) *<input name="consultantCharge" type="number" value={charge} onChange={(event) => setCharge(event.target.value)} required min="0" step="0.01" inputMode="decimal" aria-invalid={Boolean(errors.consultantCharge)} /><FieldError field="consultantCharge" errors={errors} /></label>
     <label>Ayursarga Commission % *<input name="ayursargaCommissionPercentage" type="number" value={commission} onChange={(event) => setCommission(event.target.value)} required min="0" max="100" step="0.01" inputMode="decimal" aria-invalid={Boolean(errors.ayursargaCommissionPercentage)} /><FieldError field="ayursargaCommissionPercentage" errors={errors} /></label>
     <p className="full portal-form-note" aria-live="polite">Consumer total: <strong>{pricing ? formatCurrency(pricing.totalCharge) : "Enter charge and commission"}</strong>. Includes consultant charge plus Ayursarga commission.</p>

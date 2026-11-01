@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { ServiceDocument } from "@/features/firestore/models";
-import type { QueryPageOptions } from "@/services/firestore/firestoreService";
+import type { StatusOrderedCursor } from "@/services/firestore/statusOrderedQuery";
 import { listHospitalServices, reviewHospitalPackages } from "@/services/hospitals/serviceService";
 import { hasPublishedPackage, workingPackage, packageReviewLabel } from "@/features/hospitals/packageReview";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
@@ -14,6 +14,7 @@ import { PortalPagination } from "@/components/portal/PortalPagination";
 import { formatStatus } from "@/utils/text";
 import { packageProcedureEntries, packageTitle, sortPackagesByDuration } from "@/features/hospitals/packages";
 import { formatCurrency } from "@/utils/currency";
+import { inactiveLast } from "@/utils/statusOrder";
 
 export function AdminHospitalPackages({ hospitalId }: { hospitalId: string }) {
   const [selected, setSelected] = useState<string[]>([]);
@@ -24,14 +25,14 @@ export function AdminHospitalPackages({ hospitalId }: { hospitalId: string }) {
   const [message, setMessage, messageNotification] = useRepeatableMessage();
   const [actionError, setActionError, errorNotification] = useRepeatableMessage();
   const loader = useCallback(
-    (cursor: QueryPageOptions["cursor"]) => listHospitalServices(hospitalId, { pageSize: 20, cursor }),
+    (cursor: StatusOrderedCursor | null) => listHospitalServices(hospitalId, { pageSize: 20, cursor }),
     [hospitalId],
   );
-  const { errorNotification: loadErrorNotification, items, error, isLoading, hasMore, loadMore, patchItem } = usePaginatedList<ServiceDocument>(
+  const { errorNotification: loadErrorNotification, items, error, isLoading, hasMore, loadMore, patchItem } = usePaginatedList<ServiceDocument, StatusOrderedCursor>(
     loader,
     "We could not load this hospital's packages. Refresh the page and try again.",
   );
-  const orderedItems = useMemo(() => sortPackagesByDuration(items.map(workingPackage)), [items]);
+  const orderedItems = useMemo(() => inactiveLast(sortPackagesByDuration(items.map(workingPackage))), [items]);
   const pending = items.filter((item) => item.reviewStatus === "pending");
   const selectedPending = pending.filter((item) => selected.includes(item.id));
 

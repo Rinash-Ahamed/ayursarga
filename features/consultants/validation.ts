@@ -3,6 +3,7 @@ import { isValidPhoneNumber } from "@/utils/phone";
 import { isIsoDate } from "@/utils/date";
 import { CONSULTATION_SERVICES, consultationService, type ConsultationServiceId } from "@/features/consultations/catalog";
 import { getConsultantPricing, parseConsultantCharge, parseConsultantCommission } from "@/features/consultants/pricing";
+import { CONSULTANT_TITLES, type ConsultantTitle } from "@/features/consultants/name";
 
 export const CONSULTANT_TIME_SLOTS = ["morning", "noon", "evening"] as const;
 export const CONSULTANT_WEEK_DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
@@ -29,6 +30,7 @@ export function formatConsultantTimeSlot(slot: ConsultantTimeSlot, timings?: Con
 }
 
 export type ConsultantFields = {
+  title?: ConsultantTitle | "";
   name: string;
   designation: string;
   consultantCharge: number | null;
@@ -53,6 +55,7 @@ export type ConsultantValidationErrors = Partial<Record<ConsultantField, string>
 
 export function validateConsultantFields(input: Record<string, unknown>) {
   const data: ConsultantFields = {
+    ...(input.title === undefined ? {} : { title: input.title as ConsultantTitle | "" }),
     name: toTrimmedString(input.name, 120),
     designation: toTrimmedString(input.designation, 120),
     consultationServices: CONSULTATION_SERVICES.filter((service) => Array.isArray(input.consultationServices) && input.consultationServices.includes(service.id)).map((service) => service.id),
@@ -72,6 +75,7 @@ export function validateConsultantFields(input: Record<string, unknown>) {
     emergencyContactNo: toTrimmedString(input.emergencyContactNo, 25),
   };
   const errors: ConsultantValidationErrors = {};
+  if (input.title !== undefined && input.title !== "" && !CONSULTANT_TITLES.includes(input.title as ConsultantTitle)) errors.title = "Choose a title from the list.";
   if (input.availableDates != null && (!Array.isArray(input.availableDates) || input.availableDates.length > 31
     || input.availableDates.some((date: unknown) => typeof date !== "string" || !isIsoDate(date))
     || new Set(input.availableDates).size !== input.availableDates.length)) {
@@ -128,6 +132,7 @@ export function validateConsultantFields(input: Record<string, unknown>) {
 
 export function consultantFormValues(form: FormData): Record<string, unknown> {
   return {
+    title: form.get("title") ?? undefined,
     name: form.get("name"),
     designation: form.get("designation"),
     consultantCharge: form.get("consultantCharge"),

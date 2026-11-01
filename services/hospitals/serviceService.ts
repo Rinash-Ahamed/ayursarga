@@ -2,7 +2,7 @@
 
 import type { ServiceDocument } from "@/features/firestore/models";
 import { COLLECTIONS } from "@/constants/firestore";
-import { runFilteredQuery, type QueryPageOptions } from "@/services/firestore/firestoreService";
+import { runStatusOrderedQuery, type StatusOrderedOptions } from "@/services/firestore/statusOrderedQuery";
 import { authorizedApiRequest, authorizedMutationRequest } from "@/services/api/client";
 
 type ServiceInput = Pick<ServiceDocument,
@@ -12,14 +12,14 @@ type ServiceInput = Pick<ServiceDocument,
 
 export function listHospitalServices(
   hospitalId: string,
-  options: Pick<QueryPageOptions, "pageSize" | "cursor"> = {},
+  options: StatusOrderedOptions = {},
   searchTerm = "",
 ) {
   const trimmedSearch = searchTerm.trim();
   const namePrefix = trimmedSearch
     ? `${trimmedSearch.charAt(0).toUpperCase()}${trimmedSearch.slice(1)}`
     : "";
-  return runFilteredQuery<ServiceDocument>({
+  return runStatusOrderedQuery<ServiceDocument>({
     collectionPath: COLLECTIONS.services,
     filters: [{ field: "hospitalId", operator: "==", value: hospitalId }],
     sort: { field: "name", direction: "asc" },

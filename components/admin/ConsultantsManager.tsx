@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useDeferredValue, useState, type FormEvent } from "react";
+import { useCallback, useDeferredValue, useRef, useState, type FormEvent } from "react";
 import type { ConsultantDocument } from "@/features/firestore/models";
-import type { QueryPageOptions } from "@/services/firestore/firestoreService";
+import type { StatusOrderedCursor } from "@/services/firestore/statusOrderedQuery";
 import { CONSULTANT_WEEK_DAYS, CONSULTANT_DAY_LABELS, consultantFormValues, validateConsultantFields, formatConsultantTimeSlot, type ConsultantValidationErrors } from "@/features/consultants/validation";
-import { createConsultant, listConsultants, setConsultantStatus, updateConsultant } from "@/services/consultants/consultantService";
+import { createConsultant, listConsultants, setConsultantStatus, updateConsultant, uploadConsultantPhoto } from "@/services/consultants/consultantService";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalToast } from "@/components/portal/PortalToast";
@@ -21,28 +21,32 @@ import { consultationService } from "@/features/consultations/catalog";
 import { getConsultantPricing } from "@/features/consultants/pricing";
 import { ConsultantPhoto } from "@/components/consultants/ConsultantPhoto";
 import { ConsultantPhotoUpload } from "@/components/admin/ConsultantPhotoUpload";
+import { consultantDisplayName } from "@/features/consultants/name";
 
 export function ConsultantsManager() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<ConsultantValidationErrors>({});
   const [busyId, setBusyId] = useState<string | null>(null);
+  const saving = useRef(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
   const [actionError, setActionError, actionErrorNotification] = useRepeatableMessage();
   const [message, setMessage, messageNotification] = useRepeatableMessage();
   const [searchTerm, setSearchTerm] = useState("");
   const deferredSearch = useDeferredValue(searchTerm);
-  const loader = useCallback((cursor: QueryPageOptions["cursor"]) => listConsultants({ pageSize: 20, cursor }, deferredSearch), [deferredSearch]);
-  const { errorNotification: loadErrorNotification, items, error: loadError, isLoading, hasMore, reload, loadMore, patchItem } = usePaginatedList<ConsultantDocument>(loader, "We could not load the consultant list. Refresh and try again.");
+  const loader = useCallback((cursor: StatusOrderedCursor | null) => listConsultants({ pageSize: 20, cursor }, deferredSearch), [deferredSearch]);
+  const { errorNotification: loadErrorNotification, items, error: loadError, isLoading, hasMore, reload, loadMore, patchItem } = usePaginatedList<ConsultantDocument, StatusOrderedCursor>(loader, "We could not load the consultant list. Refresh and try again.");
 
   function resetEditor() {
     setEditingId(null);
+    setSelectedPhoto(null);
     setFieldErrors({});
     setActionError(null);
   }
 
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busyId) return;
+    if (busyId || saving.current) return;
     const form = event.currentTarget;
     const validation = validateConsultantFields(consultantFormValues(new FormData(form)));
     setFieldErrors(validation.errors);
@@ -53,14 +57,22 @@ export function ConsultantsManager() {
       focusFirstInvalidField(form);
       return;
     }
+    saving.current = true;
     setBusyId("create");
     try {
       const employeeId = await createConsultant(validation.data);
+      let photoError: string | null = null;
+      if (selectedPhoto) {
+        try { await uploadConsultantPhoto(employeeId, selectedPhoto); }
+        catch (caught) { photoError = caught instanceof Error ? caught.message : "The photo could not be saved."; }
+      }
       form.reset();
+      setSelectedPhoto(null);
       setShowCreateForm(false);
       setFieldErrors({});
       await reload();
-      setMessage(`${employeeId} has been added to Our Consultants.`);
+      if (photoError) setActionError(`${employeeId} was added, but the photo could not be saved. Do not add the consultant again. Click Edit on their card to check the photo before trying again. ${photoError}`);
+      else setMessage(`${employeeId} has been added to Our Consultants.`);
     } catch (caught) {
       if (caught instanceof Error && "status" in caught && caught.status === 409) {
         setFieldErrors({ email: caught.message });
@@ -69,12 +81,13 @@ export function ConsultantsManager() {
       setActionError(caught instanceof Error ? caught.message : "We could not add the consultant. Try again.");
     } finally {
       setBusyId(null);
+      saving.current = false;
     }
   }
 
   async function edit(event: FormEvent<HTMLFormElement>, consultant: ConsultantDocument & { id: string }) {
     event.preventDefault();
-    if (busyId) return;
+    if (busyId || saving.current) return;
     const form = event.currentTarget;
     const validation = validateConsultantFields(consultantFormValues(new FormData(form)));
     setFieldErrors(validation.errors);
@@ -85,23 +98,33 @@ export function ConsultantsManager() {
       focusFirstInvalidField(form);
       return;
     }
+    saving.current = true;
     setBusyId(consultant.id);
     try {
       await updateConsultant(consultant.id, validation.data, consultant);
-      if (deferredSearch.trim()) await reload();
-      else patchItem(consultant.id, validation.data);
+      let imageUrl = consultant.imageUrl;
+      let photoError: string | null = null;
+      if (selectedPhoto) {
+        try { imageUrl = await uploadConsultantPhoto(consultant.id, selectedPhoto, consultant.imageUrl); }
+        catch (caught) { photoError = caught instanceof Error ? caught.message : "The photo could not be saved."; }
+      }
+      if (deferredSearch.trim() || photoError) await reload();
+      else patchItem(consultant.id, { ...validation.data, ...(imageUrl !== undefined ? { imageUrl } : {}) });
       resetEditor();
-      setMessage(`${consultant.employeeId} has been updated.`);
+      if (photoError) setActionError(`${consultant.employeeId}'s details were saved, but the photo could not be confirmed. Click Edit to check the photo before trying again. ${photoError}`);
+      else setMessage(`${consultant.employeeId} has been updated.`);
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : "We could not update the consultant. Try again.");
     } finally {
       setBusyId(null);
+      saving.current = false;
     }
   }
 
   async function toggleStatus(consultant: ConsultantDocument & { id: string }) {
-    if (busyId) return;
+    if (busyId || saving.current) return;
     const nextStatus = consultant.status === "active" ? "inactive" : "active";
+    saving.current = true;
     setBusyId(consultant.id);
     setActionError(null);
     setMessage(null);
@@ -113,13 +136,14 @@ export function ConsultantsManager() {
       setActionError(caught instanceof Error ? caught.message : "We could not change the consultant status. Try again.");
     } finally {
       setBusyId(null);
+      saving.current = false;
     }
   }
 
   const error = actionError ?? loadError;
   return <PortalShell role="admin" title="Our Consultants">
     <PortalLoadGuard notification={loadErrorNotification} loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/admin" loadingMessage="Loading consultants..." />
-    <div className="portal-actions portal-page-actions"><button className="portal-button" type="button" aria-expanded={showCreateForm} onClick={() => {
+    <div className="portal-actions portal-page-actions"><button className="portal-button" type="button" disabled={Boolean(busyId)} aria-expanded={showCreateForm} onClick={() => {
       setShowCreateForm((current) => !current);
       resetEditor();
       setMessage(null);
@@ -127,9 +151,9 @@ export function ConsultantsManager() {
 
     {showCreateForm && <form className="portal-card portal-form" onSubmit={create} noValidate>
       <p className="full portal-form-note">Complete the fields marked *. We’ll assign a consultant ID when you save.</p>
-      <p className="full portal-form-note">After saving, choose Upload photo on the consultant’s card to add the photo customers will see.</p>
       <ConsultantFormFields errors={fieldErrors} />
-      <div className="portal-actions full"><button className="portal-button" disabled={busyId === "create"}>{busyId === "create" ? "Adding..." : "Add consultant"}</button><button className="portal-button secondary" type="button" disabled={busyId === "create"} onClick={() => { setShowCreateForm(false); setFieldErrors({}); setActionError(null); }}>Cancel</button></div>
+      <ConsultantPhotoUpload file={selectedPhoto} disabled={Boolean(busyId)} onChange={setSelectedPhoto} />
+      <div className="portal-actions full"><button className="portal-button" disabled={Boolean(busyId)}>{busyId === "create" ? "Adding..." : "Add consultant"}</button><button className="portal-button secondary" type="button" disabled={Boolean(busyId)} onClick={() => { setShowCreateForm(false); setSelectedPhoto(null); setFieldErrors({}); setActionError(null); }}>Cancel</button></div>
     </form>}
 
     <label className="portal-search">Search consultants
@@ -139,10 +163,10 @@ export function ConsultantsManager() {
     <PortalFeedback error={error} notification={actionError ? actionErrorNotification : loadErrorNotification} emptyTitle={deferredSearch.trim() ? "No matching consultants" : "No consultants yet"} empty={!error && !isLoading && items.length === 0 ? (deferredSearch.trim() ? "No consultants match your search." : "Select Add New to create the first consultant record.") : undefined} />
     <PortalToast message={message} notification={messageNotification} />
     <div className="portal-list consultant-list">{items.map((consultant) => <article className="portal-card" key={consultant.id}>
-      <div className="portal-row-heading"><div className="consultant-profile-heading"><ConsultantPhoto name={consultant.name} imageUrl={consultant.imageUrl} /><div><h3>{consultant.name}</h3>{consultant.designation && <p>{consultant.designation}</p>}<strong className="consultant-employee-id">{consultant.employeeId}</strong></div></div><span className="portal-status" data-status={consultant.status}>{formatStatus(consultant.status)}</span></div>
-      <ConsultantPhotoUpload consultantId={consultant.id} imageUrl={consultant.imageUrl} disabled={Boolean(busyId) || editingId === consultant.id} onChange={imageUrl => patchItem(consultant.id, { imageUrl })} />
+      <div className="portal-row-heading"><div className="consultant-profile-heading"><ConsultantPhoto name={consultantDisplayName(consultant)} imageUrl={consultant.imageUrl} /><div><h3>{consultantDisplayName(consultant)}</h3>{consultant.designation && <p>{consultant.designation}</p>}<strong className="consultant-employee-id">{consultant.employeeId}</strong></div></div><span className="portal-status" data-status={consultant.status}>{formatStatus(consultant.status)}</span></div>
       {editingId === consultant.id ? <form className="portal-form portal-edit-form" onSubmit={(event) => void edit(event, consultant)} noValidate>
         <ConsultantFormFields key={consultant.id} defaultValues={consultant} errors={fieldErrors} />
+        <ConsultantPhotoUpload key={consultant.id} file={selectedPhoto} imageUrl={consultant.imageUrl} disabled={Boolean(busyId)} onChange={setSelectedPhoto} />
         <div className="portal-actions full"><button className="portal-button" disabled={busyId === consultant.id}>{busyId === consultant.id ? "Saving..." : "Save changes"}</button><button className="portal-button secondary" type="button" disabled={busyId === consultant.id} onClick={resetEditor}>Cancel</button></div>
       </form> : <>
         <dl className="consultant-details">
@@ -165,7 +189,7 @@ export function ConsultantsManager() {
           {consultant.address && <div className="consultant-detail-wide"><dt>Address</dt><dd>{consultant.address}</dd></div>}
           {consultant.emergencyContactNo && <div><dt>Emergency contact</dt><dd>{consultant.emergencyContactNo}</dd></div>}
         </dl>
-        <div className="portal-actions"><button className="portal-button secondary" type="button" disabled={Boolean(busyId)} onClick={() => { setEditingId(consultant.id); setShowCreateForm(false); setFieldErrors({}); setActionError(null); setMessage(null); }}>Edit</button><button className={`portal-button${consultant.status === "active" ? " danger" : ""}`} type="button" disabled={Boolean(busyId)} onClick={() => void toggleStatus(consultant)}>{consultant.status === "active" ? "Make inactive" : "Make active"}</button></div>
+        <div className="portal-actions"><button className="portal-button secondary" type="button" disabled={Boolean(busyId)} onClick={() => { setEditingId(consultant.id); setSelectedPhoto(null); setShowCreateForm(false); setFieldErrors({}); setActionError(null); setMessage(null); }}>Edit</button><button className={`portal-button${consultant.status === "active" ? " danger" : ""}`} type="button" disabled={Boolean(busyId)} onClick={() => void toggleStatus(consultant)}>{consultant.status === "active" ? "Make inactive" : "Make active"}</button></div>
       </>}
     </article>)}</div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />

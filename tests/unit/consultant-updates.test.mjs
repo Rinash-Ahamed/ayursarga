@@ -52,6 +52,17 @@ test("status-only saves preserve legacy profiles without forcing new pricing or 
   assert.equal(f.writes[1][1].action, "status_change");
   assert.equal(Object.hasOwn(f.writes[1][1].updatedValues, "consultantCharge"), false);
 });
+
+test("Admin titles persist atomically with edits, can be cleared, and unsupported values are rejected", async () => {
+  const f = fixture();
+  for (const title of ["Dr.", "Mrs.", ""]) {
+    assert.equal((await f.send({ action: "update", fields: { ...fields, title } })).status, 200);
+    assert.equal(f.writes.at(-1)[1].updatedValues.title, title);
+    assert.equal(f.writes.at(-1)[1].updatedValues.imageUrl, "https://images.test/photo.webp");
+  }
+  assert.equal((await f.send({ action: "update", fields: { ...fields, title: "Invalid" } })).status, 400);
+  assert.equal(f.writes.length, 6);
+});
 test("unauthenticated/unauthorized, missing, archived and invalid saves cannot create partial writes", async () => {
   for (const [options, body, id, expected] of [
     [{denied:401}, {action:"update",fields}, "AS001",401], [{denied:403}, {action:"update",fields}, "AS001",403],

@@ -160,11 +160,14 @@ to deploy, rerun maintenance scripts, or modify live data.
   Pending/Active state, contract
   workflow, signed-contract URL, visibility, activation, and archive/restore.
 - The Admin Users page keeps Consumer and Hospital accounts in separate
-  role-filtered views. Admin accounts are not mixed into either list. Removing
-  a Consumer from this page is an audited archive: it revokes active application
-  access and hides the profile from normal lists while preserving bookings and
-  historical records. It must never delete the Firebase Authentication account
-  or the Firestore user document.
+  role-filtered views. Admin accounts are not mixed into either list. Both lists
+  use reversible Make inactive / Make active account controls through a verified
+  Admin server endpoint with atomic status-change audits. Keep inactive accounts
+  visible and preserve profiles, Auth accounts and booking history; do not offer
+  Remove/Delete or silently restore historical archives. Hospital login access
+  is separate from centre activation/publication. Enabling its account requires
+  an active non-archived assigned centre and matching official email; disabled
+  Auth accounts must use the existing controlled setup/activation workflow.
 - Our Consultants is an Admin-only operational collection. Consultant records
   use verified Admin server endpoints for creation, profile edits, status changes
   and photos; direct client writes are denied. Keep shared server validation and
@@ -187,6 +190,13 @@ to deploy, rerun maintenance scripts, or modify live data.
   exposes only validated tokenized portrait URLs; legacy records use initials.
   The imageUrl field is server-managed: exclude it from profile-edit payloads
   and preserve it during server-side edits. Only the photo endpoint changes it.
+  Photo selection belongs in Add/Edit, not idle cards. Stage optional files until
+  Save; Cancel uploads nothing. Save the profile first, then use the existing
+  photo endpoint and its expected-URL check. If only the photo fails, retain the
+  saved consultant and report partial success without recreating it. Optional
+  title prefixes (Dr., Mr., Ms., Mrs.) are validated server-side and displayed
+  through the shared name formatter; new public/payment booking names include
+  the title. Preserve historical booking-name snapshots and untitled records.
 - Public centre discovery uses the bounded `/api/public/hospitals` server
   projection. Do not restore anonymous SDK reads of full `hospitals` or
   `services` documents: those records contain contract, commission, actor, and
@@ -352,6 +362,11 @@ to deploy, rerun maintenance scripts, or modify live data.
   aggregations for dashboard totals and deploy required indexes deliberately.
   Do not load complete collections or add realtime listeners without a genuine
   live-update requirement.
+- Lists with Active/Inactive records show inactive entries last, including after
+  local status changes. Use the shared status-phase cursor for hospital, user,
+  consultant and operational package queries so current records are exhausted
+  before inactive pages. Preserve search and within-group ordering; do not apply
+  only a per-page sort or change booking lifecycle statuses to achieve ordering.
 
 ## Change discipline and validation
 

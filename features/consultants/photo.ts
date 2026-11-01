@@ -1,3 +1,8 @@
+export function consultantPhotoFileError(file: Pick<File, "type" | "size">): string | null {
+  return !["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size <= 0 || file.size > 8 * 1024 * 1024
+    ? "Choose a JPG, PNG or WebP photo up to 8 MB." : null;
+}
+
 /** Only individually tokenized, server-uploaded consultant portraits are public. */
 export function consultantPhotoUrl(value: unknown, consultantId: string): string | null {
   if (typeof value !== "string" || value.length > 1000) return null;

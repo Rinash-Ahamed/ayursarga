@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { inactiveLast } from "@/utils/statusOrder";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import type { DocumentRecord, QueryPage } from "@/services/firestore/firestoreService";
 
@@ -56,5 +57,6 @@ export function usePaginatedList<T, TCursor = NonNullable<QueryPage<T>["cursor"]
     };
   }, [reload]);
 
-  return { items, error, errorNotification, isLoading, hasMore, reload, loadMore, patchItem, removeItem };
+  const orderedItems = useMemo(() => inactiveLast(items), [items]);
+  return { items: orderedItems, error, errorNotification, isLoading, hasMore, reload, loadMore, patchItem, removeItem };
 }

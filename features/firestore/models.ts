@@ -181,6 +181,7 @@ export type HospitalCapacityDocument = AuditedDocument & {
 };
 
 export type ConsultantDocument = AuditedDocument & {
+  title?: import("@/features/consultants/name").ConsultantTitle | "";
   imageUrl?: string | null;
   consultationServices?: import("@/features/consultations/catalog").ConsultationServiceId[];
   designation?: string;

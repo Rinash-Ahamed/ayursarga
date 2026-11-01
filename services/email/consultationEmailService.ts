@@ -6,6 +6,7 @@ import { sendEmail } from "@/services/email/emailService";
 import { isValidEmail } from "@/utils/text";
 import type { ConsultationEmailResult } from "@/features/consultations/email";
 import { consultationAdminRecipients, addConsultationNotification } from "@/services/consultations/consultationNotificationsAdmin";
+import { consultantDisplayName } from "@/features/consultants/name";
 
 const COLLECTION = "consultationEmailEvents";
 type AppointmentEmailEvent = "confirmed" | "rescheduled" | "cancelled";
@@ -43,7 +44,7 @@ export function queueConsultationEmail(transaction: Transaction, firestore: Fire
       bookingAuditId: input.auditId,
       payloadHash: input.payloadHash ?? null, actorRole: input.actorRole, audience: "consultant", channel: "email",
       recipient: typeof input.consultant.email === "string" ? input.consultant.email.trim().toLowerCase() : "",
-      payload: { ...payload, amount: input.consultantFee ?? null, providerName: String(input.consultant.name ?? booking.consultantName ?? "") },
+      payload: { ...payload, amount: input.consultantFee ?? null, providerName: consultantDisplayName(input.consultant) || String(booking.consultantName ?? "") },
       status: "pending", createdAt: input.now, createdBy: input.actorId, updatedAt: input.now, updatedBy: input.actorId,
       archivedAt: null, archivedBy: null, lastAuditId: input.auditId,
     });

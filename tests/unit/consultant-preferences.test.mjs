@@ -115,7 +115,7 @@ test("consultant service sends validated charges and preserves atomic audited ed
 
 test("creation API checks Admin access and charge validation before its atomic consultant/audit write", async () => {
   class AuthorizationError extends Error { constructor() { super("Denied"); this.status = 403; } }
-  for (const scenario of ["allowed", "invalid", "invalid-days", "invalid-dates", "missing-charge", "missing-commission", "invalid-commission", "denied"]) {
+  for (const scenario of ["allowed", "invalid", "invalid-title", "invalid-days", "invalid-dates", "missing-charge", "missing-commission", "invalid-commission", "denied"]) {
     const writes = [];
     let commits = 0;
     const firestore = {
@@ -136,12 +136,14 @@ test("creation API checks Admin access and charge validation before its atomic c
       "@/services/firebase/adminAuthorization": { AdminAuthorizationError: AuthorizationError, requireActiveAdmin: async () => { if (scenario === "denied") throw new AuthorizationError(); return { uid: "admin", firestore }; } },
       "@/services/api/server": { apiJson: (body, status = 200) => Response.json(body, { status }) },
     });
-    const response = await POST(new Request("https://test.local/api/admin/consultants", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...legacy, consultationServices: ["lactation"], availableDates: scenario === "invalid-dates" ? ["2099-02-30"] : ["2099-10-26"], preferredDays: scenario === "invalid-days" ? ["bad-day"] : ["mon", "wed"], consultantCharge: scenario === "missing-charge" ? undefined : scenario === "invalid" ? -1 : 900.5, ayursargaCommissionPercentage: scenario === "missing-commission" ? undefined : scenario === "invalid-commission" ? 101 : 12.5 }) }));
+    const response = await POST(new Request("https://test.local/api/admin/consultants", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...legacy, title: scenario === "invalid-title" ? "Invalid" : "Dr.", consultationServices: ["lactation"], availableDates: scenario === "invalid-dates" ? ["2099-02-30"] : ["2099-10-26"], preferredDays: scenario === "invalid-days" ? ["bad-day"] : ["mon", "wed"], consultantCharge: scenario === "missing-charge" ? undefined : scenario === "invalid" ? -1 : 900.5, ayursargaCommissionPercentage: scenario === "missing-commission" ? undefined : scenario === "invalid-commission" ? 101 : 12.5 }) }));
     assert.equal(response.status, scenario === "allowed" ? 201 : scenario === "denied" ? 403 : 400);
     assert.equal(commits, scenario === "allowed" ? 1 : 0);
     if (scenario === "allowed") {
       const consultant = writes.find((write) => write.path === "consultants/AS001");
       const audit = writes.find((write) => write.path === "auditLogs/audit");
+      assert.equal(consultant.data.title, "Dr.");
+      assert.equal(audit.data.updatedValues.title, "Dr.");
       assert.equal(consultant.data.consultantCharge, 900.5);
       assert.equal(consultant.data.ayursargaCommissionPercentage, 12.5);
       assert.deepEqual(consultant.data.consultationServices, ["lactation"]);

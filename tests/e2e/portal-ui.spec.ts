@@ -5,6 +5,118 @@ import { authEmail } from "../../lib/authEmail";
 import { getCalendarMonthRange } from "../../utils/date";
 const styles = ["node_modules/tailwindcss/lib/css/preflight.css", "app/globals.css", "app/portal.css"].map((file) => readFileSync(file, "utf8")).join("\n");
 const screens = ["admin-dashboard", "admin-hospitals", "admin-details", "admin-consultants", "admin-users", "admin-bookings", "admin-availability", "admin-audits", "hospital-dashboard", "hospital-profile", "hospital-services", "hospital-bookings", "hospital-availability", "hospital-password", "admin-login", "hospital-login", "admin-forgot", "hospital-forgot"];
+
+test("consultant Add/Edit stages optional photos and saves the chosen title without exposing idle uploads", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "admin-consultants");
+  const photo = { name: "portrait.png", mimeType: "image/png", buffer: Buffer.from("photo-fixture") };
+  const uploads = () => page.evaluate(() => (window as unknown as { consultantPhotoUploads: { id: string; name: string }[] }).consultantPhotoUploads);
+  await expect(page.getByLabel("Consultant photo", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.getByLabel("Consultant photo", { exact: true }).setInputFiles(photo);
+  expect(await uploads()).toHaveLength(0);
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.getByLabel("Consultant photo", { exact: true })).toHaveCount(0);
+  expect(await uploads()).toHaveLength(0);
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  const editForm = page.locator(".portal-edit-form");
+  await editForm.locator('select[name="title"]').selectOption("Dr.");
+  await editForm.locator('input[name="consultantCharge"]').fill("300");
+  await editForm.locator('input[name="ayursargaCommissionPercentage"]').fill("10");
+  await editForm.getByLabel("Consultant photo", { exact: true }).setInputFiles(photo);
+  await editForm.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(editForm).toHaveCount(0);
+  await expect(page.locator(".consultant-profile-heading h3")).toHaveText(/^Dr\. /);
+  expect(await uploads()).toHaveLength(1);
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(page.locator('select[name="title"]')).toHaveValue("Dr.");
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.getByRole("button", { name: "Add New", exact: true }).click();
+  const createForm = page.locator("form").first();
+  await createForm.locator('select[name="title"]').selectOption("Ms.");
+  for (const [name, value] of Object.entries({ name: "New Consultant", email: "new@example.test", contactNo: "9876543210", whatsappNo: "9876543210", qualification: "BAMS", yearsExperience: "3", consultantCharge: "300", ayursargaCommissionPercentage: "10" })) await createForm.locator(`input[name="${name}"]`).fill(value);
+  await createForm.getByLabel("Consultant photo", { exact: true }).setInputFiles({ name: "bad.svg", mimeType: "image/svg+xml", buffer: Buffer.from("svg") });
+  await expect(createForm.getByRole("alert")).toContainText("JPG, PNG or WebP");
+  await createForm.getByLabel("Consultant photo", { exact: true }).setInputFiles(photo);
+  await page.evaluate(() => Object.assign(window, { failConsultantPhoto: true }));
+  await createForm.getByRole("button", { name: "Add consultant", exact: true }).click();
+  await expect(createForm).toHaveCount(0);
+  await expect(page.getByText(/AS002 was added, but the photo could not be saved/).first()).toBeVisible();
+  const calls = await uploads();
+  expect(calls).toHaveLength(2);
+  expect(calls[1].id).toBe("AS002");
+  const writes = await page.evaluate(() => (window as unknown as { consumerBookingFixture: { consultantWrites: Record<string, unknown>[] } }).consumerBookingFixture.consultantWrites);
+  expect(writes).toHaveLength(2);
+  expect(writes[1]).toMatchObject({ title: "Ms.", name: "New Consultant" });
+  expect(writes.every(write => !("imageUrl" in write))).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
+
+test("shared booking cards stay compact and readable across portals and consultation flows", async ({ page }, testInfo) => {
+  await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
+  for (const screen of ["admin-bookings", "hospital-bookings", "consumer-bookings", "admin-consultations", "consumer-consultations-policy"]) {
+    await mount(page, screen);
+    const cards = page.locator(".consumer-booking-row");
+    await expect(cards.first()).toBeVisible();
+    const compact = await cards.first().evaluate(element => {
+      const style = getComputedStyle(element);
+      const facts = element.querySelector(".consumer-booking-facts")!;
+      return { padding: parseFloat(style.paddingTop), gap: parseFloat(style.gap), factsGap: parseFloat(getComputedStyle(facts).rowGap),
+        overflow: element.scrollWidth > element.clientWidth + 1,
+        badControls: Array.from(element.querySelectorAll("button")).filter(button => button.getClientRects().length && button.getBoundingClientRect().height < 43).length };
+    });
+    expect(compact.padding).toBeLessThanOrEqual(18);
+    expect(compact.gap).toBeLessThanOrEqual(14);
+    expect(compact.factsGap).toBe(10);
+    expect(compact.overflow).toBe(false);
+    expect(compact.badControls).toBe(0);
+    await expect(cards.first().locator(".consumer-booking-reference")).toContainText("Booking ID:");
+    await expect(cards.first().locator(".consumer-booking-cost").first()).toBeVisible();
+    const moneyLayout = await cards.first().evaluate(element => {
+      const meta = element.querySelector(".consumer-booking-meta")!;
+      const price = meta.querySelector(".consumer-booking-cost:not(.operational-booking-commission)")!.getBoundingClientRect();
+      const badge = meta.querySelector(".portal-status")!.getBoundingClientRect();
+      const commission = meta.querySelector(".operational-booking-commission")?.getBoundingClientRect();
+      return { overlap: Math.min(price.right, badge.right) - Math.max(price.left, badge.left) > 1 && Math.min(price.bottom, badge.bottom) - Math.max(price.top, badge.top) > 1,
+        commissionOverlap: !!commission && Math.min(price.bottom, commission.bottom) - Math.max(price.top, commission.top) > 1,
+        overflow: meta.scrollWidth > meta.clientWidth + 1 };
+    });
+    expect(moneyLayout).toEqual({ overlap: false, commissionOverlap: false, overflow: false });
+    if (screen === "consumer-consultations-policy") await expect(cards.first().locator(".consultation-cancellation")).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath(`${screen}-compact.png`), fullPage: true });
+  }
+});
+
+test("inactive records follow current records across portal lists and after a local status change", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
+  for (const [screen, selector] of [
+    ["admin-hospitals-status-order", ".admin-hospital-card .admin-package-status>.portal-status:first-child"],
+    ["admin-consultants-status-order", ".consultant-list>article>.portal-row-heading>.portal-status"],
+    ["admin-users-status-order", ".admin-user-grid .admin-user-heading>.portal-status"],
+    ["hospital-services-status-order", ".portal-service-status"],
+    ["admin-packages-status-order", ".portal-package-review-row>.portal-status"],
+  ]) {
+    await mount(page, screen);
+    const badges = page.locator(selector);
+    await expect(badges).toHaveCount(4);
+    expect(await badges.evaluateAll(elements => elements.map(element => element.getAttribute("data-status")))).toEqual(["active", "active", "inactive", "inactive"]);
+    if (screen === "admin-users-status-order") {
+      await page.getByRole("button", { name: "Hospitals", exact: true }).click();
+      await expect(badges).toHaveCount(4);
+      expect(await badges.evaluateAll(elements => elements.map(element => element.getAttribute("data-status")))).toEqual(["active", "active", "inactive", "inactive"]);
+      await page.getByRole("button", { name: "Make inactive", exact: true }).first().click();
+      await page.getByRole("dialog").getByRole("button", { name: "Make inactive", exact: true }).click();
+      await expect(page.getByRole("dialog")).toBeHidden();
+      expect(await badges.evaluateAll(elements => elements.map(element => element.getAttribute("data-status")))).toEqual(["active", "inactive", "inactive", "inactive"]);
+    }
+    if (screen.includes("services") || screen.includes("packages")) {
+      const headings = screen.includes("services") ? page.locator(".portal-service-heading>h3") : page.locator(".portal-package-review-row h3");
+      await expect(headings).toHaveText(["7-day package", "14-day package", "7-day package", "21-day package"]);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  }
+});
 async function mount(page: Page, screen: string) {
   const pageErrors: string[] = [];
   const recordPageError = (error: Error) => pageErrors.push(error.message);
@@ -27,6 +139,41 @@ async function mount(page: Page, screen: string) {
   await page.waitForTimeout(120);
 }
 
+test("Admin Availability and complete Settings keep separate cards spaced without overlap", async ({ page }, testInfo) => {
+  await page.route("**/*", route=>route.fulfill({status:204,body:""}));
+  for (const screen of ["admin-availability","admin-settings","admin-settings-disabled"]) {
+    await mount(page,screen);
+    const first=page.locator(".portal-page-enter .portal-card").first();
+    const next=screen==="admin-availability"?page.locator(".portal-availability-list"):page.locator(".portal-page-enter .portal-card").nth(1);
+    await expect(first).toBeVisible();
+    await expect(next).toBeVisible();
+    const assertSpacing=async()=>{
+      const a=await first.boundingBox(); const b=await next.boundingBox();
+      expect(b!.y-(a!.y+a!.height),screen).toBeGreaterThanOrEqual(16);
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),screen).toBe(true);
+    };
+    await assertSpacing();
+    if (screen==="admin-availability") {
+      const cards=page.locator(".portal-availability-record");
+      for (let index=1;index<await cards.count();index++) {
+        const a=await cards.nth(index-1).boundingBox(); const b=await cards.nth(index).boundingBox();
+        expect(b!.y-(a!.y+a!.height)).toBeGreaterThanOrEqual(16);
+      }
+    }
+    for (const position of [0.5,1,0]) {
+      await page.evaluate(fraction=>window.scrollTo({top:(document.documentElement.scrollHeight-innerHeight)*fraction,behavior:"instant"}),position);
+      await assertSpacing();
+    }
+    if (screen.startsWith("admin-settings")) {
+      await page.getByRole("button",{name:"Edit consultation policy",exact:true}).click();
+      await assertSpacing();
+      await page.getByRole("button",{name:"Cancel",exact:true}).click();
+      await assertSpacing();
+    }
+    await page.screenshot({path:testInfo.outputPath(`${screen}-spacing.png`),fullPage:true});
+  }
+});
+
 test("Admin hospital cards show contacts created time and package approvals in a responsive three-column maximum", async ({ page }, testInfo) => {
   await page.route("**/*", route => route.fulfill({status:204,body:""}));
   await mount(page,"admin-hospital-cards");
@@ -41,6 +188,31 @@ test("Admin hospital cards show contacts created time and package approvals in a
   await expect(first.locator("dt").filter({hasText:/^Created$/})).toHaveCount(1);
   await expect(first.locator(".admin-card-facts")).toContainText(/\d{2}\/\d{2}\/\d{4},.*IST/);
   await expect(first).toHaveAttribute("href","/admin/hospitals/centre-0");
+  await expect(first.locator(".admin-package-status>.portal-status").first()).toHaveText("active");
+  const compact = await first.evaluate(element => {
+    const style = getComputedStyle(element);
+    const badges = element.querySelector(".admin-package-status")!.getBoundingClientRect();
+    const facts = element.querySelector(".admin-card-facts")!.getBoundingClientRect();
+    return { padding: style.paddingTop, gap: style.gap, badgesBeforeFacts: badges.bottom <= facts.top,
+      factColumns: getComputedStyle(element.querySelector(".admin-card-facts")!).gridTemplateColumns.split(" ").length };
+  });
+  expect(compact).toEqual({ padding: "18px", gap: "12px", badgesBeforeFacts: true, factColumns: 2 });
+  const statusPosition = await first.evaluate(element => {
+    const card = element.getBoundingClientRect();
+    const badges = element.querySelector(".admin-package-status")!;
+    const bounds = badges.getBoundingClientRect();
+    const title = element.querySelector("h3")!.getBoundingClientRect();
+    const last = badges.lastElementChild!.getBoundingClientRect();
+    return { besideName: bounds.left >= title.right, sameTop: Math.abs(bounds.top - title.top) < 1, top: Math.round(bounds.top - card.top),
+      right: Math.round(card.right - last.right), alignment: getComputedStyle(badges).justifyContent };
+  });
+  expect(statusPosition).toEqual({ besideName: true, sameTop: true, top: 19, right: 19, alignment: "flex-end" });
+  for (const [left, right] of [["Email", "Owner WhatsApp"], ["Hospital phone", "Created"]]) {
+    const leftBounds = await first.locator(".admin-card-facts>div").filter({ has: page.locator("dt", { hasText: new RegExp(`^${left}$`) }) }).boundingBox();
+    const rightBounds = await first.locator(".admin-card-facts>div").filter({ has: page.locator("dt", { hasText: new RegExp(`^${right}$`) }) }).boundingBox();
+    expect(Math.abs(leftBounds!.y - rightBounds!.y)).toBeLessThan(1);
+    expect(rightBounds!.x).toBeGreaterThan(leftBounds!.x);
+  }
   const grid=page.locator(".admin-hospital-grid");
   const width=await page.locator(".admin-card-layout").evaluate(element=>element.clientWidth);
   const columns=await grid.evaluate(element=>getComputedStyle(element).gridTemplateColumns.split(" ").length);
@@ -177,7 +349,7 @@ test("Consultation cancellation details show agreed deadlines and hide expired a
   await expect(page.getByText("Cancellation window expired", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Cancel appointment", exact: true })).toHaveCount(0);
   await mount(page, "consumer-consultations");
-  await expect(page.getByText(/current policies have not been applied/)).toBeVisible();
+  await expect(page.getByText("Your original booking terms still apply. Contact Ayursarga with your booking ID to check your cancellation deadline and any refund.", { exact: true })).toBeVisible();
 });
 
 test("Admin edits consultation cancellation policy with confirmation and inline aligned fields", async ({ page }) => {
@@ -785,8 +957,36 @@ test("Admin user cards show created date and time for both groups with a safe le
       if (screen.endsWith("no-date")) await expect(facts.locator("dd")).toHaveText("Not recorded");
       else await expect(facts.locator("dd")).toHaveText(/\d{2}\/\d{2}\/\d{4},.*\d{2}:\d{2}.*IST/);
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
-      await expect(page.locator(".admin-user-grid").getByRole("button",{name:"Remove",exact:true})).toHaveCount(group==="Consumers"?1:0);
+      await expect(page.locator(".admin-user-grid").getByRole("button",{name:"Remove",exact:true})).toHaveCount(0);
+      await expect(page.locator(".admin-user-grid").getByRole("button",{name:"Make inactive",exact:true})).toHaveCount(1);
     }
+  }
+});
+
+test("Admin Consumer and Hospital accounts become inactive and active without removal", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "admin-users");
+  for (const group of ["Consumers", "Hospitals"]) {
+    await page.getByRole("button", { name: group, exact: true }).click();
+    const card = page.locator(".admin-user-grid .portal-row").first();
+    const before = await page.evaluate(() => (globalThis as unknown as { userStatusCalls: string[] }).userStatusCalls.length);
+    await card.getByRole("button", { name: "Make inactive", exact: true }).click();
+    let dialog = page.getByRole("dialog");
+    await expect(page.locator("body")).toHaveCSS("position", "fixed");
+    if (group === "Hospitals") await expect(dialog).toContainText("login access only");
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(dialog).toBeHidden();
+    expect(await page.evaluate(() => (globalThis as unknown as { userStatusCalls: string[] }).userStatusCalls.length)).toBe(before);
+    await card.getByRole("button", { name: "Make inactive", exact: true }).click();
+    dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Make inactive", exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(card.locator(".portal-status")).toHaveText("inactive");
+    await card.getByRole("button", { name: "Make active", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Make active", exact: true }).click();
+    await expect(card.locator(".portal-status")).toHaveText("active");
+    await expect(card.getByRole("button", { name: /Remove|Delete/ })).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   }
 });
 
@@ -800,6 +1000,64 @@ test("hospital user cards show account details without raw hospital IDs", async 
   await expect(card).not.toContainText("Hospital centre");
   await expect(card.locator(".portal-status")).toHaveText("active");
   await expect(card.getByRole("button", { name: "Remove", exact: true })).toHaveCount(0);
+});
+
+test("both user grids fit up to five compact cards without hiding account details", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "admin-user-cards");
+  for (const group of ["Consumers", "Hospitals"]) {
+    await page.getByRole("button", { name: group, exact: true }).click();
+    const cards = page.locator(".admin-user-grid>.portal-row");
+    await expect(cards).toHaveCount(10);
+    const layout = await cards.evaluateAll(elements => {
+      const bounds = elements.map(element => element.getBoundingClientRect());
+      return { columns: bounds.filter(box => Math.abs(box.y - bounds[0].y) < 2).length,
+        width: elements[0].parentElement!.getBoundingClientRect().width,
+        overflow: elements.some(element => element.scrollWidth > element.clientWidth + 1),
+        heights: bounds.filter(box => Math.abs(box.y - bounds[0].y) < 2).map(box => box.height) };
+    });
+    const expected = layout.width >= 1150 ? 5 : layout.width >= 920 ? 4 : layout.width >= 690 ? 3 : layout.width >= 460 ? 2 : 1;
+    expect(layout.columns).toBe(expected);
+    if (page.viewportSize()!.width >= 1800) expect(layout.columns).toBe(5);
+    expect(layout.overflow).toBe(false);
+    expect(Math.max(...layout.heights) - Math.min(...layout.heights)).toBeLessThan(2);
+    await expect(cards.first().getByRole("button", { name: "Make inactive", exact: true })).toBeVisible();
+    await expect(cards.first()).toContainText("Created");
+    const heading = await cards.first().locator(".admin-user-heading").boundingBox();
+    const badge = await cards.first().locator(".portal-status").boundingBox();
+    expect(Math.abs(badge!.y - heading!.y)).toBeLessThan(2);
+    expect(Math.abs(badge!.x + badge!.width - heading!.x - heading!.width)).toBeLessThan(2);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  }
+  await page.screenshot({ path: test.info().outputPath("user-grid.png"), fullPage: true });
+});
+
+test("user contact details expand independently and collapse without hiding essential information", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "admin-user-cards");
+  for (const group of ["Consumers", "Hospitals"]) {
+    await page.getByRole("button", { name: group, exact: true }).click();
+    const cards = page.locator(".admin-user-grid>.portal-row");
+    const details = cards.first().locator("details");
+    const summary = details.locator("summary");
+    await expect(details).not.toHaveAttribute("open");
+    await expect(details.getByText("Phone number", { exact: true })).toBeHidden();
+    await expect(cards.first().locator("h3")).toBeVisible();
+    await expect(cards.first().locator(".portal-status")).toBeVisible();
+    await summary.click();
+    await expect(details).toHaveAttribute("open", "");
+    await expect(details.getByText("Phone number", { exact: true })).toBeVisible();
+    await expect(details.getByText("Address", { exact: true })).toBeVisible();
+    await expect(summary.locator(".admin-user-show-less")).toBeVisible();
+    await expect(cards.nth(1).locator("details")).not.toHaveAttribute("open");
+    expect(await details.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+    await summary.focus();
+    await page.keyboard.press("Enter");
+    await expect(details).not.toHaveAttribute("open");
+    await expect(summary.locator(".admin-user-show-more")).toBeVisible();
+    await expect(cards.first().getByRole("button", { name: "Make inactive", exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  }
 });
 
 test("consultant date restrictions disable unavailable dates and keep nested calendars viewport-safe", async ({ page }) => {
@@ -881,7 +1139,7 @@ test("consultant designation and preferred availability edit legacy records safe
   await expect(page.getByText("Enter a valid non-negative charge with up to 2 decimal places.", { exact: true })).toBeVisible();
   await charge.fill("900.50");
   await commission.fill("10");
-  await expect(page.locator(".portal-edit-form .portal-form-note")).toContainText("₹990.55");
+  await expect(page.locator(".portal-edit-form .portal-form-note").filter({ hasText: "Consumer total:" })).toContainText("₹990.55");
   const inputs = await page.locator('input[name="consultantCharge"], input[name="ayursargaCommissionPercentage"]').evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().top));
   if (page.viewportSize()!.width > 700) expect(Math.abs(inputs[0] - inputs[1])).toBeLessThanOrEqual(1);
   await page.getByRole("checkbox", { name: "Prenatal doctor consultation", exact: true }).check();
@@ -1044,6 +1302,7 @@ test("both portals pulse only for new notifications and stop when viewed without
     await mount(page, screen);
     const bell = page.locator(".portal-notification-trigger");
     await expect(bell).not.toHaveAttribute("data-attention");
+    const normalBackground = await bell.evaluate(element => getComputedStyle(element).backgroundColor);
     const deliver = (ids: string[]) => page.evaluate((ids) => {
       window.dispatchEvent(new CustomEvent("portal-test-notifications", { detail: ids.map((id) => ({
         id, readAt: null, title: "New notification", message: "Update", actionHref: "#", createdAt: { seconds: 100, nanoseconds: 0 },
@@ -1051,6 +1310,13 @@ test("both portals pulse only for new notifications and stop when viewed without
     }, ids);
     await deliver(["notification", "fresh"]);
     await expect(bell).toHaveAttribute("data-attention", "true");
+    await expect(bell).not.toHaveCSS("background-color", normalBackground);
+    await expect(bell).toHaveCSS("color", "rgb(255, 255, 255)");
+    const highlightedBackground = "rgb(31, 61, 43)";
+    await expect(bell).toHaveCSS("background-color", highlightedBackground);
+    await deliver(["notification", "fresh"]);
+    await expect(bell).toHaveAttribute("data-attention", "true");
+    await expect(bell).toHaveCSS("background-color", highlightedBackground);
     await expect(bell.locator("svg")).toHaveCSS("animation-name", "portal-notification-pulse");
     await expect(bell.locator("svg")).toHaveCSS("animation-duration", "2.4s");
     await expect.poll(() => bell.locator("svg").evaluate((element) => Number(getComputedStyle(element).opacity))).toBeLessThan(.95);
@@ -1058,6 +1324,7 @@ test("both portals pulse only for new notifications and stop when viewed without
     await expect(bell.locator(".portal-notification-count")).toHaveCSS("animation-name", "portal-notification-pulse");
     await bell.click();
     await expect(bell).not.toHaveAttribute("data-attention");
+    await expect(bell).not.toHaveCSS("background-color", highlightedBackground);
     await expect(bell.locator(".portal-notification-count")).toHaveText("2");
     await deliver(["notification", "fresh", "viewed-live"]);
     await expect(bell).not.toHaveAttribute("data-attention");
@@ -1068,6 +1335,7 @@ test("both portals pulse only for new notifications and stop when viewed without
     await expect(bell).toHaveAttribute("data-attention", "true");
     await page.emulateMedia({ reducedMotion: "reduce" });
     await expect(bell.locator("svg")).toHaveCSS("animation-name", "none");
+    await expect(bell).toHaveCSS("background-color", highlightedBackground);
     await expect(bell).toHaveCSS("outline-style", "solid");
     // Keyboard focus may legitimately use the stronger shared 3px outline.
     expect(await bell.evaluate((element) => parseFloat(getComputedStyle(element).outlineWidth))).toBeGreaterThanOrEqual(2);

@@ -11,15 +11,14 @@ import {
   firestoreTimestamp,
   readDocument,
   readDocumentsByIds,
-  runFilteredQuery,
   type DocumentRecord,
-  type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
+import { runStatusOrderedQuery, type StatusOrderedOptions } from "@/services/firestore/statusOrderedQuery";
 import {
   createAuditedDocument,
-  getArchiveMetadata,
   updateAuditedDocument,
 } from "@/services/firestore/auditService";
+import { authorizedApiRequest } from "@/services/api/client";
 
 const profileCache = new Map<string, UserProfile>();
 const profileRequests = new Map<string, Promise<UserProfile>>();
@@ -125,8 +124,8 @@ export function clearUserProfileCache(uid?: string) {
   profileRequests.clear();
 }
 
-export function listUsers(role: "consumer" | "hospital", options: Pick<QueryPageOptions, "pageSize" | "cursor"> = {}) {
-  return runFilteredQuery<UserDocument>({
+export function listUsers(role: "consumer" | "hospital", options: StatusOrderedOptions = {}) {
+  return runStatusOrderedQuery<UserDocument>({
     collectionPath: COLLECTIONS.users,
     filters: [{ field: "role", operator: "==", value: role }],
     sort: { field: "createdAt", direction: "desc" },
@@ -134,17 +133,14 @@ export function listUsers(role: "consumer" | "hospital", options: Pick<QueryPage
   });
 }
 
-export async function archiveConsumer(user: DocumentRecord<UserDocument>) {
-  if (user.role !== "consumer") throw new Error("Only consumer accounts can be removed from this list.");
-  if (user.status === "archived") return;
-  await updateAuditedDocument(
-    COLLECTIONS.users,
-    user.id,
-    { status: "archived", ...getArchiveMetadata() },
-    { action: "archive", actorRole: "admin" },
-    user,
-  );
+export async function setUserAccountStatus(user: DocumentRecord<UserDocument>, status: "active" | "inactive") {
+  const result = await authorizedApiRequest<{ changes: Pick<UserDocument, "status"> & Partial<Pick<UserDocument, "lastAuditId">> }>(`/api/admin/users/${encodeURIComponent(user.id)}/status`, {
+    method: "PATCH", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status, expectedAuditId: user.lastAuditId ?? null }),
+    signedOutMessage: "Sign in again to manage accounts.", failureMessage: "We could not change this account. Try again.",
+  });
   clearUserProfileCache(user.id);
+  return result.changes;
 }
 
 export async function getUserDisplayNames(uids: string[]) {
