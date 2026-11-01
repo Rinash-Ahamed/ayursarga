@@ -361,7 +361,10 @@ html[data-theme="dark"] .portal-toast[data-tone="error"],body[data-theme="dark"]
 .portal-form .portal-inline-check input{ width:16px; height:16px; flex:0 0 16px; margin:0; padding:0; box-shadow:none; accent-color:var(--forest); }
 .consultant-list{ margin-top:22px; }
 .consultant-list.portal-list{ gap:10px; }
-.consultant-list>.portal-card{ padding:18px; }
+.consultant-list>.portal-card{ display:flex;flex-direction:column;padding:18px; }
+.consultant-list>.portal-card>.portal-actions{ margin-top:auto; padding-top:4px; }
+.consultant-list>.portal-card[data-editing="true"]{ grid-column:1/-1; }
+.consultant-list .consultant-details{ grid-template-columns:repeat(2,minmax(0,1fr)); }
 .consultant-list .portal-row-heading h3{ font-size:20px; line-height:1.3; }
 .consultant-employee-id{ display:block; margin-top:5px; color:var(--clay-dark); font-size:10px; letter-spacing:.1em; }
 .consultant-details{ margin:12px 0 14px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); align-items:start; gap:10px 16px; }
@@ -454,6 +457,16 @@ html[data-theme="dark"] .portal-toast[data-tone="error"],body[data-theme="dark"]
 .portal-star-picker .portal-rating-clear{ padding:7px 9px; border:0; background:transparent; color:var(--rust); font:inherit; font-size:10px; font-weight:700; text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
 .portal-security-form{ max-width:760px; }
 .portal-list{ display:grid; gap:14px; }
+.portal-list.admin-record-grid,.consultation-history.admin-record-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr)); align-items:stretch; gap:14px; }
+.admin-booking-grid>.portal-row.consumer-booking-row{ display:flex; flex-direction:column; min-width:0; }
+.admin-booking-grid .consumer-booking-copy{ width:100%; }
+.admin-booking-grid .consumer-booking-facts{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+.admin-booking-grid .consumer-booking-row .consumer-booking-meta{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); width:100%; min-width:0; margin-top:auto; padding-top:12px; border-top:1px solid rgba(31,61,43,.13); justify-items:start; align-items:start; }
+.admin-booking-grid .consumer-booking-meta .consumer-booking-cost{ text-align:left; }
+.admin-booking-grid .consumer-booking-reference{ min-height:48px; padding-right:128px; overflow-wrap:anywhere; }
+.admin-booking-grid .consumer-booking-row .consumer-booking-meta>.portal-status{ position:absolute; top:18px; right:18px; max-width:120px; white-space:normal; overflow-wrap:anywhere; }
+.admin-booking-grid .consumer-booking-row .consumer-booking-meta>.consumer-booking-cost{ grid-column:auto; grid-row:auto; min-width:0; }
+.admin-booking-grid .operational-booking-actions{ width:100%; }
 .admin-card-layout{ min-width:0; container-type:inline-size; }
 .admin-card-grid{ grid-template-columns:minmax(0,1fr); align-items:stretch; }
 @container(min-width:650px){ .admin-card-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); } }

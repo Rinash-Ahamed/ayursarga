@@ -161,7 +161,7 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
     {isLoading && items.length === 0 && <section className="portal-empty-state portal-state-card" role="status"><span className="portal-empty-state-leaf" aria-hidden="true" /><h3>Loading online consultations</h3><p>Please wait while we retrieve your appointment information.</p></section>}
     {!isLoading && !loadError && items.length === 0 && <section className="portal-empty-state portal-state-card" role="status"><span className="portal-empty-state-leaf" aria-hidden="true" /><h3>{emptyTitle}</h3><p>{emptyMessage}</p></section>}
     {!isLoading && !loadError && items.length > 0 && visibleItems.length === 0 && <PortalFeedback emptyTitle="No matching online consultations" empty="No consultations currently loaded on this page match the selected search or filters." />}
-    <div className="consultation-history consumer-booking-list">{visibleItems.map((booking) => <article className="portal-row consumer-booking-row operational-booking-card consultation-history-card" data-accent={booking.status} key={booking.id}>
+    <div className={`consultation-history consumer-booking-list${role === "admin" ? " admin-record-grid admin-booking-grid" : ""}`}>{visibleItems.map((booking) => <article className="portal-row consumer-booking-row operational-booking-card consultation-history-card" data-accent={booking.status} key={booking.id}>
       <div className="consumer-booking-copy">
       <span className="consumer-booking-reference">Booking ID: {booking.bookingReference}</span>
       <h3>{booking.serviceName}</h3>

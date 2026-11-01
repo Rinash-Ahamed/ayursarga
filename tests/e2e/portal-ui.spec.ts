@@ -6,6 +6,52 @@ import { getCalendarMonthRange } from "../../utils/date";
 const styles = ["node_modules/tailwindcss/lib/css/preflight.css", "app/globals.css", "app/portal.css"].map((file) => readFileSync(file, "utf8")).join("\n");
 const screens = ["admin-dashboard", "admin-hospitals", "admin-details", "admin-consultants", "admin-users", "admin-bookings", "admin-availability", "admin-audits", "hospital-dashboard", "hospital-profile", "hospital-services", "hospital-bookings", "hospital-availability", "hospital-password", "admin-login", "hospital-login", "admin-forgot", "hospital-forgot"];
 
+test("Admin consultant and both booking lists use aligned responsive card grids", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
+  for (const screen of ["admin-consultants-duplicates", "admin-bookings", "admin-consultations-grid"]) {
+    await mount(page, screen);
+    const grid = page.locator(".admin-record-grid");
+    const cards = grid.locator(":scope>article");
+    await expect(cards.nth(1)).toBeVisible();
+    const bounds = (await grid.boundingBox())!;
+    const first = (await cards.nth(0).boundingBox())!;
+    const second = (await cards.nth(1).boundingBox())!;
+    if (bounds.width >= 734) {
+      expect(Math.abs(first.y - second.y)).toBeLessThan(1);
+      expect(Math.abs(first.height - second.height)).toBeLessThan(1);
+      expect(second.x).toBeGreaterThanOrEqual(first.x + first.width + 13);
+    } else {
+      expect(Math.abs(first.x - second.x)).toBeLessThan(1);
+      expect(second.y).toBeGreaterThanOrEqual(first.y + first.height + 13);
+    }
+    for (const card of await cards.all()) {
+      expect(await card.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+      if (screen !== "admin-consultants-duplicates") {
+        const cardBounds = (await card.boundingBox())!;
+        const badgeBounds = (await card.locator(".portal-status").boundingBox())!;
+        expect(badgeBounds.y - cardBounds.y).toBeLessThan(21);
+        expect(cardBounds.x + cardBounds.width - badgeBounds.x - badgeBounds.width).toBeLessThan(21);
+        const headingBounds = (await card.locator("h3").boundingBox())!;
+        expect(badgeBounds.y + badgeBounds.height).toBeLessThanOrEqual(headingBounds.y);
+      }
+      if (screen === "admin-bookings") {
+        const costs = card.locator(".consumer-booking-cost");
+        expect(Math.abs((await costs.nth(0).boundingBox())!.y - (await costs.nth(1).boundingBox())!.y)).toBeLessThan(1);
+      }
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await grid.screenshot({ path: test.info().outputPath(`${screen}-grid.png`) });
+    if (screen === "admin-consultants-duplicates") {
+      await cards.first().getByRole("button", { name: "Edit", exact: true }).click();
+      const editing = grid.locator('[data-editing="true"]');
+      expect((await editing.boundingBox())!.width).toBeCloseTo(bounds.width, 0);
+      await expect(editing.locator('input[name="name"]')).toBeVisible();
+      await editing.getByRole("button", { name: "Cancel", exact: true }).click();
+      await expect(grid.locator('[data-editing="true"]')).toHaveCount(0);
+    }
+  }
+});
+
 test("duplicate consultant responses stay unique through editing and loading another page", async ({ page }) => {
   const warnings: string[] = [];
   page.on("console", message => { if (/same key|unique.*key/i.test(message.text())) warnings.push(message.text()); });

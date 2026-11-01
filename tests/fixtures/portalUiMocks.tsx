@@ -236,7 +236,7 @@ export const recordConsultantSettlement = async (input: { status: string; refere
   portalUiState.calls++; Object.assign(financeRecord, { settlementStatus: input.status, settlementReference: input.reference, settlementDate: input.date, settlementNotes: input.notes }); return { record: { ...financeRecord } };
 };
 export const createConsultationBooking = async (input: unknown) => { portalUiState.consultantWrites.push(input); return { ok: true, bookingId: "consultation-fixture", bookingReference: "AYURCONS01" }; };
-export const listConsultationBookings = () => page(portalUiState.screen === "consumer-consultations-empty" ? [] : [{ ...consultation,
+export const listConsultationBookings = () => page(portalUiState.screen === "admin-consultations-grid" ? Array.from({ length: 3 }, (_, index) => ({ ...consultation, id: `consultation-${index}`, bookingReference: `AYURGRID${index}`, consumerName: index === 0 ? "A consumer with a longer full name for wrapping" : consultation.consumerName })) : portalUiState.screen === "consumer-consultations-empty" ? [] : [{ ...consultation,
   ...(portalUiState.screen === "consumer-consultations-policy" || portalUiState.screen === "consumer-consultations-expired" ? {
     cancellationPolicy: snapshotConsultationCancellation(DEFAULT_CONSULTATION_CANCELLATION_POLICY, portalUiState.screen.endsWith("expired") ? "2000-01-01" : "2099-10-25", "09:30"),
     paymentTotals: { paidPaise: 99055, refundedPaise: 0 },

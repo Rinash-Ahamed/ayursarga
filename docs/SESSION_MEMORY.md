@@ -2,6 +2,27 @@
 
 Updated: 1 November 2026 (Asia/Calcutta).
 
+## Responsive Admin consultant and booking grids (1 November 2026)
+
+- v4.30.4 groups the Admin consultant and booking-card layout updates. Shared
+  Admin-only auto-fill grid uses a 360px preferred minimum, reducing to one
+  column when space is limited without overflow. Consultant details use two
+  columns, cards stretch within each row, actions align at the bottom and Edit
+  expands across the grid to preserve the full form. Hospital booking and Admin
+  online consultation cards stack their content and financial summary within
+  each grid cell. Consumer/Hospital layouts and backend workflows are unchanged.
+- Admin booking status badges sit at the top-right with space reserved in the
+  booking-reference line. Package amount and estimated commission share one row;
+  consultation cards retain their existing fee-only display.
+- Focused mocked desktop, tablet, 320px phone and mobile WebKit checks exercise
+  multi-card alignment, text wrapping, overflow, full-width Edit/Cancel,
+  duplicate-page preservation, staged photos and consultation reschedule dialogs.
+  An initial spacing failure exposed an older gap rule; scoped grid specificity
+  was corrected and all eight grid/dialog checks passed on rerun. Final badge
+  and amount assertions are also checked on all four viewport configurations.
+  No persisted fields, permissions, rules/indexes or API changes. No build/lint
+  or deployment requested.
+
 ## Consumer consultant-card alignment (1 November 2026)
 
 - v4.30.3 groups the existing large portrait beside the name and a visible
