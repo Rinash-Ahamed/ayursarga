@@ -157,62 +157,62 @@ export function buildHospitalContractHtml(hospital: DocumentRecord<HospitalDocum
   <style>
     :root{--forest:#173e2b;--forest-deep:#0b2d1e;--emerald:#0f5739;--gold:#b8872f;--gold-soft:#e8c66d;--ink:#252921;--muted:#657363;--line:#d8dfd9;--paper:#fff}
     *{box-sizing:border-box}
-    body{margin:0;background:#e8eee9;color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:10.25pt;line-height:1.64}
+    body{margin:0;background:#e8eee9;color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:10.25pt;line-height:1.48}
     .contract-document{position:relative;width:min(100%,210mm);margin:0 auto 24px;padding:19mm 17mm 18mm;background:var(--paper);box-shadow:0 24px 70px rgba(11,45,30,.18);overflow:hidden}
     .contract-document::before{content:"";position:absolute;top:43mm;right:-33mm;width:86mm;height:86mm;border:1px solid rgba(184,135,47,.09);border-radius:50%;box-shadow:0 0 0 12mm rgba(23,62,43,.025),0 0 0 24mm rgba(184,135,47,.018);pointer-events:none}
-    .contract-brand{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12mm;margin:-19mm -17mm 7mm;padding:11mm 17mm 9mm;border-bottom:4px solid var(--gold);background:linear-gradient(130deg,var(--forest-deep),var(--forest) 58%,var(--emerald));color:#fff;overflow:hidden}
+    .contract-brand{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12mm;margin:-19mm -17mm 5mm;padding:8mm 17mm 6mm;border-bottom:4px solid var(--gold);background:linear-gradient(130deg,var(--forest-deep),var(--forest) 58%,var(--emerald));color:#fff;overflow:hidden}
     .contract-brand::after{content:"";position:absolute;right:-15mm;top:-30mm;width:75mm;height:75mm;border:1px solid rgba(232,198,109,.22);border-radius:50%;box-shadow:0 0 0 9mm rgba(232,198,109,.05)}
     .contract-brand-lockup{position:relative;z-index:1;display:flex;align-items:center;gap:4mm}
     .contract-brand img{width:18mm;height:18mm;object-fit:contain;border-radius:50%;background:#fff;padding:1.5mm}
     .contract-brand strong{display:block;color:#fff;font-family:Georgia,serif;font-size:18pt;font-weight:500;letter-spacing:.02em}
     .contract-brand small{display:block;margin-top:1mm;color:var(--gold-soft);font-size:7.5pt;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
     .contract-classification{position:relative;z-index:1;padding:2.5mm 4mm;border:1px solid rgba(232,198,109,.5);border-radius:100px;color:var(--gold-soft);font-size:7pt;font-weight:700;letter-spacing:.13em;text-transform:uppercase}
-    .confidential-ribbon{display:flex;align-items:center;gap:3mm;margin:0 0 8mm;color:var(--forest);font-size:7.5pt;font-weight:700;letter-spacing:.13em;text-transform:uppercase}
+    .confidential-ribbon{display:flex;align-items:center;gap:3mm;margin:0 0 5mm;color:var(--forest);font-size:7.5pt;font-weight:700;letter-spacing:.13em;text-transform:uppercase}
     .confidential-ribbon::before,.confidential-ribbon::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,transparent,var(--gold))}
     .confidential-ribbon::after{background:linear-gradient(90deg,var(--gold),transparent)}
-    h1{max-width:145mm;margin:0 0 10mm;color:var(--forest);font-family:Georgia,serif;font-size:27pt;font-weight:500;line-height:1.08;letter-spacing:-.02em}
-    h2{position:relative;margin:10mm 0 4mm;padding:3.5mm 4mm 3.5mm 6mm;display:flex;align-items:baseline;gap:2.5mm;border:1px solid rgba(23,62,43,.12);border-left:3px solid var(--gold);border-radius:2mm;background:linear-gradient(90deg,#f3f7f3,#fff);color:var(--forest);font-family:Georgia,serif;font-size:15.5pt;font-weight:600;line-height:1.25;break-after:avoid}
+    h1{max-width:145mm;margin:0 0 6mm;color:var(--forest);font-family:Georgia,serif;font-size:27pt;font-weight:500;line-height:1.08;letter-spacing:-.02em}
+    h2{position:relative;margin:6mm 0 3mm;padding:2.5mm 4mm 2.5mm 6mm;display:flex;align-items:baseline;gap:2.5mm;border:1px solid rgba(23,62,43,.12);border-left:3px solid var(--gold);border-radius:2mm;background:linear-gradient(90deg,#f3f7f3,#fff);color:var(--forest);font-family:Georgia,serif;font-size:15.5pt;font-weight:600;line-height:1.25;break-after:avoid}
     .contract-section-number{flex:0 0 10mm;color:inherit;font:inherit;line-height:inherit;text-align:left}
-    h3{margin:6mm 0 2mm;color:var(--forest);font-size:11.5pt;break-after:avoid}
-    p{margin:0 0 4mm;orphans:3;widows:3}
-    .term-summary{position:relative;padding:5mm 5mm 5mm 7mm;border:1px solid var(--line);border-left:3px solid var(--forest);border-radius:2.5mm;background:#fff}
+    h3{margin:4mm 0 2mm;color:var(--forest);font-size:11.5pt;break-after:avoid}
+    p{margin:0 0 3mm;orphans:3;widows:3}
+    .term-summary{position:relative;padding:4mm 5mm 4mm 6mm;border:1px solid var(--line);border-left:3px solid var(--forest);border-radius:2.5mm;background:#fff}
     .contract-highlight{display:inline-block;padding:.45mm 1.4mm;border:1px solid rgba(184,135,47,.3);border-radius:1.5mm;background:#fbf4df;color:var(--forest);font-weight:750;line-height:1.25;white-space:nowrap}
     .contract-highlight-strong{padding:.7mm 2mm;border-color:rgba(184,135,47,.52);background:#f5e8bf;font-size:10pt;font-weight:800}
-    table{width:100%;margin:5mm 0 7mm;border-collapse:separate;border-spacing:0;overflow:hidden;border:1px solid #cbd6cd;border-radius:3mm;font-size:9.1pt;break-inside:avoid;box-shadow:0 2mm 7mm rgba(23,62,43,.045)}
-    th{padding:3.2mm 3.5mm;background:linear-gradient(120deg,var(--forest-deep),var(--forest));color:#fff;text-align:left;font-size:8.3pt;letter-spacing:.06em;text-transform:uppercase}
-    td{padding:3mm 3.5mm;vertical-align:top;border-top:1px solid var(--line)}
+    table{width:100%;margin:4mm 0 5mm;border-collapse:separate;border-spacing:0;overflow:hidden;border:1px solid #cbd6cd;border-radius:3mm;font-size:9.1pt;break-inside:avoid;box-shadow:0 2mm 7mm rgba(23,62,43,.045)}
+    th{padding:2.5mm 3.5mm;background:linear-gradient(120deg,var(--forest-deep),var(--forest));color:#fff;text-align:left;font-size:8.3pt;letter-spacing:.06em;text-transform:uppercase}
+    td{padding:2.5mm 3.5mm;vertical-align:top;border-top:1px solid var(--line)}
     td+td,th+th{border-left:1px solid var(--line)}
     tr:nth-child(even) td{background:#f5f8f5}
     .party-details{margin-top:3mm;font-size:9.3pt}
-    .party-details th{width:50%;padding:4mm 5mm;border-bottom:1mm solid var(--gold);font-size:9pt}
-    .party-details td{padding:4.5mm 5mm;line-height:1.55}
+    .party-details th{width:50%;padding:3mm 5mm;border-bottom:1mm solid var(--gold);font-size:9pt}
+    .party-details td{padding:3mm 5mm;line-height:1.45}
     .party-details td strong{display:inline-block;margin-bottom:1mm;color:var(--forest);font-size:7.4pt;letter-spacing:.09em;text-transform:uppercase}
-    .party-subdetail{margin-top:4mm;padding-top:3.5mm;border-top:1px solid var(--line)}
-    .contract-contact-grid{margin:5mm 0 7mm;display:grid;grid-template-columns:1fr 1fr;gap:3mm;break-inside:avoid}
-    .contract-contact-card{padding:4mm 4.5mm;border:1px solid var(--line);border-radius:2.5mm;background:linear-gradient(145deg,#f7faf7,#fff)}
-    .contract-contact-card>strong{display:block;margin-bottom:3mm;color:var(--forest);font-size:8pt;letter-spacing:.08em;text-transform:uppercase}
+    .party-subdetail{margin-top:3mm;padding-top:2.5mm;border-top:1px solid var(--line)}
+    .contract-contact-grid{margin:4mm 0 5mm;display:grid;grid-template-columns:1fr 1fr;gap:2.5mm;break-inside:avoid}
+    .contract-contact-card{padding:3mm 4mm;border:1px solid var(--line);border-radius:2.5mm;background:linear-gradient(145deg,#f7faf7,#fff)}
+    .contract-contact-card>strong{display:block;margin-bottom:2mm;color:var(--forest);font-size:8pt;letter-spacing:.08em;text-transform:uppercase}
     .contract-contact-card dl{margin:0}
-    .contract-contact-card dl>div{padding:2.2mm 0;border-top:1px solid rgba(23,62,43,.1)}
+    .contract-contact-card dl>div{padding:1.5mm 0;border-top:1px solid rgba(23,62,43,.1)}
     .contract-contact-card dl>div:first-child{padding-top:0;border-top:0}
     .contract-contact-card dt{margin:0 0 .7mm;color:#647568;font-size:6.8pt;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
     .contract-contact-card dd{margin:0;color:var(--ink);font-size:8.6pt;font-weight:600;line-height:1.4;overflow-wrap:anywhere}
     .signature-boxes{table-layout:fixed;border-color:rgba(23,62,43,.42);box-shadow:0 3mm 10mm rgba(23,62,43,.09)}
-    .signature-boxes th{width:50%;padding:4mm 5mm;border-bottom:1mm solid var(--gold);font-size:8.7pt;letter-spacing:.08em}
-    .signature-boxes td{box-sizing:border-box;width:50%;height:43mm;padding:5mm;background:#fff!important}
+    .signature-boxes th{width:50%;padding:3mm 5mm;border-bottom:1mm solid var(--gold);font-size:8.7pt;letter-spacing:.08em}
+    .signature-boxes td{box-sizing:border-box;width:50%;height:38mm;padding:4mm;background:#fff!important}
     .signature-boxes td+td{border-left:1px solid rgba(23,62,43,.28)}
     .signature-boxes td strong{display:block;color:var(--forest);font-size:7.4pt;letter-spacing:.08em;text-transform:uppercase}
-    .signature-mark{box-sizing:border-box;width:100%;height:32mm;padding:4mm;display:flex;flex-direction:column;justify-content:space-between;border:1px solid rgba(23,62,43,.16);border-radius:2mm;background:linear-gradient(145deg,#f7faf7,#fff)}
+    .signature-mark{box-sizing:border-box;width:100%;height:29mm;padding:3mm;display:flex;flex-direction:column;justify-content:space-between;border:1px solid rgba(23,62,43,.16);border-radius:2mm;background:linear-gradient(145deg,#f7faf7,#fff)}
     .signature-art{height:15mm;overflow:hidden;display:flex;align-items:flex-start;justify-content:center}
     .signature-art img{width:72%;height:auto;object-fit:contain;transform:translateY(-28%)}
     .signature-date{display:block;color:var(--forest);font-size:5.7pt;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
-    .contract-footer{display:flex;align-items:center;justify-content:space-between;gap:8mm;margin:12mm -17mm -18mm;padding:6mm 17mm;border-top:3px solid var(--gold);background:var(--forest-deep);color:#fff}
+    .contract-footer{display:flex;align-items:center;justify-content:space-between;gap:8mm;margin:8mm -17mm -18mm;padding:4mm 17mm;border-top:3px solid var(--gold);background:var(--forest-deep);color:#fff}
     .contract-footer-brand{display:flex;align-items:center;gap:3mm}
     .contract-footer img{width:11mm;height:11mm;object-fit:contain;border-radius:50%;background:#fff;padding:1mm}
     .contract-footer strong{font-family:Georgia,serif;font-size:12pt;font-weight:500}
     .contract-footer span{color:var(--gold-soft);font-size:7pt;font-weight:700;letter-spacing:.12em;text-transform:uppercase;text-align:right}
-    @page{size:A4;margin:15mm 14mm 17mm}
+    @page{size:A4;margin:13mm 14mm 15mm}
     @media(max-width:640px){.contract-document{padding:12mm 8mm}.contract-brand{margin:-12mm -8mm 7mm;padding:8mm}.contract-brand img{width:14mm;height:14mm}.contract-classification{display:none}.contract-footer{margin:10mm -8mm -12mm;padding:5mm 8mm}}
-    @media print{body{background:#fff}.contract-document{width:auto;margin:0;padding:0;box-shadow:none;overflow:visible}.contract-document::before{display:none}.contract-brand{margin:0 0 8mm;padding:9mm 10mm}.contract-footer{margin:10mm 0 0;padding:5mm 8mm}}
+    @media print{body{background:#fff}.contract-document{width:auto;margin:0;padding:0;box-shadow:none;overflow:visible}.contract-document::before{display:none}.contract-brand{margin:0 0 5mm;padding:6mm 10mm}.contract-footer{margin:7mm 0 0;padding:4mm 8mm}}
   </style>
 </head>
 <body>

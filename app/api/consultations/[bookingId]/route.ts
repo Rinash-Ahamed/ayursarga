@@ -8,12 +8,13 @@ import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
 import { requestAuditDevice } from "@/services/api/audit";
 import { consultationAdminRecipients, addConsultationNotification } from "@/services/consultations/consultationNotificationsAdmin";
 import { publicConsultantProjection } from "@/features/consultations/publicProjection";
-import type { ConsultantTimeSlot } from "@/features/consultants/validation";
 import { validConsultationSchedule } from "@/features/consultations/schedule";
 import { isConsultantDateAvailable } from "@/features/consultations/availability";
 import { queueConsultationEmail, deliverConsultationEmails } from "@/services/email/consultationEmailService";
 import { auditPayment } from "@/services/payments/consultationPaymentsAdmin";
 import { consultationCancellationEligibility, validCancellationSnapshot, snapshotConsultationCancellation } from "@/features/consultations/cancellationPolicy";
+import { generateConsultationSlots } from "@/features/consultations/slots";
+import { readScheduleDay, requireFreeSlot, releaseSlot, saveSlotEntry, SlotReservationError } from "@/services/consultations/slotReservationsAdmin";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -58,19 +59,28 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
       const now = Timestamp.now();
       const update: Record<string, unknown> = { status: action === "reschedule" ? "confirmed" : action, updatedAt: now, updatedBy: uid };
       let consultantContact: Record<string, unknown> | undefined;
+      let previousDay: Awaited<ReturnType<typeof readScheduleDay>> | undefined;
+      let nextDay: Awaited<ReturnType<typeof readScheduleDay>> | undefined;
       if (role === "admin" && typeof input.adminNotes === "string") update.adminNotes = input.adminNotes.trim() || null;
       if (action === "reschedule") {
         const date = typeof input.confirmedDate === "string" ? input.confirmedDate : "";
         const time = typeof input.confirmedTime === "string" ? input.confirmedTime : "";
-        if (!validConsultationSchedule(date, booking.slotStartTime, booking.slotEndTime, time)) throw new ConsultationError("Choose a future date and a time within the appointment window.", 400);
+        if (!validConsultationSchedule(date, "00:00", "23:59", time)) throw new ConsultationError("Choose a future date and appointment time.", 400);
         if (booking.status === "confirmed" && date === booking.confirmedDate && time === booking.confirmedTime) throw new ConsultationError("Choose a different appointment date or time.", 400);
         const consultant = await transaction.get(firestore.collection("consultants").doc(booking.consultantId));
         consultantContact = consultant.data() ?? {};
         const provider = consultant.exists ? publicConsultantProjection(consultant.id, consultant.data()!, booking.serviceId) : null;
-        const timing = provider?.preferredSlotTimings[booking.preferredTimeSlot as ConsultantTimeSlot];
+        const appointment = provider ? generateConsultationSlots(date, booking.serviceId, provider, now.toDate()).find(slot => slot.startTime === time) : null;
         if (provider && !isConsultantDateAvailable(date, provider)) throw new ConsultationError("The consultant is not available on this date. Choose a configured available day.", 409);
-        if (!provider || !timing || time < timing.startTime || time >= timing.endTime) throw new ConsultationError("The consultant is no longer available in this appointment window.", 409);
+        if (!provider || !appointment) throw new ConsultationError("Choose one of this consultant's available appointment times.", 409);
+        const previousDate = booking.confirmedDate ?? booking.preferredDate;
+        previousDay = await readScheduleDay(transaction, firestore, booking.consultantId, previousDate);
+        nextDay = date === previousDate ? previousDay : await readScheduleDay(transaction, firestore, booking.consultantId, date);
+        requireFreeSlot(nextDay, appointment, now.toMillis(), bookingId);
         update.confirmedDate = date; update.confirmedTime = time;
+        update.confirmedEndTime = appointment.endTime;
+        update.slotStartTime = appointment.startTime; update.slotEndTime = appointment.endTime;
+        update.preferredTimeSlot = appointment.window; update.scheduleVersion = 2;
         update.confirmedAt = booking.confirmedAt ?? now;
         if (validCancellationSnapshot(booking.cancellationPolicy)) update.cancellationPolicy = snapshotConsultationCancellation(booking.cancellationPolicy.policy, date, time, true);
       }
@@ -91,7 +101,12 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
         update.cancellationOutcome = { requestedAt: now.toDate().toISOString(), policyVersion: hasPolicy ? booking.cancellationPolicy.policy.version : null,
           eligibleRefundPaise: role === "consumer" ? eligibility?.eligibleRefundPaise ?? null : null,
           remainingRefundPaise: role === "consumer" ? eligibility?.remainingRefundPaise ?? null : null };
+        previousDay = await readScheduleDay(transaction, firestore, booking.consultantId, booking.confirmedDate ?? booking.preferredDate);
       }
+      // The old slot is released only in the same successful commit as the
+      // booking change; failed cancellation/rescheduling leaves it untouched.
+      if (previousDay) releaseSlot(transaction, firestore, previousDay, bookingId, uid, role === "admin" ? "admin" : "consumer", now);
+      if (nextDay) saveSlotEntry(transaction, firestore, nextDay, { ownerId: bookingId, startTime: String(update.confirmedTime), endTime: String(update.confirmedEndTime), state: "booked", expiresAt: null }, uid, role === "admin" ? "admin" : "consumer", now);
       const audit = firestore.collection("auditLogs").doc();
       update.lastAuditId = audit.id;
       transaction.update(reference, update);
@@ -121,7 +136,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
     const delivery = result.emailEventId ? await deliverConsultationEmails(firestore, result.emailEventId) : undefined;
     return mutationJson(result.changes, delivery);
   } catch (error) {
-    if (error instanceof AdminAuthorizationError || error instanceof RequestBodyError || error instanceof ConsultationError) return apiJson({ error: error.message }, error.status);
+    if (error instanceof AdminAuthorizationError || error instanceof RequestBodyError || error instanceof ConsultationError || error instanceof SlotReservationError) return apiJson({ error: error.message }, error.status);
     logApiError("PATCH /api/consultations/[bookingId]", error);
     return apiJson({ error: "We could not update this consultation. Try again." }, 503);
   }

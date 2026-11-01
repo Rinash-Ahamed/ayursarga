@@ -5,7 +5,7 @@ const pure = loadTypeScript("services/payments/razorpay.ts");
 export const paidConsultant = { name: "Assigned Professional", designation: "Physician", qualification: "BAMS", yearsExperience: 3,
   status: "active", archivedAt: null, consultationServices: ["prenatal-doctor"], consultantCharge: 900.5, ayursargaCommissionPercentage: 10,
   preferredTimeSlots: ["morning"], preferredSlotTimings: { morning: { startTime: "09:30", endTime: "11:45" } }, email: "consultant@example.test" };
-export const paidInput = { checkoutVersion: 1, consultantId: "AS001", serviceId: "prenatal-doctor", preferredDate: "2099-10-25", preferredTimeSlot: "morning",
+export const paidInput = { checkoutVersion: 1, consultantId: "AS001", serviceId: "prenatal-doctor", preferredDate: "2099-10-25", preferredTimeSlot: "morning", appointmentStartTime: "09:30",
   expectedSlotStartTime: "09:30", expectedSlotEndTime: "11:45", expectedCharge: 990.55, bookingTermsAccepted: true, requestId: "payment-attempt-0001", consumerNotes: "" };
 export function consultationPaymentFixture(options = {}) {
   const state = { orders: new Map(), payments: new Map(), orderCalls: 0, mode: "test", uncertainOrder: false, ...options.paymentState };

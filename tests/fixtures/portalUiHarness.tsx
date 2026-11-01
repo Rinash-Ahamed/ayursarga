@@ -53,6 +53,7 @@ const screens = {
   "admin-dashboard-consultations-unavailable": <AdminDashboard />,
   "admin-dashboard-consultations-zero": <AdminDashboard />,
   "admin-consultants": <ConsultantsManager />, "admin-users": <UsersList />, "admin-bookings": <AdminBookings />,
+  "admin-consultants-schedule": <ConsultantsManager />,
   "admin-users-no-date": <UsersList />,
   "admin-user-cards": <UsersList />,
   "admin-availability": <AdminAvailability />, "admin-audits": <AdminAuditLogs />,

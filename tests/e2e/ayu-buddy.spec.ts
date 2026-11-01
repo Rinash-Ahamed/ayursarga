@@ -11,6 +11,7 @@ const contactBundle = bundleDialogHarness("tests/fixtures/contactHarness.tsx", {
   "./Reveal": "tests/fixtures/contactMotionMocks.tsx", "./MagneticButton": "tests/fixtures/contactMotionMocks.tsx",
 }, { NEXT_PUBLIC_TURNSTILE_SITE_KEY: "synthetic-site-key" });
 const photo = readFileSync("public/ayu-buddy.webp");
+const whatsappPhoto = readFileSync("public/whatsapp.png");
 
 async function mount(page: Page, enabled = true, contact = false) {
   // Mock the provider script, never solve real challenges or send email in tests.
@@ -31,6 +32,7 @@ async function mount(page: Page, enabled = true, contact = false) {
   ` }));
   await page.route("https://ayu.test/**", (route) => route.request().url().endsWith("ayu-buddy.webp")
     ? route.fulfill({ contentType: "image/webp", body: photo })
+    : route.request().url().endsWith("whatsapp.png") ? route.fulfill({ contentType: "image/png", body: whatsappPhoto })
     : route.fulfill({ contentType: "text/html", body: '<html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><main style="height:2500px"><h1>Ayursarga</h1><button>Background control</button></main><div id="fixture-root"></div><div id="contact-root"></div></body></html>' }));
   await page.goto("https://ayu.test/");
   for (const file of ["node_modules/tailwindcss/lib/css/preflight.css", "app/globals.css"]) await page.addStyleTag({ content: readFileSync(file, "utf8") });
@@ -46,6 +48,52 @@ async function openForm(page: Page) {
   await page.locator(".enquiry-verification").scrollIntoViewIfNeeded();
   await expect(page.getByRole("button", { name: "Send to Ayursarga", exact: true })).toBeEnabled();
 }
+
+test("right-side support alternates every three seconds and pauses for keyboard and an open guide", async ({ page }, info) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.clock.install();
+  await mount(page);
+  const ayu = page.getByRole("button", {name:"Ask Ayu, your Ayursarga guide"});
+  const whatsapp = page.getByRole("link", {name:/Chat with Ayursarga on WhatsApp/});
+  await expect(ayu).toBeVisible();
+  await expect(whatsapp).toHaveCount(0);
+  const dock = page.locator(".support-launcher");
+  const bounds = (await dock.boundingBox())!;
+  expect(bounds.x + bounds.width / 2).toBeGreaterThan(page.viewportSize()!.width / 2);
+  const layoutWidth = await page.evaluate(() => document.documentElement.clientWidth);
+  expect(layoutWidth - bounds.x - bounds.width).toBeLessThanOrEqual(20);
+  expect(bounds.x + bounds.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  expect(bounds.y + bounds.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+  await page.clock.runFor(3_000);
+  await expect(whatsapp).toBeVisible();
+  await expect(ayu).toHaveCount(0);
+  await expect(whatsapp).toHaveAttribute("href", /^https:\/\/wa.me\//);
+  await expect(page.locator(".whatsapp-bubble")).toHaveCount(1);
+  await whatsapp.focus();
+  await page.clock.runFor(6_000);
+  await expect(whatsapp).toBeFocused();
+  await page.getByRole("button", {name:"Background control",exact:true}).focus();
+  await page.clock.runFor(3_000);
+  await expect(ayu).toBeVisible();
+  await ayu.click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.clock.runFor(9_000);
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(ayu).toBeFocused();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await dock.screenshot({path:info.outputPath("support-launcher.png")});
+});
+
+test("reduced motion keeps both support controls stable on the right without eager guide loading", async ({page}) => {
+  await page.clock.install();
+  await mount(page);
+  await expect(page.locator(".support-launcher")).toHaveAttribute("data-static", "true");
+  await page.clock.runFor(12_000);
+  await expect(page.getByRole("button", {name:"Ask Ayu, your Ayursarga guide"})).toBeVisible();
+  await expect(page.getByRole("link", {name:/Chat with Ayursarga on WhatsApp/})).toBeVisible();
+  expect(await page.evaluate(() => (globalThis as typeof globalThis & {fixtureLazyLoads?:number}).fixtureLazyLoads ?? 0)).toBe(0);
+});
 
 test("Ayu offers curated guidance with a viewport-safe, scroll-locked keyboard-accessible dialog", async ({ page }, info) => {
   const errors: string[] = [];

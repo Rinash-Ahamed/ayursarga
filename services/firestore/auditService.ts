@@ -27,16 +27,6 @@ export function getAuditActorId() {
   return uid;
 }
 
-export function getArchiveMetadata() {
-  const actorId = getAuditActorId();
-  return {
-    archivedAt: serverTimestamp(),
-    archivedBy: actorId,
-    updatedAt: serverTimestamp(),
-    updatedBy: actorId,
-  };
-}
-
 function getDeviceMetadata() {
   if (typeof navigator === "undefined") {
     return { userAgent: null, platform: null, ipAddress: null };
@@ -106,27 +96,6 @@ export async function updateAuditedDocument(
   const batch = writeBatch(firestore);
   batch.update(target, documentChanges);
   batch.set(audit, auditEntry(collectionPath, id, context, previous, updatedValues));
-  await batch.commit();
-}
-
-export async function replaceAuditedDocument(
-  collectionPath: string,
-  id: string,
-  replacement: DocumentData,
-  context: AuditContext,
-  _previousValues: DocumentData,
-) {
-  void _previousValues;
-  const firestore = getClientFirestore();
-  const target = doc(firestore, collectionPath, id);
-  const current = await getDoc(target);
-  if (!current.exists()) throw new Error("The requested record could not be found.");
-  const previous = current.data();
-  const audit = doc(collection(firestore, COLLECTIONS.auditLogs));
-  const documentData = { ...replacement, lastAuditId: audit.id };
-  const batch = writeBatch(firestore);
-  batch.set(target, documentData);
-  batch.set(audit, auditEntry(collectionPath, id, context, previous, documentData));
   await batch.commit();
 }
 

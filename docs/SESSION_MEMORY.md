@@ -2,6 +2,223 @@
 
 Updated: 1 November 2026 (Asia/Calcutta).
 
+## Compact five-page partner contract (1 November 2026)
+
+- v4.31.6 adds a partner-contract-only compact mode to the native PDF renderer:
+  shorter repeated header/footer, more usable page height, tighter paragraph,
+  heading and table spacing, and slightly shorter equal signing boxes. Existing
+  9.1pt body text and wording are unchanged. Generic branded document/invoice
+  rendering retains the old default layout and is byte-for-byte regression tested.
+  HTML preview/print spacing is tightened in its existing rules without duplicate
+  overrides, keeping body font size, terms, placeholders and signature content.
+- Synthetic standard and long-name/address PDFs were both six pages before and
+  are both five afterward. Normalized full exported-text SHA256 values match the
+  pre-change baselines. Arbitrarily longer records may still paginate further;
+  there is no truncation or forced five-page clipping. Four focused browser
+  checks passed for page count/text identity/bounds, invoice isolation and HTML
+  readability/signing boxes. Existing company GSTIN/contact unit test passed.
+- PDF skill used for actual PDF visual verification. Poppler was unavailable;
+  a pre-existing local pdf.js renderer in an unused node_modules package was
+  used solely as a QA tool, not imported into application/tests or added as a
+  dependency. All ten PDF page PNGs plus HTML particulars/signatures reviewed.
+  No PDF business records, audit writes, build/lint or deployment performed.
+- Separate pre-existing export limitation discovered: contractBlocks ignores
+  the HTML contact-card div, and the native signature renderer draws generic
+  signing boxes rather than the preview's image/dates. These differences existed
+  in the six-page baseline and remain unchanged by this spacing-only task.
+  Reported to owner; a future fidelity fix needs explicit scope and new text
+  baselines/page-count verification, not silently dropping this finding.
+
+## Right-side alternating Ayu/WhatsApp launcher (1 November 2026)
+
+- v4.31.5 moves Ayu and its dialog/failure notice to the right. With Ayu enabled,
+  Nav's existing Ayu launcher owns a shared right-side dock and reuses the existing
+  WhatsApp link/image; standalone WhatsAppBubble returns null to avoid duplicates.
+  With Ayu disabled, the original standalone WhatsApp launcher remains available.
+  Consumer PortalShell's existing Ayu surface uses the same shared dock.
+- Alternates Ayu/WhatsApp every 3 seconds with a 250ms opacity/small vertical
+  transition. Hidden controls are inert and excluded from keyboard/accessibility
+  navigation. Rotation pauses on pointer hover, keyboard focus, hidden documents
+  and open Ayu dialogs. Reduced-motion users get two static controls without
+  switching/animation. Safe-area/mobile bottom-navigation spacing retained.
+  Timer/listener cleanup is included; no new dependency, API, eager guide/form
+  import, image generation or change to enquiry sending. AYU_ONLINE stays intact.
+- Ayursarga design skill guided preservation of theme, shared assets, lightweight
+  motion and reduced-motion behavior. Twelve focused local browser checks passed
+  desktop, 320px phone and mobile WebKit for timed rotation, focus pause, open
+  dialog stability, lazy guide loading, reduced motion, flag-off behavior,
+  viewport bounds, focus return and scroll lock. Launcher screenshot reviewed.
+  Earlier failed assertions were corrected for narrow dock width/desktop scrollbar;
+  final run passed all 12. Physical devices/tablet landscape are not verified.
+  No build/lint or deployment requested/run for this task.
+
+## Firestore redeployment and index readiness (1 November 2026)
+
+- Owner-requested scoped firestore:rules,firestore:indexes deployment completed
+  successfully to ayursarga-connect. Rules compiled and were already current;
+  indexes deployed successfully. Follow-up Firebase CLI inventory reports every
+  composite index READY, including both new consultant/status/date scheduling
+  indexes previously reported CREATING. The private entries indexing exemption
+  is present. No operational records, Storage rules or app hosting changed.
+- v4.31.3 quiet refresh and v4.31.4 Consumer session continuity are application
+  code; this Firebase deployment does not publish them. A separate application
+  deployment is still required. No build/lint rerun or version bump for deploy.
+
+## Consumer session continuity (1 November 2026)
+
+- v4.31.4 applies the shared 15-minute idle hook only to authenticated Admin and
+  Hospital roles. Owner explicitly approved removing inactivity sign-out for
+  Consumers; AGENTS.md now records that role-specific decision. Consumers retain
+  existing Firebase browser-session behavior and explicit Logout. No custom token
+  storage, new auth context, API/rule change or authorization bypass was added.
+  Account eligibility, revoked-session and protected-route handling are unchanged.
+- Four focused local regressions passed using the real AuthProvider role gate
+  and idle hook with fake time/cloud dependencies: Consumer survives 15 minutes
+  and a further day of inactivity/foreground events and can explicitly log out;
+  Admin/Hospital each expire exactly once at 15 minutes; unauthenticated/loading
+  or incomplete sessions do not start a privileged idle timer. These are local
+  checks, not live Google sign-in or physical-device persistence verification.
+  No build/lint or deployment requested/run for this task.
+
+## Quiet consultation availability refresh (1 November 2026)
+
+- v4.31.3 keeps the 10-minute server payment hold and all atomic booking/payment
+  safeguards unchanged. Shared useConsultationSlots refreshes every 45 seconds
+  instead of 15, only while visible, and on focus/return. In-flight reads are not
+  duplicated or aborted by another refresh; paired foreground events are
+  coalesced for 1.5 seconds. Explicit retries use the same single-flight handler.
+- Only a new consultant/service/date read shows blocking loading. Successful
+  background refreshes retain controls/selection until the response arrives.
+  Failures preserve the last options but show an inline error and prevent payment
+  or Admin reschedule confirmation until a successful retry. If a selected slot
+  disappears, an explicit unavailable option/message asks for another time;
+  payment remains disabled. Key changes/unmount abort and ignore stale responses.
+- Eight focused desktop/WebKit-phone component-harness browser tests passed for
+  Admin schedule, Consumer booking/consent, quiet slow refresh, reduced polling,
+  request deduplication, failure/retry, disappearing slot and Admin rescheduling.
+  Twelve local slot/payment API fixture regressions passed; these do not prove
+  native Firestore contention or live Razorpay delivery. No build/lint, deployed
+  workflow writes, deployment or measured server-latency improvement claimed.
+
+## Dead-code cleanup and validation (1 November 2026)
+
+- v4.31.2 removes three helpers verified unreferenced throughout source/tests:
+  formatBookingCarePreference (plus its type and two unused imports),
+  getArchiveMetadata and replaceAuditedDocument. Existing create/update audit
+  helpers remain unchanged. No files, operational data or uploaded assets were
+  removed; the active idle-timeout hook and Next convention exports were retained.
+- Strict TypeScript unused-local/parameter scan passed. Focused booking-date and
+  consultant-preference regressions passed all 19 checks. Owner-requested lint
+  passed without warnings/errors. Production build passed compilation, TypeScript
+  and generation of all 84 pages.
+- Fresh same-build production server on loopback port 3198 returned HTTP 200 for
+  /api/health (configuration, 3 ready dependencies), /api/health?deep=true with
+  Accept application/json (deep-configuration, 6 ready dependencies), and the
+  themed /health?deep=true page with expected content/style markers. Configuration
+  checks do not prove live payment/email delivery or all API permissions. The
+  temporary server was stopped; generated next-env route import restored. No
+  deployment or live workflow mutations were performed.
+
+## Consultant card action alignment (1 November 2026)
+
+- v4.31.1 groups Edit, Make active/inactive and View appointment slots in one
+  card action grid. Previously the slots button was outside the shared action
+  group, so it touched the row above. Equal-width Edit/status actions now share
+  a row; slots spans the next row with a 10px gap and 44px minimum touch targets.
+  Existing handlers, permissions, editing and scheduling behavior are unchanged.
+- Focused Playwright card-grid regression passed all 8 viewport projects:
+  320/390px phones, landscape, two tablets, desktop, wide and WebKit phone.
+  Assertions cover button separation, equal sizing, card/page overflow and
+  entering/cancelling Edit. Phone screenshot was visually reviewed. These use
+  the local component harness, not live data or physical devices. No build,
+  lint, API checks or deployment requested/run for this styling-only fix.
+
+## Firestore deployment (1 November 2026)
+
+- Owner-requested scoped deployment to ayursarga-connect completed successfully:
+  firestore.rules compiled and was released; firestore.indexes.json was deployed,
+  including the private consultationSlotDays.entries indexing exemption.
+- Both new consultationBookings consultant/status/date indexes were still
+  CREATING on the post-deployment checks. Wait for READY before rolling out the
+  application changes that depend on them. Existing indexes remain READY.
+- No Next.js application, Hosting or Storage rules deployment was performed;
+  no operational records were changed by this deployment.
+
+## Consultation appointment slots and payment reservations (1 November 2026)
+
+- v4.31.0 introduces generated 30-minute appointments (60 for the explicitly
+  assigned Psychologist service). Shared generation respects preferred weekdays,
+  optional dates and configured windows in IST, excludes started times and never
+  extends beyond working hours. The final full slot ends at closing time even
+  for non-divisible windows; an unavoidable remainder becomes a gap before that
+  slot, never an overlapping or shortened appointment.
+- New private consultationSlotDays/{consultantId}_{ISO-date} documents serialize
+  overlapping intervals across all service types. A latest entry per HH:mm key
+  bounds the day index to 1,440 possible entries; original intents/booking data
+  and immutable claim/release audits retain history. Every claim, confirmation,
+  release and booking/financial/notification change commits atomically. No TTL,
+  file/document deletion, Cloud Function or unaudited historical migration.
+  Checkout holds last 10 minutes; server time makes expired holds non-blocking
+  without deleting them. A captured payment needs its own live hold plus current
+  provider/date/time eligibility. Late/unbookable captures go to paid_review with
+  financial settlement hold, not a conflicting appointment or false email.
+- Cancellation releases only after the validated cancellation commit. Admin
+  rescheduling validates a generated slot, atomically releases the old date/range
+  and reserves the destination. Failed/stale changes retain original capacity.
+  Legacy active appointments are read through bounded date/status queries in the
+  same transaction; unknown durations retain their quoted end rather than
+  backfilling a new duration. Historical IDs, contacts, terms/policy snapshots,
+  payment references and emails are preserved. Legacy payment intents retain
+  their quoted/hash compatibility and also undergo overlap checks on capture.
+  Search Center/Hospital package booking logic is unchanged.
+- Authenticated GET /api/consultations/slots is Admin/Consumer-only, validates
+  consultant/service/ISO date, caps legacy reads at 201 per query and fails closed
+  on overflow. Consumer responses contain available ranges only; Admin gets
+  available/booked/reserved states without identities, contacts or finances.
+  Excluding the rescheduled booking is Admin-only. API uses no-store and per-user
+  throttling. Direct SDK reads/writes of the day index are explicitly denied.
+- Consumer selects full AM/PM appointment ranges, checks live availability before
+  payment and can check/recover an expired checkout before choosing a new time.
+  Shared polling refreshes every 15 seconds while visible and on focus, aborts
+  stale requests and cleans up on close/navigation. Backend arbitration, not
+  polling, prevents simultaneous bookings. Admin Our Consultants has View
+  appointment slots with service/date selectors and status badges; rescheduling
+  selects available generated ranges. Bookings and both email audiences show
+  exact start/end times for new appointments, retaining legacy presentation.
+- Rules/index definitions updated locally: private day-index deny rule, two
+  consultant/status/date booking indexes and an indexing exemption for entries.
+  Deploy these definitions deliberately and wait for required indexes to become
+  ready BEFORE rolling out the application. No deployment was performed.
+- Validation: full local unit/API suite passed 325 checks. Twelve final focused
+  slot checks also passed after closing-boundary refinement, covering distinct
+  Consumer races, mixed service overlaps, adjacent/final slots, failed payment
+  expiry, late captures, ownership, cancellation/reschedule rollback and legacy
+  intervals. Twelve final mocked browser checks passed desktop, 320px phone and
+  mobile WebKit for Admin status panel, Consumer selection/consent, full ranges,
+  rescheduling and duplicate submit prevention; mobile schedule screenshot
+  reviewed. Test fixtures now choose actual generated slots rather than arbitrary
+  old window times. Source-only permission checks are not deployed-rules proof.
+- Final lint passed with no warnings/errors after renaming pre-existing test
+  loop variables prohibited by Next's no-assign-module-variable rule. Production
+  build passed compilation, TypeScript and 84 generated pages. Earlier build
+  attempts caught a fixture type annotation and initial syntax error, both fixed.
+  Successful intermediate builds received their own fresh-server health checks.
+  Final production HTTP smoke passed all five tests: health JSON (essential and
+  deep), themed /health?deep=true, anonymous/invalid-token denials, bounded public
+  consultant privacy projection and Search Center list/detail/package reads.
+  Deep health HTTP 200, mode deep-configuration, all six dependencies ready. The
+  first sandbox server could not reach Firestore (refused proxy); restarted only
+  the owned validation server with network access and reran successfully without
+  changing timeouts. All temporary servers stopped. Only read-only public cloud
+  requests occurred; payments/email and booking writes were local fixtures.
+- Native emulator contention test was added at tests/emulator/consultation-slots.test.mjs
+  and attempted against demo-ayursarga only, but Firebase CLI rejected installed
+  Java 8 and requires Java 21+. It did not execute. Install/use Java 21+ and run
+  that test before release; native multi-process contention, deployed rule/index
+  enforcement and a real Razorpay Test-mode end-to-end payment remain unverified.
+  Previously reported dependency advisories remain a separate unresolved release
+  concern. No production-readiness guarantee is implied by local test/build passes.
+
 ## Shared Hospital responsive card grids (1 November 2026)
 
 - v4.30.7 extends the Admin card-grid layout to Hospital bookings and packages.

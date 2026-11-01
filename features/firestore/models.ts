@@ -221,6 +221,7 @@ export type ConsultationBookingDocument = AuditedDocument & {
   slotStartTime: string; slotEndTime: string; consumerNotes: string | null; adminNotes: string | null;
   status: "requested" | "confirmed" | "completed" | "cancelled" | "rejected";
   confirmedDate: string | null; confirmedTime: string | null;
+  confirmedEndTime?: string; scheduleVersion?: 2;
   confirmedAt: Timestamp | null; completedAt: Timestamp | null;
   bookingTermsAcceptedAt: Timestamp; bookingTermsVersion: string;
 };

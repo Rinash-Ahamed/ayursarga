@@ -8,6 +8,8 @@ import { emptyQueryPage } from "@/services/firestore/firestoreService";
 import { getConsultationBooking, getPublicConsultant, listConsultationBookings, updateConsultationBooking } from "@/services/consultations/consultationService";
 import type { PublicConsultant } from "@/features/consultations/types";
 import { consultantAvailabilitySummary, isConsultantDateAvailable } from "@/features/consultations/availability";
+import { useConsultationSlots } from "@/hooks/useConsultationSlots";
+import { formatAppointmentRange } from "@/features/consultations/slots";
 import { useAuth } from "@/hooks/useAuth";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
@@ -22,7 +24,6 @@ import { formatDisplayDate, toDateInputValue } from "@/utils/date";
 import { formatCurrency } from "@/utils/currency";
 import { formatStatus } from "@/utils/text";
 import { formatConsultantTimeSlot } from "@/features/consultants/validation";
-import { validConsultationSchedule } from "@/features/consultations/schedule";
 import { consultationEmailFeedback } from "@/features/consultations/email";
 import { formatBookingPlacedAt } from "@/features/bookings/display";
 import { AdminBookingNavigation } from "@/components/admin/AdminBookingNavigation";
@@ -66,6 +67,7 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
   const availableDates = availability?.availableDates?.filter((value) => value >= toDateInputValue() && dateAllowed(value)).toSorted() ?? [];
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
+  const appointmentSlots = useConsultationSlots(action?.status === "reschedule" ? action.booking.consultantId : "", action?.booking.serviceId ?? "", date, action?.booking.id);
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [emailWarning, setEmailWarning, emailWarningEvent] = useRepeatableMessage();
@@ -105,8 +107,8 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
     if (action.status === "reschedule" && (!availability || availabilityLoading || !dateAllowed(date))) {
       setError("Choose a date matching the consultant's current availability."); return;
     }
-    if (action.status === "reschedule" && !validConsultationSchedule(date, action.booking.slotStartTime, action.booking.slotEndTime, time)) {
-      setError("Choose a future date and a time within the appointment window."); return;
+    if (action.status === "reschedule" && (appointmentSlots.loading || appointmentSlots.error || !appointmentSlots.slots.some(slot => slot.startTime === time && slot.status === "available"))) {
+      setError("Choose an available appointment time."); return;
     }
     submitting.current = true; setBusy(true); setError(null); setMessage(null); setEmailWarning(null);
     try {
@@ -172,7 +174,7 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
         {booking.paymentStatus && <div><dt>Payment</dt><dd>{formatStatus(booking.paymentStatus)}{booking.paymentReference ? ` · ${booking.paymentReference}` : ""}</dd></div>}
         {booking.paymentStatus && booking.status === "cancelled" && <div><dt>Refund information</dt><dd>Cancellation does not automatically refund payment. Contact Ayursarga for review under the cancellation policy.</dd></div>}
         <div><dt>Preferred window</dt><dd>{formatConsultantTimeSlot(booking.preferredTimeSlot, { [booking.preferredTimeSlot]: { startTime: booking.slotStartTime, endTime: booking.slotEndTime } })}</dd></div>
-        {booking.confirmedDate && <div><dt>Scheduled appointment</dt><dd>{formatDisplayDate(booking.confirmedDate)} · {booking.confirmedTime ? `${booking.confirmedTime} IST` : `${booking.slotStartTime} - ${booking.slotEndTime} IST`}</dd></div>}
+        {booking.confirmedDate && <div><dt>Scheduled appointment</dt><dd>{formatDisplayDate(booking.confirmedDate)} · {booking.confirmedTime && booking.confirmedEndTime ? formatAppointmentRange(booking.confirmedTime, booking.confirmedEndTime) : booking.confirmedTime ?? `${booking.slotStartTime} - ${booking.slotEndTime}`} IST</dd></div>}
         {role === "admin" && <><div><dt>Consumer</dt><dd>{booking.consumerName}</dd></div><div><dt>Email</dt><dd>{booking.consumerEmail}</dd></div><div><dt>Phone</dt><dd>{booking.consumerPhone}</dd></div></>}
         {booking.consumerNotes && <div><dt>Consumer notes</dt><dd>{booking.consumerNotes}</dd></div>}
         {booking.adminNotes && <div><dt>Appointment notes</dt><dd>{booking.adminNotes}</dd></div>}
@@ -190,14 +192,14 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
     </div>
     <PortalDialog open={Boolean(action)} title={action ? `${action.status === "reschedule" ? "Reschedule" : action.status === "completed" ? "Complete" : "Cancel"} appointment?` : "Appointment"}
       message={action?.status === "reschedule" ? "Save the revised schedule and email the consumer after it is saved." : action?.status === "cancelled" && role === "admin" ? "Cancel this appointment and email the consumer after it is saved." : "The status changes only after you confirm."} tone={action?.status === "cancelled" ? "danger" : "default"}
-      busy={busy} confirmDisabled={action?.status === "reschedule" && (availabilityLoading || !availability || !dateAllowed(date))} onCancel={() => { if (!submitting.current) setAction(null); }} onConfirm={() => void confirm()}>
+      busy={busy} confirmDisabled={action?.status === "reschedule" && (availabilityLoading || !availability || !dateAllowed(date) || appointmentSlots.loading || Boolean(appointmentSlots.error) || !appointmentSlots.slots.some(slot => slot.startTime === time && slot.status === "available"))} onCancel={() => { if (!submitting.current) setAction(null); }} onConfirm={() => void confirm()}>
       <div className="portal-form consultation-dialog-fields">
         {action?.status === "reschedule" && <><p className="full">Current appointment: {formatDisplayDate(action.booking.confirmedDate ?? action.booking.preferredDate)} · {action.booking.confirmedTime ?? `${action.booking.slotStartTime} - ${action.booking.slotEndTime}`} IST</p>
           {availabilityLoading && <p className="full" role="status">Checking current consultant availability…</p>}
           {availabilityError && <p className="portal-form-error full" role="alert">{availabilityError}</p>}
           {availability && <p className="full">Available days/dates: {consultantAvailabilitySummary(availability)}</p>}
           <label>New appointment date *<DateInput min={availableDates[0] ?? toDateInputValue()} max={availableDates.at(-1)} value={date} isDateAllowed={dateAllowed} onChange={(event) => setDate(event.target.value)} disabled={busy || availabilityLoading || !availability} required /></label>
-          <label>New appointment time (IST) *<input type="time" value={time} min={action.booking.slotStartTime} max={action.booking.slotEndTime} onChange={(event) => setTime(event.target.value)} disabled={busy} required /></label><p className="full">Choose a time between {action.booking.slotStartTime} and {action.booking.slotEndTime} IST. We’ll check the consultant is still available when you save.</p></>}
+          <label>New appointment time (IST) *<select value={time} onChange={(event) => setTime(event.target.value)} disabled={busy || appointmentSlots.loading || Boolean(appointmentSlots.error)} required><option value="">Select an available time</option>{appointmentSlots.slots.map(slot => <option key={slot.startTime} value={slot.startTime} disabled={slot.status !== "available"}>{formatAppointmentRange(slot.startTime, slot.endTime)}{slot.status !== "available" ? ` · ${slot.status}` : ""}</option>)}</select></label><p className="full">Choose an available time. The previous appointment stays reserved until this change is saved.</p>{appointmentSlots.error && <p className="full portal-form-error" role="alert">{appointmentSlots.error}</p>}</>}
         {role === "admin" && <label className="full">Appointment notes (visible to the consumer)<textarea value={notes} onChange={(event) => setNotes(event.target.value)} maxLength={1000} disabled={busy} /></label>}
         {error && <p className="portal-form-error full" role="alert">{error}</p>}
         {busy && <p className="full" role="status">{role === "admin" && action?.status !== "completed" ? "Saving the appointment and checking email delivery. Please wait." : "Saving the appointment. Please wait."}</p>}

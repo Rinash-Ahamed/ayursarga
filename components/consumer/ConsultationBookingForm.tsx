@@ -8,7 +8,8 @@ import { consultationService } from "@/features/consultations/catalog";
 import { consultantAvailabilitySummary, isConsultantDateAvailable } from "@/features/consultations/availability";
 import { validConsultationSchedule } from "@/features/consultations/schedule";
 import type { PublicConsultant } from "@/features/consultations/types";
-import { formatConsultantTimeSlot, type ConsultantTimeSlot } from "@/features/consultants/validation";
+import { formatAppointmentRange, generateConsultationSlots } from "@/features/consultations/slots";
+import { useConsultationSlots } from "@/hooks/useConsultationSlots";
 import { createConsultationBooking, listPublicConsultants } from "@/services/consultations/consultationService";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
@@ -36,7 +37,9 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
   const { items, error: loadError, errorNotification: loadNotification, isLoading, hasMore, loadMore, reload } = usePaginatedList<PublicConsultant, number>(loader, "We could not load consultants. Please try again.");
   const [consultantId, setConsultantId] = useState("");
   const [date, setDate] = useState("");
-  const [slot, setSlot] = useState<ConsultantTimeSlot | "">("");
+  const [slot, setSlot] = useState("");
+  const appointmentSlots = useConsultationSlots(consultantId, service?.id ?? "", date);
+  const appointment = appointmentSlots.slots.find(value => value.startTime === slot && value.status === "available");
   const [consent, setConsent] = useState(false);
   const [cancellationPolicy, setCancellationPolicy] = useState<ConsultationCancellationPolicy | null>(null);
   const [policyFailed, setPolicyFailed] = useState(false);
@@ -56,10 +59,7 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
   const lastVisibilityRefresh = useRef(0);
   const consultant = items.find((item) => item.id === consultantId);
   const dateAllowed = useCallback((value: string) => Boolean(consultant && isConsultantDateAvailable(value, consultant)
-    && consultant.preferredTimeSlots.some((key) => {
-      const window = consultant.preferredSlotTimings[key];
-      return window && validConsultationSchedule(value, window.startTime, window.endTime);
-    })), [consultant]);
+    && service && generateConsultationSlots(value, service.id, consultant).length), [consultant, service]);
   const hasConsultants = items.length > 0;
   const availableDates = consultant?.availableDates?.filter(dateAllowed).toSorted() ?? [];
   const noAvailableDates = Boolean(consultant?.availableDates?.length && !availableDates.length);
@@ -74,7 +74,7 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
       if (result.bookingId) {
         clearConsultationPaymentReminder();
         router.push(`/app/bookings/consultations?booking=${encodeURIComponent(result.bookingId)}`);
-      } else setError(result.state === "paid_review" ? "Payment received; your appointment needs Ayursarga review. Contact support and do not pay again." : "Payment is not confirmed yet. Resume this payment or contact Ayursarga if money was debited.");
+      } else setError(result.state === "paid_review" ? "Payment received; your appointment needs Ayursarga review. Contact support and do not pay again." : result.state === "reservation_expired" ? "Your appointment hold has expired. If money was debited, contact Ayursarga before paying again. Otherwise, choose another appointment time." : "Payment is not confirmed yet. Resume this payment or contact Ayursarga if money was debited.");
     } catch (failure) { setError(failure instanceof Error ? failure.message : "We could not check payment. Please contact support before paying again."); }
     finally { submitting.current = false; setBusy(false); }
   }
@@ -97,8 +97,8 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting.current || !service || pendingPayment || !cancellationPolicy) return;
-    const timing = slot && consultant?.preferredSlotTimings[slot];
-    if (!consultant || !slot || !timing || !consultant.preferredTimeSlots.includes(slot) || !isIsoDate(date) || date < toDateInputValue() || !consent) {
+    const timing = appointment && consultant?.preferredSlotTimings[appointment.window];
+    if (!consultant || !appointment || !timing || appointmentSlots.loading || appointmentSlots.error || !isIsoDate(date) || date < toDateInputValue() || !consent) {
       setError("Choose a consultant, date and preferred time window, and accept the booking terms."); return;
     }
     if (!dateAllowed(date) || !validConsultationSchedule(date, timing.startTime, timing.endTime)) {
@@ -109,12 +109,13 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
     if (attempt.current?.key !== key) attempt.current = { key, id: globalThis.crypto.randomUUID() };
     submitting.current = true; setBusy(true); setError(null);
     try {
-      const result = await createConsultationBooking({ consultantId, serviceId: service.id, preferredDate: date, preferredTimeSlot: slot,
+      const result = await createConsultationBooking({ consultantId, serviceId: service.id, preferredDate: date, preferredTimeSlot: appointment.window, appointmentStartTime: appointment.startTime,
         expectedSlotStartTime: timing.startTime, expectedSlotEndTime: timing.endTime,
         consumerNotes: notes, expectedCharge: consultant.consultantCharge, bookingTermsAccepted: consent, requestId: attempt.current.id, expectedCancellationPolicyVersion: cancellationPolicy.version });
       router.push(`/app/bookings/consultations?booking=${encodeURIComponent(result.bookingId)}`);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "We could not book this consultation. Try again.");
+      appointmentSlots.reload();
     } finally { submitting.current = false; setBusy(false); }
   }
   return <PortalShell role="consumer" title={service?.label ?? "Online consultation"}>
@@ -129,7 +130,7 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
         {paymentDetails && <p>{paymentDetails.consultantName} · {paymentDetails.serviceName} · {formatDisplayDate(paymentDetails.date)} · {paymentDetails.timeWindow} · {formatCurrency(paymentDetails.totalPaise / 100)}</p>}
         {paymentDetails?.cancellationPolicy && <ConsultationCancellationInfo snapshot={paymentDetails.cancellationPolicy} status="confirmed" now={clock} />}
         {error && <p className="portal-form-error" role="alert">{error}</p>}
-        <div className="portal-actions"><button type="button" className="portal-button secondary" disabled={busy} onClick={() => void checkPayment()}>Check payment status</button><button type="button" className="portal-button" disabled={busy} onClick={() => void checkPayment(true)}>Resume payment</button><Link className="portal-button secondary" href="/app/support">Contact support</Link></div>
+        <div className="portal-actions"><button type="button" className="portal-button secondary" disabled={busy} onClick={() => void checkPayment()}>Check payment status</button>{paymentDetails?.state === "reservation_expired" ? <button type="button" className="portal-button secondary" disabled={busy} onClick={async () => { const {clearConsultationPaymentReminder} = await import("@/services/payments/consultationCheckout"); clearConsultationPaymentReminder(); attempt.current=null; setPaymentDetails(null); setSlot(""); appointmentSlots.reload(); }}>Choose another appointment time</button> : <button type="button" className="portal-button" disabled={busy} onClick={() => void checkPayment(true)}>Resume payment</button>}<Link className="portal-button secondary" href="/app/support">Contact support</Link></div>
       </section>}
       <PortalToast message={error} notification={notification} tone="error" />
       <PortalToast message={loadError} notification={loadNotification} tone="error" />
@@ -163,14 +164,15 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
         {consultant && <p className="full portal-form-note">Availability: {consultantAvailabilitySummary(consultant)}. Choose an available date from the calendar.</p>}
         {noAvailableDates && <p className="full portal-form-error" role="status">This consultant has no upcoming appointments available. Choose another consultant or contact Ayursarga for help.</p>}
         <label>Preferred appointment date *<DateInput value={date} min={availableDates[0] ?? toDateInputValue()} max={availableDates.at(-1)} isDateAllowed={dateAllowed} onChange={(event) => { setDate(event.target.value); setSlot(""); }} required disabled={busy || !consultant || noAvailableDates} /></label>
-        <label>Preferred time *<select value={slot} onChange={(event) => setSlot(event.target.value as ConsultantTimeSlot)} required disabled={busy || !consultant}>
-          <option value="">Select a preferred time</option>{consultant?.preferredTimeSlots.map((value) => {
-            const window = consultant.preferredSlotTimings[value];
-            return <option key={value} value={value} disabled={!date || !dateAllowed(date) || !window || !validConsultationSchedule(date, window.startTime, window.endTime)}>{formatConsultantTimeSlot(value, consultant.preferredSlotTimings)}</option>;
-          })}
+        <label>Preferred time *<select value={slot} onChange={(event) => setSlot(event.target.value)} required disabled={busy || !consultant || !date || appointmentSlots.loading || Boolean(appointmentSlots.error)}>
+          <option value="">{appointmentSlots.loading ? "Checking appointment times…" : "Select an appointment time"}</option>{slot && !appointment && !appointmentSlots.loading && <option value={slot} disabled>Selected time is no longer available</option>}{appointmentSlots.slots.filter(value => value.status === "available").map(value => <option key={value.startTime} value={value.startTime}>{formatAppointmentRange(value.startTime, value.endTime)}</option>)}
         </select></label>
+        {appointmentSlots.error && <div className="full portal-form-error" role="alert">{appointmentSlots.error}<button className="portal-button secondary" type="button" onClick={appointmentSlots.reload}>Check times again</button></div>}
+        {slot && !appointment && !appointmentSlots.loading && !appointmentSlots.error && <p className="full portal-form-error" role="status">Your selected time is no longer available. Please choose another appointment time.</p>}
+        {date && !appointmentSlots.loading && !appointmentSlots.error && !appointmentSlots.slots.length && <p className="full portal-form-note" role="status">No appointment times are available on this date. Choose another date.</p>}
+        <p className="full portal-form-note">Your selected time is held for 10 minutes while you complete payment. Times are checked again before confirmation.</p>
         <label className="full">Notes (optional)<textarea name="notes" maxLength={500} disabled={busy} /></label>
-        {cancellationPolicy && consultant && slot && isIsoDate(date) && consultant.preferredSlotTimings[slot] && <div className="full"><ConsultationCancellationInfo snapshot={snapshotConsultationCancellation(cancellationPolicy, date, consultant.preferredSlotTimings[slot]!.startTime)} status="confirmed" now={clock} /></div>}
+        {cancellationPolicy && appointment && isIsoDate(date) && <div className="full"><ConsultationCancellationInfo snapshot={snapshotConsultationCancellation(cancellationPolicy, date, appointment.startTime)} status="confirmed" now={clock} /></div>}
         <fieldset className="portal-consent full" disabled={busy}><legend>Booking confirmation *</legend>
           <p>Please review the <Link href={ROUTES.public.termsAndConditions} target="_blank">Customer Terms &amp; Conditions</Link>, <Link href={ROUTES.public.cancellationRefundPolicy} target="_blank">Cancellation &amp; Refund Policy</Link> and <Link href={ROUTES.public.patientServiceDisclaimer} target="_blank">Patient/Service Disclaimer &amp; Consent</Link>.</p>
           <label className="portal-consent-choice"><input type="checkbox" required checked={consent} onChange={(event) => setConsent(event.target.checked)} /><span>I have read and agree to the applicable terms and policies.</span></label>
@@ -178,7 +180,7 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
         {error && <p className="portal-form-error full" role="alert">{error}</p>}
         {error && <div className="portal-actions full"><button type="button" className="portal-button secondary" disabled={busy || isLoading} onClick={() => { setConsultantId(""); setSlot(""); setConsent(false); void reload(); }}>Refresh consultants</button><button type="button" className="portal-button secondary" disabled={busy || Boolean(pendingPayment)} onClick={() => { setConsent(false); setError(null); setCancellationPolicy(null); setPolicyFailed(false); setPolicyRetry(value => value + 1); }}>Reload cancellation terms</button></div>}
         {!cancellationPolicy && <p className="full" role="status">{policyFailed ? "Cancellation terms could not be loaded. Please retry before paying." : "Loading agreed cancellation terms…"}{policyFailed && <button type="button" className="portal-button secondary" onClick={() => { setPolicyFailed(false); setPolicyRetry(value => value + 1); }}>Reload cancellation terms</button>}</p>}
-        <div className="portal-actions full"><button className="portal-button" disabled={busy || Boolean(pendingPayment) || !cancellationPolicy || !consent || !consultant || !date || !dateAllowed(date) || !slot}>{busy ? "Processing payment..." : consultant ? `Pay ${formatCurrency(consultant.consultantCharge)} & book appointment` : "Pay & book appointment"}</button></div>
+        <div className="portal-actions full"><button className="portal-button" disabled={busy || Boolean(pendingPayment) || !cancellationPolicy || !consent || !consultant || !date || !dateAllowed(date) || !appointment || appointmentSlots.loading || Boolean(appointmentSlots.error)}>{busy ? "Processing payment..." : consultant ? `Pay ${formatCurrency(consultant.consultantCharge)} & book appointment` : "Pay & book appointment"}</button></div>
       </form>}
     </>}
     </div>

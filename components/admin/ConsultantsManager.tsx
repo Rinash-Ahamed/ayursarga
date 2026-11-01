@@ -1,4 +1,5 @@
 "use client";
+import { ConsultantSchedule } from "@/components/admin/ConsultantSchedule";
 
 import { useCallback, useDeferredValue, useRef, useState, type FormEvent } from "react";
 import type { ConsultantDocument } from "@/features/firestore/models";
@@ -24,6 +25,7 @@ import { ConsultantPhotoUpload } from "@/components/admin/ConsultantPhotoUpload"
 import { consultantDisplayName } from "@/features/consultants/name";
 
 export function ConsultantsManager() {
+  const [scheduleId, setScheduleId] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<ConsultantValidationErrors>({});
@@ -162,6 +164,7 @@ export function ConsultantsManager() {
 
     <PortalFeedback error={error} notification={actionError ? actionErrorNotification : loadErrorNotification} emptyTitle={deferredSearch.trim() ? "No matching consultants" : "No consultants yet"} empty={!error && !isLoading && items.length === 0 ? (deferredSearch.trim() ? "No consultants match your search." : "Select Add New to create the first consultant record.") : undefined} />
     <PortalToast message={message} notification={messageNotification} />
+    {scheduleId && <ConsultantSchedule key={scheduleId} consultantId={scheduleId} services={items.find(item => item.id === scheduleId)?.consultationServices ?? []} onClose={() => setScheduleId(null)} />}
     <div className="portal-list consultant-list admin-record-grid portal-record-grid">{items.map((consultant) => <article className="portal-card" key={consultant.id} data-editing={editingId === consultant.id}>
       <div className="portal-row-heading"><div className="consultant-profile-heading"><ConsultantPhoto name={consultantDisplayName(consultant)} imageUrl={consultant.imageUrl} /><div><h3>{consultantDisplayName(consultant)}</h3>{consultant.designation && <p>{consultant.designation}</p>}<strong className="consultant-employee-id">{consultant.employeeId}</strong></div></div><span className="portal-status" data-status={consultant.status}>{formatStatus(consultant.status)}</span></div>
       {editingId === consultant.id ? <form className="portal-form portal-edit-form" onSubmit={(event) => void edit(event, consultant)} noValidate>
@@ -189,7 +192,11 @@ export function ConsultantsManager() {
           {consultant.address && <div className="consultant-detail-wide"><dt>Address</dt><dd>{consultant.address}</dd></div>}
           {consultant.emergencyContactNo && <div><dt>Emergency contact</dt><dd>{consultant.emergencyContactNo}</dd></div>}
         </dl>
-        <div className="portal-actions"><button className="portal-button secondary" type="button" disabled={Boolean(busyId)} onClick={() => { setEditingId(consultant.id); setSelectedPhoto(null); setShowCreateForm(false); setFieldErrors({}); setActionError(null); setMessage(null); }}>Edit</button><button className={`portal-button${consultant.status === "active" ? " danger" : ""}`} type="button" disabled={Boolean(busyId)} onClick={() => void toggleStatus(consultant)}>{consultant.status === "active" ? "Make inactive" : "Make active"}</button></div>
+        <div className="portal-actions consultant-card-actions">
+          <button className="portal-button secondary" type="button" disabled={Boolean(busyId)} onClick={() => { setEditingId(consultant.id); setSelectedPhoto(null); setShowCreateForm(false); setFieldErrors({}); setActionError(null); setMessage(null); }}>Edit</button>
+          <button className={`portal-button${consultant.status === "active" ? " danger" : ""}`} type="button" disabled={Boolean(busyId)} onClick={() => void toggleStatus(consultant)}>{consultant.status === "active" ? "Make inactive" : "Make active"}</button>
+          <button className="portal-button secondary consultant-card-schedule-action" type="button" onClick={() => setScheduleId(consultant.id)}>View appointment slots</button>
+        </div>
       </>}
     </article>)}</div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />

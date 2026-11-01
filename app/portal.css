@@ -360,9 +360,14 @@ html[data-theme="dark"] .portal-toast[data-tone="error"],body[data-theme="dark"]
 .portal-form .portal-inline-check{ display:flex; align-items:center; gap:8px; color:var(--sage); font-size:10px; font-weight:650; cursor:pointer; }
 .portal-form .portal-inline-check input{ width:16px; height:16px; flex:0 0 16px; margin:0; padding:0; box-shadow:none; accent-color:var(--forest); }
 .consultant-list{ margin-top:22px; }
+.consultant-schedule-slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px;padding:0;list-style:none;}
+.consultant-schedule-slots>li{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:12px;border:1px solid var(--portal-border,rgba(31,61,43,.2));border-radius:12px;font-size:13px;}
 .consultant-list.portal-list{ gap:10px; }
 .consultant-list>.portal-card{ display:flex;flex-direction:column;padding:18px; }
 .consultant-list>.portal-card>.portal-actions{ margin-top:auto; padding-top:4px; }
+.consultant-card-actions{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; width:100%; align-items:stretch; }
+.consultant-card-actions>.portal-button{ width:100%; min-width:0; padding-inline:12px; }
+.consultant-card-schedule-action{ grid-column:1/-1; }
 .consultant-list>.portal-card[data-editing="true"]{ grid-column:1/-1; }
 .consultant-list .consultant-details{ grid-template-columns:repeat(2,minmax(0,1fr)); }
 .consultant-list .portal-row-heading h3{ font-size:20px; line-height:1.3; }

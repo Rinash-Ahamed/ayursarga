@@ -134,7 +134,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useSessionIdleTimeout(
-    status === "authenticated" && Boolean(snapshot.user && snapshot.profile),
+    status === "authenticated" && Boolean(snapshot.user)
+      && (snapshot.profile?.role === "admin" || snapshot.profile?.role === "hospital"),
     expireIdleSession,
   );
 

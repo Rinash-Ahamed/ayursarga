@@ -177,11 +177,11 @@ html[data-ayursarga-opening="seen"] .public-opening{ display:none; }
 .nav-profile-actions>button{ background:#fff; color:var(--forest); }
 .nav-profile-actions>a:hover,.nav-profile-actions>a:focus-visible,.nav-profile-actions>button:hover:not(:disabled),.nav-profile-actions>button:focus-visible{ border-color:var(--gold); background:var(--gold); color:var(--forest); }
 .nav-profile-actions>button:disabled{ opacity:.5; cursor:not-allowed; }
-.ayu-buddy-launcher{ position:fixed; z-index:83; left:max(18px,env(safe-area-inset-left)); bottom:max(24px,env(safe-area-inset-bottom)); display:flex; align-items:flex-end; gap:2px; min-width:72px; min-height:72px; padding:0; border:0; background:transparent; color:var(--forest); cursor:pointer; }
+.ayu-buddy-launcher{ position:fixed; z-index:83; right:max(18px,env(safe-area-inset-right)); bottom:max(24px,env(safe-area-inset-bottom)); display:flex; align-items:flex-end; gap:2px; min-width:72px; min-height:72px; padding:0; border:0; background:transparent; color:var(--forest); cursor:pointer; }
 .ayu-buddy-launcher>img{ width:72px; height:71px; object-fit:contain; filter:drop-shadow(0 4px 8px rgba(31,61,43,.12)); }
 .ayu-buddy-launcher>span{ margin:0 0 10px -8px; padding:7px 11px; border:1px solid rgba(31,61,43,.2); border-radius:999px; background:#fff; color:var(--forest); font:700 11px/1.4 var(--font-body,Arial,sans-serif); box-shadow:0 3px 10px rgba(31,61,43,.07); }
 .ayu-buddy-launcher:focus-visible{ outline:3px solid var(--gold); outline-offset:4px; border-radius:16px; }
-.ayu-buddy-layer{ display:flex; align-items:flex-end; justify-content:flex-start; padding:max(20px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left)); background:rgba(15,37,25,.3); }
+.ayu-buddy-layer{ display:flex; align-items:flex-end; justify-content:flex-end; padding:max(20px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left)); background:rgba(15,37,25,.3); }
 .app-modal-layer>.ayu-buddy-dialog{ display:flex; flex-direction:column; width:420px; max-width:100%; max-height:min(720px,100%); overflow:hidden; border:1px solid rgba(31,61,43,.22); border-radius:22px; background:#fffdf8; color:#1f3d2b; box-shadow:0 20px 70px rgba(15,37,25,.2); font-family:var(--font-body,Arial,sans-serif); animation:ayuBuddyAppear .18s ease-out; }
 .ayu-buddy-header{ display:flex; align-items:center; gap:10px; flex:none; padding:18px 16px; border-bottom:1px solid #dbe3d9; background:#f0f5ed; }
 .ayu-buddy-header>img{ flex:none; width:56px; height:55px; object-fit:contain; }
@@ -215,15 +215,22 @@ html[data-ayursarga-opening="seen"] .public-opening{ display:none; }
 .ayu-buddy-success h4{ margin:0 0 8px; font-size:15px; line-height:1.5; }
 .ayu-buddy-direct{ display:flex; align-items:center; min-height:44px; margin-top:12px; color:#28533a; font-size:12px; overflow-wrap:anywhere; text-decoration:underline; text-underline-offset:4px; }
 .ayu-buddy-loading{ padding:24px; font-size:14px; }
-.ayu-buddy-unavailable{ position:fixed; z-index:84; left:max(16px,env(safe-area-inset-left)); bottom:calc(170px + env(safe-area-inset-bottom)); width:min(300px,calc(100vw - 32px)); padding:16px; border:1px solid #cad6c9; border-radius:14px; background:#fffdf8; color:#294b35; font-size:13px; line-height:1.7; box-shadow:0 6px 25px rgba(31,61,43,.12); }
+.ayu-buddy-unavailable{ position:fixed; z-index:84; right:max(16px,env(safe-area-inset-right)); bottom:calc(170px + env(safe-area-inset-bottom)); width:min(300px,calc(100vw - 32px)); padding:16px; border:1px solid #cad6c9; border-radius:14px; background:#fffdf8; color:#294b35; font-size:13px; line-height:1.7; box-shadow:0 6px 25px rgba(31,61,43,.12); }
 .ayu-buddy-unavailable a{ display:block; color:#185437; text-decoration:underline; }
 .ayu-buddy-unavailable button{ min-height:44px; margin-top:6px; color:#185437; font-weight:700; }
 .ayu-buddy-dialog button:disabled{ opacity:.6; cursor:wait; }
 .ayu-buddy-dialog button:focus-visible,.ayu-buddy-dialog a:focus-visible{ outline:3px solid #bd964e; outline-offset:3px; }
 @keyframes ayuBuddyAppear{ from{ opacity:0; } to{ opacity:1; } }
-@media(max-width:1024px){ .ayu-buddy-launcher{ left:max(12px,env(safe-area-inset-left)); bottom:calc(90px + env(safe-area-inset-bottom)); } .ayu-buddy-launcher>span{ font-size:10px; padding:6px 9px; } }
+@media(max-width:1024px){ .ayu-buddy-launcher{ right:max(12px,env(safe-area-inset-right)); bottom:calc(90px + env(safe-area-inset-bottom)); } .ayu-buddy-launcher>span{ font-size:10px; padding:6px 9px; } }
 @media(max-width:600px){ .ayu-buddy-layer{ padding:max(10px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left)); } .ayu-buddy-content{ padding:16px; } .ayu-buddy-header{ padding:14px 12px; gap:8px; } .ayu-buddy-launcher>img{ width:62px; height:61px; } .ayu-buddy-header h2{ font-size:21px; } }
 @media(prefers-reduced-motion:reduce){ .ayu-buddy-dialog{ animation:none; } }
+.support-launcher{ position:fixed; z-index:83; right:max(18px,env(safe-area-inset-right)); bottom:max(24px,env(safe-area-inset-bottom)); width:150px; height:76px; pointer-events:none; }
+.support-launcher>.support-launcher-option{ position:absolute; left:auto; right:0; bottom:0; opacity:0; visibility:hidden; pointer-events:none; transform:translateY(6px); transition:opacity .25s ease,transform .25s ease,visibility .25s; }
+.support-launcher>.support-launcher-option[data-active="true"]{ opacity:1; visibility:visible; pointer-events:auto; transform:none; }
+.support-launcher[data-static="true"]{ height:136px; }
+.support-launcher[data-static="true"]>.ayu-buddy-launcher{ bottom:60px; }
+@media(max-width:1024px){ .support-launcher{ right:max(12px,env(safe-area-inset-right)); bottom:calc(90px + env(safe-area-inset-bottom)); } }
+@media(prefers-reduced-motion:reduce){ .support-launcher>.support-launcher-option{ transition:none; transform:none; } }
 .mobile-bottom-nav{ display:none; }
 
 .nav-auth-backdrop{ position:fixed; z-index:120; inset:0; padding:22px; display:grid; place-items:center; overscroll-behavior:contain; touch-action:none; background:rgba(18,39,27,.72); }

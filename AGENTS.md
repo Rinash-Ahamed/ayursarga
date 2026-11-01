@@ -81,7 +81,11 @@ to deploy, rerun maintenance scripts, or modify live data.
 - Protect every portal page with its matching `RequireRole`. Unauthorized users
   must be redirected to their correct portal; unauthenticated users go to the
   relevant login page.
-- Retain the 15-minute inactivity sign-out for authenticated portal sessions.
+- Retain the 15-minute inactivity sign-out for authenticated Admin and Hospital
+  sessions. Consumers remain signed in through the shared Firebase session and
+  are not signed out merely for inactivity. Preserve explicit Logout, role and
+  account-status checks, session revocation and server-side authorization; never
+  add a parallel Consumer auth implementation or store tokens manually.
 - Keep one public Login action. Its popup offers Consumer Google sign-in on the
   current page and a link to Hospital Login; never expose Admin Login publicly.
   After Consumer sign-in, replace Login with the Consumer's Google profile control
@@ -255,8 +259,20 @@ to deploy, rerun maintenance scripts, or modify live data.
   booking consent; requests, audits and addressed bell notifications commit
   atomically. Stable request IDs prevent retries from duplicating appointments.
   New online appointments require full Razorpay payment verified server-side;
-  only a captured matching INR payment confirms the selected date and configured
-  window, without inventing an exact appointment time. Durable private payment
+  only a captured matching INR payment confirms the selected generated appointment
+  slot. Regular services use 30 minutes; Psychology uses 60. Generate only full
+  slots within configured availability, including the final exact-end slot.
+  A private consultationSlotDays document per consultant/IST date serializes all
+  overlapping ranges across services. Checkout claims a 10-minute audited hold;
+  expiry is evaluated server-side, never through TTL/deletion. Capture requires
+  the still-owned unexpired hold, current eligibility and no overlapping legacy
+  appointment. Late/unbookable captures go to financial review, not a false
+  confirmation. Cancellation/rescheduling release the old range only atomically
+  with the booking change; rescheduling reserves a generated destination slot.
+  Preserve old IDs, agreed policies and records; legacy unknown-time appointments
+  conservatively block their quoted window. Direct client slot reads/writes stay
+  denied; authenticated slot projections expose times/states, never identities.
+  Durable private payment
   intents claim order creation before the provider POST; uncertain orders must
   never be automatically recreated. Checkout returns alone cannot confirm a
   booking. Validate raw webhook signatures and journal event IDs atomically.
@@ -285,8 +301,8 @@ to deploy, rerun maintenance scripts, or modify live data.
   Snapshot versioned terms/deadlines into new payment drafts before checkout and
   retain that snapshot on confirmation. Consumers must review the current policy
   version before a new payment request; existing intents keep their quoted terms.
-  Use the configured window start as cancellation reference, not an invented
-  exact appointment time. Rescheduling retains the agreed policy version and
+  New generated-slot bookings use their selected slot start as cancellation
+  reference; legacy windows retain their original reference. Rescheduling retains the agreed policy version and
   recalculates IST deadlines from the new confirmed exact time. Backend Consumer
   cancellation revalidates the snapshot, status and time inside the transaction;
   record the eligible/remaining refund based on the private verified payment

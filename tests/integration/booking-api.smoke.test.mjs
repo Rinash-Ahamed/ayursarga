@@ -7,8 +7,17 @@ const origin = new URL(process.env.AYURSARGA_SMOKE_ORIGIN || "http://127.0.0.1:3
 if (origin.protocol !== "http:" || origin.hostname !== "127.0.0.1" || origin.pathname !== "/" || origin.username || origin.password) throw new Error("Smoke tests require an explicit loopback HTTP server.");
 const read = (path, options = {}) => fetch(new URL(path, origin), { ...options, signal: AbortSignal.timeout(45000) });
 
+test("consultation schedule and payment APIs reject anonymous callers before accessing private records", async()=>{
+  for(const [path,method] of [["/api/consultations/slots?consultantId=AS001&service=prenatal-doctor&date=2099-10-25","GET"],["/api/consumer/consultations","POST"],["/api/admin/hospitals/package-summary","POST"]]) {
+    const response=await read(path,{method,headers:{"content-type":"application/json"},...(method==="GET"?{}:{body:"{}"})});
+    assert.equal(response.status,401);
+    assert.match(response.headers.get("cache-control"),/no-store/);
+    assert.equal(typeof (await response.json()).error,"string");
+  }
+});
+
 test("fresh production build serves essential/deep health JSON and the themed expanded page", async () => {
-  for (const [path, mode, count] of [["/api/health", "configuration", 3], ["/api/health?deep=true", "deep-configuration", 5]]) {
+  for (const [path, mode, count] of [["/api/health", "configuration", 3], ["/api/health?deep=true", "deep-configuration", 6]]) {
     const response = await read(path, { headers: { Accept: "application/json" } });
     assert.equal(response.status, 200, `${path}: configuration readiness`);
     assert.match(response.headers.get("cache-control"), /no-store/);

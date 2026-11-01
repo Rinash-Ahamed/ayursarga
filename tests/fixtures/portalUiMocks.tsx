@@ -1,5 +1,7 @@
 import { useSyncExternalStore, type ReactNode } from "react";
 import { DEFAULT_CONSULTATION_CANCELLATION_POLICY, snapshotConsultationCancellation } from "@/features/consultations/cancellationPolicy";
+import { generateConsultationSlots } from "@/features/consultations/slots";
+import type { PublicConsultant } from "@/features/consultations/types";
 import type { ServiceDocument, TreatmentStatus } from "@/features/firestore/models";
 import { CONSUMER_PRIVACY_NOTICE_VERSION, CUSTOMER_TERMS_VERSION } from "@/features/consumers/privacyConsent";
 import { validateInvoiceInput, INVOICE_ISSUER, invoiceParty, type InvoiceInput } from "@/features/billing/invoices";
@@ -110,7 +112,7 @@ export const listConsultants = (options?: { cursor?: unknown }) => {
       ? { documents: [record("AS002"), record("AS003"), record("AS003")], cursor: null, hasMore: false }
       : { documents: [record("AS002"), record("AS001"), record("AS002")], cursor: { phase: "current", document: null }, hasMore: true });
   }
-  return page(portalUiState.screen === "admin-consultants-empty" ? [] : [consultant]);
+    return page(portalUiState.screen === "admin-consultants-empty" ? [] : [{...consultant, ...(portalUiState.screen === "admin-consultants-schedule" ? {consultationServices:["prenatal-doctor","psychologist"]} : {})}]);
 };
 export const listHospitalAvailabilityRequests = () => page(portalUiState.screen === "hospital-availability-empty" ? [] : availability);
 export const listAdminAvailabilityRequests = () => page(portalUiState.screen === "admin-availability-empty" ? [] : availability);
@@ -203,7 +205,7 @@ export const clearAllAuditLogs = async () => { auditMfaCalls.clears++; return 0;
 export const markAllNotificationsRead = async () => {};
 export const markNotificationRead = async () => {};
 
-const consultationProfessional = { id: "AS001", name: "Assigned Consultation Professional", designation: "Ayurvedic physician", qualification: "BAMS, MD", yearsExperience: 3.5,
+const consultationProfessional: PublicConsultant = { id: "AS001", name: "Assigned Consultation Professional", designation: "Ayurvedic physician", qualification: "BAMS, MD", yearsExperience: 3.5,
   consultantCharge: 990.55, preferredTimeSlots: ["morning"], preferredSlotTimings: { morning: { startTime: "09:30", endTime: "11:45" } } };
 const consultation = { ...metadata, id: "consultation-fixture", bookingReference: "AYURCONS01", serviceId: "prenatal-doctor", serviceName: "Prenatal doctor consultation",
   consultantId: "AS001", consultantName: consultationProfessional.name, consultantDesignation: consultationProfessional.designation, consultantCharge: 900.5,
@@ -216,8 +218,16 @@ export const listPublicConsultants = () => {
   return page(portalUiState.screen === "consumer-consultation-empty" || staleFirstRead ? [] : [portalUiState.screen.endsWith("-restricted")
     ? { ...consultationProfessional, preferredDays: ["sun"], availableDates: ["2099-10-25"] } : consultationProfessional]);
 };
-export const getPublicConsultant = async () => portalUiState.screen.endsWith("-restricted")
+export const getPublicConsultant = async (): Promise<PublicConsultant> => portalUiState.screen.endsWith("-restricted")
   ? { ...consultationProfessional, preferredDays: ["sun"], availableDates: ["2099-10-25"] } : consultationProfessional;
+export const slotReads = { calls: 0, hold: false, fail: false, unavailableStart: "", finish: null as (() => void) | null };
+Object.assign(globalThis, { slotReads });
+export const listConsultationSlots = async (_consultantId:string, service:string, date:string) => {
+  slotReads.calls++;
+  if (slotReads.hold) await new Promise<void>(resolve => { slotReads.finish = resolve; });
+  if (slotReads.fail) throw new Error("Appointment times could not be checked. Please try again.");
+  return {slots:generateConsultationSlots(date, service, await getPublicConsultant()).filter(slot => slot.startTime !== slotReads.unavailableStart).map((slot,index)=>({...slot,status:portalUiState.screen === "admin-consultants-schedule" ? index === 0 ? "booked" as const : index === 1 ? "reserved" as const : "available" as const : "available" as const})),checkedAt:new Date().toISOString(),holdMinutes:10};
+};
 export const consultationPaymentStatus = async () => ({ checkout: { intentId: "fixture", state: "ready", bookingId: null, totalPaise: 99055, currency: "INR" } });
 export const payForConsultation = async () => ({ bookingId: "consultation-fixture" });
 export const clearConsultationPaymentReminder = () => {};
@@ -245,7 +255,7 @@ export const getConsultationBooking = async () => consultation;
 export const updateConsultationBooking = async (_id: string, input: { action: string; confirmedDate?: string; confirmedTime?: string; adminNotes?: string }) => {
   portalUiState.consultantWrites.push(input);
   await Promise.resolve();
-  return { changes: { ...input, status: input.action === "reschedule" ? "confirmed" : input.action, lastAuditId: "consultation-updated" },
+  return { changes: { ...input, ...(input.action === "reschedule" ? {confirmedEndTime:generateConsultationSlots(input.confirmedDate!, consultation.serviceId, consultationProfessional).find(slot=>slot.startTime===input.confirmedTime)?.endTime} : {}), status: input.action === "reschedule" ? "confirmed" : input.action, lastAuditId: "consultation-updated" },
     email: input.action !== "completed" ? { status: portalUiState.screen === "admin-consultations-email-failure" ? "failed" : "accepted" } : undefined,
     consultantEmail: input.action !== "completed" ? { status: portalUiState.screen === "admin-consultations-consultant-email-failure" ? "failed" : "accepted" } : undefined };
 };

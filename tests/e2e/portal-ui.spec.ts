@@ -6,6 +6,26 @@ import { getCalendarMonthRange } from "../../utils/date";
 const styles = ["node_modules/tailwindcss/lib/css/preflight.css", "app/globals.css", "app/portal.css"].map((file) => readFileSync(file, "utf8")).join("\n");
 const screens = ["admin-dashboard", "admin-hospitals", "admin-details", "admin-consultants", "admin-users", "admin-bookings", "admin-availability", "admin-audits", "hospital-dashboard", "hospital-profile", "hospital-services", "hospital-bookings", "hospital-availability", "hospital-password", "admin-login", "hospital-login", "admin-forgot", "hospital-forgot"];
 
+test("Admin consultant schedule distinguishes available booked and reserved times without management writes", async ({page})=>{
+  await mount(page,"admin-consultants-schedule");
+  await page.getByRole("button",{name:"View appointment slots",exact:true}).click();
+  const panel=page.getByRole("region",{name:"Consultant appointment schedule"});
+  await panel.getByRole("textbox",{name:"Date",exact:true}).fill("25/10/2099");
+  await expect(panel.locator(".consultant-schedule-slots>li")).toHaveCount(4);
+  await expect(panel.getByText("Booked",{exact:true})).toBeVisible();
+  await expect(panel.getByText("Temporarily reserved",{exact:true})).toBeVisible();
+  await expect(panel.getByText("Available",{exact:true})).toHaveCount(2);
+  await panel.getByRole("combobox",{name:"Service",exact:true}).selectOption("psychologist");
+  await expect(panel.locator(".consultant-schedule-slots>li")).toHaveCount(2);
+  await expect(panel).toContainText("9:30 AM – 10:30 AM");
+  expect(await panel.evaluate(element=>element.scrollWidth<=element.clientWidth)).toBe(true);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await panel.screenshot({path:test.info().outputPath("consultant-schedule.png")});
+  await panel.getByRole("button",{name:"Close schedule",exact:true}).click();
+  await expect(panel).toHaveCount(0);
+  expect(await page.evaluate(()=>(window as unknown as {consumerBookingFixture:{consultantWrites:unknown[]}}).consumerBookingFixture.consultantWrites.length)).toBe(0);
+});
+
 test("Admin consultant and both booking lists use aligned responsive card grids", async ({ page }) => {
   await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
   for (const screen of ["admin-consultants-duplicates", "admin-bookings", "admin-consultations-grid"]) {
@@ -26,6 +46,23 @@ test("Admin consultant and both booking lists use aligned responsive card grids"
     }
     for (const card of await cards.all()) {
       expect(await card.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+      if (screen === "admin-consultants-duplicates") {
+        const actions = card.locator(".consultant-card-actions");
+        const buttons = actions.getByRole("button");
+        await expect(buttons).toHaveCount(3);
+        const edit = (await buttons.nth(0).boundingBox())!;
+        const status = (await buttons.nth(1).boundingBox())!;
+        const schedule = (await buttons.nth(2).boundingBox())!;
+        expect(Math.abs(edit.y - status.y)).toBeLessThan(1);
+        expect(Math.abs(edit.height - status.height)).toBeLessThan(1);
+        expect(status.x - edit.x - edit.width).toBeGreaterThanOrEqual(9);
+        expect(schedule.y - Math.max(edit.y + edit.height, status.y + status.height)).toBeGreaterThanOrEqual(9);
+        expect(schedule.x).toBeCloseTo(edit.x, 0);
+        expect(schedule.width).toBeCloseTo(edit.width + status.width + 10, 0);
+        for (const button of await buttons.all()) {
+          expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+        }
+      }
       if (screen !== "admin-consultants-duplicates") {
         const cardBounds = (await card.boundingBox())!;
         const badgeBounds = (await card.locator(".portal-status").boundingBox())!;
@@ -627,17 +664,17 @@ test("Hospital bookings go directly from start to complete with treatment badges
 });
 
 test("Admin creation duplicate emails remain inline and focus the email field without closing either form", async ({ page }) => {
-  for (const module of ["hospitals", "consultants"]) {
-    await mount(page, `admin-${module}`);
+  for (const collectionName of ["hospitals", "consultants"]) {
+    await mount(page, `admin-${collectionName}`);
     await page.evaluate(() => Object.assign(window, { duplicateCreation: true }));
-    await page.getByRole("button", { name: module === "hospitals" ? "Add Hospital" : "Add New", exact: true }).click();
+    await page.getByRole("button", { name: collectionName === "hospitals" ? "Add Hospital" : "Add New", exact: true }).click();
     const form = page.locator("form").first();
-    const values = module === "hospitals"
+    const values = collectionName === "hospitals"
       ? { legalName: "Example hospital", name: "Example hospital", email: "existing@example.test", phone: "9876543210", hospitalPhone1: "9876543210", city: "Palakkad", commission: "10", registeredAddress: "A complete registered address", address: "A complete service address" }
       : { name: "Example consultant", email: "existing@example.test", contactNo: "9876543210", whatsappNo: "9876543210", qualification: "BAMS", yearsExperience: "3", consultantCharge: "300", ayursargaCommissionPercentage: "10" };
     for (const [name, value] of Object.entries(values)) await form.locator(`input[name="${name}"]`).fill(value);
-    if (module === "hospitals") await form.getByPlaceholder("Search district or state").fill("Palakkad, Kerala");
-    await form.getByRole("button", { name: module === "hospitals" ? "Create hospital" : "Add consultant", exact: true }).click();
+    if (collectionName === "hospitals") await form.getByPlaceholder("Search district or state").fill("Palakkad, Kerala");
+    await form.getByRole("button", { name: collectionName === "hospitals" ? "Create hospital" : "Add consultant", exact: true }).click();
     const email = form.locator('input[name="email"]');
     await expect(email).toHaveAttribute("aria-invalid", "true");
     await expect(form.locator(".portal-field-error")).toContainText("This email is already used");
@@ -712,8 +749,9 @@ test("online consultation form uses assigned charges and custom windows, require
   expect((await page.locator(".consultation-professional>span").boundingBox())!.width).toBeGreaterThan(90);
   expect((await page.getByRole("radio", { name: /Assigned Consultation Professional/ }).boundingBox())!.width).toBeLessThan(25);
   await page.getByRole("textbox", { name: "Preferred appointment date *", exact: true }).fill("25/10/2099");
-  await expect(page.getByRole("option", { name: /Morning: 9:30 AM/ })).toContainText("11:45 AM");
-  await page.getByRole("combobox", { name: "Preferred time *", exact: true }).selectOption("morning");
+  await expect(page.getByRole("option", { name: "9:30 AM – 10:00 AM", exact: true })).toBeAttached();
+  await expect(page.getByRole("option", { name: "11:15 AM – 11:45 AM", exact: true })).toBeAttached();
+  await page.getByRole("combobox", { name: "Preferred time *", exact: true }).selectOption("09:30");
   await expect(submit).toBeDisabled();
   await page.getByRole("checkbox", { name: "I have read and agree to the applicable terms and policies.", exact: true }).check();
   await expect(submit).toBeEnabled();
@@ -725,6 +763,49 @@ test("online consultation form uses assigned charges and custom windows, require
   expect(writes.consultantWrites[0]).toMatchObject({ consultantId: "AS001", serviceId: "prenatal-doctor", preferredDate: "2099-10-25", preferredTimeSlot: "morning", bookingTermsAccepted: true, expectedCharge: 990.55 });
   expect(writes.navigatedTo).toBe("/app/bookings/consultations?booking=consultation-fixture");
   expect(errors).toEqual([]);
+});
+
+test("consultation availability refresh is quiet, deduplicated and handles changed slots safely", async ({ page }) => {
+  await page.clock.install();
+  await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "consumer-consultation-new");
+  const fixture = () => page.evaluate(() => (window as unknown as {slotReads:{calls:number}}).slotReads.calls);
+  const update = (values: {hold?:boolean;fail?:boolean;unavailableStart?:string}) => page.evaluate(values => Object.assign((window as unknown as {slotReads:object}).slotReads, values), values);
+  const finish = () => page.evaluate(() => (window as unknown as {slotReads:{finish:(()=>void)|null}}).slotReads.finish?.());
+  await page.getByRole("radio", {name:/Assigned Consultation Professional/}).check();
+  await page.getByRole("textbox", {name:"Preferred appointment date *",exact:true}).fill("25/10/2099");
+  const times = page.getByRole("combobox", {name:"Preferred time *",exact:true});
+  const pay = page.getByRole("button", {name:/Pay.*book appointment/i});
+  await times.selectOption("09:30");
+  await page.getByRole("checkbox", {name:"I have read and agree to the applicable terms and policies.",exact:true}).check();
+  await expect(pay).toBeEnabled();
+  const initial = await fixture();
+  await page.clock.runFor(15_000);
+  expect(await fixture()).toBe(initial);
+  await update({hold:true});
+  await page.clock.runFor(30_000);
+  expect(await fixture()).toBe(initial + 1);
+  await expect(times).toBeEnabled();
+  await expect(times).toHaveValue("09:30");
+  await expect(pay).toBeEnabled();
+  await page.evaluate(() => { window.dispatchEvent(new Event("focus")); document.dispatchEvent(new Event("visibilitychange")); });
+  expect(await fixture()).toBe(initial + 1);
+  await finish();
+  await expect(times).toHaveValue("09:30");
+  await update({hold:false,fail:true});
+  await page.clock.runFor(45_000);
+  await expect(page.getByRole("button", {name:"Check times again",exact:true})).toBeVisible();
+  await expect(pay).toBeDisabled();
+  await expect(times).toHaveValue("09:30");
+  await update({fail:false});
+  await page.getByRole("button", {name:"Check times again",exact:true}).click();
+  await expect(pay).toBeEnabled();
+  await update({unavailableStart:"09:30"});
+  await page.clock.runFor(45_000);
+  await expect(page.getByText("Your selected time is no longer available. Please choose another appointment time.", {exact:true})).toBeVisible();
+  await expect(pay).toBeDisabled();
+  await times.selectOption("10:00");
+  await expect(pay).toBeEnabled();
 });
 
 test("online consultation empty state is clear and does not show an unusable form", async ({ page }) => {
@@ -858,10 +939,10 @@ test("online consultation history reschedules with a locked shared dialog and Co
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { consultantWrites: object[] } }).consumerBookingFixture.consultantWrites.length)).toBe(0);
   await page.getByRole("button", { name: "Reschedule", exact: true }).click();
-  await dialog.locator('input[type="time"]').fill("10:15");
+  await dialog.getByRole("combobox", {name:"New appointment time (IST) *",exact:true}).selectOption("10:30");
   await dialog.getByRole("button", { name: "Confirm", exact: true }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.getByText("25/10/2099 · 10:15 IST", { exact: true })).toBeVisible();
+  await expect(page.getByText("25/10/2099 · 10:30 AM – 11:00 AM IST", { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.body.style.position)).not.toBe("fixed");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath("online-consultation-history.png"), fullPage: true });
@@ -880,15 +961,14 @@ test("consultation rescheduling validates before saving, submits once and report
   await mount(page, "admin-consultations-email-failure");
   await page.getByRole("button", { name: "Reschedule", exact: true }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.locator('input[type="time"]').fill("12:00");
-  await dialog.getByRole("button", { name: "Confirm", exact: true }).click();
-  await expect(dialog.getByRole("alert")).toContainText("within the appointment window");
+  await dialog.getByRole("combobox", {name:"New appointment time (IST) *",exact:true}).selectOption("");
+  await expect(dialog.getByRole("button", {name:"Confirm",exact:true})).toBeDisabled();
   expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { consultantWrites: unknown[] } }).consumerBookingFixture.consultantWrites.length)).toBe(0);
-  await dialog.locator('input[type="time"]').fill("10:15");
+  await dialog.getByRole("combobox", {name:"New appointment time (IST) *",exact:true}).selectOption("10:30");
   await dialog.getByRole("button", { name: "Confirm", exact: true }).evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
   await expect(dialog).toBeHidden();
   expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { consultantWrites: unknown[] } }).consumerBookingFixture.consultantWrites.length)).toBe(1);
-  await expect(page.getByText("25/10/2099 · 10:15 IST", { exact: true })).toBeVisible();
+  await expect(page.getByText("25/10/2099 · 10:30 AM – 11:00 AM IST", { exact: true })).toBeVisible();
   await expect(page.locator(".portal-form-error")).toContainText("mail service did not confirm");
   await expect(page.locator('.portal-toast[data-tone="error"]')).toContainText("mail service did not confirm");
   expect(await page.evaluate(() => document.body.style.position)).not.toBe("fixed");

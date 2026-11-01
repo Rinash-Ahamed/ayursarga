@@ -6,6 +6,15 @@ import type { ConsultationBookingDocument } from "@/features/firestore/models";
 import { authorizedApiRequest, decodeMutation } from "@/services/api/client";
 import type { ConsultationEmailResult } from "@/features/consultations/email";
 import { readDocument, runFilteredQuery, type QueryPageOptions } from "@/services/firestore/firestoreService";
+import type { AppointmentSlot } from "@/features/consultations/slots";
+
+export function listConsultationSlots(consultantId: string, service: string, date: string, excludeBookingId?: string, signal?: AbortSignal) {
+  const params = new URLSearchParams({consultantId,service,date});
+  if (excludeBookingId) params.set("excludeBookingId",excludeBookingId);
+  return authorizedApiRequest<{slots:AppointmentSlot[];checkedAt:string;holdMinutes:number}>(`/api/consultations/slots?${params}`, {
+    signal, signedOutMessage:"Sign in to check appointment times.", failureMessage:"Appointment times could not be checked. Please try again.",
+  });
+}
 
 export async function listPublicConsultants(service: ConsultationServiceId, cursor: number | null = null, signal?: AbortSignal): Promise<ConsultantPage> {
   const params = new URLSearchParams({ service });
@@ -25,7 +34,7 @@ export async function getPublicConsultant(service: string, consultantId: string,
 
 export async function createConsultationBooking(input: {
   consultantId: string; serviceId: ConsultationServiceId; preferredDate: string;
-  preferredTimeSlot: string; expectedSlotStartTime: string; expectedSlotEndTime: string;
+  preferredTimeSlot: string; expectedSlotStartTime: string; expectedSlotEndTime: string; appointmentStartTime: string;
   consumerNotes: string; expectedCharge: number; bookingTermsAccepted: boolean; requestId: string; expectedCancellationPolicyVersion: string;
 }) {
   const { loadConsultationCheckout, preparePaidConsultation, payForConsultation } = await import("@/services/payments/consultationCheckout");

@@ -91,33 +91,37 @@ function contractBlocks(html: string, selector = ".contract-document"): PdfBlock
   return blocks;
 }
 
-function pageHeader(pageNumber: number, heading = "PARTNER CENTRE AGREEMENT", footer = "Ayursarga Partner Network") {
+function pageHeader(pageNumber: number, heading = "PARTNER CENTRE AGREEMENT", footer = "Ayursarga Partner Network", compact = false) {
+  const headerHeight = compact ? 58 : 68;
+  const footerTop = compact ? 804 : 790;
   return [
-    rectangle(0, 0, PAGE_WIDTH, 68, FOREST),
-    rectangle(0, 68, PAGE_WIDTH, 4, GOLD),
-    textLine("AYURSARGA", MARGIN_X, 43, 12, "F2", GOLD),
-    textLine(heading, PAGE_WIDTH - 190, 43, 8, "F2", "0.88 0.92 0.89"),
-    rectangle(0, 790, PAGE_WIDTH, 52, FOREST),
-    rectangle(0, 790, PAGE_WIDTH, 3, GOLD),
-    textLine("PRIVATE & CONFIDENTIAL", MARGIN_X, 817, 7.2, "F2", GOLD),
-    textLine(footer, MARGIN_X + 112, 817, 7.2, "F1", "0.88 0.92 0.89"),
-    textLine(`Page ${pageNumber}`, PAGE_WIDTH - 82, 817, 7.2, "F1", "0.88 0.92 0.89"),
+    rectangle(0, 0, PAGE_WIDTH, headerHeight, FOREST),
+    rectangle(0, headerHeight, PAGE_WIDTH, 4, GOLD),
+    textLine("AYURSARGA", MARGIN_X, compact ? 37 : 43, 12, "F2", GOLD),
+    textLine(heading, PAGE_WIDTH - 190, compact ? 37 : 43, 8, "F2", "0.88 0.92 0.89"),
+    rectangle(0, footerTop, PAGE_WIDTH, PAGE_HEIGHT - footerTop, FOREST),
+    rectangle(0, footerTop, PAGE_WIDTH, 3, GOLD),
+    textLine("PRIVATE & CONFIDENTIAL", MARGIN_X, compact ? 829 : 817, 7.2, "F2", GOLD),
+    textLine(footer, MARGIN_X + 112, compact ? 829 : 817, 7.2, "F1", "0.88 0.92 0.89"),
+    textLine(`Page ${pageNumber}`, PAGE_WIDTH - 82, compact ? 829 : 817, 7.2, "F1", "0.88 0.92 0.89"),
   ];
 }
 
-function renderContract(blocks: PdfBlock[], heading?: string, footer?: string) {
+function renderContract(blocks: PdfBlock[], heading?: string, footer?: string, compact = false) {
   const pages: string[][] = [];
   let commands: string[] = [];
-  let top = CONTENT_TOP;
+  const contentTop = compact ? 80 : CONTENT_TOP;
+  const contentBottom = compact ? 786 : CONTENT_BOTTOM;
+  let top = contentTop;
 
   function newPage() {
-    commands = pageHeader(pages.length + 1, heading, footer);
+    commands = pageHeader(pages.length + 1, heading, footer, compact);
     pages.push(commands);
-    top = CONTENT_TOP;
+    top = contentTop;
   }
 
   function ensureSpace(height: number) {
-    if (top + height > CONTENT_BOTTOM) newPage();
+    if (top + height > contentBottom) newPage();
   }
 
   function renderLines(lines: string[], x: number, width: number, size: number, lineHeight: number, font = "F1", color = INK) {
@@ -134,8 +138,8 @@ function renderContract(blocks: PdfBlock[], heading?: string, footer?: string) {
   for (const block of blocks) {
     if (block.kind === "heading") {
       const size = block.level === 1 ? 23 : block.level === 2 ? 15 : 11;
-      const lineHeight = block.level === 1 ? 28 : block.level === 2 ? 20 : 16;
-      const gapBefore = block.level === 1 ? 2 : block.level === 2 ? 15 : 10;
+      const lineHeight = block.level === 1 ? 28 : block.level === 2 ? (compact ? 18 : 20) : 16;
+      const gapBefore = block.level === 1 ? 2 : block.level === 2 ? (compact ? 7 : 15) : (compact ? 6 : 10);
       const lines = wrapText(block.text, Math.floor(CONTENT_WIDTH / (size * .52)));
       ensureSpace(gapBefore + lines.length * lineHeight + 12);
       top += gapBefore;
@@ -144,20 +148,20 @@ function renderContract(blocks: PdfBlock[], heading?: string, footer?: string) {
         commands.push(textLine(line, MARGIN_X + (block.level === 2 ? 12 : 0), top, size, "F2", block.level === 3 ? EMERALD : FOREST));
         top += lineHeight;
       });
-      top += block.level === 1 ? 10 : 7;
+      top += block.level === 1 ? (compact ? 7 : 10) : (compact ? 4 : 7);
       continue;
     }
 
     if (block.kind === "paragraph") {
-      renderLines(block.text.split("\n"), MARGIN_X, CONTENT_WIDTH, 9.1, 13.2);
-      top += 8;
+      renderLines(block.text.split("\n"), MARGIN_X, CONTENT_WIDTH, 9.1, compact ? 12.6 : 13.2);
+      top += compact ? 3 : 8;
       continue;
     }
 
     if (block.signature) {
       const columnWidth = CONTENT_WIDTH / 2;
-      const headerHeight = 30;
-      const signingHeight = 96;
+      const headerHeight = compact ? 26 : 30;
+      const signingHeight = compact ? 90 : 96;
       const totalHeight = headerHeight + signingHeight;
       top += 4;
       ensureSpace(totalHeight + 10);
@@ -187,18 +191,18 @@ function renderContract(blocks: PdfBlock[], heading?: string, footer?: string) {
     for (const [rowIndex, row] of block.rows.entries()) {
       const firstLines = wrapText(row[0] ?? "", Math.floor((firstColumnWidth - 18) / (8.5 * .52)));
       const secondLines = wrapText(row[1] ?? "", Math.floor((secondColumnWidth - 18) / (8.5 * .52)));
-      const rowHeight = Math.max(block.signature && rowIndex > 0 ? 142 : 28, Math.max(firstLines.length, secondLines.length) * 11.5 + 14);
+      const rowHeight = Math.max(compact ? 26 : 28, Math.max(firstLines.length, secondLines.length) * 11.5 + (compact ? 10 : 14));
       ensureSpace(rowHeight + 3);
       commands.push(rectangle(MARGIN_X, top, CONTENT_WIDTH, rowHeight, rowIndex === 0 ? FOREST : rowIndex % 2 === 0 ? "0.96 0.97 0.96" : "1 1 1"));
       commands.push(border(MARGIN_X, top, CONTENT_WIDTH, rowHeight));
       commands.push(`${LINE} RG 0.7 w ${MARGIN_X + firstColumnWidth} ${PAGE_HEIGHT - top - rowHeight} m ${MARGIN_X + firstColumnWidth} ${PAGE_HEIGHT - top} l S`);
       const color = rowIndex === 0 ? "1 1 1" : INK;
       const font = rowIndex === 0 ? "F2" : "F1";
-      firstLines.forEach((line, index) => commands.push(textLine(line, MARGIN_X + 9, top + 16 + index * 11.5, 8.5, font, color)));
-      secondLines.forEach((line, index) => commands.push(textLine(line, MARGIN_X + firstColumnWidth + 9, top + 16 + index * 11.5, 8.5, font, color)));
+      firstLines.forEach((line, index) => commands.push(textLine(line, MARGIN_X + 9, top + (compact ? 14 : 16) + index * 11.5, 8.5, font, color)));
+      secondLines.forEach((line, index) => commands.push(textLine(line, MARGIN_X + firstColumnWidth + 9, top + (compact ? 14 : 16) + index * 11.5, 8.5, font, color)));
       top += rowHeight;
     }
-    top += 10;
+    top += compact ? 7 : 10;
   }
   return pages.map((page) => page.join("\n"));
 }
@@ -238,7 +242,7 @@ export function buildBrandedDocumentPdf(html: string, selector: string, heading:
 
 export function buildHospitalContractPdf(hospital: DocumentRecord<HospitalDocument>) {
   const html = buildHospitalContractHtml(hospital);
-  const pages = renderContract(contractBlocks(html));
+  const pages = renderContract(contractBlocks(html), undefined, undefined, true);
   const safeName = hospital.name.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "hospital";
   const dateParts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Kolkata",

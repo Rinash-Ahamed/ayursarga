@@ -92,9 +92,9 @@ test("Admin revocation cutoff blocks old native-MFA reads/writes and cannot be c
 });
 
 test("hospital and consultant creation cannot bypass the server duplicate-email checks", async () => {
-  for (const module of ["hospitals", "consultants"]) {
+  for (const collectionName of ["hospitals", "consultants"]) {
     for (const role of ["admin", "hospital", "consumer"]) {
-      const response = await call(`/${module}/create-${role}-${suffix}`, { role, method: "PATCH", body: { fields: fields({ name: "Duplicate", email: "existing@example.test" }) } });
+      const response = await call(`/${collectionName}/create-${role}-${suffix}`, { role, method: "PATCH", body: { fields: fields({ name: "Duplicate", email: "existing@example.test" }) } });
       assert.equal(response.status, 403);
     }
   }

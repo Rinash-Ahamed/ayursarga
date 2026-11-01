@@ -1,8 +1,9 @@
 "use client";
 
-import { Component, useCallback, useRef, useState, type ReactNode } from "react";
+import { Component, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
+import { WhatsAppLauncher } from "@/components/WhatsAppBubble";
 // Modal, guide, phone control and email transport stay out of the initial view.
 const AyuBuddyDialog = dynamic(() => import("@/components/AyuBuddyDialog"), { ssr: false });
 
@@ -20,12 +21,32 @@ function AyuBuddyLauncher() {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState(false);
+  const [active, setActive] = useState("ayu");
+  const [paused, setPaused] = useState(false);
+  const [visible, setVisible] = useState(true);
+  const [reducedMotion, setReducedMotion] = useState(false);
   const launcher = useRef<HTMLButtonElement>(null);
   const markReady = useCallback(() => setReady(true), []);
   const handleFailure = useCallback(() => { setBusy(false); setReady(true); }, []);
   const close = () => { if (!busy) { setOpen(false); setReady(false); } };
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const motion = () => setReducedMotion(media.matches);
+    const visibility = () => setVisible(document.visibilityState === "visible");
+    motion(); visibility();
+    media.addEventListener("change", motion);
+    document.addEventListener("visibilitychange", visibility);
+    return () => { media.removeEventListener("change", motion); document.removeEventListener("visibilitychange", visibility); };
+  }, []);
+  useEffect(() => {
+    if (open || paused || !visible || reducedMotion) return;
+    const timer = window.setInterval(() => setActive(value => value === "ayu" ? "whatsapp" : "ayu"), 3_000);
+    return () => window.clearInterval(timer);
+  }, [open, paused, visible, reducedMotion]);
+  const ayuVisible = reducedMotion || open || active === "ayu";
   return <>
-    <button ref={launcher} className="ayu-buddy-launcher" type="button" aria-label="Ask Ayu, your Ayursarga guide" aria-haspopup="dialog" aria-expanded={open} disabled={busy} onClick={(event) => {
+    <div className="support-launcher" data-static={reducedMotion} aria-label="Contact Ayursarga" onPointerEnter={() => setPaused(true)} onPointerLeave={event => { if (!event.currentTarget.contains(document.activeElement)) setPaused(false); }} onFocusCapture={() => setPaused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget) && !event.currentTarget.matches(":hover")) setPaused(false); }}>
+    <button ref={launcher} className="ayu-buddy-launcher support-launcher-option" data-active={ayuVisible} aria-hidden={!ayuVisible} inert={!ayuVisible} tabIndex={ayuVisible ? 0 : -1} type="button" aria-label="Ask Ayu, your Ayursarga guide" aria-haspopup="dialog" aria-expanded={open} disabled={busy} onClick={(event) => {
       // Safari does not focus pointer-activated buttons by default. Give the
       // shared modal a reliable focus-return target before it opens.
       event.currentTarget.focus({ preventScroll: true });
@@ -35,6 +56,8 @@ function AyuBuddyLauncher() {
       <Image src="/ayu-buddy.webp" alt="" width={72} height={71} sizes="72px" unoptimized />
       <span>{open && !ready ? "Opening Ayu..." : "Ask Ayu"}</span>
     </button>
+    <WhatsAppLauncher rotating active={reducedMotion || (!open && active === "whatsapp")} />
+    </div>
     {open && <AyuDialogBoundary onFailure={handleFailure} onClose={() => { close(); launcher.current?.focus({ preventScroll: true }); }}>
       <AyuBuddyDialog onClose={close} onBusyChange={setBusy} onReady={markReady} />
     </AyuDialogBoundary>}

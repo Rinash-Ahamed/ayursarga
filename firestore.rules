@@ -475,6 +475,7 @@ service cloud.firestore {
     match /consultationPaymentIntents/{id} { allow read, write: if false; }
     match /consultationPaymentReceipts/{id} { allow read, write: if false; }
     match /consultationFinancials/{id} { allow read, write: if false; }
+    match /consultationSlotDays/{id} { allow read, write: if false; }
     match /razorpayWebhookEvents/{id} { allow read, write: if false; }
     match /cancellationPolicies/{id} { allow read, write: if false; }
 

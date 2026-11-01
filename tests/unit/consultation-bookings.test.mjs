@@ -8,7 +8,7 @@ const consultant = { name: "Assigned Professional", designation: "Ayurvedic phys
   status: "active", employeeSequence: 1, archivedAt: null, consultationServices: ["prenatal-doctor"], consultantCharge: 900.5, ayursargaCommissionPercentage: 0,
   preferredTimeSlots: ["morning"], preferredSlotTimings: { morning: { startTime: "09:30", endTime: "11:45" } },
   email: "private@example.com", contactNo: "9876543210", address: "Private address", emergencyContactNo: "9876543210", lastAuditId: "secret-audit" };
-const input = { consultantId: "AS001", serviceId: "prenatal-doctor", preferredDate: "2099-10-25", preferredTimeSlot: "morning",
+const input = { consultantId: "AS001", serviceId: "prenatal-doctor", preferredDate: "2099-10-25", preferredTimeSlot: "morning", appointmentStartTime: "09:30",
   expectedSlotStartTime: "09:30", expectedSlotEndTime: "11:45",
   bookingTermsAccepted: true, expectedCharge: 900.5, requestId: "consultation-attempt-0001", consumerNotes: "Please help with pregnancy lifestyle." };
 const fixture = (options = {}) => consultationPaymentFixture({ ...options, records: { "consultants/AS001": consultant, ...options.records } });
@@ -42,7 +42,7 @@ test("consultation creation snapshots actual charge, provider, Consumer and cons
   const record = f.records.get(`consultationBookings/${bookingId}`);
   assert.equal(record.consumerId, "patient"); assert.equal(record.consultantName, consultant.name);
   assert.equal(record.consultantCharge, 900.5); assert.equal(record.status, "confirmed");
-  assert.equal(record.confirmedDate, input.preferredDate); assert.equal(record.confirmedTime, null); assert.ok(record.confirmedAt);
+  assert.equal(record.confirmedDate, input.preferredDate); assert.equal(record.confirmedTime, "09:30"); assert.equal(record.confirmedEndTime, "10:00"); assert.ok(record.confirmedAt);
   assert.equal(f.calls.smtp.length, 1);
   assert.equal(record.slotStartTime, "09:30"); assert.equal(record.consumerPhone, "9876543210");
   assert.ok(record.bookingTermsAcceptedAt); assert.ok(record.bookingTermsVersion);
@@ -128,14 +128,14 @@ test("Admin rescheduling checks current days/dates without changing existing app
     const before = f.records.get(`consultationBookings/${id}`);
     f.records.set("consultants/AS001", { ...consultant, ...changes });
     f.actor.role = "admin"; f.actor.uid = "admin";
-    assert.equal((await update(f, id, { action: "reschedule", requestId: "reschedule-availability-0001", confirmedDate: "2099-10-26", confirmedTime: "10:15" })).status, 409);
+    assert.equal((await update(f, id, { action: "reschedule", requestId: "reschedule-availability-0001", confirmedDate: "2099-10-26", confirmedTime: "10:30" })).status, 409);
     assert.deepEqual(f.records.get(`consultationBookings/${id}`), before);
     assert.equal(f.calls.smtp.length, 1); assert.equal(f.calls.consultantSmtp.length, 1);
   }
   const { f, id } = await seeded();
   f.records.set("consultants/AS001", { ...consultant, preferredDays: ["mon"], availableDates: ["2099-10-26"] });
   f.actor.role = "admin"; f.actor.uid = "admin";
-  assert.equal((await update(f, id, { action: "reschedule", requestId: "reschedule-availability-0002", confirmedDate: "2099-10-26", confirmedTime: "10:15" })).status, 200);
+  assert.equal((await update(f, id, { action: "reschedule", requestId: "reschedule-availability-0002", confirmedDate: "2099-10-26", confirmedTime: "10:30" })).status, 200);
 });
 
 test("retrying original creation after cancellation suppresses obsolete pending emails for both recipients", async () => {
@@ -287,7 +287,7 @@ test("a changed consultation charge must be reviewed before a new appointment ca
 test("a changed consultant time window cannot silently replace the window chosen by the Consumer", async () => {
   const f = fixture({ records: { "consultants/AS001": { ...consultant, preferredSlotTimings: { morning: { startTime: "10:00", endTime: "12:00" } } } } });
   assert.equal((await create(f)).status, 409); assert.equal(f.calls.writes.length, 0);
-  assert.equal((await create(f, { ...input, expectedSlotStartTime: "10:00", expectedSlotEndTime: "12:00" })).status, 201);
+  assert.equal((await create(f, { ...input, expectedSlotStartTime: "10:00", expectedSlotEndTime: "12:00", appointmentStartTime:"10:00" })).status, 201);
   assert.equal(f.values("consultationBookings")[0].slotStartTime, "10:00");
 });
 
@@ -307,19 +307,19 @@ test("Admin reschedules a confirmed consultation, emails old and new schedule on
   f.actor.role = "admin"; f.actor.uid = "admin";
   const savedBefore = f.records.get(`consultationBookings/${id}`);
   const body = { action: "reschedule", requestId: "reschedule-attempt-0001", expectedAuditId: savedBefore.lastAuditId,
-    confirmedDate: "2099-10-26", confirmedTime: "10:15", adminNotes: "Please be ready five minutes before your consultation.", consultantCharge: 1 };
+    confirmedDate: "2099-10-26", confirmedTime: "10:30", adminNotes: "Please be ready five minutes before your consultation.", consultantCharge: 1 };
   const response = await update(f, id, body);
   assert.equal(response.status, 200); assert.equal((await response.json()).email.status, "accepted");
   assert.equal((await update(f, id, body)).status, 200);
   const saved = f.records.get(`consultationBookings/${id}`);
-  assert.equal(saved.status, "confirmed"); assert.equal(saved.confirmedTime, "10:15"); assert.equal(saved.consultantCharge, 900.5);
+  assert.equal(saved.status, "confirmed"); assert.equal(saved.confirmedTime, "10:30"); assert.equal(saved.confirmedEndTime,"11:00"); assert.equal(saved.consultantCharge, 900.5);
   assert.equal(saved.confirmedAt, savedBefore.confirmedAt);
   assert.equal(f.calls.smtp.length, 2);
   assert.match(f.calls.smtp[1].text, /rescheduled/);
   assert.match(f.calls.smtp[1].text, /Original appointment date: 25\/10\/2099/);
-  assert.match(f.calls.smtp[1].text, /Original appointment time: 09:30 - 11:45 IST/);
+  assert.match(f.calls.smtp[1].text, /Original appointment time: 9:30 AM – 10:00 AM IST/);
   assert.match(f.calls.smtp[1].text, /Updated appointment date: 26\/10\/2099/);
-  assert.match(f.calls.smtp[1].text, /10:15 IST/);
+  assert.match(f.calls.smtp[1].text, /10:30 AM – 11:00 AM IST/);
   assert.equal(f.calls.smtp[1].to, "patient@example.com");
   assert.doesNotMatch(f.calls.smtp[1].text, /five minutes/); // private notes are not copied into email.
   assert.equal(f.values("notifications").filter((item) => item.recipientId === "patient").length, 1);
@@ -347,7 +347,7 @@ test("Admin cannot reschedule outside the window, against unavailable providers,
   const { f, id } = await seeded(); f.actor.role = "admin"; f.actor.uid = "admin";
   const base = { action: "reschedule", requestId: "reschedule-attempt-0001", confirmedDate: "2099-10-25", confirmedTime: "10:00" };
   for (const confirmedTime of ["09:00", "11:45", "19:00", "10:99", "invalid"]) {
-    assert.equal((await update(f, id, { ...base, confirmedTime })).status, 400);
+    assert.equal((await update(f, id, { ...base, confirmedTime })).status, ["10:99","invalid"].includes(confirmedTime) ? 400 : 409);
   }
   for (const status of ["confirmed", "rejected"]) assert.equal((await update(f, id, { status })).status, 400);
   assert.equal((await update(f, id, { ...base, requestId: "bad" })).status, 400);
@@ -369,7 +369,7 @@ test("Admin cancellation emails the original schedule after saving and retries n
   assert.equal(f.records.get(`consultationBookings/${id}`).status, "cancelled");
   assert.equal(f.calls.smtp.length, 2);
   assert.match(f.calls.smtp[1].text, /cancelled/); assert.match(f.calls.smtp[1].text, /25\/10\/2099/);
-  assert.match(f.calls.smtp[1].text, /09:30 - 11:45 IST/);
+  assert.match(f.calls.smtp[1].text, /9:30 AM – 10:00 AM IST/);
   assert.match(f.calls.smtp[1].text, /info@ayursarga.com/);
 });
 
@@ -387,7 +387,7 @@ test("Repeated reschedules preserve each original schedule, reject stale/conflic
   assert.equal(f.records.get(`consultationBookings/${id}`).confirmedDate, "2099-10-27");
   assert.equal(f.calls.smtp.length, 3);
   assert.match(f.calls.smtp[2].text, /Original appointment date: 26\/10\/2099/);
-  assert.match(f.calls.smtp[2].text, /Original appointment time: 10:00 IST/);
+  assert.match(f.calls.smtp[2].text, /Original appointment time: 10:00 AM – 10:30 AM IST/);
   assert.equal(f.values("notifications").filter((item) => item.recipientId === "patient").length, 2);
 });
 
@@ -457,14 +457,14 @@ test("assigned consultants receive independent branded emails for booking, resch
   assert.equal(first.to, consultant.email);
   assert.match(first.text, /Hello Assigned Professional,/);
   assert.match(first.text, /Consumer: Patient/);
-  assert.match(first.text, /09:30 - 11:45 IST/);
+  assert.match(first.text, /9:30 AM – 10:00 AM IST/);
   assert.match(first.text, /Booking reference:/);
   assert.doesNotMatch(first.text, /My Bookings|dashboard|Please help with pregnancy lifestyle/);
   assert.match(first.html, /#1f3d2b/);
   assert.equal((await create(f)).status, 200);
   assert.equal(f.calls.consultantSmtp.length, 1);
   f.actor.role = "admin"; f.actor.uid = "admin";
-  const reschedule = { action: "reschedule", requestId: "consultant-reschedule-001", confirmedDate: "2099-10-26", confirmedTime: "10:15" };
+  const reschedule = { action: "reschedule", requestId: "consultant-reschedule-001", confirmedDate: "2099-10-26", confirmedTime: "10:30" };
   const response = await update(f, id, reschedule);
   assert.equal((await response.json()).consultantEmail.status, "accepted");
   assert.equal((await update(f, id, reschedule)).status, 200);
@@ -476,7 +476,7 @@ test("assigned consultants receive independent branded emails for booking, resch
   assert.equal((await update(f, id, cancellation)).status, 200);
   assert.equal(f.calls.consultantSmtp.length, 3);
   assert.match(f.calls.consultantSmtp[2].text, /Original appointment date: 26\/10\/2099/);
-  assert.match(f.calls.consultantSmtp[2].text, /Original appointment time: 10:15 IST/);
+  assert.match(f.calls.consultantSmtp[2].text, /Original appointment time: 10:30 AM – 11:00 AM IST/);
   assert.equal(f.calls.smtp.length, 3);
 });
 

@@ -7,6 +7,7 @@ import { isValidEmail } from "@/utils/text";
 import type { ConsultationEmailResult } from "@/features/consultations/email";
 import { consultationAdminRecipients, addConsultationNotification } from "@/services/consultations/consultationNotificationsAdmin";
 import { consultantDisplayName } from "@/features/consultants/name";
+import { formatAppointmentRange } from "@/features/consultations/slots";
 
 const COLLECTION = "consultationEmailEvents";
 type AppointmentEmailEvent = "confirmed" | "rescheduled" | "cancelled";
@@ -23,10 +24,10 @@ export function queueConsultationEmail(transaction: Transaction, firestore: Fire
     consumerName: String(booking.consumerName ?? ""), bookingReference: String(booking.bookingReference ?? ""),
     providerName: String(booking.consultantName ?? ""), serviceName: String(booking.serviceName ?? ""),
     date: booking.confirmedDate ?? booking.preferredDate,
-    time: typeof booking.confirmedTime === "string" ? booking.confirmedTime : null,
+    time: typeof booking.confirmedTime === "string" ? (typeof booking.confirmedEndTime === "string" ? formatAppointmentRange(booking.confirmedTime, booking.confirmedEndTime) : booking.confirmedTime) : null,
     timeWindow: `${booking.slotStartTime} - ${booking.slotEndTime}`,
     previousDate: previous.confirmedDate ?? previous.preferredDate,
-    previousTime: typeof previous.confirmedTime === "string" ? previous.confirmedTime : null,
+    previousTime: typeof previous.confirmedTime === "string" ? (typeof previous.confirmedEndTime === "string" ? formatAppointmentRange(previous.confirmedTime, previous.confirmedEndTime) : previous.confirmedTime) : null,
     previousTimeWindow: `${previous.slotStartTime} - ${previous.slotEndTime}`,
     amount: typeof booking.consultantCharge === "number" ? booking.consultantCharge : null,
   };

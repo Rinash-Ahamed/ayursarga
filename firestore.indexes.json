@@ -1,5 +1,7 @@
 {
   "indexes": [
+    { "collectionGroup": "consultationBookings", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "consultantId", "order": "ASCENDING" }, { "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "confirmedDate", "order": "ASCENDING" }] },
+    { "collectionGroup": "consultationBookings", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "consultantId", "order": "ASCENDING" }, { "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "preferredDate", "order": "ASCENDING" }] },
     {
       "collectionGroup": "hospitals", "queryScope": "COLLECTION",
       "fields": [{ "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }]
@@ -229,5 +231,5 @@
       ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [{ "collectionGroup": "consultationSlotDays", "fieldPath": "entries", "indexes": [] }]
 }

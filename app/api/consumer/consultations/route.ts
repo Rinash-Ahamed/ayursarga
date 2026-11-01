@@ -3,6 +3,7 @@ import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { allowRequest } from "@/services/api/rateLimit";
 import { apiJson } from "@/services/api/server";
 import { prepareConsultationPayment, ConsultationPaymentError } from "@/services/payments/consultationPaymentsAdmin";
+import { SlotReservationError } from "@/services/consultations/slotReservationsAdmin";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
     if ((body as Record<string, unknown>).checkoutVersion !== 1) return apiJson({ error: "Consultations now require payment. Refresh the page before continuing." }, 409);
     return apiJson({ ok: true, checkout: await prepareConsultationPayment(firestore, uid, body as Record<string, unknown>) });
   } catch (error) {
-    if (error instanceof AdminAuthorizationError || error instanceof RequestBodyError || error instanceof ConsultationPaymentError) return apiJson({ error: error.message }, error.status);
+    if (error instanceof AdminAuthorizationError || error instanceof RequestBodyError || error instanceof ConsultationPaymentError || error instanceof SlotReservationError) return apiJson({ error: error.message }, error.status);
     return apiJson({ error: "Payment setup could not be confirmed. Contact Ayursarga before starting another payment." }, 503);
   }
 }

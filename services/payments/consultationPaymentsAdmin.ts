@@ -17,6 +17,8 @@ import { consultationAdminRecipients, addConsultationNotification } from "@/serv
 import { queueConsultationEmail } from "@/services/email/consultationEmailService";
 import { readConsultationCancellationPolicy } from "@/services/consultations/cancellationPolicyAdmin";
 import { snapshotConsultationCancellation } from "@/features/consultations/cancellationPolicy";
+import { CONSULTATION_HOLD_MS, generateConsultationSlots } from "@/features/consultations/slots";
+import { readScheduleDay, requireFreeSlot, ownsLiveHold, saveSlotEntry, releaseSlot, slotState } from "@/services/consultations/slotReservationsAdmin";
 import { createRazorpayOrder, fetchRazorpayOrder, fetchRazorpayPayment, fetchRazorpayOrderPayments, getRazorpayReadiness, razorpayCheckoutKey, rupeesToPaise, type RazorpayPayment, type RazorpayOrder } from "@/services/payments/razorpay";
 
 export class ConsultationPaymentError extends Error { constructor(message: string, public status = 409) { super(message); } }
@@ -40,8 +42,9 @@ function completedProfile(profile: Data | undefined) {
 
 /** The only Consumer projection of an intent. No commission, payout or settlement data. */
 export function consumerCheckout(id: string, value: Data): ConsultationCheckout {
-  const ready = value.state === "ready" && typeof value.orderId === "string" && value.mode === getRazorpayReadiness().mode;
-  return { intentId: id, state: String(value.state), bookingId: typeof value.bookingId === "string" ? value.bookingId : null,
+  const expired = value.draft?.scheduleVersion === 2 && !value.bookingId && value.state === "ready" && !(value.holdExpiresAt > Date.now());
+  const ready = !expired && value.state === "ready" && typeof value.orderId === "string" && value.mode === getRazorpayReadiness().mode;
+  return { intentId: id, state: expired ? "reservation_expired" : String(value.state), bookingId: typeof value.bookingId === "string" ? value.bookingId : null,
     bookingReference: typeof value.bookingReference === "string" ? value.bookingReference : null,
     totalPaise: Number(value.amountPaise), currency: "INR",
     ...(value.draft?.cancellationPolicy ? { cancellationPolicy: value.draft.cancellationPolicy } : {}),
@@ -61,7 +64,8 @@ export async function prepareConsultationPayment(firestore: Firestore, uid: stri
     throw new ConsultationPaymentError("Choose a valid consultant, date, time window and fee.", 400);
   }
   const id = `consultation-${hashPaymentValue(`${uid}:${requestId}`)}`;
-  const inputHash = hashPaymentValue(JSON.stringify([service.id, consultantId, date, slot, expectedCharge, notes, body.expectedSlotStartTime, body.expectedSlotEndTime, body.expectedCancellationPolicyVersion]));
+  const oldInputHash = hashPaymentValue(JSON.stringify([service.id, consultantId, date, slot, expectedCharge, notes, body.expectedSlotStartTime, body.expectedSlotEndTime, body.expectedCancellationPolicyVersion]));
+  const inputHash = body.appointmentStartTime === undefined ? oldInputHash : hashPaymentValue(JSON.stringify([service.id, consultantId, date, slot, expectedCharge, notes, body.expectedSlotStartTime, body.expectedSlotEndTime, body.expectedCancellationPolicyVersion, body.appointmentStartTime]));
   const legacyInputHash = hashPaymentValue(JSON.stringify([service.id, consultantId, date, slot, expectedCharge, notes, body.expectedSlotStartTime, body.expectedSlotEndTime]));
   const ref = firestore.collection("consultationPaymentIntents").doc(id);
   const receipt = `cp_${hashPaymentValue(id).slice(0, 32)}`;
@@ -89,21 +93,27 @@ export async function prepareConsultationPayment(firestore: Firestore, uid: stri
     if (!provider || !pricing || !timing || !provider.preferredTimeSlots.includes(slot)) throw new ConsultationPaymentError("This consultant is not configured for paid booking. Choose another professional or contact Ayursarga.");
     if (provider.consultantCharge !== expectedCharge || timing.startTime !== body.expectedSlotStartTime || timing.endTime !== body.expectedSlotEndTime) throw new ConsultationPaymentError("The fee or time window changed. Refresh consultants and review before paying.");
     if (!isConsultantDateAvailable(date, provider) || !validConsultationSchedule(date, timing.startTime, timing.endTime)) throw new ConsultationPaymentError("Choose an available date and time window that has not ended.");
+    const appointment = generateConsultationSlots(date, service.id, provider).find(value => value.window === slot && value.startTime === body.appointmentStartTime);
+    if (!appointment) throw new ConsultationPaymentError("Choose an available appointment time before paying.");
     const amountPaise = rupeesToPaise(pricing.totalCharge);
     if (amountPaise < 100) throw new ConsultationPaymentError("This consultation fee is not configured for payment.");
     const consumer = profile.data()!;
     const cancellationPolicy = await readConsultationCancellationPolicy(firestore, transaction);
     if (body.expectedCancellationPolicyVersion !== cancellationPolicy.version) throw new ConsultationPaymentError("Cancellation terms changed. Reload and review them before paying.");
     const now = Timestamp.now();
+    const day = await readScheduleDay(transaction, firestore, consultantId, date);
+    requireFreeSlot(day, appointment, now.toMillis());
+    const holdExpiresAt = now.toMillis() + CONSULTATION_HOLD_MS;
     const draft = { consumerId: uid, consumerName: String(consumer.name ?? "").trim(), consumerEmail: String(consumer.email ?? "").trim().toLowerCase(),
       consumerPhone: consumer.phone.trim(), consumerAddress: typeof consumer.address === "string" ? consumer.address.trim() || null : null,
       consultantId, consultantName: provider.name, consultantDesignation: provider.designation, serviceId: service.id, serviceName: service.label,
-      consultantCharge: pricing.totalCharge, preferredDate: date, preferredTimeSlot: slot, slotStartTime: timing.startTime, slotEndTime: timing.endTime,
+      consultantCharge: pricing.totalCharge, preferredDate: date, preferredTimeSlot: slot, slotStartTime: appointment.startTime, slotEndTime: appointment.endTime, scheduleVersion: 2,
       consumerNotes: notes || null, bookingTermsAcceptedAt: now, bookingTermsVersion: BOOKING_TERMS_VERSION,
-      cancellationPolicy: snapshotConsultationCancellation(cancellationPolicy, date, timing.startTime) };
+      cancellationPolicy: snapshotConsultationCancellation(cancellationPolicy, date, appointment.startTime) };
     const intent = { consumerId: uid, consultantId, inputHash, receipt, amountPaise, pricing, draft, mode: readiness.mode,
       state: "creating", orderId: null, bookingId: null, bookingReference: null, createdAt: now, createdBy: uid,
-      archivedAt: null, archivedBy: null };
+      archivedAt: null, archivedBy: null, holdExpiresAt };
+    saveSlotEntry(transaction, firestore, day, { ownerId: id, startTime: appointment.startTime, endTime: appointment.endTime, state: "held", expiresAt: holdExpiresAt }, uid, "consumer", now);
     const meta = auditPayment(transaction, firestore, "consultationPaymentIntents", id, null, intent, uid, "consumer");
     transaction.create(ref, { ...intent, ...meta });
     transaction.create(firestore.collection("consultationPaymentReceipts").doc(receipt), { intentId: id, createdAt: now, createdBy: uid, ...meta });
@@ -192,16 +202,25 @@ async function commitPayment(firestore: Firestore, id: string, payment: Razorpay
     const consultant = await transaction.get(firestore.collection("consultants").doc(intent.consultantId));
     const provider = consultant.exists ? publicConsultantProjection(intent.consultantId, consultant.data()!, intent.draft.serviceId) : null;
     const timing = provider?.preferredSlotTimings[intent.draft.preferredTimeSlot as ConsultantTimeSlot];
+    const scheduled = intent.draft.scheduleVersion === 2;
+    const now = Timestamp.now();
+    const day = !bookingSnap.exists ? await readScheduleDay(transaction, firestore, intent.consultantId, intent.draft.preferredDate) : null;
+    const appointment = provider ? generateConsultationSlots(intent.draft.preferredDate, intent.draft.serviceId, provider, now.toDate())
+      .find(value => value.window === intent.draft.preferredTimeSlot && value.startTime === intent.draft.slotStartTime && value.endTime === intent.draft.slotEndTime) : null;
+    const reserved = day && scheduled && appointment && ownsLiveHold(day, id, appointment.startTime, appointment.endTime, now.toMillis())
+      && slotState(day, appointment, now.toMillis(), id) === "available";
     const bookable = !bookingSnap.exists && intent.state !== "paid_review" && captured && payment.amount_refunded === 0 && completedProfile(consumer.data())
       && provider && timing && isConsultantDateAvailable(intent.draft.preferredDate, provider)
-      && timing.startTime === intent.draft.slotStartTime && timing.endTime === intent.draft.slotEndTime
-      && validConsultationSchedule(intent.draft.preferredDate, timing.startTime, timing.endTime);
+      && (scheduled ? reserved : day && slotState(day, intent.draft, now.toMillis(), id) === "available"
+        && timing.startTime === intent.draft.slotStartTime && timing.endTime === intent.draft.slotEndTime
+        && validConsultationSchedule(intent.draft.preferredDate, timing.startTime, timing.endTime));
     const admins = bookable ? await consultationAdminRecipients(transaction, firestore) : [];
     const bookingReference = bookable ? await reserveBookingReference(transaction, firestore, id) : intent.bookingReference;
     // All transaction reads must precede every write (reserveBookingReference is the last reader).
-    const now = Timestamp.now();
     const uid = String(intent.consumerId);
     if (captured) {
+      if (day && bookable) saveSlotEntry(transaction, firestore, day, { ownerId: id, startTime: intent.draft.slotStartTime, endTime: intent.draft.slotEndTime, state: "booked", expiresAt: null }, uid, "consumer", now);
+      else if (day && scheduled) releaseSlot(transaction, firestore, day, id, uid, "consumer", now);
       const grossPaise = intent.amountPaise;
       const commissionPaise = rupeesToPaise(intent.pricing.commissionAmount);
       const consultantPayablePaise = rupeesToPaise(intent.pricing.baseCharge);
@@ -225,7 +244,8 @@ async function commitPayment(firestore: Firestore, id: string, payment: Razorpay
       if (changed) transaction.set(financeRef, { ...record, ...auditPayment(transaction, firestore, "consultationFinancials", id,
         previous ? { paymentStatus: previous.paymentStatus, refundedPaise: previous.refundedPaise } : null, record, uid, "consumer") });
       if (bookable) {
-        const booking = { ...intent.draft, bookingReference, status: "confirmed", confirmedDate: intent.draft.preferredDate, confirmedTime: null,
+        const booking = { ...intent.draft, bookingReference, status: "confirmed", confirmedDate: intent.draft.preferredDate, confirmedTime: scheduled ? intent.draft.slotStartTime : null,
+          ...(scheduled ? { confirmedEndTime: intent.draft.slotEndTime } : {}),
           confirmedAt: now, completedAt: null, adminNotes: null, paymentStatus: "paid", paymentReference: payment.id, paymentIntentId: id,
           paymentTotals: { paidPaise: grossPaise, refundedPaise },
           createdAt: now, createdBy: uid, archivedAt: null, archivedBy: null };
