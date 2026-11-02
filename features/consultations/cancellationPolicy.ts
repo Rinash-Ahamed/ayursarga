@@ -25,9 +25,9 @@ export type ConsultationCancellationOutcome = {
   requestedAt: string; policyVersion: string | null; eligibleRefundPaise: number | null; remainingRefundPaise: number | null;
 };
 
-/** Published online consultation terms, not the example 24-hour policy. */
+/** Published online consultation terms for new checkout requests. */
 export const DEFAULT_CONSULTATION_CANCELLATION_POLICY: ConsultationCancellationPolicy = {
-  version: "consultation-published-48h-v1", refundWindowHours: 48, cancellationCutoffHours: 48,
+  version: "consultation-published-24h-v2", refundWindowHours: 24, cancellationCutoffHours: 24,
   allowAfterCutoff: true, refundType: "percentage", refundValue: 100, lateRefundValue: 0,
   conditions: "Exceptional circumstances require Ayursarga approval. Applicable legal rights remain unaffected. Eligible refunds use the original payment method.",
 };

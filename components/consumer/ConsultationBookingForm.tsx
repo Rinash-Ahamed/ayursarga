@@ -5,17 +5,16 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { consultationService } from "@/features/consultations/catalog";
-import { consultantAvailabilitySummary, isConsultantDateAvailable } from "@/features/consultations/availability";
+import { isConsultantDateAvailable } from "@/features/consultations/availability";
 import { validConsultationSchedule } from "@/features/consultations/schedule";
-import type { PublicConsultant } from "@/features/consultations/types";
+import type { AvailableConsultant } from "@/features/consultations/types";
 import { formatAppointmentRange, generateConsultationSlots } from "@/features/consultations/slots";
 import { useConsultationSlots } from "@/hooks/useConsultationSlots";
-import { createConsultationBooking, listPublicConsultants } from "@/services/consultations/consultationService";
+import { createConsultationBooking, listConsultationAvailability } from "@/services/consultations/consultationService";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalToast } from "@/components/portal/PortalToast";
-import { PortalPagination } from "@/components/portal/PortalPagination";
 import { DateInput } from "@/components/forms/DateInput";
 import { formatCurrency } from "@/utils/currency";
 import { isIsoDate, toDateInputValue, formatDisplayDate } from "@/utils/date";
@@ -28,16 +27,23 @@ import { ConsultationCancellationInfo } from "@/components/consultations/Consult
 import { usePortalClock } from "@/hooks/usePortalClock";
 import { useConsultationPaymentReminder } from "@/hooks/useConsultationPaymentReminder";
 
+const isFutureAppointmentDate = (value: string) => isIsoDate(value) && value >= toDateInputValue();
+
 export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
   const { firebaseUser } = useAuth();
   const service = consultationService(serviceId);
   const router = useRouter();
-  const loader = useCallback((cursor: number | null) => service
-    ? listPublicConsultants(service.id, cursor) : Promise.resolve({ documents: [], cursor: null, hasMore: false }), [service]);
-  const { items, error: loadError, errorNotification: loadNotification, isLoading, hasMore, loadMore, reload } = usePaginatedList<PublicConsultant, number>(loader, "We could not load consultants. Please try again.");
   const [consultantId, setConsultantId] = useState("");
   const [date, setDate] = useState("");
   const [slot, setSlot] = useState("");
+  const loader = useCallback((cursor: number | null) => service && isFutureAppointmentDate(date)
+    ? listConsultationAvailability(service.id, date, cursor) : Promise.resolve({ documents: [], cursor: null, hasMore: false }), [service, date]);
+  const { items: loadedItems, error: loadError, errorNotification: loadNotification, isLoading, hasMore, loadMore, reload } = usePaginatedList<AvailableConsultant, number>(loader, "We could not check appointment availability. Please try again.");
+  // A previous date's page may remain in the shared pagination state while the
+  // new request runs. Never offer its times or consultant IDs for this date.
+  const items = loadedItems.filter(item => item.availabilityDate === date && item.availabilityService === service?.id);
+  const times = [...new Map(items.flatMap(item => item.availableSlots).map(value => [value.startTime, value])).values()].sort((a,b) => a.startTime.localeCompare(b.startTime));
+  const matchingConsultants = items.filter(item => item.availableSlots.some(value => value.startTime === slot));
   const appointmentSlots = useConsultationSlots(consultantId, service?.id ?? "", date);
   const appointment = appointmentSlots.slots.find(value => value.startTime === slot && value.status === "available");
   const [consent, setConsent] = useState(false);
@@ -56,13 +62,9 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
   const [error, setError, notification] = useRepeatableMessage();
   const submitting = useRef(false);
   const attempt = useRef<{ key: string; id: string } | null>(null);
-  const lastVisibilityRefresh = useRef(0);
-  const consultant = items.find((item) => item.id === consultantId);
-  const dateAllowed = useCallback((value: string) => Boolean(consultant && isConsultantDateAvailable(value, consultant)
-    && service && generateConsultationSlots(value, service.id, consultant).length), [consultant, service]);
-  const hasConsultants = items.length > 0;
-  const availableDates = consultant?.availableDates?.filter(dateAllowed).toSorted() ?? [];
-  const noAvailableDates = Boolean(consultant?.availableDates?.length && !availableDates.length);
+  const consultant = matchingConsultants.find((item) => item.id === consultantId);
+  const dateAllowed = (value: string) => Boolean(consultant && isConsultantDateAvailable(value, consultant)
+    && service && generateConsultationSlots(value, service.id, consultant).length);
   async function checkPayment(resume = false) {
     if (!pendingPayment || submitting.current) return;
     submitting.current = true; setBusy(true); setError(null);
@@ -78,27 +80,11 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
     } catch (failure) { setError(failure instanceof Error ? failure.message : "We could not check payment. Please contact support before paying again."); }
     finally { submitting.current = false; setBusy(false); }
   }
-  useEffect(() => {
-    const refreshVisibleConsultants = () => {
-      if (document.visibilityState !== "visible" || Date.now() - lastVisibilityRefresh.current < 1_500) return;
-      lastVisibilityRefresh.current = Date.now();
-      void reload();
-    };
-    lastVisibilityRefresh.current = Date.now();
-    window.addEventListener("focus", refreshVisibleConsultants);
-    window.addEventListener("pageshow", refreshVisibleConsultants);
-    document.addEventListener("visibilitychange", refreshVisibleConsultants);
-    return () => {
-      window.removeEventListener("focus", refreshVisibleConsultants);
-      window.removeEventListener("pageshow", refreshVisibleConsultants);
-      document.removeEventListener("visibilitychange", refreshVisibleConsultants);
-    };
-  }, [reload]);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting.current || !service || pendingPayment || !cancellationPolicy) return;
     const timing = appointment && consultant?.preferredSlotTimings[appointment.window];
-    if (!consultant || !appointment || !timing || appointmentSlots.loading || appointmentSlots.error || !isIsoDate(date) || date < toDateInputValue() || !consent) {
+    if (!consultant || !appointment || !timing || appointmentSlots.loading || appointmentSlots.error || loadError || !isIsoDate(date) || date < toDateInputValue() || !consent) {
       setError("Choose a consultant, date and preferred time window, and accept the booking terms."); return;
     }
     if (!dateAllowed(date) || !validConsultationSchedule(date, timing.startTime, timing.endTime)) {
@@ -122,7 +108,7 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
     <div className="portal-flow-page">
     {!service ? <><nav className="portal-actions portal-flow-navigation" aria-label="Consultation navigation"><Link className="portal-button secondary" href="/#wellness">Choose another service</Link><Link className="portal-button secondary" href="/app/bookings/consultations">My online consultations</Link></nav><p className="portal-form-error">Choose a valid service from Wellness Path.</p></> : <>
       <section className="portal-flow-intro" aria-label="Consultation guidance">
-        <p>Choose an available professional, date and time window. Pay the full consultation fee securely through Razorpay. Your appointment is confirmed only after payment is verified. Online consultation is not an emergency service.</p>
+        <p>Choose your date and an available time, then select a consultant. Pay the full consultation fee securely through Razorpay. Your appointment is confirmed only after payment is verified. Online consultation is not an emergency service.</p>
         <nav className="portal-actions portal-flow-navigation" aria-label="Consultation navigation"><Link className="portal-button secondary" href="/#wellness">Choose another service</Link><Link className="portal-button secondary" href="/app/bookings/consultations">My online consultations</Link></nav>
       </section>
       {pendingPayment && <section className="portal-card" aria-label="Pending consultation payment">
@@ -134,14 +120,21 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
       </section>}
       <PortalToast message={error} notification={notification} tone="error" />
       <PortalToast message={loadError} notification={loadNotification} tone="error" />
-      {loadError && !hasConsultants && <section className="portal-empty-state portal-state-card" role="alert"><span className="portal-empty-state-leaf" aria-hidden="true" /><h3>Consultants could not be loaded</h3><p>{loadError}</p><button className="portal-button secondary" type="button" onClick={() => void reload()} disabled={isLoading}>Try again</button></section>}
-      {isLoading && !hasConsultants && <section className="portal-empty-state portal-state-card" role="status"><span className="portal-empty-state-leaf" aria-hidden="true" /><h3>Finding available consultants</h3><p>We’re checking who is available for your consultation.</p></section>}
-      {!isLoading && !loadError && !hasConsultants && <section className="portal-empty-state portal-state-card" role="status"><span className="portal-empty-state-leaf" aria-hidden="true" /><h3>Consultants are not available yet</h3><p>No appointments are available for {service.label.toLowerCase()} right now. Check again later or <Link href="/contact">contact Ayursarga</Link> for help.</p><button className="portal-button secondary" type="button" onClick={() => void reload()} disabled={isLoading}>Check availability again</button></section>}
-      {hasConsultants && <form className="portal-form portal-card consumer-consultation-form" onSubmit={submit}>
-        <fieldset className="full consultation-professionals" disabled={busy}>
+      <form className="portal-form portal-card consumer-consultation-form" onSubmit={submit}>
+        <label>Preferred appointment date *<DateInput value={date} min={toDateInputValue()} isDateAllowed={isFutureAppointmentDate} onChange={(event) => { setDate(event.target.value); setSlot(""); setConsultantId(""); setConsent(false); setError(null); }} required disabled={busy} /></label>
+        <label>Preferred time *<select value={slot} onChange={(event) => { setSlot(event.target.value); setConsultantId(""); setConsent(false); setError(null); }} required disabled={busy || !date || !times.length || Boolean(loadError)}>
+          <option value="">{date && isLoading && !items.length ? "Checking appointment times…" : "Select an appointment time"}</option>{times.map(value => <option key={value.startTime} value={value.startTime}>{formatAppointmentRange(value.startTime, value.endTime)}</option>)}
+        </select></label>
+        {!date && <p className="full portal-form-note">Choose a date to see available appointment times.</p>}
+        {date && isLoading && !items.length && <p className="full portal-form-note" role="status">Checking available appointment times…</p>}
+        {loadError && <div className="full portal-form-error" role="alert">{loadError}<button className="portal-button secondary" type="button" disabled={isLoading} onClick={() => void reload()}>Try again</button></div>}
+        {date && !isLoading && !loadError && !times.length && <p className="full portal-form-note" role="status">{hasMore ? "No times are available among these consultants. Load more availability or choose another date." : "No appointment times are available on this date. Choose another date or contact Ayursarga for help."}</p>}
+        {hasMore && <div className="portal-actions full"><button className="portal-button secondary" type="button" disabled={busy || isLoading} onClick={() => void loadMore()}>{isLoading ? "Loading availability…" : "Load more availability"}</button><p className="portal-form-note">More consultants may have additional times available.</p></div>}
+        {date && <div className="portal-actions full"><button className="portal-button secondary" type="button" disabled={busy || isLoading} onClick={() => { setSlot(""); setConsultantId(""); setConsent(false); void reload(); }}>Refresh availability</button></div>}
+        {slot && <fieldset className="full consultation-professionals" disabled={busy || Boolean(loadError)}>
           <legend>Choose your consultant *</legend>
-          <div className="consultation-professional-grid">{items.map((item) => <label className="consultation-professional" key={item.id} data-selected={item.id === consultantId}>
-            <input type="radio" name="consultant" value={item.id} checked={item.id === consultantId} required onChange={() => { setConsultantId(item.id); setDate(""); setSlot(""); }} />
+          <div className="consultation-professional-grid">{matchingConsultants.map((item) => <label className="consultation-professional" key={item.id} data-selected={item.id === consultantId}>
+            <input type="radio" name="consultant" value={item.id} checked={item.id === consultantId} required onChange={() => { setConsultantId(item.id); setConsent(false); }} />
             <span className="consultation-professional-info">
               <span className="consultation-professional-banner">
                 <span className="consultation-professional-identity">
@@ -159,18 +152,12 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
               </span>
             </span>
           </label>)}</div>
-          <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
-        </fieldset>
-        {consultant && <p className="full portal-form-note">Availability: {consultantAvailabilitySummary(consultant)}. Choose an available date from the calendar.</p>}
-        {noAvailableDates && <p className="full portal-form-error" role="status">This consultant has no upcoming appointments available. Choose another consultant or contact Ayursarga for help.</p>}
-        <label>Preferred appointment date *<DateInput value={date} min={availableDates[0] ?? toDateInputValue()} max={availableDates.at(-1)} isDateAllowed={dateAllowed} onChange={(event) => { setDate(event.target.value); setSlot(""); }} required disabled={busy || !consultant || noAvailableDates} /></label>
-        <label>Preferred time *<select value={slot} onChange={(event) => setSlot(event.target.value)} required disabled={busy || !consultant || !date || appointmentSlots.loading || Boolean(appointmentSlots.error)}>
-          <option value="">{appointmentSlots.loading ? "Checking appointment times…" : "Select an appointment time"}</option>{slot && !appointment && !appointmentSlots.loading && <option value={slot} disabled>Selected time is no longer available</option>}{appointmentSlots.slots.filter(value => value.status === "available").map(value => <option key={value.startTime} value={value.startTime}>{formatAppointmentRange(value.startTime, value.endTime)}</option>)}
-        </select></label>
+        </fieldset>}
+        {slot && !matchingConsultants.length && !isLoading && !loadError && <p className="full portal-form-note" role="status">No consultants currently loaded are available at this time. Choose another time{hasMore ? " or load more availability" : ""}.</p>}
+        {consultant && appointmentSlots.loading && <p className="full portal-form-note" role="status">Checking your consultant’s appointment time…</p>}
         {appointmentSlots.error && <div className="full portal-form-error" role="alert">{appointmentSlots.error}<button className="portal-button secondary" type="button" onClick={appointmentSlots.reload}>Check times again</button></div>}
-        {slot && !appointment && !appointmentSlots.loading && !appointmentSlots.error && <p className="full portal-form-error" role="status">Your selected time is no longer available. Please choose another appointment time.</p>}
-        {date && !appointmentSlots.loading && !appointmentSlots.error && !appointmentSlots.slots.length && <p className="full portal-form-note" role="status">No appointment times are available on this date. Choose another date.</p>}
-        <p className="full portal-form-note">Your selected time is held for 10 minutes while you complete payment. Times are checked again before confirmation.</p>
+        {consultant && !appointment && !appointmentSlots.loading && !appointmentSlots.error && <p className="full portal-form-error" role="status">This consultant is no longer available at your selected time. Please choose another consultant or appointment time.</p>}
+        <p className="full portal-form-note">Your time is reserved for 10 minutes after you start payment. Availability is checked again before confirmation.</p>
         <label className="full">Notes (optional)<textarea name="notes" maxLength={500} disabled={busy} /></label>
         {cancellationPolicy && appointment && isIsoDate(date) && <div className="full"><ConsultationCancellationInfo snapshot={snapshotConsultationCancellation(cancellationPolicy, date, appointment.startTime)} status="confirmed" now={clock} /></div>}
         <fieldset className="portal-consent full" disabled={busy}><legend>Booking confirmation *</legend>
@@ -180,8 +167,8 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
         {error && <p className="portal-form-error full" role="alert">{error}</p>}
         {error && <div className="portal-actions full"><button type="button" className="portal-button secondary" disabled={busy || isLoading} onClick={() => { setConsultantId(""); setSlot(""); setConsent(false); void reload(); }}>Refresh consultants</button><button type="button" className="portal-button secondary" disabled={busy || Boolean(pendingPayment)} onClick={() => { setConsent(false); setError(null); setCancellationPolicy(null); setPolicyFailed(false); setPolicyRetry(value => value + 1); }}>Reload cancellation terms</button></div>}
         {!cancellationPolicy && <p className="full" role="status">{policyFailed ? "Cancellation terms could not be loaded. Please retry before paying." : "Loading agreed cancellation terms…"}{policyFailed && <button type="button" className="portal-button secondary" onClick={() => { setPolicyFailed(false); setPolicyRetry(value => value + 1); }}>Reload cancellation terms</button>}</p>}
-        <div className="portal-actions full"><button className="portal-button" disabled={busy || Boolean(pendingPayment) || !cancellationPolicy || !consent || !consultant || !date || !dateAllowed(date) || !appointment || appointmentSlots.loading || Boolean(appointmentSlots.error)}>{busy ? "Processing payment..." : consultant ? `Pay ${formatCurrency(consultant.consultantCharge)} & book appointment` : "Pay & book appointment"}</button></div>
-      </form>}
+        <div className="portal-actions full"><button className="portal-button" disabled={busy || Boolean(pendingPayment) || !cancellationPolicy || !consent || !consultant || !date || !dateAllowed(date) || !appointment || appointmentSlots.loading || Boolean(appointmentSlots.error) || Boolean(loadError)}>{busy ? "Processing payment..." : consultant ? `Pay ${formatCurrency(consultant.consultantCharge)} & book appointment` : "Pay & book appointment"}</button></div>
+      </form>
     </>}
     </div>
   </PortalShell>;

@@ -2,6 +2,7 @@ import { bookingFlowFixture } from "./bookingFlowFixture.mjs";
 import { loadTypeScript } from "./loadTypeScript.mjs";
 
 const pure = loadTypeScript("services/payments/razorpay.ts");
+const cancellationPolicy = loadTypeScript("features/consultations/cancellationPolicy.ts").DEFAULT_CONSULTATION_CANCELLATION_POLICY;
 export const paidConsultant = { name: "Assigned Professional", designation: "Physician", qualification: "BAMS", yearsExperience: 3,
   status: "active", archivedAt: null, consultationServices: ["prenatal-doctor"], consultantCharge: 900.5, ayursargaCommissionPercentage: 10,
   preferredTimeSlots: ["morning"], preferredSlotTimings: { morning: { startTime: "09:30", endTime: "11:45" } }, email: "consultant@example.test" };
@@ -38,7 +39,7 @@ export function consultationPaymentFixture(options = {}) {
 }
 export const paymentRequest = (body, method = "POST", headers = {}) => new Request("https://test.local/api/consumer/consultations", { method, headers: { "Content-Type": "application/json", ...headers }, ...(method === "GET" ? {} : { body: JSON.stringify(body) }) });
 export async function prepare(f, body = paidInput) {
-  return f.load("app/api/consumer/consultations/route.ts").POST(paymentRequest({ expectedCancellationPolicyVersion: "consultation-published-48h-v1", ...body }));
+  return f.load("app/api/consumer/consultations/route.ts").POST(paymentRequest({ expectedCancellationPolicyVersion: cancellationPolicy.version, ...body }));
 }
 export async function verify(f, id, paymentId = "pay_Synthetic", signature = "synthetic-valid-signature") {
   return f.load("app/api/consumer/consultation-payments/[intentId]/route.ts").POST(paymentRequest({ paymentId, signature }), { params: Promise.resolve({ intentId: id }) });

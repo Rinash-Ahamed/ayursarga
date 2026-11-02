@@ -10,3 +10,9 @@ export type PublicConsultant = {
   availableDates?: string[];
 };
 export type ConsultantPage = { documents: PublicConsultant[]; cursor: number | null; hasMore: boolean };
+export type AvailableConsultant = PublicConsultant & {
+  availabilityDate: string;
+  availabilityService: string;
+  availableSlots: import("@/features/consultations/slots").AppointmentSlot[];
+};
+export type ConsultationAvailabilityPage = { documents: AvailableConsultant[]; cursor: number | null; hasMore: boolean };

@@ -16,6 +16,12 @@ test("30/60-minute generation includes the exact final slot and never extends co
   assert.equal(regular.length,6);assert.equal(psychology.length,3);
   assert.deepEqual(regular.at(-1),{startTime:"11:30",endTime:"12:00",window:"morning",status:"available"});
   assert.equal(psychology.at(-1).endTime,"12:00");
+  assert.deepEqual(generateConsultationSlots(date,"prenatal-yoga",provider),psychology);
+  const yogaUneven=generateConsultationSlots(date,"prenatal-yoga",{...provider,preferredSlotTimings:{morning:{startTime:"09:00",endTime:"11:45"}}});
+  assert.equal(yogaUneven.length,2);
+  assert.deepEqual(yogaUneven.at(-1),{startTime:"10:45",endTime:"11:45",window:"morning",status:"available"});
+  assert.ok(yogaUneven.every((slot,index)=>index===0||!intervalsOverlap(yogaUneven[index-1],slot)));
+  assert.equal(generateConsultationSlots(date,"prenatal-yoga",{...provider,preferredSlotTimings:{morning:{startTime:"09:00",endTime:"09:59"}}}).length,0);
   const uneven=generateConsultationSlots(date,"prenatal-doctor",{...provider,preferredSlotTimings:{morning:{startTime:"09:00",endTime:"11:45"}}});
   assert.equal(uneven.at(-1).startTime,"11:15");assert.equal(uneven.at(-1).endTime,"11:45");
   assert.ok(uneven.every((slot,index)=>index===0||!intervalsOverlap(uneven[index-1],slot)));
@@ -36,15 +42,15 @@ test("simultaneous checkout requests reserve one slot once; retries cannot dupli
 test("different Consumers racing for the same consultant interval cannot both obtain payment orders",async()=>{
   const f=consultationPaymentFixture();f.records.set("users/other-consumer",{...f.profile,uid:"other-consumer"});
   const api=f.load("services/payments/consultationPaymentsAdmin.ts");
-  const body={...paidInput,expectedCancellationPolicyVersion:"consultation-published-48h-v1"};
+  const body={...paidInput,expectedCancellationPolicyVersion:loadTypeScript("features/consultations/cancellationPolicy.ts").DEFAULT_CONSULTATION_CANCELLATION_POLICY.version};
   const results=await Promise.allSettled([api.prepareConsultationPayment(f.firestore,"patient",body),api.prepareConsultationPayment(f.firestore,"other-consumer",body)]);
   assert.equal(results.filter(result=>result.status==="fulfilled").length,1);
   assert.equal(results.find(result=>result.status==="rejected").reason.status,409);
   assert.equal(f.paymentState.orderCalls,1);
 });
 
-test("the final regular and Psychology slots confirm with their exact end time",async()=>{
-  for(const [serviceId,start] of [["prenatal-doctor","11:30"],["psychologist","11:00"]]) {
+test("the final regular, Psychology and Yoga slots confirm with their exact end time",async()=>{
+  for(const [serviceId,start] of [["prenatal-doctor","11:30"],["psychologist","11:00"],["prenatal-yoga","11:00"]]) {
     const f=consultationPaymentFixture({records:{"consultants/AS001":{...paidConsultant,consultationServices:[serviceId],preferredSlotTimings:{morning:{startTime:"09:00",endTime:"12:00"}}}}});
     const id=await book(f,{serviceId,appointmentStartTime:start,expectedSlotStartTime:"09:00",expectedSlotEndTime:"12:00"});
     assert.equal(f.records.get(`consultationBookings/${id}`).confirmedTime,start);
@@ -63,10 +69,28 @@ test("failed payments never confirm and their holds stop blocking at expiry with
 });
 
 test("mixed 30/60-minute services share overlap protection and adjacent slots remain bookable",async()=>{
-  const f=consultationPaymentFixture({records:{"consultants/AS001":{...paidConsultant,consultationServices:["prenatal-doctor","psychologist"]}}});
-  await checkout(f,{serviceId:"psychologist"});
+  for(const serviceId of ["psychologist","prenatal-yoga"]) {
+  const f=consultationPaymentFixture({records:{"consultants/AS001":{...paidConsultant,consultationServices:["prenatal-doctor",serviceId]}}});
+  await checkout(f,{serviceId});
   assert.equal((await prepare(f,{...paidInput,requestId:"overlap-attempt-0001",appointmentStartTime:"10:00"})).status,409);
   assert.equal((await prepare(f,{...paidInput,requestId:"adjacent-attempt-0001",appointmentStartTime:"10:30"})).status,200);
+  }
+});
+
+test("Yoga rescheduling uses a full hour and leaves the existing appointment unchanged until saved",async()=>{
+  const f=consultationPaymentFixture({records:{"consultants/AS001":{...paidConsultant,consultationServices:["prenatal-yoga"],preferredSlotTimings:{morning:{startTime:"09:00",endTime:"12:00"}}}}});
+  const id=await book(f,{serviceId:"prenatal-yoga",appointmentStartTime:"09:00",expectedSlotStartTime:"09:00",expectedSlotEndTime:"12:00"});
+  f.actor.role="admin";
+  const invalid=await change(f,id,{action:"reschedule",requestId:"yoga-invalid-time-001",confirmedDate:date,confirmedTime:"09:30"});
+  assert.equal(invalid.status,409);
+  assert.match((await invalid.json()).error,/available appointment times/);
+  assert.equal(f.records.get(`consultationBookings/${id}`).confirmedTime,"09:00");
+  assert.equal(dayOf(f).entries["09:00"].state,"booked");
+  const valid=await change(f,id,{action:"reschedule",requestId:"yoga-valid-time-001",confirmedDate:date,confirmedTime:"11:00"});
+  assert.equal(valid.status,200,await valid.clone().text());
+  assert.equal(f.records.get(`consultationBookings/${id}`).confirmedEndTime,"12:00");
+  assert.equal(dayOf(f).entries["09:00"].state,"released");
+  assert.equal(dayOf(f).entries["11:00"].state,"booked");
 });
 
 test("expired holds reopen without deletions; delayed payment cannot steal a newer hold",async()=>{
@@ -131,4 +155,49 @@ test("slot API returns safe states to Admin, available times only to Consumers a
   f.actor.role="admin";const admin=await (await get("")).json();assert.equal(admin.slots[0].status,"reserved");
   f.actor.role="hospital";assert.equal((await get("")).status,403);
   assert.match(readFileSync("firestore.rules","utf8"),/match \/consultationSlotDays\/\{id\} \{ allow read, write: if false; \}/);
+});
+
+test("date-first availability search is bounded, paginated, role protected and excludes private data and unavailable times",async()=>{
+  const records=Object.fromEntries(Array.from({length:18},(_,index)=>[`consultants/AS${String(index+1).padStart(3,"0")}`,{...paidConsultant,employeeSequence:index+1,email:"private@example.test",contactNo:"9876543210",lastAuditId:"private-audit"}]));
+  const f=consultationPaymentFixture({records});await checkout(f);
+  const get=query=>f.load("app/api/consultations/availability/route.ts").GET(new Request(`https://test.local/api/consultations/availability?service=prenatal-doctor&date=${date}${query}`));
+  const response=await get("");assert.equal(response.status,200);assert.equal(response.headers.get("cache-control"),"no-store");
+  const first=await response.json();assert.equal(first.documents.length,8);assert.equal(first.cursor,8);assert.equal(first.hasMore,true);
+  assert.equal(first.documents[0].availableSlots.some(slot=>slot.startTime==="09:30"),false);
+  assert.ok(first.documents.every(item=>item.availabilityDate===date && item.availabilityService==="prenatal-doctor" && item.availableSlots.every(slot=>slot.status==="available")));
+  assert.doesNotMatch(JSON.stringify(first),/private@example|9876543210|private-audit|ownerId|consumerId|ayursargaCommission|payable|paymentIntent/);
+  for(const item of first.documents)for(const key of ["email","contactNo","whatsappNo","address","emergencyContactNo","lastAuditId","ayursargaCommissionPercentage"])assert.equal(key in item,false,key);
+  const second=await(await get("&cursor=8")).json();assert.equal(second.documents.length,8);assert.equal(second.documents[0].id,"AS009");assert.equal(second.cursor,16);
+  const last=await(await get("&cursor=16")).json();assert.equal(last.documents.length,2);assert.equal(last.hasMore,false);
+  assert.equal((await get("&cursor=-1")).status,400);
+  f.actor.role="hospital";assert.equal((await get("")).status,403);
+  assert.equal(f.paymentState.orderCalls,1,"availability reads must not create payments");
+});
+
+test("date-first search excludes inactive, archived, unassigned, unavailable-day and fully booked providers without stopping pagination",async()=>{
+  const records=Object.fromEntries(Array.from({length:10},(_,index)=>[`consultants/AS${String(index+1).padStart(3,"0")}`,{...paidConsultant,employeeSequence:index+1}]));
+  for(let index=1;index<=8;index++)records[`consultants/AS${String(index).padStart(3,"0")}`].availableDates=["2099-10-26"];
+  records["consultants/AS009"].archivedAt={seconds:1};
+  const f=consultationPaymentFixture({records});
+  const get=query=>f.load("app/api/consultations/availability/route.ts").GET(new Request(`https://test.local/api/consultations/availability?service=prenatal-doctor&date=${date}${query}`));
+  const first=await(await get("")).json();assert.deepEqual(first.documents,[]);assert.equal(first.hasMore,true);assert.equal(first.cursor,8);
+  const second=await(await get("&cursor=8")).json();assert.deepEqual(second.documents.map(item=>item.id),["AS010"]);
+  f.records.get("consultants/AS010").status="inactive";assert.deepEqual((await(await get("&cursor=8")).json()).documents,[]);
+  f.records.get("consultants/AS010").status="active";f.records.get("consultants/AS010").consultationServices=["psychologist"];
+  assert.deepEqual((await(await get("&cursor=8")).json()).documents,[]);
+  f.records.get("consultants/AS010").consultationServices=["prenatal-doctor"];
+  f.records.set("consultationBookings/full-day",{consultantId:"AS010",preferredDate:date,status:"confirmed",slotStartTime:"09:30",slotEndTime:"11:45",archivedAt:null});
+  assert.deepEqual((await(await get("&cursor=8")).json()).documents,[]);
+  for(const query of ["service=unknown&date=2099-10-25","service=prenatal-doctor&date=01/11/2099","service=prenatal-doctor&date=2000-01-01"]) {
+    assert.equal((await f.load("app/api/consultations/availability/route.ts").GET(new Request(`https://test.local/api/consultations/availability?${query}`))).status,400);
+  }
+});
+
+test("date-first availability denies ineligible callers and throttles without any writes",async()=>{
+  const request=new Request(`https://test.local/api/consultations/availability?service=prenatal-doctor&date=${date}`);
+  const denied=consultationPaymentFixture({denied:true});
+  assert.equal((await denied.load("app/api/consultations/availability/route.ts").GET(request)).status,403);
+  const limited=consultationPaymentFixture({overrides:{"@/services/api/rateLimit":{allowRequest:()=>false}}});
+  assert.equal((await limited.load("app/api/consultations/availability/route.ts").GET(request)).status,429);
+  assert.equal(denied.calls.writes.length,0);assert.equal(limited.calls.writes.length,0);
 });

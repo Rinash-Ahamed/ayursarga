@@ -220,6 +220,19 @@ export const listPublicConsultants = () => {
 };
 export const getPublicConsultant = async (): Promise<PublicConsultant> => portalUiState.screen.endsWith("-restricted")
   ? { ...consultationProfessional, preferredDays: ["sun"], availableDates: ["2099-10-25"] } : consultationProfessional;
+export const availabilityReads: string[] = [];
+export const availabilityScenario = { paginated:false, fail:false, holdDate:"", release:null as (() => void) | null };
+Object.assign(globalThis, { availabilityReads, availabilityScenario });
+export const listConsultationAvailability = async (service:string, date:string, cursor:number|null = null) => {
+  availabilityReads.push(`${service}:${date}:${cursor ?? "first"}`);
+  if (availabilityScenario.holdDate === date) await new Promise<void>(resolve => { availabilityScenario.release=resolve; });
+  if (availabilityScenario.fail) throw new Error("Availability unavailable");
+  const source = await listPublicConsultants();
+  const providers = (availabilityScenario.paginated && cursor
+    ? [{...consultationProfessional,id:"AS002",name:"Second Available Professional",consultantCharge:1200,preferredSlotTimings:{morning:{startTime:"10:30",endTime:"12:00"}}}]
+    : source.documents) as PublicConsultant[];
+  return {documents:providers.map(provider => ({...provider,availabilityDate:date,availabilityService:service,availableSlots:generateConsultationSlots(date,service,provider)})).filter(provider => provider.availableSlots.length), cursor:availabilityScenario.paginated ? 1 : null,hasMore:availabilityScenario.paginated && !cursor};
+};
 export const slotReads = { calls: 0, hold: false, fail: false, unavailableStart: "", finish: null as (() => void) | null };
 Object.assign(globalThis, { slotReads });
 export const listConsultationSlots = async (_consultantId:string, service:string, date:string) => {
@@ -231,8 +244,7 @@ export const listConsultationSlots = async (_consultantId:string, service:string
 export const consultationPaymentStatus = async () => ({ checkout: { intentId: "fixture", state: "ready", bookingId: null, totalPaise: 99055, currency: "INR" } });
 export const payForConsultation = async () => ({ bookingId: "consultation-fixture" });
 export const clearConsultationPaymentReminder = () => {};
-export const getConsultationCancellationPolicy = async () => ({ policy: { version: "consultation-published-48h-v1", refundWindowHours: 48, cancellationCutoffHours: 48,
-  allowAfterCutoff: true, refundType: "percentage", refundValue: 100, lateRefundValue: 0, conditions: "Exceptional circumstances require support review." } });
+export const getConsultationCancellationPolicy = async () => ({ policy: { ...DEFAULT_CONSULTATION_CANCELLATION_POLICY, conditions: "Exceptional circumstances require support review." } });
 export const saveConsultationCancellationPolicy = async (policy: object) => { portalUiState.calls++; return { policy: { ...policy, version: "saved-policy" } }; };
 const financeRecord = { id: "consultation-fixture", bookingId: "consultation-fixture", bookingReference: "AYURCONS01", consultantId: "AS001",
   consultantName: "Assigned Consultation Professional", consumerName: "Patient With a Longer Display Name", serviceName: "Prenatal doctor consultation",

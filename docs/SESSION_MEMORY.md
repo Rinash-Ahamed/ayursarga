@@ -1,6 +1,114 @@
 # Session handoff
 
-Updated: 1 November 2026 (Asia/Calcutta).
+Updated: 2 November 2026 (Asia/Calcutta).
+
+## Owner-requested lint/build validation (2 November 2026)
+
+- v4.32.2 fixes React Compiler preserve-manual-memoization lint errors in the
+  date-first consultation form: dateAllowed is a local predicate rather than an
+  unnecessary useCallback over a derived consultant object. Date validation and
+  payment behavior are unchanged. No persisted fields or API permissions changed.
+- Initial build encountered a malformed generated .next/dev/types/validator.ts;
+  removed that ignored generated file only. No application data was deleted.
+  Final full ESLint passed with zero warnings/errors; production build passed,
+  including TypeScript and generation of 85 pages. No dependency changes.
+- Fresh production server on 127.0.0.1:3198 verified this build: /api/health
+  returned HTTP 200, configuration mode, all 3 dependencies ready;
+  /api/health?deep=true with Accept: application/json returned HTTP 200,
+  deep-configuration mode, all 6 dependencies ready. /health?deep=true returned
+  HTTP 200 with themed card, success heading, expanded checks, payment status and
+  CSS references. This is configuration-only, not live delivery/payment/DB proof.
+  Temporary server stopped; git diff --check passed; no tsconfig.tsbuildinfo
+  remained. No deployment or live workflow mutations performed.
+
+## Consultation free-cancellation deadline (2 November 2026)
+
+- v4.32.1 changes the published consultation cancellation default and legal
+  wording from 48 to 24 hours before the scheduled appointment. New policy
+  version is consultation-published-24h-v2; new booking consent is 2026-11-02.
+  Full routine refunds remain inclusive at the deadline; later cancellation is
+  allowed only before the appointment begins, without a routine refund.
+- Consumer policy details now say Free cancellation date and time and display
+  the snapshotted refundDeadlineAt, not lastCancellationAt (the last permitted
+  late cancellation, previously the appointment start). Non-100% policies use
+  Refund deadline date and time. Expired free deadlines are explicitly marked.
+  Deadlines use the scheduled IST appointment, never the creation/current time.
+- Existing 48-hour booking/payment snapshots retain their agreed policy through
+  payment capture and rescheduling; no historical records were migrated. A
+  read-only check found no saved cancellationPolicies/consultation override in
+  the configured project, so the new default applies after app deployment.
+  No production writes, emails, rule changes or deployments were performed.
+- Validation: 36 focused local cancellation, legal, slot/API and Search Center
+  booking fixture regressions passed. Six desktop/mobile WebKit browser checks
+  passed for consumer policy display, booking form and Admin policy editing,
+  including the 24-hour default. git diff --check passed. These fixture/browser
+  checks do not prove live Firestore permissions or Razorpay delivery. Emulator
+  contention coverage still requires Java 21+. Build/lint/typecheck were not
+  requested for this task and were not run.
+
+## Date-first consultation booking flow (2 November 2026)
+
+- v4.32.0 changes Consumer consultation booking order to date -> actual available
+  generated time -> matching consultant with total fee -> consent/payment. Date
+  and time controls precede consultant cards; no consultant portrait/list request
+  is made before a valid date. The shared custom calendar stays available for
+  future dates; provider weekday/exact-date restrictions filter search results.
+- New authenticated GET /api/consultations/availability uses requireActiveUser
+  for Consumer/Admin (Hospital denied), date/service/cursor validation, per-user
+  throttling and no-store responses. One query scans 8 consultants plus lookahead
+  using the existing status/services/employeeSequence index. A read-only
+  transaction reuses publicConsultantProjection, generateConsultationSlots and
+  readScheduleDay/slotState, with at most 3 providers' schedule checks in flight.
+  Booked, held, past, inactive, archived, unassigned and unavailable-day entries
+  are excluded; contacts, owners, commissions and audit metadata are not exposed.
+  Cursor advances over scanned records even for an empty filtered page. Existing
+  bounded legacy overlap queries remain; no unbounded collection scan or mirror.
+- Client uses one HTTP search per date/page, not a request per displayed provider.
+  Load more availability advertises possible later-page times. A chosen provider
+  still uses the shared single-provider 45s quiet refresh before payment; actual
+  holds/orders/capture retain existing atomic validation, stable request IDs,
+  charge/policy snapshots and financial privacy. Date/time changes clear selected
+  provider/consent. Results carry date/service context, and request versions ignore
+  delayed stale pages. Explicit Refresh reloads the current date and clears prior
+  time/provider choices, rather than dropping later-page selections on tab focus.
+- Narrow API-audit skill guided caller/response authorization/privacy and read
+  bounds. No persisted fields, client rules, payment business logic or Hospital/
+  Search Center code changed. Existing consultant and scheduling indexes are used;
+  no new rules/index deployment required. App deployment is required to publish.
+- Validation: 16 focused local slot/availability API fixture regressions passed,
+  including Yoga/Psychology durations, current/legacy overlaps, role/rate denials,
+  safe DTOs and empty-page pagination. Another 49 local consultation booking/
+  payment regressions passed. Twenty-one final responsive browser checks passed
+  across desktop/320px/mobile WebKit for filtering, fees, consent/single submit,
+  pagination/reset, quiet refresh, photos, empty/retry states and nested calendar
+  behavior. Two added desktop/WebKit delayed-date/failure-retry tests passed;
+  strengthened checked-selection assertion reran successfully on both. Mobile
+  form screenshot reviewed. These use local cloud/provider/component fixtures,
+  not native emulator/live Firebase, real payment, inbox or physical devices.
+  Integration smoke inventory now includes anonymous availability denial but was
+  not executed here. No build/lint/typecheck, health run, live mutations or deploy
+  requested/performed; no measured server-latency improvement is claimed.
+
+## One-hour Yoga Instructor appointments (2 November 2026)
+
+- v4.31.8 makes the explicit prenatal-yoga service use 60-minute generated slots,
+  like psychologist. Other services remain 30 minutes. Shared generation feeds
+  Consumer availability, Admin schedule/rescheduling, payment holds and capture
+  checks; no parallel timing rules or SDK writes were added. Admin availability
+  guidance and AGENTS.md reflect this owner-approved duration change.
+- Existing booking snapshots are not migrated; explicit future rescheduling uses
+  current generated slots. Current-eligibility checks still send captured but
+  unbookable/changed-duration drafts to review instead of falsely confirming.
+  Private slot permissions/audits remain unchanged; no rules deployment required.
+- All 13 focused local slot/payment fixture regressions passed, including Yoga
+  final exact-end slot, sub-hour exclusion, uneven-window boundaries, payment
+  confirmation, cross-service overlap/adjacency, invalid reschedule rejection
+  preserving the original reservation and successful one-hour rescheduling.
+  Tests are local cloud/provider fixtures, not native/live contention checks.
+  No build/lint, live booking writes, emails or deployment requested/run.
+- Owner also asked whether date/time should precede consultant selection.
+  Recommended date -> actual available time -> matching consultants -> payment;
+  that separate discovery/booking-flow change has not been implemented.
 
 ## Consumer payment-status clarity (1 November 2026)
 

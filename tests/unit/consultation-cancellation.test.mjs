@@ -27,10 +27,10 @@ test("Consumer cancellation table renders the agreed policy values, deadlines an
 const context = id => ({ params: Promise.resolve({ bookingId: id }) });
 async function booked(f) { const checkout = (await (await prepare(f)).json()).checkout; f.capture(checkout); await verify(f, checkout.intentId); return checkout.intentId; }
 
-test("India reference dates and exact 48-hour boundary are timezone-safe and inclusive for refunds", () => {
+test("India reference dates and exact 24-hour boundary are timezone-safe and inclusive for refunds", () => {
   const s = snapshot(policy, "2026-11-05", "09:00");
   assert.equal(s.appointmentAt, "2026-11-05T03:30:00.000Z");
-  assert.equal(s.refundDeadlineAt, "2026-11-03T03:30:00.000Z");
+  assert.equal(s.refundDeadlineAt, "2026-11-04T03:30:00.000Z");
   assert.equal(s.reference, "window_start"); assert.equal(valid(s), true);
   const at = Date.parse(s.refundDeadlineAt);
   assert.equal(eligibility(s, "confirmed", paid, at).eligibleRefundPaise, 99055);
@@ -41,6 +41,42 @@ test("India reference dates and exact 48-hour boundary are timezone-safe and inc
   assert.equal(eligibility({ ...s, refundDeadlineAt: s.appointmentAt }, "confirmed", paid, at).allowed, false);
   assert.throws(() => snapshot(policy, "2026-02-30", "09:00"));
   assert.throws(() => snapshot(policy, "2026-11-05", "24:00"));
+});
+
+test("free cancellation displays appointment-minus-24h, never the current time or last permitted cancellation time", () => {
+  const { ConsultationCancellationInfo } = loadTypeScript("components/consultations/ConsultationCancellationInfo.tsx", {
+    "next/link": { __esModule:true, default:({href,children})=>createElement("a",{href},children) },
+  });
+  const terms=snapshot(policy,"2026-11-05","10:00",true);
+  assert.equal(terms.refundDeadlineAt,"2026-11-04T04:30:00.000Z");
+  const now=Date.parse("2026-11-04T05:00:00.000Z");
+  const html=renderToStaticMarkup(createElement(ConsultationCancellationInfo,{snapshot:terms,status:"confirmed",totals:paid,now}));
+  const deadline=html.match(/Free cancellation date and time<\/dt><dd>(.*?)<\/dd>/)[1];
+  assert.match(deadline,/04\/11\/2026, 10:00 am IST/);
+  assert.match(deadline,/deadline passed/);
+  assert.doesNotMatch(deadline,/05\/11\/2026|10:30/);
+  assert.doesNotMatch(html,/Last cancellation date and time/);
+  assert.match(html,/Cancellation available without a routine refund/);
+  assert.equal(eligibility(terms,"confirmed",paid,now).eligibleRefundPaise,0);
+});
+
+test("old 48-hour booking and payment snapshots survive the new 24-hour default", async()=>{
+  const oldPolicy={...policy,version:"consultation-published-48h-v1",refundWindowHours:48,cancellationCutoffHours:48};
+  const oldTerms=snapshot(oldPolicy,"2026-11-05","10:00",true);
+  assert.equal(valid(oldTerms),true);assert.equal(oldTerms.refundDeadlineAt,"2026-11-03T04:30:00.000Z");
+  const f=consultationPaymentFixture({records:{"cancellationPolicies/consultation":{policy:oldPolicy}}});
+  const oldCheckout=(await(await prepare(f,{...paidInput,expectedCancellationPolicyVersion:oldPolicy.version})).json()).checkout;
+  f.records.set("cancellationPolicies/consultation",{policy});
+  f.capture(oldCheckout);await verify(f,oldCheckout.intentId);
+  const oldBooking=f.records.get(`consultationBookings/${oldCheckout.intentId}`);
+  assert.equal(oldBooking.cancellationPolicy.policy.refundWindowHours,48);
+  assert.equal(oldBooking.cancellationPolicy.policy.version,oldPolicy.version);
+  const next=await prepare(f,{...paidInput,requestId:"new24-hour-policy-001",appointmentStartTime:"10:00"});
+  assert.equal(next.status,200,await next.clone().text());
+  const nextCheckout=(await next.json()).checkout;
+  assert.equal(nextCheckout.cancellationPolicy.policy.refundWindowHours,24);
+  assert.equal(Date.parse(nextCheckout.cancellationPolicy.appointmentAt)-Date.parse(nextCheckout.cancellationPolicy.refundDeadlineAt),24*3600000);
+  assert.equal(oldBooking.cancellationPolicy.policy.refundWindowHours,48);
 });
 
 test("fixed/percentage refunds cap verified money, subtract earlier refunds and keep missing payments unknown", () => {
@@ -122,7 +158,7 @@ test("reschedule retains agreed policy version, recomputes exact IST deadline, a
   const updated = f.records.get(`consultationBookings/${id}`);
   assert.equal(updated.cancellationPolicy.policy.version, policy.version);
   assert.equal(updated.cancellationPolicy.reference, "exact_time");
-  assert.equal(updated.cancellationPolicy.refundDeadlineAt, "2099-10-24T04:30:00.000Z");
+  assert.equal(updated.cancellationPolicy.refundDeadlineAt, "2099-10-25T04:30:00.000Z");
   delete updated.cancellationPolicy; delete updated.paymentIntentId;
   f.actor.role = "consumer"; f.actor.uid = "patient";
   assert.equal((await route.PATCH(paymentRequest({ action: "cancelled" }, "PATCH"), context(id))).status, 200);

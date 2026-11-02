@@ -11,12 +11,14 @@ export function ConsultationCancellationInfo({ snapshot, status, totals, outcome
   const eligibility = now === null ? null : consultationCancellationEligibility(snapshot, status, totals ?? null, now);
   const rate = (value: number) => p.refundType === "percentage" ? `${value}% of the amount paid` : `${formatCurrency(value)}, capped to the amount paid`;
   const ended = !["requested", "confirmed"].includes(status);
+  const freeCancellation = p.refundType === "percentage" && p.refundValue === 100;
+  const refundDeadlinePassed = now !== null && now > Date.parse(snapshot.refundDeadlineAt);
   const remaining = outcome ? outcome.remainingRefundPaise : eligibility?.allowed ? eligibility.remainingRefundPaise : null;
   return <section className="consultation-cancellation" aria-label="Cancellation policy">
     <h3>Cancellation policy</h3>
     <dl className="consultation-cancellation-details">
-      <div><dt>Cancellation eligibility</dt><dd>{status === "cancelled" ? "Cancelled" : ended ? "Online cancellation unavailable" : eligibility === null ? "Checking deadline…" : eligibility.allowed ? "Cancellation available" : "Cancellation window expired"}</dd></div>
-      <div><dt>Last cancellation date and time</dt><dd>{formatDisplayDateTime(snapshot.lastCancellationAt)} IST{p.allowAfterCutoff ? " (before appointment begins)" : " (cutoff inclusive)"}</dd></div>
+      <div><dt>Cancellation eligibility</dt><dd>{status === "cancelled" ? "Cancelled" : ended ? "Online cancellation unavailable" : eligibility === null ? "Checking deadline…" : eligibility.allowed ? refundDeadlinePassed && p.lateRefundValue === 0 ? "Cancellation available without a routine refund" : "Cancellation available" : "Cancellation window expired"}</dd></div>
+      <div><dt>{freeCancellation ? "Free cancellation date and time" : "Refund deadline date and time"}</dt><dd>{formatDisplayDateTime(snapshot.refundDeadlineAt)} IST (inclusive){!ended && refundDeadlinePassed ? " — deadline passed" : ""}</dd></div>
       <div><dt>Refund eligibility</dt><dd>{outcome ? remaining === null ? "Support review required" : `At cancellation: ${formatCurrency(remaining / 100)} remaining eligible refund` : eligibility?.allowed ? remaining === null ? "Payment verification required before calculating a refund" : `${formatCurrency(remaining / 100)} remaining eligible refund` : "No online refund quote available; contact support for exceptions"}</dd></div>
     </dl>
     <details><summary>Policy terms and refund deadlines</summary>

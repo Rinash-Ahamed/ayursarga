@@ -51,7 +51,7 @@ export function ConsultantFormFields({ defaultValues = {}, errors }: {
     </fieldset>
     <fieldset className="full consultant-preferences" aria-invalid={Boolean(errors.preferredTimeSlots || errors.preferredDays)}>
       <legend>Preferred availability <small>Optional · select one or more</small></legend>
-      <p>Appointments are generated within these hours: 30 minutes per consultation, or 60 minutes for Psychology. Customers can book only an available appointment time.</p>
+      <p>Appointments are generated within these hours: 30 minutes per consultation, or 60 minutes for Psychology and Yoga Instructor sessions. Customers can book only an available appointment time.</p>
       <div className="consultant-day-options" role="group" aria-label="Preferred days">
         {CONSULTANT_WEEK_DAYS.map((day) => <label className="portal-inline-check" key={day}>
           <input type="checkbox" name="preferredDays" value={day} defaultChecked={defaultValues.preferredDays?.includes(day)} aria-invalid={Boolean(errors.preferredDays)} />{CONSULTANT_DAY_LABELS[day]}

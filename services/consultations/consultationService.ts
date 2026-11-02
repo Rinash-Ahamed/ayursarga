@@ -1,12 +1,20 @@
 "use client";
 
 import type { ConsultationServiceId } from "@/features/consultations/catalog";
-import type { ConsultantPage, PublicConsultant } from "@/features/consultations/types";
+import type { ConsultantPage, PublicConsultant, ConsultationAvailabilityPage } from "@/features/consultations/types";
 import type { ConsultationBookingDocument } from "@/features/firestore/models";
 import { authorizedApiRequest, decodeMutation } from "@/services/api/client";
 import type { ConsultationEmailResult } from "@/features/consultations/email";
 import { readDocument, runFilteredQuery, type QueryPageOptions } from "@/services/firestore/firestoreService";
 import type { AppointmentSlot } from "@/features/consultations/slots";
+
+export function listConsultationAvailability(service: string, date: string, cursor: number | null = null) {
+  const params = new URLSearchParams({service, date});
+  if (cursor !== null) params.set("cursor", String(cursor));
+  return authorizedApiRequest<ConsultationAvailabilityPage>(`/api/consultations/availability?${params}`, {
+    signedOutMessage:"Sign in to check appointment availability.", failureMessage:"Appointment availability could not be checked. Please try again.",
+  });
+}
 
 export function listConsultationSlots(consultantId: string, service: string, date: string, excludeBookingId?: string, signal?: AbortSignal) {
   const params = new URLSearchParams({consultantId,service,date});

@@ -4,7 +4,7 @@ import { validConsultationSchedule } from "@/features/consultations/schedule";
 
 export const CONSULTATION_HOLD_MS = 10 * 60 * 1000;
 export type AppointmentSlot = { startTime: string; endTime: string; window: ConsultantTimeSlot; status: "available" | "booked" | "reserved" };
-export const consultationDuration = (service: string) => service === "psychologist" ? 60 : 30;
+export const consultationDuration = (service: string) => service === "psychologist" || service === "prenatal-yoga" ? 60 : 30;
 export const minutesOfTime = (time: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(time) ? Number(time.slice(0, 2)) * 60 + Number(time.slice(3)) : NaN;
 export const timeOfMinutes = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 export const intervalsOverlap = (a: { startTime: string; endTime: string }, b: { startTime: string; endTime: string }) => a.startTime < b.endTime && b.startTime < a.endTime;

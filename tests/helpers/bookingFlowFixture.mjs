@@ -38,20 +38,22 @@ export function bookingFlowFixture(options = {}) {
         where: (field, operator, value) => buildQuery([...filters, { field, operator, value }], maximum, ordering, after),
         limit: (value) => buildQuery(filters, value, ordering, after),
         orderBy: (field, direction) => buildQuery(filters, maximum, { field, direction }, after),
-        startAfter: (doc) => buildQuery(filters, maximum, ordering, doc.id),
+        startAfter: (doc) => buildQuery(filters, maximum, ordering, typeof doc === "number" ? doc : doc.id),
         aggregate: (fields) => ({ get: async () => {
           const { docs } = await buildQuery(filters, Number.MAX_SAFE_INTEGER).get();
           return { data: () => Object.fromEntries(Object.entries(fields).map(([key, field]) => [key, field._field ? docs.reduce((sum, doc) => sum + (doc.data()[field._field] ?? 0), 0) : docs.length])) };
         } }),
         count: () => ({ get: async () => { const page = await buildQuery(filters, Number.MAX_SAFE_INTEGER).get(); return { data: () => ({ count: page.size }) }; } }),
         get: async () => {
-          let entries = [...records].filter(([path, data]) => path.startsWith(`${collection}/`) && filters.every(({ field, operator, value }) => operator === "in" ? value.includes(data[field]) : data[field] === value));
+          let entries = [...records].filter(([path, data]) => path.startsWith(`${collection}/`) && filters.every(({ field, operator, value }) => operator === "in" ? value.includes(data[field]) : operator === "array-contains" ? data[field]?.includes(value) : data[field] === value));
           if (ordering) entries.sort((a, b) => {
             const left = a[1][ordering.field]?.toMillis?.() ?? a[1][ordering.field];
             const right = b[1][ordering.field]?.toMillis?.() ?? b[1][ordering.field];
             return (left < right ? -1 : left > right ? 1 : a[0].localeCompare(b[0])) * (ordering.direction === "desc" ? -1 : 1);
           });
-          if (after) entries = entries.slice(entries.findIndex(([path]) => path.split("/")[1] === after) + 1);
+          if (after) entries = typeof after === "number" && ordering
+            ? entries.filter(([,data]) => data[ordering.field] > after)
+            : entries.slice(entries.findIndex(([path]) => path.split("/")[1] === after) + 1);
           const docs = entries.slice(0, maximum).map(([path]) => snapshot({ id: path.split("/")[1], path }));
           return { docs, size: docs.length };
         },

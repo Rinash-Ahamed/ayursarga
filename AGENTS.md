@@ -254,13 +254,22 @@ to deploy, rerun maintenance scripts, or modify live data.
   records and their supported handling without silently migrating data.
 - Online Wellness Path appointments use the separate `consultationBookings`
   collection and authenticated server endpoints, not hospital `bookings` or
-  invented hospital/service IDs. Creation snapshots consultant/service, charge,
+  invented hospital/service IDs. Consumer booking selection follows date ->
+  available generated time -> matching consultants with visible total fees ->
+  payment. Authenticated date-first availability uses bounded cursor pages of
+  eligible consultants and safe projections; do not fetch the whole collection
+  or issue one browser request per consultant. Keep pagination visible even when
+  a scanned page has no matching times. Recheck the selected consultant quietly
+  and retain the authoritative transactional payment/slot checks. Date/time
+  changes clear the previous consultant/consent and stale-date responses must
+  not replace the current choices. Creation snapshots consultant/service, charge,
   preferred India care date/window, Consumer contacts and mandatory versioned
   booking consent; requests, audits and addressed bell notifications commit
   atomically. Stable request IDs prevent retries from duplicating appointments.
   New online appointments require full Razorpay payment verified server-side;
   only a captured matching INR payment confirms the selected generated appointment
-  slot. Regular services use 30 minutes; Psychology uses 60. Generate only full
+  slot. Regular services use 30 minutes; Psychology and Yoga Instructor
+  (prenatal-yoga) use 60. Generate only full
   slots within configured availability, including the final exact-end slot.
   A private consultationSlotDays document per consultant/IST date serializes all
   overlapping ranges across services. Checkout claims a 10-minute audited hold;
@@ -295,9 +304,10 @@ to deploy, rerun maintenance scripts, or modify live data.
   automatic payouts, meeting links or consultant Auth accounts are implied.
   Consultation cancellation settings are Admin-only under Settings, through
   authenticated server endpoints and the private cancellationPolicies document.
-  The published default is 100% of verified amounts paid at least 48 hours before
+  The published default is 100% of verified amounts paid at least 24 hours before
   the appointment reference, zero routine refund later, with late cancellation
-  allowed only before the appointment begins. Never substitute a 24-hour example.
+  allowed only before the appointment begins. Preserve older 48-hour policy
+  snapshots and existing agreed terms; do not backfill the new default onto them.
   Snapshot versioned terms/deadlines into new payment drafts before checkout and
   retain that snapshot on confirmation. Consumers must review the current policy
   version before a new payment request; existing intents keep their quoted terms.

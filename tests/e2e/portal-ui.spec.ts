@@ -401,8 +401,10 @@ test("portal guidance stays readable and aligned across Admin Hospital and Consu
       }
     }
     if (screen === "consumer-consultation-new") {
+      await page.getByRole("textbox", {name:"Preferred appointment date *",exact:true}).fill("25/10/2099");
+      await page.getByRole("combobox", {name:"Preferred time *",exact:true}).selectOption("09:30");
       await page.getByRole("radio", { name: /Assigned Consultation Professional/ }).check();
-      await expect(page.getByText("Choose an available date from the calendar.", { exact: false })).toBeVisible();
+      await expect(page.getByRole("textbox", {name:"Preferred appointment date *",exact:true})).toHaveValue("25/10/2099");
     }
     const overflow = await page.locator(".portal-form-note,.portal-help-list,.portal-field-error,.portal-form-error").evaluateAll(elements => elements.filter(element => {
       const rect = element.getBoundingClientRect();
@@ -486,15 +488,16 @@ test("Consultation cancellation details show agreed deadlines and hide expired a
   await mount(page, "consumer-consultations-policy");
   const policy = page.getByRole("region", { name: "Cancellation policy", exact: true });
   await expect(policy).toContainText("Cancellation available");
-  await expect(policy).toContainText("25/10/2099");
+  await expect(policy).toContainText("Free cancellation date and time");
+  await expect(policy).toContainText("24/10/2099");
   await expect(policy).toContainText("₹990.55");
   await policy.getByText("Policy terms and refund deadlines", { exact: true }).click();
-  await expect(policy).toContainText("23/10/2099");
+  await expect(policy).toContainText("24/10/2099");
   await expect(policy).toContainText("100% of the amount paid");
   const terms = policy.getByRole("table");
   await expect(terms.getByRole("columnheader")).toHaveCount(3);
   await expect(terms.getByRole("columnheader", { name: "Cancellation period", exact: true })).toBeVisible();
-  await expect(terms).toContainText("48 hours before the appointment reference time");
+  await expect(terms).toContainText("24 hours before the appointment reference time");
   await expect(terms).toContainText("0% of the amount paid");
   await expect(terms).toContainText("Cancellation does not issue a refund automatically");
   await expect(page.getByRole("button", { name: "Cancel appointment", exact: true })).toBeVisible();
@@ -511,6 +514,7 @@ test("Admin edits consultation cancellation policy with confirmation and inline 
   await mount(page, "admin-cancellation-settings");
   const windowField = page.getByRole("spinbutton", { name: "Refund window *", exact: true });
   await expect(windowField).toBeDisabled();
+  await expect(windowField).toHaveValue("24");
   await page.getByRole("button", { name: "Edit consultation policy", exact: true }).click();
   await windowField.fill("3");
   await page.getByRole("combobox", { name: "Refund window unit", exact: true }).selectOption("days");
@@ -700,6 +704,8 @@ test("existing Admin and Hospital edit forms no longer display hospital descript
 test("consultant photos and labeled professional details stay readable without duplicate qualifications", async ({ page }) => {
   await page.route("https://images.test/**", route => route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72"><rect width="72" height="72" fill="#dce9df"/></svg>' }));
   await mount(page, "consumer-consultation-photo");
+  await page.getByRole("textbox", {name:"Preferred appointment date *",exact:true}).fill("25/10/2099");
+  await page.getByRole("combobox", {name:"Preferred time *",exact:true}).selectOption("09:30");
   const card = page.locator(".consultation-professional");
   await expect(card.locator(".consultation-professional-name")).toHaveText("Shafna");
   expect((await card.textContent())?.match(/BAMS/g)).toHaveLength(1);
@@ -734,6 +740,66 @@ test("consultant photos and labeled professional details stay readable without d
   await expect(page.getByLabel("Consultant photo", { exact: true })).toHaveCount(0);
 });
 
+test("date-first consultation filters matching consultants, paginates and resets stale selections", async ({page}) => {
+  await page.route("**/*", route => route.fulfill({status:204,body:""}));
+  await mount(page,"consumer-consultation-new");
+  await page.evaluate(() => { (window as unknown as {availabilityScenario:{paginated:boolean}}).availabilityScenario.paginated=true; });
+  expect(await page.evaluate(() => (window as unknown as {availabilityReads:string[]}).availabilityReads.length)).toBe(0);
+  const date = page.getByRole("textbox",{name:"Preferred appointment date *",exact:true});
+  const time = page.getByRole("combobox",{name:"Preferred time *",exact:true});
+  const pay = page.getByRole("button",{name:/Pay.*book appointment/i});
+  await date.fill("25/10/2099");
+  await expect(time).toBeEnabled();
+  await expect(page.getByRole("radio")).toHaveCount(0);
+  expect(await page.evaluate(() => (window as unknown as {slotReads:{calls:number}}).slotReads.calls)).toBe(0);
+  await time.selectOption("09:30");
+  await page.getByRole("radio",{name:/Assigned Consultation Professional/}).check();
+  await page.getByRole("checkbox",{name:"I have read and agree to the applicable terms and policies.",exact:true}).check();
+  await expect(pay).toBeEnabled();
+  await page.getByRole("button",{name:"Load more availability",exact:true}).click();
+  await expect(page.getByRole("button",{name:"Load more availability",exact:true})).toHaveCount(0);
+  await expect(page.getByRole("radio")).toHaveCount(1);
+  await time.selectOption("10:30");
+  await expect(page.getByRole("radio")).toHaveCount(2);
+  await expect(page.locator('input[name="consultant"]:checked')).toHaveCount(0);
+  await expect(pay).toBeDisabled();
+  await expect(page.locator(".consultation-professional").filter({hasText:"Second Available Professional"})).toContainText("₹1,200.00");
+  await date.fill("26/10/2099");
+  await expect(time).toHaveValue("");
+  await expect(page.getByRole("radio")).toHaveCount(0);
+  await expect(pay).toBeDisabled();
+  expect(await page.evaluate(() => (window as unknown as {availabilityReads:string[]}).availabilityReads.length)).toBe(3);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+
+test("date-first consultation ignores delayed old dates and recovers from availability errors", async ({page}) => {
+  await page.route("**/*", route => route.fulfill({status:204,body:""}));
+  await mount(page,"consumer-consultation-new");
+  const update = (values:{holdDate?:string;fail?:boolean}) => page.evaluate(values => Object.assign((window as unknown as {availabilityScenario:object}).availabilityScenario,values),values);
+  const date=page.getByRole("textbox",{name:"Preferred appointment date *",exact:true});
+  const time=page.getByRole("combobox",{name:"Preferred time *",exact:true});
+  await update({holdDate:"2099-10-25"});
+  await date.fill("25/10/2099");
+  await expect.poll(() => page.evaluate(() => (window as unknown as {availabilityScenario:{release:unknown}}).availabilityScenario.release!==null)).toBe(true);
+  await date.fill("26/10/2099");
+  await time.selectOption("09:30");
+  await page.getByRole("radio",{name:/Assigned Consultation Professional/}).check();
+  await page.evaluate(() => (window as unknown as {availabilityScenario:{release:()=>void}}).availabilityScenario.release());
+  await expect(date).toHaveValue("26/10/2099");
+  await expect(time).toHaveValue("09:30");
+  await expect(page.getByRole("radio",{name:/Assigned Consultation Professional/})).toBeChecked();
+  await update({holdDate:"",fail:true});
+  await date.fill("27/10/2099");
+  await expect(page.getByRole("button",{name:"Try again",exact:true})).toBeVisible();
+  await expect(page.getByRole("button",{name:/Pay.*book appointment/i})).toBeDisabled();
+  await expect(page.getByRole("radio")).toHaveCount(0);
+  await update({fail:false});
+  await page.getByRole("button",{name:"Try again",exact:true}).click();
+  await expect(time).toBeEnabled();
+  await time.selectOption("09:30");
+  await expect(page.getByRole("radio",{name:/Assigned Consultation Professional/})).toBeVisible();
+});
+
 test("online consultation form uses assigned charges and custom windows, requires consent and submits once", async ({ page }, testInfo) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -741,6 +807,11 @@ test("online consultation form uses assigned charges and custom windows, require
   await mount(page, "consumer-consultation-new");
   const submit = page.getByRole("button", { name: /Pay.*book appointment/i });
   await expect(submit).toBeDisabled();
+  await expect(page.getByRole("radio")).toHaveCount(0);
+  await page.getByRole("textbox", { name: "Preferred appointment date *", exact: true }).fill("25/10/2099");
+  await expect(page.getByRole("option", { name: "9:30 AM – 10:00 AM", exact: true })).toBeAttached();
+  await expect(page.getByRole("option", { name: "11:15 AM – 11:45 AM", exact: true })).toBeAttached();
+  await page.getByRole("combobox", { name: "Preferred time *", exact: true }).selectOption("09:30");
   await page.getByRole("radio", { name: /Assigned Consultation Professional/ }).check();
   await expect(page.locator(".consultation-professional")).toContainText("₹990.55");
   await expect(page.locator(".consultation-professional")).not.toContainText("Commission");
@@ -748,10 +819,6 @@ test("online consultation form uses assigned charges and custom windows, require
   expect(providerCard!.height).toBeLessThan(350);
   expect((await page.locator(".consultation-professional>span").boundingBox())!.width).toBeGreaterThan(90);
   expect((await page.getByRole("radio", { name: /Assigned Consultation Professional/ }).boundingBox())!.width).toBeLessThan(25);
-  await page.getByRole("textbox", { name: "Preferred appointment date *", exact: true }).fill("25/10/2099");
-  await expect(page.getByRole("option", { name: "9:30 AM – 10:00 AM", exact: true })).toBeAttached();
-  await expect(page.getByRole("option", { name: "11:15 AM – 11:45 AM", exact: true })).toBeAttached();
-  await page.getByRole("combobox", { name: "Preferred time *", exact: true }).selectOption("09:30");
   await expect(submit).toBeDisabled();
   await page.getByRole("checkbox", { name: "I have read and agree to the applicable terms and policies.", exact: true }).check();
   await expect(submit).toBeEnabled();
@@ -772,11 +839,11 @@ test("consultation availability refresh is quiet, deduplicated and handles chang
   const fixture = () => page.evaluate(() => (window as unknown as {slotReads:{calls:number}}).slotReads.calls);
   const update = (values: {hold?:boolean;fail?:boolean;unavailableStart?:string}) => page.evaluate(values => Object.assign((window as unknown as {slotReads:object}).slotReads, values), values);
   const finish = () => page.evaluate(() => (window as unknown as {slotReads:{finish:(()=>void)|null}}).slotReads.finish?.());
-  await page.getByRole("radio", {name:/Assigned Consultation Professional/}).check();
   await page.getByRole("textbox", {name:"Preferred appointment date *",exact:true}).fill("25/10/2099");
   const times = page.getByRole("combobox", {name:"Preferred time *",exact:true});
   const pay = page.getByRole("button", {name:/Pay.*book appointment/i});
   await times.selectOption("09:30");
+  await page.getByRole("radio", {name:/Assigned Consultation Professional/}).check();
   await page.getByRole("checkbox", {name:"I have read and agree to the applicable terms and policies.",exact:true}).check();
   await expect(pay).toBeEnabled();
   const initial = await fixture();
@@ -802,31 +869,35 @@ test("consultation availability refresh is quiet, deduplicated and handles chang
   await expect(pay).toBeEnabled();
   await update({unavailableStart:"09:30"});
   await page.clock.runFor(45_000);
-  await expect(page.getByText("Your selected time is no longer available. Please choose another appointment time.", {exact:true})).toBeVisible();
+  await expect(page.getByText("This consultant is no longer available at your selected time. Please choose another consultant or appointment time.", {exact:true})).toBeVisible();
   await expect(pay).toBeDisabled();
   await times.selectOption("10:00");
+  await page.getByRole("radio", {name:/Assigned Consultation Professional/}).check();
+  await page.getByRole("checkbox", {name:"I have read and agree to the applicable terms and policies.",exact:true}).check();
   await expect(pay).toBeEnabled();
 });
 
-test("online consultation empty state is clear and does not show an unusable form", async ({ page }) => {
+test("date-first consultation empty state keeps date selection usable and payment disabled", async ({ page }) => {
   await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
   await mount(page, "consumer-consultation-empty");
-  await expect(page.getByRole("heading", { name: "Consultants are not available yet" })).toBeVisible();
-  await expect(page.getByText("No appointments are available for prenatal doctor consultation right now.", { exact: false })).toBeVisible();
-  await expect(page.locator("form")).toHaveCount(0);
-  await expect(page.getByRole("textbox", { name: "Preferred appointment date *", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Check availability again" })).toBeVisible();
+  const date = page.getByRole("textbox", {name:"Preferred appointment date *",exact:true});
+  await expect(date).toBeEnabled();
+  await date.fill("25/10/2099");
+  await expect(page.getByText("No appointment times are available on this date. Choose another date or contact Ayursarga for help.", {exact:true})).toBeVisible();
+  await expect(page.getByRole("radio")).toHaveCount(0);
+  await expect(page.getByRole("button", {name:/Pay.*book appointment/i})).toBeDisabled();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
 
-test("online consultant availability refreshes when the Consumer returns to the page", async ({ page }) => {
+test("date-first availability can be refreshed without restarting the booking date", async ({ page }) => {
   await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
   await mount(page, "consumer-consultation-refresh");
-  await expect(page.getByRole("heading", { name: "Consultants are not available yet" })).toBeVisible();
-  await page.waitForTimeout(1_550);
-  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await page.getByRole("textbox", {name:"Preferred appointment date *",exact:true}).fill("25/10/2099");
+  await expect(page.getByText("No appointment times are available on this date. Choose another date or contact Ayursarga for help.", {exact:true})).toBeVisible();
+  await page.getByRole("button", {name:"Refresh availability",exact:true}).click();
+  await page.getByRole("combobox", {name:"Preferred time *",exact:true}).selectOption("09:30");
   await expect(page.getByText("Assigned Consultation Professional", { exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Consultants are not available yet" })).toHaveCount(0);
+  await expect(page.getByRole("textbox", {name:"Preferred appointment date *",exact:true})).toHaveValue("25/10/2099");
 });
 
 test("consumer consultation cards show payment status only while Admin retains the reference", async ({page}) => {
@@ -1277,19 +1348,18 @@ test("user contact details expand independently and collapse without hiding esse
   }
 });
 
-test("consultant date restrictions disable unavailable dates and keep nested calendars viewport-safe", async ({ page }) => {
+test("date-first search respects consultant date restrictions and Admin calendars stay viewport-safe", async ({ page }) => {
   await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
   await mount(page, "consumer-consultation-restricted");
-  await page.getByRole("radio").first().check();
   const date = page.getByRole("textbox", { name: "Preferred appointment date *", exact: true });
   await date.fill("26/10/2099"); await date.blur();
-  await expect(date).toHaveAttribute("aria-invalid", "true");
   await expect(page.getByRole("button", { name: /Pay.*book appointment/i })).toBeDisabled();
-  await expect(page.getByText("The consultant is not available on this date. Choose an available date.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("radio")).toHaveCount(0);
+  await expect(page.getByText("No appointment times are available on this date. Choose another date or contact Ayursarga for help.", {exact:true})).toBeVisible();
   await date.fill("25/10/2099");
   await page.getByRole("button", { name: "Open calendar", exact: true }).click();
   const calendar = page.getByRole("dialog", { name: "Choose appointment date" });
-  await expect(calendar.getByRole("button", { name: "26/10/2099", exact: true })).toBeDisabled();
+  await expect(calendar.getByRole("button", { name: "26/10/2099", exact: true })).toBeEnabled();
   await expect(calendar.getByRole("button", { name: "25/10/2099", exact: true })).toBeEnabled();
   const bounds = await calendar.boundingBox();
   expect(bounds!.x).toBeGreaterThanOrEqual(0);

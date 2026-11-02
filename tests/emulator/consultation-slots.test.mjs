@@ -20,7 +20,8 @@ test("native Firestore transactions serialize competing payment holds and captur
       "@/services/auth/authEmailService":{authEmailSiteUrl:()=>"https://ayursarga.com"},
       "@/services/email/emailService":{sendEmail:async()=>{throw Error("SMTP is forbidden in emulator tests");}},
     });
-    const requests=[0,1].map(i=>({...paidInput,consultantId,requestId:`emulator-${randomUUID()}-${i}`,expectedCancellationPolicyVersion:"consultation-published-48h-v1"}));
+    const policyVersion=loadTypeScript("features/consultations/cancellationPolicy.ts").DEFAULT_CONSULTATION_CANCELLATION_POLICY.version;
+    const requests=[0,1].map(i=>({...paidInput,consultantId,requestId:`emulator-${randomUUID()}-${i}`,expectedCancellationPolicyVersion:policyVersion}));
     const results=await Promise.allSettled(requests.map(body=>api.prepareConsultationPayment(firestore,uid,body)));
     assert.equal(results.filter(r=>r.status==="fulfilled").length,1);
     assert.equal(results.find(r=>r.status==="rejected").reason.status,409);

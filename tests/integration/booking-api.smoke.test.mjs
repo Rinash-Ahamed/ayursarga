@@ -8,7 +8,7 @@ if (origin.protocol !== "http:" || origin.hostname !== "127.0.0.1" || origin.pat
 const read = (path, options = {}) => fetch(new URL(path, origin), { ...options, signal: AbortSignal.timeout(45000) });
 
 test("consultation schedule and payment APIs reject anonymous callers before accessing private records", async()=>{
-  for(const [path,method] of [["/api/consultations/slots?consultantId=AS001&service=prenatal-doctor&date=2099-10-25","GET"],["/api/consumer/consultations","POST"],["/api/admin/hospitals/package-summary","POST"]]) {
+  for(const [path,method] of [["/api/consultations/availability?service=prenatal-doctor&date=2099-10-25","GET"],["/api/consultations/slots?consultantId=AS001&service=prenatal-doctor&date=2099-10-25","GET"],["/api/consumer/consultations","POST"],["/api/admin/hospitals/package-summary","POST"]]) {
     const response=await read(path,{method,headers:{"content-type":"application/json"},...(method==="GET"?{}:{body:"{}"})});
     assert.equal(response.status,401);
     assert.match(response.headers.get("cache-control"),/no-store/);
