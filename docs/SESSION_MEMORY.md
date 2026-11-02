@@ -2,6 +2,26 @@
 
 Updated: 2 November 2026 (Asia/Calcutta).
 
+## Production app redeployment (2 November 2026, v4.37.1)
+
+- Owner requested redeployment. Authenticated Vercel rebuild/redeploy of the
+  existing Ayursarga production release completed READY and assigned
+  www.ayursarga.com (also ayursarga.com/ayursarga.vercel.app).
+  Deployment: dpl_AYmgDZxdJL9iW3Gx3Y7jaxue7ymk;
+  unique URL: https://ayursarga-nprzk361h-rinash-ahameds-projects.vercel.app.
+  Read-only Vercel API metadata confirmed source SHA
+  1d0ba86b70e39fc1fb7801232819f1e838500d40 matches local HEAD (v4.37.1).
+- Used existing production environment configuration. No source/env upload,
+  environment sync, Firebase rules/index/Storage/Auth deployment or operational
+  data mutations performed. Earlier pending Firebase rule hardening remains a
+  separate deployment. No local build/lint/typecheck or version bump for deploy.
+- Post-deployment /api/health?deep=true with Accept application/json returned
+  HTTP 200, deep-configuration/ok: all six configuration dependencies ready.
+  /health?deep=true returned HTTP 200 HTML with themed markup. These are only
+  configuration/page checks, not proof of actual email receipt or payment flow.
+  No emails or test payments initiated; verify Razorpay receipt/customer name
+  and direct info mailbox delivery with a fresh controlled Test payment.
+
 ## Razorpay customer prefill and direct team email (v4.37.1)
 
 - Checkout previously supplied merchant name/order/amount but no Consumer prefill.
