@@ -2,6 +2,16 @@
 
 Updated: 1 November 2026 (Asia/Calcutta).
 
+## Consumer payment-status clarity (1 November 2026)
+
+- v4.31.7 shows only payment status on Consumer online consultation cards, not
+  the gateway pay_* reference. Admin keeps the reference. Stored records, API
+  responses, verification, Finance and support data are unchanged; this is a
+  presentation-only change, not a new secrecy boundary for safe payment IDs.
+- Two focused local desktop/WebKit-phone browser regressions passed, asserting
+  Consumer status-only output and retained Admin reference. No build/lint,
+  live workflow requests or deployment requested/run.
+
 ## Compact five-page partner contract (1 November 2026)
 
 - v4.31.6 adds a partner-contract-only compact mode to the native PDF renderer:

@@ -829,6 +829,18 @@ test("online consultant availability refreshes when the Consumer returns to the 
   await expect(page.getByRole("heading", { name: "Consultants are not available yet" })).toHaveCount(0);
 });
 
+test("consumer consultation cards show payment status only while Admin retains the reference", async ({page}) => {
+  await page.route("**/*", route => route.fulfill({status:204,body:""}));
+  for (const screen of ["consumer-consultations", "admin-consultations"]) {
+    await mount(page, screen);
+    const payment = page.locator(".consultation-booking-details>div").filter({has:page.locator("dt", {hasText:/^Payment$/})}).locator("dd");
+    if (screen === "consumer-consultations") {
+      await expect(payment).toHaveText(/^paid$/i);
+      await expect(page.locator(".consultation-history")).not.toContainText("pay_fixture_private_reference");
+    } else await expect(payment).toContainText("pay_fixture_private_reference");
+  }
+});
+
 test("consumer online consultation history uses the aligned empty-state pattern", async ({ page }) => {
   await page.route("**/*", (route) => route.fulfill({ status: 204, body: "" }));
   await mount(page, "consumer-consultations-empty");

@@ -171,7 +171,7 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
       <dl className="consumer-booking-facts consultation-booking-details">
         <div><dt>Booked on</dt><dd>{formatBookingPlacedAt(booking.createdAt)}</dd></div>
         <div><dt>Preferred date</dt><dd>{formatDisplayDate(booking.preferredDate)}</dd></div>
-        {booking.paymentStatus && <div><dt>Payment</dt><dd>{formatStatus(booking.paymentStatus)}{booking.paymentReference ? ` · ${booking.paymentReference}` : ""}</dd></div>}
+        {booking.paymentStatus && <div><dt>Payment</dt><dd>{formatStatus(booking.paymentStatus)}{role === "admin" && booking.paymentReference ? ` · ${booking.paymentReference}` : ""}</dd></div>}
         {booking.paymentStatus && booking.status === "cancelled" && <div><dt>Refund information</dt><dd>Cancellation does not automatically refund payment. Contact Ayursarga for review under the cancellation policy.</dd></div>}
         <div><dt>Preferred window</dt><dd>{formatConsultantTimeSlot(booking.preferredTimeSlot, { [booking.preferredTimeSlot]: { startTime: booking.slotStartTime, endTime: booking.slotEndTime } })}</dd></div>
         {booking.confirmedDate && <div><dt>Scheduled appointment</dt><dd>{formatDisplayDate(booking.confirmedDate)} · {booking.confirmedTime && booking.confirmedEndTime ? formatAppointmentRange(booking.confirmedTime, booking.confirmedEndTime) : booking.confirmedTime ?? `${booking.slotStartTime} - ${booking.slotEndTime}`} IST</dd></div>}

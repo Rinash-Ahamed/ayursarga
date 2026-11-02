@@ -211,7 +211,7 @@ const consultation = { ...metadata, id: "consultation-fixture", bookingReference
   consultantId: "AS001", consultantName: consultationProfessional.name, consultantDesignation: consultationProfessional.designation, consultantCharge: 900.5,
   consumerId: "patient", consumerName: "Patient With a Longer Display Name", consumerEmail: "patient@example.com", consumerPhone: "9876543210",
   preferredDate: "2099-10-25", preferredTimeSlot: "morning", slotStartTime: "09:30", slotEndTime: "11:45", status: "confirmed", confirmedDate: "2099-10-25", confirmedTime: null, confirmedAt: now,
-  consumerNotes: "Guidance about pregnancy lifestyle", adminNotes: null };
+  consumerNotes: "Guidance about pregnancy lifestyle", adminNotes: null, paymentStatus: "paid", paymentReference: "pay_fixture_private_reference" };
 export const listPublicConsultants = () => {
   if (portalUiState.screen === "consumer-consultation-photo") return page([{ ...consultationProfessional, name: "Shafna", designation: "BAMS", qualification: "BAMS", yearsExperience: 3, consultantCharge: 300, imageUrl: "https://images.test/consultant.webp" }]);
   const staleFirstRead = portalUiState.screen === "consumer-consultation-refresh" && portalUiState.publicConsultantReads++ === 0;
