@@ -1,5 +1,6 @@
 import { useSyncExternalStore, type ReactNode } from "react";
 import { DEFAULT_CONSULTATION_CANCELLATION_POLICY, snapshotConsultationCancellation } from "@/features/consultations/cancellationPolicy";
+import { ConsultationCheckoutClosedError } from "@/features/payments/checkout";
 import { generateConsultationSlots } from "@/features/consultations/slots";
 import type { PublicConsultant } from "@/features/consultations/types";
 import type { ServiceDocument, TreatmentStatus } from "@/features/firestore/models";
@@ -242,12 +243,18 @@ export const listConsultationSlots = async (_consultantId:string, service:string
   if (slotReads.fail) throw new Error("Appointment times could not be checked. Please try again.");
   return {slots:generateConsultationSlots(date, service, await getPublicConsultant()).filter(slot => slot.startTime !== slotReads.unavailableStart).map((slot,index)=>({...slot,status:portalUiState.screen === "admin-consultants-schedule" ? index === 0 ? "booked" as const : index === 1 ? "reserved" as const : "available" as const : "available" as const})),checkedAt:new Date().toISOString(),holdMinutes:10};
 };
-export const paymentRecovery = { state: "ready", fail: false, calls: 0 };
+export const paymentRecovery = { state: "ready", fail: false, calls: 0, discardable: false, closeNext: false };
 Object.assign(globalThis, { paymentRecovery });
 export const consultationPaymentStatus = async () => {
   paymentRecovery.calls++;
   if (paymentRecovery.fail) throw new Error("Payment status could not be checked. Contact support before paying again.");
   return { checkout: { intentId: "fixture", state: paymentRecovery.state, bookingId: null, totalPaise: 99055, currency: "INR" } };
+};
+export const abandonConsultationCheckout = async () => {
+  paymentRecovery.calls++;
+  if (paymentRecovery.fail) throw new Error("Payment status could not be checked. Contact support before paying again.");
+  if (!paymentRecovery.discardable) throw new Error("A payment was attempted for this checkout. Resume it or check its status before paying again.");
+  return { checkout: { intentId: "fixture", state: "abandoned", bookingId: null, totalPaise: 99055, currency: "INR" } };
 };
 export const payForConsultation = async () => ({ bookingId: "consultation-fixture" });
 export const clearConsultationPaymentReminder = () => {
@@ -267,8 +274,9 @@ export const listConsultantFinance = async () => ({ documents: [financeRecord], 
 export const recordConsultantSettlement = async (input: { status: string; reference: string; date: string; notes: string }) => {
   portalUiState.calls++; Object.assign(financeRecord, { settlementStatus: input.status, settlementReference: input.reference, settlementDate: input.date, settlementNotes: input.notes }); return { record: { ...financeRecord } };
 };
-export const createConsultationBooking = async (input: unknown) => { portalUiState.consultantWrites.push(input); return { ok: true, bookingId: "consultation-fixture", bookingReference: "AYURCONS01" }; };
+export const createConsultationBooking = async (input: unknown) => { portalUiState.consultantWrites.push(input); if (paymentRecovery.closeNext) { paymentRecovery.closeNext = false; throw new ConsultationCheckoutClosedError(); } return { ok: true, bookingId: "consultation-fixture", bookingReference: "AYURCONS01" }; };
 export const listConsultationBookings = () => page(portalUiState.screen === "admin-consultations-grid" ? Array.from({ length: 3 }, (_, index) => ({ ...consultation, id: `consultation-${index}`, bookingReference: `AYURGRID${index}`, consumerName: index === 0 ? "A consumer with a longer full name for wrapping" : consultation.consumerName })) : portalUiState.screen === "consumer-consultations-empty" ? [] : [{ ...consultation,
+  ...(portalUiState.screen === "consumer-consultations-rescheduled" ? { consumerRescheduleCount: 1 } : {}),
   ...(portalUiState.screen === "consumer-consultations-policy" || portalUiState.screen === "consumer-consultations-expired" ? {
     cancellationPolicy: snapshotConsultationCancellation(DEFAULT_CONSULTATION_CANCELLATION_POLICY, portalUiState.screen.endsWith("expired") ? "2000-01-01" : "2099-10-25", "09:30"),
     paymentTotals: { paidPaise: 99055, refundedPaise: 0 },
@@ -277,7 +285,7 @@ export const getConsultationBooking = async () => consultation;
 export const updateConsultationBooking = async (_id: string, input: { action: string; confirmedDate?: string; confirmedTime?: string; adminNotes?: string }) => {
   portalUiState.consultantWrites.push(input);
   await Promise.resolve();
-  return { changes: { ...input, ...(input.action === "reschedule" ? {confirmedEndTime:generateConsultationSlots(input.confirmedDate!, consultation.serviceId, consultationProfessional).find(slot=>slot.startTime===input.confirmedTime)?.endTime} : {}), status: input.action === "reschedule" ? "confirmed" : input.action, lastAuditId: "consultation-updated" },
+  return { changes: { ...input, ...(input.action === "reschedule" ? {confirmedEndTime:generateConsultationSlots(input.confirmedDate!, consultation.serviceId, consultationProfessional).find(slot=>slot.startTime===input.confirmedTime)?.endTime, ...(portalUiState.screen.startsWith("consumer") ? {consumerRescheduleCount:1} : {})} : {}), status: input.action === "reschedule" ? "confirmed" : input.action, lastAuditId: "consultation-updated" },
     email: input.action !== "completed" ? { status: portalUiState.screen === "admin-consultations-email-failure" ? "failed" : "accepted" } : undefined,
     consultantEmail: input.action !== "completed" ? { status: portalUiState.screen === "admin-consultations-consultant-email-failure" ? "failed" : "accepted" } : undefined };
 };

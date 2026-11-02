@@ -283,7 +283,17 @@ to deploy, rerun maintenance scripts, or modify live data.
   denied; authenticated slot projections expose times/states, never identities.
   Durable private payment
   intents claim order creation before the provider POST; uncertain orders must
-  never be automatically recreated. Checkout returns alone cannot confirm a
+  never be automatically recreated. Closing checkout may automatically abandon
+  its own provider-verified never-attempted order; Consumer may also choose
+  Ignore unpaid checkout. Require a matching created INR order with zero paid,
+  full amount due and no payment attempts, plus transactional ownership, current
+  state/revision and no booking/financial record. Audit an abandoned intent and
+  release only its own hold atomically; preserve all history. Clear recovery and
+  use a fresh request ID only after verified abandonment. Never ignore attempted,
+  processing, authorized, paid, unknown or unreachable payments. Abandonment is
+  not provider-order cancellation or a refund: any later captured payment goes
+  to financial review and must never confirm an abandoned intent.
+  Checkout returns alone cannot confirm a
   booking. Validate raw webhook signatures and journal event IDs atomically.
   Keep private commission/base-payable/settlement fields in server-only payment
   and financial collections, never Consumer-readable booking documents, public
@@ -298,8 +308,19 @@ to deploy, rerun maintenance scripts, or modify live data.
   review; no automatic refund allocation or payout reversal is implied. Admin can
   reschedule to a validated date/exact time, complete, or cancel; do not restore
   Confirm or Reject actions. Preserve legacy requested/rejected records without
-  silently migrating them. Hospital package bookings remain immediately
-  confirmed and unaffected. Consumer reads/cancellation are
+  silently migrating them. Consumers may reschedule their own confirmed online
+  consultation once, inclusively at least 24 hours before its scheduled IST
+  start, with the same consultant/service and unchanged payment. Reuse the
+  audited schedule transaction, stable action ID/revision check, atomic old-slot
+  release/new-slot reservation and branded Consumer/consultant email events.
+  Store server-managed consumerRescheduleCount/consumerRescheduledAt; retries
+  must not consume another allowance, and Admin changes must never reset it.
+  Consumer slot exclusion is allowed only for their owned matching eligible
+  appointment; never accept arbitrary exclusion IDs or client-side counters.
+  Preserve direct client booking/slot write denials and existing agreed policy
+  versions when recalculating deadlines. Hospital package bookings remain
+  immediately confirmed and unaffected.
+  Consumer reads/cancellation are
   own-record only; Hospitals cannot access these appointments. No client writes,
   automatic payouts, meeting links or consultant Auth accounts are implied.
   Consultation cancellation settings are Admin-only under Settings, through

@@ -6,6 +6,7 @@ import { consultationService } from "@/features/consultations/catalog";
 import { generateConsultationSlots, CONSULTATION_HOLD_MS } from "@/features/consultations/slots";
 import { readScheduleDay, slotState, SlotReservationError } from "@/services/consultations/slotReservationsAdmin";
 import { isIsoDate, toDateInputValue } from "@/utils/date";
+import { consumerRescheduleEligibility } from "@/features/consultations/rescheduling";
 
 export const runtime = "nodejs";
 export async function GET(request: Request) {
@@ -16,9 +17,14 @@ export async function GET(request: Request) {
     const consultantId = params.get("consultantId") ?? "", date = params.get("date") ?? "";
     const service = consultationService(params.get("service")), exclude = params.get("excludeBookingId") ?? undefined;
     if (!/^AS\d{3,40}$/.test(consultantId) || !isIsoDate(date) || date < toDateInputValue() || !service
-      || (exclude && (role !== "admin" || !/^consultation-[a-f0-9]{64}$/.test(exclude)))) return apiJson({ error: "Choose a valid consultant, date and service." }, 400);
+      || (exclude && !/^consultation-[a-f0-9]{64}$/.test(exclude))) return apiJson({ error: "Choose a valid consultant, date and service." }, 400);
     const now = new Date();
     const slots = await firestore.runTransaction(async transaction => {
+      if (exclude && role === "consumer") {
+        const booking = (await transaction.get(firestore.collection("consultationBookings").doc(exclude))).data();
+        if (!booking || booking.archivedAt != null || booking.consumerId !== uid || booking.consultantId !== consultantId || booking.serviceId !== service.id) throw new SlotReservationError("This appointment is not available to reschedule.", 403);
+        if (!consumerRescheduleEligibility(booking, now.getTime()).allowed) throw new SlotReservationError("Your one-time reschedule is unavailable. It must be requested at least 24 hours before the appointment.", 409);
+      }
       const consultant = await transaction.get(firestore.collection("consultants").doc(consultantId));
       const provider = consultant.exists ? publicConsultantProjection(consultantId, consultant.data()!, service.id) : null;
       if (!provider) throw new SlotReservationError("This consultant is no longer available for this service.", 404);

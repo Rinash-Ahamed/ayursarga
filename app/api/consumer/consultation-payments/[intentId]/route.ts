@@ -3,7 +3,7 @@ import { AdminAuthorizationError, requireActiveUser } from "@/services/firebase/
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { apiJson } from "@/services/api/server";
 import { allowRequest } from "@/services/api/rateLimit";
-import { ownedConsultationIntent, consumerCheckout, reconcileConsultationPayment, recoverConsultationPayment, ConsultationPaymentError } from "@/services/payments/consultationPaymentsAdmin";
+import { ownedConsultationIntent, consumerCheckout, reconcileConsultationPayment, recoverConsultationPayment, abandonUnpaidConsultationCheckout, ConsultationPaymentError } from "@/services/payments/consultationPaymentsAdmin";
 import { verifyRazorpayCheckoutSignature } from "@/services/payments/razorpay";
 import { deliverConsultationEmails } from "@/services/email/consultationEmailService";
 
@@ -22,13 +22,13 @@ export async function POST(request: Request, context: Context) {
     const { uid, firestore } = await requireActiveUser(request, ["consumer"]);
     if (!allowRequest(`consultation-verify:${uid}`, 40, 10 * 60 * 1000)) return apiJson({ error: "Please wait before checking payment again." }, 429);
     const { intentId } = await context.params;
-    const intent = await ownedConsultationIntent(firestore, uid, intentId);
     const body = await readJsonBody(request, 2000) as Record<string, unknown> | null;
-    if (body?.action === "check" && Object.keys(body).length === 1) {
-      const checkout = await recoverConsultationPayment(firestore, uid, intentId);
+    if ((body?.action === "check" || body?.action === "abandon") && Object.keys(body).length === 1) {
+      const checkout = body.action === "abandon" ? await abandonUnpaidConsultationCheckout(firestore, uid, intentId) : await recoverConsultationPayment(firestore, uid, intentId);
       if (checkout.bookingId) after(() => deliverConsultationEmails(firestore, `confirmation-${intentId}`).then(() => undefined));
       return apiJson({ checkout });
     }
+    const intent = await ownedConsultationIntent(firestore, uid, intentId);
     if (!body || typeof body.paymentId !== "string" || typeof body.signature !== "string" || typeof intent.orderId !== "string"
       || !verifyRazorpayCheckoutSignature({ serverOrderId: intent.orderId, paymentId: body.paymentId, signature: body.signature })) {
       return apiJson({ error: "Payment verification failed. Check your booking status before paying again." }, 400);

@@ -813,7 +813,7 @@ test("date-first consultation ignores delayed old dates and recovers from availa
   await expect(page.getByRole("radio",{name:/Assigned Consultation Professional/})).toBeVisible();
 });
 
-test("previous payments explain disabled Pay and only expired recovery permits a fresh checkout", async ({ page }) => {
+test("verified unpaid checkout can be ignored in one action without re-entering the form, while uncertain payments stay blocked", async ({ page }) => {
   await page.route("**/*", route => route.fulfill({ contentType: "text/html", body: "<!doctype html><html><body></body></html>" }));
   await page.goto("https://ayursarga.test/");
   await page.evaluate(() => sessionStorage.setItem("ayursarga-pending-consultation-payment:patient", "fixture"));
@@ -828,22 +828,45 @@ test("previous payments explain disabled Pay and only expired recovery permits a
   await expect(page.locator("#consultation-payment-blocked")).toContainText("avoid paying twice");
   await page.getByRole("link", { name: "Review previous payment", exact: true }).click();
   await expect(page.getByRole("region", { name: "Pending consultation payment" })).toBeInViewport();
+  await page.getByText("Payment details and help", { exact: true }).click();
   await page.getByRole("button", { name: "Check payment status", exact: true }).click();
   await expect(pay).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Choose another appointment time", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Ignore unpaid checkout", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Pending consultation payment" })).toContainText("A payment was attempted");
+  await expect(pay).toBeDisabled();
   await page.evaluate(() => { (window as unknown as { paymentRecovery: { fail: boolean } }).paymentRecovery.fail = true; });
   await page.getByRole("button", { name: "Check payment status", exact: true }).click();
   await expect(page.getByRole("region", { name: "Pending consultation payment" })).toContainText("Payment status could not be checked");
   await expect(pay).toBeDisabled();
-  await page.evaluate(() => { const recovery = (window as unknown as { paymentRecovery: { fail: boolean; state: string } }).paymentRecovery; recovery.fail = false; recovery.state = "reservation_expired"; });
-  await page.getByRole("button", { name: "Check payment status", exact: true }).click();
-  await page.getByRole("button", { name: "Choose another appointment time", exact: true }).click();
+  await page.evaluate(() => { const recovery = (window as unknown as { paymentRecovery: { fail: boolean; discardable: boolean } }).paymentRecovery; recovery.fail = false; recovery.discardable = true; });
+  await page.getByRole("button", { name: "Ignore unpaid checkout", exact: true }).click();
   await expect(page.getByRole("region", { name: "Pending consultation payment" })).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Preferred time *", exact: true })).toHaveValue("09:30");
+  await expect(page.getByRole("radio")).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "I have read and agree to the applicable terms and policies.", exact: true })).toBeChecked();
+  await expect(pay).toBeEnabled();
+  expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { consultantWrites: unknown[] } }).consumerBookingFixture.consultantWrites.length)).toBe(0);
+});
+
+test("closing an unused checkout lets the same completed form pay again with a fresh request identity", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({ contentType: "text/html", body: "<!doctype html><html><body></body></html>" }));
+  await page.goto("https://ayursarga.test/");
+  await mount(page, "consumer-consultation-new");
+  await page.getByRole("textbox", { name: "Preferred appointment date *", exact: true }).fill("25/10/2099");
   await page.getByRole("combobox", { name: "Preferred time *", exact: true }).selectOption("09:30");
   await page.getByRole("radio").check();
   await page.getByRole("checkbox", { name: "I have read and agree to the applicable terms and policies.", exact: true }).check();
+  await page.evaluate(() => { (window as unknown as { paymentRecovery: { closeNext: boolean } }).paymentRecovery.closeNext = true; });
+  const pay = page.getByRole("button", { name: "Pay & book appointment", exact: true });
+  await pay.click();
   await expect(pay).toBeEnabled();
-  expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { consultantWrites: unknown[] } }).consumerBookingFixture.consultantWrites.length)).toBe(0);
+  await expect(page.getByRole("region", { name: "Pending consultation payment" })).toHaveCount(0);
+  await expect(page.locator(".portal-form-error")).toHaveCount(0);
+  await pay.click();
+  const fixture = await page.evaluate(() => (window as unknown as { consumerBookingFixture: { consultantWrites: { requestId: string }[]; navigatedTo: string } }).consumerBookingFixture);
+  expect(fixture.consultantWrites).toHaveLength(2);
+  expect(fixture.consultantWrites[0].requestId).not.toBe(fixture.consultantWrites[1].requestId);
+  expect(fixture.navigatedTo).toContain("consultation-fixture");
 });
 
 test("online consultation form uses assigned charges and custom windows, requires consent and submits once", async ({ page }, testInfo) => {
@@ -1082,9 +1105,37 @@ test("online consultation history reschedules with a locked shared dialog and Co
   await expect(page.locator("dt").filter({ hasText: /^Booked on$/ }).locator("..").locator("dd")).toHaveText("21/09/2026, 07:43 pm IST");
   await expect(page.getByText("Scheduled appointment", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Confirm appointment", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Reschedule", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Reschedule", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Reject", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Cancel appointment", exact: true })).toBeVisible();
+});
+
+test("consumer can reschedule once through the shared dialog with aligned mobile fields and no Admin controls", async ({ page }) => {
+  await mount(page, "consumer-consultations-policy");
+  await expect(page.getByRole("region", { name: "Rescheduling policy" })).toContainText("at least 24 hours");
+  await page.getByRole("button", { name: "Reschedule", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("one-time reschedule");
+  await expect(dialog.getByRole("textbox", { name: "Appointment notes", exact: false })).toHaveCount(0);
+  await expect(dialog.getByText("Our Consultants", { exact: false })).toHaveCount(0);
+  expect(await page.evaluate(() => document.body.style.position)).toBe("fixed");
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { consultantWrites: unknown[] } }).consumerBookingFixture.consultantWrites.length)).toBe(0);
+  await page.getByRole("button", { name: "Reschedule", exact: true }).click();
+  await dialog.getByRole("textbox", { name: "New appointment date *", exact: true }).fill("26/10/2099");
+  await dialog.getByRole("combobox", { name: "New appointment time (IST) *", exact: true }).selectOption("10:30");
+  await dialog.getByRole("button", { name: "Confirm", exact: true }).evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole("region", { name: "Rescheduling policy" })).toContainText("one-time reschedule has been used");
+  await expect(page.getByRole("button", { name: "Reschedule", exact: true })).toHaveCount(0);
+  await expect(page.getByText("26/10/2099 · 10:30 AM – 11:00 AM IST", { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { consultantWrites: unknown[] } }).consumerBookingFixture.consultantWrites.length)).toBe(1);
+  expect(await page.evaluate(() => document.body.style.position)).not.toBe("fixed");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  for (const screen of ["consumer-consultations-expired", "consumer-consultations-rescheduled"]) {
+    await mount(page, screen);
+    await expect(page.getByRole("button", { name: "Reschedule", exact: true })).toHaveCount(0);
+  }
 });
 
 test("consultation rescheduling validates before saving, submits once and reports email failure honestly", async ({ page }) => {

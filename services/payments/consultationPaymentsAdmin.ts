@@ -163,6 +163,38 @@ export async function recoverConsultationPayment(firestore: Firestore, uid: stri
   return reconcileConsultationPayment(firestore, id, payments[0].id, undefined, { order, payment: payments[0] });
 }
 
+/** Ignore only a provider-verified, never-attempted checkout. Keep its history and reconcile late captures. */
+export async function abandonUnpaidConsultationCheckout(firestore: Firestore, uid: string, id: string) {
+  const initial = await ownedConsultationIntent(firestore, uid, id);
+  if (initial.bookingId || initial.state === "paid_review") return consumerCheckout(id, initial);
+  if (initial.mode !== getRazorpayReadiness().mode) throw new ConsultationPaymentError("Payment configuration changed. Contact Ayursarga.", 503);
+  if (!["ready", "abandoned"].includes(initial.state) || typeof initial.orderId !== "string") throw new ConsultationPaymentError("We cannot confirm this checkout is unpaid. Check its status before paying again.");
+  const [order, payments] = await Promise.all([fetchRazorpayOrder(initial.orderId), fetchRazorpayOrderPayments(initial.orderId)]);
+  if (order.id !== initial.orderId || order.receipt !== initial.receipt || order.amount !== initial.amountPaise || order.currency !== "INR") throw new ConsultationPaymentError("Payment details need checking. Contact Ayursarga before paying again.");
+  const captured = payments.filter(payment => payment.captured && ["captured", "refunded"].includes(payment.status));
+  if (order.status === "paid" && captured.length === 1) return reconcileConsultationPayment(firestore, id, captured[0].id, undefined, { order, payment: captured[0] });
+  // Failed/authorized/created payment attempts can still require reconciliation.
+  // An empty, created order is the only discardable provider result.
+  if (order.status !== "created" || order.amount_paid !== 0 || order.amount_due !== initial.amountPaise || payments.length !== 0) throw new ConsultationPaymentError("A payment was attempted for this checkout. Resume it or check its status before paying again.");
+  return firestore.runTransaction(async transaction => {
+    const ref = firestore.collection("consultationPaymentIntents").doc(id);
+    const [intentSnapshot, finance, booking] = await transaction.getAll(ref, firestore.collection("consultationFinancials").doc(id), firestore.collection("consultationBookings").doc(id));
+    const intent = intentSnapshot.data();
+    if (!intent || intent.consumerId !== uid) throw new ConsultationPaymentError("Payment request not found.", 404);
+    if (intent.bookingId || intent.state === "paid_review") return consumerCheckout(id, intent);
+    if (finance.exists || booking.exists) throw new ConsultationPaymentError("This payment needs review. Check its status before paying again.");
+    if (intent.orderId !== initial.orderId || intent.mode !== initial.mode || !["ready", "abandoned"].includes(intent.state)) throw new ConsultationPaymentError("This checkout has changed. Check its status before paying again.");
+    if (intent.state === "abandoned") return consumerCheckout(id, intent);
+    if (intent.lastAuditId !== initial.lastAuditId) throw new ConsultationPaymentError("This checkout has changed. Check its status before paying again.");
+    const day = await readScheduleDay(transaction, firestore, intent.consultantId, intent.draft.preferredDate);
+    const now = Timestamp.now();
+    const changes = { state: "abandoned", abandonedAt: now };
+    releaseSlot(transaction, firestore, day, id, uid, "consumer", now);
+    transaction.update(ref, { ...changes, ...auditPayment(transaction, firestore, "consultationPaymentIntents", id, { state: intent.state }, changes, uid, "consumer") });
+    return consumerCheckout(id, { ...intent, ...changes });
+  });
+}
+
 /** Fetch provider truth before transaction; webhook payloads/checkout returns never establish payment success. */
 export async function reconcileConsultationPayment(firestore: Firestore, id: string, paymentId: string, event?: { id: string; digest: string; type: string }, verified?: { payment: RazorpayPayment; order: RazorpayOrder }) {
   const ref = firestore.collection("consultationPaymentIntents").doc(id);
@@ -209,7 +241,7 @@ async function commitPayment(firestore: Firestore, id: string, payment: Razorpay
       .find(value => value.window === intent.draft.preferredTimeSlot && value.startTime === intent.draft.slotStartTime && value.endTime === intent.draft.slotEndTime) : null;
     const reserved = day && scheduled && appointment && ownsLiveHold(day, id, appointment.startTime, appointment.endTime, now.toMillis())
       && slotState(day, appointment, now.toMillis(), id) === "available";
-    const bookable = !bookingSnap.exists && intent.state !== "paid_review" && captured && payment.amount_refunded === 0 && completedProfile(consumer.data())
+    const bookable = !bookingSnap.exists && intent.state !== "paid_review" && intent.state !== "abandoned" && captured && payment.amount_refunded === 0 && completedProfile(consumer.data())
       && provider && timing && isConsultantDateAvailable(intent.draft.preferredDate, provider)
       && (scheduled ? reserved : day && slotState(day, intent.draft, now.toMillis(), id) === "available"
         && timing.startTime === intent.draft.slotStartTime && timing.endTime === intent.draft.slotEndTime

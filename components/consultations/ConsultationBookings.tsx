@@ -20,7 +20,7 @@ import { PortalPagination } from "@/components/portal/PortalPagination";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalResultCount } from "@/components/portal/PortalResultCount";
 import { DateInput } from "@/components/forms/DateInput";
-import { formatDisplayDate, toDateInputValue } from "@/utils/date";
+import { formatDisplayDate, formatDisplayDateTime, toDateInputValue } from "@/utils/date";
 import { formatCurrency } from "@/utils/currency";
 import { formatStatus } from "@/utils/text";
 import { formatConsultantTimeSlot } from "@/features/consultants/validation";
@@ -30,6 +30,7 @@ import { AdminBookingNavigation } from "@/components/admin/AdminBookingNavigatio
 import { ConsultationCancellationInfo } from "@/components/consultations/ConsultationCancellationInfo";
 import { consultationCancellationEligibility } from "@/features/consultations/cancellationPolicy";
 import { usePortalClock } from "@/hooks/usePortalClock";
+import { consumerRescheduleEligibility } from "@/features/consultations/rescheduling";
 
 type Appointment = DocumentRecord<ConsultationBookingDocument>;
 type Action = { booking: Appointment; status: "reschedule" | "completed" | "cancelled"; requestId: string };
@@ -57,12 +58,12 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
       .then((provider) => {
         if (controller.signal.aborted) return;
         setAvailability(provider);
-        if (!provider) setAvailabilityError("This consultant is no longer bookable. Check their availability in Our Consultants.");
+        if (!provider) setAvailabilityError(role === "admin" ? "This consultant is no longer bookable. Check their availability in Our Consultants." : "This consultant is not currently available for this service. Contact Ayursarga for help.");
       })
       .catch(() => { if (!controller.signal.aborted) setAvailabilityError("Could not check current availability. Close and reopen to try again."); })
       .finally(() => { if (!controller.signal.aborted) setAvailabilityLoading(false); });
     return () => controller.abort();
-  }, [action]);
+  }, [action, role]);
   const dateAllowed = useCallback((value: string) => Boolean(availability && isConsultantDateAvailable(value, availability)), [availability]);
   const availableDates = availability?.availableDates?.filter((value) => value >= toDateInputValue() && dateAllowed(value)).toSorted() ?? [];
   const [date, setDate] = useState("");
@@ -104,6 +105,9 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
   }
   async function confirm() {
     if (!action || submitting.current) return;
+    if (role === "consumer" && action.status === "reschedule" && (clock === null || !consumerRescheduleEligibility(action.booking, clock).allowed)) {
+      setError("Your one-time reschedule is unavailable. Changes must be made at least 24 hours before the appointment."); return;
+    }
     if (action.status === "reschedule" && (!availability || availabilityLoading || !dateAllowed(date))) {
       setError("Choose a date matching the consultant's current availability."); return;
     }
@@ -163,7 +167,9 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
     {isLoading && items.length === 0 && <section className="portal-empty-state portal-state-card" role="status"><span className="portal-empty-state-leaf" aria-hidden="true" /><h3>Loading online consultations</h3><p>Please wait while we retrieve your appointment information.</p></section>}
     {!isLoading && !loadError && items.length === 0 && <section className="portal-empty-state portal-state-card" role="status"><span className="portal-empty-state-leaf" aria-hidden="true" /><h3>{emptyTitle}</h3><p>{emptyMessage}</p></section>}
     {!isLoading && !loadError && items.length > 0 && visibleItems.length === 0 && <PortalFeedback emptyTitle="No matching online consultations" empty="No consultations currently loaded on this page match the selected search or filters." />}
-    <div className={`consultation-history consumer-booking-list${role === "admin" ? " admin-record-grid admin-booking-grid portal-record-grid portal-booking-grid" : ""}`}>{visibleItems.map((booking) => <article className="portal-row consumer-booking-row operational-booking-card consultation-history-card" data-accent={booking.status} key={booking.id}>
+    <div className={`consultation-history consumer-booking-list${role === "admin" ? " admin-record-grid admin-booking-grid portal-record-grid portal-booking-grid" : ""}`}>{visibleItems.map((booking) => {
+      const reschedule = consumerRescheduleEligibility(booking, clock ?? NaN);
+      return <article className="portal-row consumer-booking-row operational-booking-card consultation-history-card" data-accent={booking.status} key={booking.id}>
       <div className="consumer-booking-copy">
       <span className="consumer-booking-reference">Booking ID: {booking.bookingReference}</span>
       <h3>{booking.serviceName}</h3>
@@ -182,17 +188,18 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
       </div>
       <div className="consumer-booking-meta"><span className="portal-status" data-status={booking.status}>{formatStatus(booking.status)}</span><div className="consumer-booking-cost"><span>Consultation charge</span><strong>{formatCurrency(booking.consultantCharge)}</strong></div></div>
       {role === "consumer" && <ConsultationCancellationInfo snapshot={booking.cancellationPolicy} status={booking.status} totals={booking.paymentTotals} outcome={booking.cancellationOutcome} now={clock} />}
+      {role === "consumer" && booking.status === "confirmed" && <section className="consultation-cancellation" aria-label="Rescheduling policy"><h3>Rescheduling</h3><p>{reschedule.used ? "Your one-time reschedule has been used. Contact Ayursarga if you need more help." : reschedule.deadlineAt ? <>You can reschedule once with the same consultant, at least 24 hours before your appointment. Reschedule by {formatDisplayDateTime(reschedule.deadlineAt)} IST (inclusive).{clock !== null && !reschedule.allowed && " The rescheduling deadline has passed. Contact Ayursarga for help."}</> : "Contact Ayursarga to check rescheduling for this appointment."}</p></section>}
       <div className="operational-booking-actions"><div className="portal-actions">
-        {role === "admin" && ["requested", "confirmed"].includes(booking.status) && <button className="portal-button secondary" disabled={busy} onClick={() => open(booking, "reschedule")}>Reschedule</button>}
+        {(role === "admin" && ["requested", "confirmed"].includes(booking.status) || role === "consumer" && reschedule.allowed) && <button className="portal-button secondary" disabled={busy} onClick={() => open(booking, "reschedule")}>Reschedule</button>}
         {role === "admin" && booking.status === "confirmed" && <button className="portal-button" disabled={busy} onClick={() => open(booking, "completed")}>Mark completed</button>}
         {["requested", "confirmed"].includes(booking.status) && (role === "admin" || !booking.cancellationPolicy || (clock !== null && consultationCancellationEligibility(booking.cancellationPolicy, booking.status, booking.paymentTotals ?? null, clock).allowed)) && <button className="portal-button danger" disabled={busy} onClick={() => open(booking, "cancelled")}>Cancel appointment</button>}
       </div></div>
-    </article>)}</div>
+    </article>; })}</div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
     </div>
     <PortalDialog open={Boolean(action)} title={action ? `${action.status === "reschedule" ? "Reschedule" : action.status === "completed" ? "Complete" : "Cancel"} appointment?` : "Appointment"}
-      message={action?.status === "reschedule" ? "Save the revised schedule and email the consumer after it is saved." : action?.status === "cancelled" && role === "admin" ? "Cancel this appointment and email the consumer after it is saved." : "The status changes only after you confirm."} tone={action?.status === "cancelled" ? "danger" : "default"}
-      busy={busy} confirmDisabled={action?.status === "reschedule" && (availabilityLoading || !availability || !dateAllowed(date) || appointmentSlots.loading || Boolean(appointmentSlots.error) || !appointmentSlots.slots.some(slot => slot.startTime === time && slot.status === "available"))} onCancel={() => { if (!submitting.current) setAction(null); }} onConfirm={() => void confirm()}>
+      message={action?.status === "reschedule" ? role === "consumer" ? "Confirm your new appointment date and time. This uses your one-time reschedule; your payment stays with this booking." : "Save the revised schedule and email the consumer after it is saved." : action?.status === "cancelled" && role === "admin" ? "Cancel this appointment and email the consumer after it is saved." : "The status changes only after you confirm."} tone={action?.status === "cancelled" ? "danger" : "default"}
+      busy={busy} confirmDisabled={action?.status === "reschedule" && (role === "consumer" && !consumerRescheduleEligibility(action.booking, clock ?? NaN).allowed || availabilityLoading || !availability || !dateAllowed(date) || appointmentSlots.loading || Boolean(appointmentSlots.error) || !appointmentSlots.slots.some(slot => slot.startTime === time && slot.status === "available"))} onCancel={() => { if (!submitting.current) setAction(null); }} onConfirm={() => void confirm()}>
       <div className="portal-form consultation-dialog-fields">
         {action?.status === "reschedule" && <><p className="full">Current appointment: {formatDisplayDate(action.booking.confirmedDate ?? action.booking.preferredDate)} · {action.booking.confirmedTime ?? `${action.booking.slotStartTime} - ${action.booking.slotEndTime}`} IST</p>
           {availabilityLoading && <p className="full" role="status">Checking current consultant availability…</p>}

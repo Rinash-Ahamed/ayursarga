@@ -2,6 +2,109 @@
 
 Updated: 2 November 2026 (Asia/Calcutta).
 
+## Simpler closed-checkout recovery (2 November 2026)
+
+- v4.34.0 adds Ignore unpaid checkout beside Resume payment. Details/check-status/
+  support move under Payment details and help. Ignore performs one server action
+  and retains date, time, consultant, notes and consent on the completed form;
+  fresh payment is available after the selected slot is rechecked. Closing an
+  unused Razorpay window automatically performs the same checked abandonment,
+  clears recovery and resets the form's request identity without a scary error.
+  The normal button remains Pay & book appointment (no price in its label).
+- Existing owned Consumer payment POST adds exact-body action=abandon. Shared
+  server helper fetches order/payments in parallel, requiring matching order ID,
+  receipt, INR amount, created status, zero paid, full amount due and zero payment
+  attempts. Unknown/creating/mode-changed/provider-unavailable, attempted (even
+  failed), authorized and financial-review cases cannot be blindly ignored.
+  A paid order is reconciled to its existing/new verified booking, not discarded.
+- Transaction re-reads owner, state/revision, booking and private finance before
+  auditing state=abandoned/abandonedAt and releasing only that intent's own hold.
+  No deletion or provider cancellation/refund is implied. Repeated/concurrent/
+  lost-response requests cannot duplicate abandonment audits. Rechecks of an
+  already abandoned intent still inspect provider truth. A later captured payment
+  cannot confirm an abandoned intent: it goes to the existing financial-review
+  hold without stealing a replacement slot or sending a false confirmation.
+- Client only clears pending recovery after verified abandonment or a booking ID;
+  uncertain responses retain it. ConsultationCheckoutClosedError resets the stable
+  form request ID only after the verified unused-close path, so another Pay click
+  does not resume an abandoned request. Existing audit, signature, capture,
+  pricing/privacy and financial-ledger checks are retained. Normal status check
+  also avoids a redundant intent read in the route. No new rules/indexes,
+  dependencies, environment keys, live mutations or deployments.
+- API-audit skill and official Razorpay late-authorization guidance informed the
+  no-attempt-only boundary. Provider orders are not revoked by this feature;
+  consumers are told to close other payment windows and never retry if debited.
+  This must not become an unconditional browser-only Ignore action.
+- Validation: 39 local payment, checkout-client and slot regressions passed;
+  19 final local tests passed covering the added simultaneous-ignore case,
+  discard/retry/failure/late-capture paths and unchanged Search Center bookings.
+  Six desktop/mobile WebKit checks passed for one-action ignore, retained form,
+  attempted/unknown blocks, automatic-close retry with a new request ID, displayed
+  fees, consent and single submit. git diff --check passed. These are local/mock
+  checks, not real Razorpay/SMTP delivery or native Firestore contention. No build,
+  lint, broad API checks or deployment requested/run for this change.
+
+## Published consultation rescheduling policy (2 November 2026)
+
+- v4.33.1 replaces the old vague Rescheduling paragraph in the published
+  Cancellation & Refund Policy with the implemented Consumer terms: one change,
+  at least 24 hours before the scheduled IST appointment, same consultant/service,
+  subject to availability. Existing payment carries over without another payment;
+  agreed cancellation terms remain with deadlines recalculated from the new time.
+  Gives My Bookings -> Online consultations instructions and support guidance
+  after cutoff/used allowance. Old appointment stays reserved until confirmation.
+- Updated only this document's Last Updated entries to 02/11/2026, preserving its
+  effective date, existing 24-hour refund wording, other sections and other legal
+  documents. Booking acceptance version becomes 2026-11-02-r2 for new requests;
+  customer/profile consent versions and historical booking/payment snapshots are
+  unchanged. No API behavior, Firestore permissions/indexes or live records changed.
+- Eighteen focused legal/rescheduling/Search Center fixture checks passed, then
+  four final legal/acceptance checks passed including an added proof that capture
+  retains an already quoted older booking-terms version. No build/lint requested
+  or run. No deployment performed; app deployment is required to publish the text.
+
+## One-time Consumer consultation rescheduling (2 November 2026)
+
+- v4.33.0 allows consumers to reschedule their own confirmed online consultation
+  once, inclusively at least 24 hours before its scheduled IST start. Same
+  consultant/service, charge/payment and booking ID are retained. Shared pure
+  consumerRescheduleEligibility drives display and transactional checks; legacy
+  absent counters start unused without migrating any records. Valid agreed
+  cancellation snapshots supply their appointment reference; legacy bookings
+  without snapshots use the scheduled date/window start, without policy backfill.
+- Existing PATCH /api/consultations/{bookingId} requires Consumer request ID and
+  expected audit revision for rescheduling. Inside its transaction it rechecks
+  owner/status/cutoff/unused allowance, current provider/date/generated time and
+  slot conflicts. Server-managed consumerRescheduleCount=1 and
+  consumerRescheduledAt commit with the schedule, slot release/reservation,
+  audit, Admin bell notification and Consumer/consultant rescheduled email events.
+  Failed commits/conflicts leave the old slot and allowance intact; idempotent
+  retries/lost responses cannot consume another use or duplicate delivery.
+  Admin rescheduling remains unrestricted by this consumer count and cannot
+  reset it. Existing agreed policy version/deadlines are recalculated normally.
+- Slot projection accepts a Consumer exclusion only after reading and verifying
+  their matching eligible, non-archived consultation. Arbitrary/other-user,
+  mismatched and already-used bookings are denied. It still exposes only safe
+  available times; Hospital access remains denied. No client write permissions
+  were added: consultationBookings and consultationSlotDays writes stay denied.
+  Existing own-record reads include the safe allowance metadata; no private
+  finance data is added. No Firestore rule/index changes or deployment needed.
+- Consumer My online consultations reuses the shared date/time PortalDialog,
+  scroll lock and slot hook. Shows deadline/one-use guidance, hides unavailable
+  Reschedule controls, omits Admin notes/management guidance, submits once and
+  locally patches the result. Search Center/hospital flows remain unchanged.
+  Narrow API-audit skill guided authorization, retries, atomic writes and privacy.
+- Validation: 78 local backend/contract regressions passed across consultation
+  rescheduling, slots, booking/email lifecycle, cancellation and Search Center
+  bookings. Seven rescheduling tests reran successfully after final helper/audit
+  refinements. Eight desktop/mobile WebKit checks passed for consumer and Admin
+  rescheduling, role controls, cancel-without-save, repeated confirm, policy/used
+  states, scroll lock and overflow. git diff --check passed. Tests use local
+  transactional fixtures, not native Firestore contention or real SMTP/Razorpay.
+  Emulator coverage still needs Java 21+. Build/lint/typecheck were not requested
+  for this change and were not run. App deployment remains required; no live
+  records, emails or deployments were changed.
+
 ## Consultation Pay button and previous-payment guidance (2 November 2026)
 
 - v4.32.4 changes the consumer button to Pay & book appointment without an amount;

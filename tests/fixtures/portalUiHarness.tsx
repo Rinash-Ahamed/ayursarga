@@ -39,6 +39,7 @@ const screens = {
   "admin-cancellation-settings": <PortalShell role="admin" title="Settings"><ConsultationCancellationSettings /></PortalShell>,
   "consumer-consultations-policy": <ConsultationBookings role="consumer" />,
   "consumer-consultations-expired": <ConsultationBookings role="consumer" />,
+  "consumer-consultations-rescheduled": <ConsultationBookings role="consumer" />,
   "admin-consultant-finance": <AdminConsultantFinance />,
   "admin-billing": <AdminBilling />,
   "password-action": <PasswordActionForm />,

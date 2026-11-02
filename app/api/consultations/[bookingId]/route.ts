@@ -14,6 +14,7 @@ import { queueConsultationEmail, deliverConsultationEmails } from "@/services/em
 import { auditPayment } from "@/services/payments/consultationPaymentsAdmin";
 import { consultationCancellationEligibility, validCancellationSnapshot, snapshotConsultationCancellation } from "@/features/consultations/cancellationPolicy";
 import { generateConsultationSlots } from "@/features/consultations/slots";
+import { consumerRescheduleEligibility } from "@/features/consultations/rescheduling";
 import { readScheduleDay, requireFreeSlot, releaseSlot, saveSlotEntry, SlotReservationError } from "@/services/consultations/slotReservationsAdmin";
 
 export const runtime = "nodejs";
@@ -30,10 +31,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
     if (!input || typeof input !== "object" || Array.isArray(input)) return apiJson({ error: "An appointment action is required." }, 400);
     const action = input.action ?? input.status;
     if (!["reschedule", "completed", "cancelled"].includes(String(action))) return apiJson({ error: "Invalid appointment action." }, 400);
-    if (role === "consumer" && action !== "cancelled") return apiJson({ error: "You can only cancel your own appointment." }, 403);
+    if (role === "consumer" && action !== "cancelled" && action !== "reschedule") return apiJson({ error: "You can only cancel or reschedule your own appointment." }, 403);
     if (input.adminNotes !== undefined && (typeof input.adminNotes !== "string" || input.adminNotes.length > 1000)) return apiJson({ error: "Keep notes within 1,000 characters." }, 400);
     const requestId = typeof input.requestId === "string" && /^[a-zA-Z0-9-]{16,100}$/.test(input.requestId) ? input.requestId : null;
     if (role === "admin" && action !== "completed" && !requestId) return apiJson({ error: "A valid action reference is required. Refresh and try again." }, 400);
+    if (role === "consumer" && action === "reschedule" && (!requestId || typeof input.expectedAuditId !== "string" || !input.expectedAuditId || input.expectedAuditId.length > 160)) return apiJson({ error: "Refresh the appointment before rescheduling." }, 400);
     const eventId = requestId ? `action-${createHash("sha256").update(`${uid}:${bookingId}:${requestId}`).digest("hex")}` : null;
     const payloadHash = createHash("sha256").update(JSON.stringify([action, input.confirmedDate ?? null, input.confirmedTime ?? null,
       role === "admin" ? String(input.adminNotes ?? "").trim() : null, input.expectedAuditId ?? null])).digest("hex");
@@ -63,6 +65,14 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
       let nextDay: Awaited<ReturnType<typeof readScheduleDay>> | undefined;
       if (role === "admin" && typeof input.adminNotes === "string") update.adminNotes = input.adminNotes.trim() || null;
       if (action === "reschedule") {
+        if (role === "consumer") {
+          const eligibility = consumerRescheduleEligibility(booking, now.toMillis());
+          if (!eligibility.allowed) throw new ConsultationError(eligibility.used
+            ? "Your one-time reschedule has already been used. Contact Ayursarga for help."
+            : "You can reschedule only at least 24 hours before your confirmed appointment. Contact Ayursarga for help.", 409);
+          update.consumerRescheduleCount = 1;
+          update.consumerRescheduledAt = now;
+        }
         const date = typeof input.confirmedDate === "string" ? input.confirmedDate : "";
         const time = typeof input.confirmedTime === "string" ? input.confirmedTime : "";
         if (!validConsultationSchedule(date, "00:00", "23:59", time)) throw new ConsultationError("Choose a future date and appointment time.", 400);
@@ -117,7 +127,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
       }
       transaction.create(audit, { action: action === "reschedule" ? "update" : "status_change", module: "consultationBookings", recordId: bookingId,
         actorId: uid, actorRole: role,
-        previousValues: { status: booking.status, confirmedDate: booking.confirmedDate ?? null, confirmedTime: booking.confirmedTime ?? null },
+        previousValues: { status: booking.status, confirmedDate: booking.confirmedDate ?? null, confirmedTime: booking.confirmedTime ?? null,
+          ...(role === "consumer" && action === "reschedule" ? { consumerRescheduleCount: booking.consumerRescheduleCount ?? 0 } : {}) },
         updatedValues: update, timestamp: now, source: "server", device: requestAuditDevice(request) });
       const recipients = role === "admin" ? [{ id: booking.consumerId as string, role: "consumer" as const }]
         : admins.map((id) => ({ id, role: "admin" as const }));
@@ -126,11 +137,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
         message: `${booking.serviceName}: appointment ${action === "reschedule" ? "rescheduled" : action}.`,
         event: `consultation_${action}_${audit.id}`, actorId: uid, auditId: audit.id, now,
       });
-      const emailEventId = role === "admin" && action !== "completed" ? eventId : null;
+      const emailEventId = (role === "admin" && action !== "completed") || (role === "consumer" && action === "reschedule") ? eventId : null;
       if (emailEventId) queueConsultationEmail(transaction, firestore, { eventId: emailEventId, bookingId,
         event: action === "reschedule" ? "rescheduled" : "cancelled", booking: { ...booking, ...update }, previous: booking,
         consultant: consultantContact, consultantFee: financial ? Number(financial.consultantPayablePaise) / 100 : undefined,
-        actorId: uid, actorRole: "admin", auditId: audit.id, now, payloadHash });
+        actorId: uid, actorRole: role === "admin" ? "admin" : "consumer", auditId: audit.id, now, payloadHash });
       return { changes: update, emailEventId };
     });
     const delivery = result.emailEventId ? await deliverConsultationEmails(firestore, result.emailEventId) : undefined;

@@ -18,7 +18,7 @@ import { PortalToast } from "@/components/portal/PortalToast";
 import { DateInput } from "@/components/forms/DateInput";
 import { formatCurrency } from "@/utils/currency";
 import { isIsoDate, toDateInputValue, formatDisplayDate } from "@/utils/date";
-import type { ConsultationCheckout } from "@/features/payments/checkout";
+import { ConsultationCheckoutClosedError, type ConsultationCheckout } from "@/features/payments/checkout";
 import { useAuth } from "@/hooks/useAuth";
 import { ROUTES } from "@/config/routes";
 import { getConsultationCancellationPolicy } from "@/services/consultations/cancellationPolicyService";
@@ -65,22 +65,27 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
   const consultant = matchingConsultants.find((item) => item.id === consultantId);
   const dateAllowed = (value: string) => Boolean(consultant && isConsultantDateAvailable(value, consultant)
     && service && generateConsultationSlots(value, service.id, consultant).length);
-  async function checkPayment(resume = false) {
+  async function checkPayment(action: "check" | "resume" | "ignore" = "check") {
     if (!pendingPayment || submitting.current) return;
     submitting.current = true; setBusy(true); setError(null);
     try {
-      const { consultationPaymentStatus, payForConsultation, clearConsultationPaymentReminder } = await import("@/services/payments/consultationCheckout");
-      let result = (await consultationPaymentStatus(pendingPayment)).checkout;
+      const { consultationPaymentStatus, abandonConsultationCheckout, payForConsultation, clearConsultationPaymentReminder } = await import("@/services/payments/consultationCheckout");
+      let result = (await (action === "ignore" ? abandonConsultationCheckout(pendingPayment) : consultationPaymentStatus(pendingPayment))).checkout;
       setPaymentDetails(result);
-      if (resume && result.state === "ready") {
+      if (action === "resume" && result.state === "ready") {
         result = await payForConsultation(result);
         setPaymentDetails(result);
       }
       if (result.bookingId) {
         clearConsultationPaymentReminder();
         router.push(`/app/bookings/consultations?booking=${encodeURIComponent(result.bookingId)}`);
-      } else setError(result.state === "paid_review" ? "Payment received; your appointment needs Ayursarga review. Contact support and do not pay again." : result.state === "reservation_expired" ? "Your appointment hold has expired. If money was debited, contact Ayursarga before paying again. Otherwise, choose another appointment time." : "Payment is not confirmed yet. Resume this payment or contact Ayursarga if money was debited.");
-    } catch (failure) { setError(failure instanceof Error ? failure.message : "We could not check payment. Please contact support before paying again."); }
+      } else if (result.state === "abandoned") {
+        clearConsultationPaymentReminder(); attempt.current = null; setPaymentDetails(null); setError(null); appointmentSlots.reload();
+      } else setError(result.state === "paid_review" ? "Payment received; your appointment needs Ayursarga review. Contact support and do not pay again." : result.state === "reservation_expired" ? "Your appointment hold has expired. Ignore this checkout only if you did not attempt payment. If money was debited, contact support before paying again." : "Payment is not confirmed yet. Resume this payment or contact Ayursarga if money was debited.");
+    } catch (failure) {
+      if (failure instanceof ConsultationCheckoutClosedError) { attempt.current = null; setPaymentDetails(null); setError(null); appointmentSlots.reload(); }
+      else setError(failure instanceof Error ? failure.message : "We could not check payment. Please contact support before paying again.");
+    }
     finally { submitting.current = false; setBusy(false); }
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -103,7 +108,8 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
         consumerNotes: notes, expectedCharge: consultant.consultantCharge, bookingTermsAccepted: consent, requestId: attempt.current.id, expectedCancellationPolicyVersion: cancellationPolicy.version });
       router.push(`/app/bookings/consultations?booking=${encodeURIComponent(result.bookingId)}`);
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "We could not book this consultation. Try again.");
+      if (failure instanceof ConsultationCheckoutClosedError) { attempt.current = null; setError(null); }
+      else setError(failure instanceof Error ? failure.message : "We could not book this consultation. Try again.");
       appointmentSlots.reload();
     } finally { submitting.current = false; setBusy(false); }
   }
@@ -115,11 +121,14 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
         <nav className="portal-actions portal-flow-navigation" aria-label="Consultation navigation"><Link className="portal-button secondary" href="/#wellness">Choose another service</Link><Link className="portal-button secondary" href="/app/bookings/consultations">My online consultations</Link></nav>
       </section>
       {pendingPayment && <section id="consultation-payment-recovery" className="portal-card" aria-label="Pending consultation payment">
-        <h2>Check your previous payment</h2><p>Check your payment status before paying again. Closing the payment window does not always mean the payment failed.</p>
-        {paymentDetails && <p>{paymentDetails.consultantName} · {paymentDetails.serviceName} · {formatDisplayDate(paymentDetails.date)} · {paymentDetails.timeWindow} · {formatCurrency(paymentDetails.totalPaise / 100)}</p>}
-        {paymentDetails?.cancellationPolicy && <ConsultationCancellationInfo snapshot={paymentDetails.cancellationPolicy} status="confirmed" now={clock} />}
+        <h2>Previous checkout</h2><p>Resume your payment, or ignore this checkout if you did not attempt payment. Close any other payment window first. If money was debited, do not pay again.</p>
         {error && <p className="portal-form-error" role="alert">{error}</p>}
-        <div className="portal-actions"><button type="button" className="portal-button secondary" disabled={busy} onClick={() => void checkPayment()}>Check payment status</button>{paymentDetails?.state === "reservation_expired" ? <button type="button" className="portal-button secondary" disabled={busy} onClick={async () => { const {clearConsultationPaymentReminder} = await import("@/services/payments/consultationCheckout"); clearConsultationPaymentReminder(); attempt.current=null; setPaymentDetails(null); setSlot(""); appointmentSlots.reload(); }}>Choose another appointment time</button> : <button type="button" className="portal-button" disabled={busy} onClick={() => void checkPayment(true)}>Resume payment</button>}<Link className="portal-button secondary" href="/app/support">Contact support</Link></div>
+        <div className="portal-actions"><button type="button" className="portal-button" disabled={busy} onClick={() => void checkPayment("resume")}>Resume payment</button><button type="button" className="portal-button secondary" disabled={busy} onClick={() => void checkPayment("ignore")}>{busy ? "Please wait…" : "Ignore unpaid checkout"}</button></div>
+        <details><summary>Payment details and help</summary>
+          {paymentDetails && <p>{paymentDetails.consultantName} · {paymentDetails.serviceName} · {formatDisplayDate(paymentDetails.date)} · {paymentDetails.timeWindow} · {formatCurrency(paymentDetails.totalPaise / 100)}</p>}
+          {paymentDetails?.cancellationPolicy && <ConsultationCancellationInfo snapshot={paymentDetails.cancellationPolicy} status="confirmed" now={clock} />}
+          <div className="portal-actions"><button type="button" className="portal-button secondary" disabled={busy} onClick={() => void checkPayment()}>Check payment status</button><Link className="portal-button secondary" href="/app/support">Contact support</Link></div>
+        </details>
       </section>}
       <PortalToast message={error} notification={notification} tone="error" />
       <PortalToast message={loadError} notification={loadNotification} tone="error" />

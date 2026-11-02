@@ -53,7 +53,36 @@ test("closing checkout checks the saved payment without claiming success or crea
     const rejected = assert.rejects(result, /not confirmed yet/);
     await Promise.resolve(); await Promise.resolve();
     await f.options().modal.ondismiss(); await rejected;
-    assert.equal(f.calls.length, 1); assert.deepEqual(JSON.parse(f.calls[0][1].body), { action: "check" });
+    assert.equal(f.calls.length, 1); assert.deepEqual(JSON.parse(f.calls[0][1].body), { action: "abandon" });
     assert.equal(f.storage.size, 1);
   } finally { f.restore(); }
+});
+
+test("closing a verified never-attempted checkout clears recovery and signals a fresh attempt without claiming payment success", async () => {
+  const f = fixture(() => ({ checkout: { ...ready, state: "abandoned" } }));
+  try {
+    const result = f.checkout.payForConsultation(ready);
+    const rejected = assert.rejects(result, error => error.name === "ConsultationCheckoutClosedError");
+    await Promise.resolve(); await Promise.resolve();
+    await f.options().modal.ondismiss();
+    await f.options().modal.ondismiss();
+    await rejected;
+    assert.equal(f.calls.length, 1);
+    assert.equal(f.storage.size, 0);
+  } finally { f.restore(); }
+});
+
+test("an uncertain ignore response retains recovery; a verified paid close opens the existing booking", async () => {
+  for (const paid of [false, true]) {
+    const f = fixture(() => { if (!paid) throw new Error("Network unavailable"); return { checkout: { ...ready, bookingId: "existing-booking" } }; });
+    try {
+      const result = f.checkout.payForConsultation(ready);
+      const outcome = paid ? result : assert.rejects(result, /not confirmed yet/);
+      await Promise.resolve(); await Promise.resolve();
+      await f.options().modal.ondismiss();
+      const confirmed = await outcome;
+      assert.equal(f.storage.size, paid ? 0 : 1);
+      if (paid) assert.equal(confirmed.bookingId, "existing-booking");
+    } finally { f.restore(); }
+  }
 });

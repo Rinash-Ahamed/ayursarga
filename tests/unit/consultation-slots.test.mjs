@@ -151,7 +151,7 @@ test("slot API returns safe states to Admin, available times only to Consumers a
   const response=await get("");assert.equal(response.status,200);assert.equal(response.headers.get("cache-control"),"no-store");
   const consumer=await response.json();assert.equal(consumer.slots.length,3);assert.ok(consumer.slots.every(slot=>slot.status==="available"));
   assert.doesNotMatch(JSON.stringify(consumer),/ownerId|consumerId|commission|payable|patient@example/);
-  assert.equal((await get("&excludeBookingId=consultation-"+"a".repeat(64))).status,400);
+  assert.equal((await get("&excludeBookingId=consultation-"+"a".repeat(64))).status,403);
   f.actor.role="admin";const admin=await (await get("")).json();assert.equal(admin.slots[0].status,"reserved");
   f.actor.role="hospital";assert.equal((await get("")).status,403);
   assert.match(readFileSync("firestore.rules","utf8"),/match \/consultationSlotDays\/\{id\} \{ allow read, write: if false; \}/);

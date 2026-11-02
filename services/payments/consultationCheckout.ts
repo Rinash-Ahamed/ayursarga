@@ -1,7 +1,6 @@
 "use client";
 
-import type { ConsultationCheckout } from "@/features/payments/checkout";
-import { CONSULTATION_PAYMENT_CHANGE_EVENT } from "@/features/payments/checkout";
+import { CONSULTATION_PAYMENT_CHANGE_EVENT, ConsultationCheckoutClosedError, type ConsultationCheckout } from "@/features/payments/checkout";
 import { authorizedApiRequest, AuthorizedApiError } from "@/services/api/client";
 import { getClientAuth } from "@/services/auth/client";
 
@@ -29,6 +28,13 @@ export function consultationPaymentStatus(intentId: string) {
   return authorizedApiRequest<{ checkout: ConsultationCheckout }>(`/api/consumer/consultation-payments/${encodeURIComponent(intentId)}`, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "check" }),
     signedOutMessage: "Sign in to check your consultation payment.", failureMessage: "Payment status could not be checked. Contact Ayursarga before paying again.",
+  });
+}
+
+export function abandonConsultationCheckout(intentId: string) {
+  return authorizedApiRequest<{ checkout: ConsultationCheckout }>(`/api/consumer/consultation-payments/${encodeURIComponent(intentId)}`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "abandon" }),
+    signedOutMessage: "Sign in to check your previous checkout.", failureMessage: "We could not confirm this checkout is unpaid. Check its status before paying again.",
   });
 }
 
@@ -87,8 +93,9 @@ export async function payForConsultation(checkout: ConsultationCheckout): Promis
         if (handled) return;
         handled = true;
         try {
-          const response = await consultationPaymentStatus(checkout.intentId);
+          const response = await abandonConsultationCheckout(checkout.intentId);
           if (response.checkout.bookingId) { clearConsultationPaymentReminder(); resolve(response.checkout); return; }
+          if (response.checkout.state === "abandoned") { clearConsultationPaymentReminder(); reject(new ConsultationCheckoutClosedError()); return; }
         } catch { /* Never interpret closing checkout as payment failure or success. */ }
         reject(new Error("Checkout closed. If money was debited, check payment status before trying again. Your appointment is not confirmed yet."));
       } },
