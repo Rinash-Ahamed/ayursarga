@@ -1087,7 +1087,6 @@ body.portal-active .portal-toast-viewport{ top:var(--portal-toast-top,calc(150px
 .consultation-professional-credentials{display:flex;flex-wrap:wrap;gap:4px 12px;min-width:0;}
 .consultation-professional-name{font-size:16px;color:#fff;letter-spacing:normal;}
 .consultation-professional-role{display:grid;gap:2px;font-size:13px;color:#e3eee7;}
-.portal-form .consultation-professional-role>small{font-size:11px;font-weight:500;color:#c6dbce;letter-spacing:normal;text-transform:none;}
 .consultation-professional-detail{display:inline-flex;gap:4px;font-size:13px;}
 .portal-form .consultation-professional-detail>small{display:block;font-size:11px;color:var(--sage);font-weight:600;text-transform:none;}
 .consultation-professional-detail>small.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0;}

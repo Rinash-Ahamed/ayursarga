@@ -2,6 +2,42 @@
 
 Updated: 2 November 2026 (Asia/Calcutta).
 
+## Consultation Pay button and previous-payment guidance (2 November 2026)
+
+- v4.32.4 changes the consumer button to Pay & book appointment without an amount;
+  the consultant card continues to show the quoted total fee.
+- Screenshot's Check your previous payment banner corresponds to a stored opaque
+  pending intent reminder. It intentionally blocks a new checkout even when
+  form/consent are complete, preventing duplicate payment after uncertain results.
+  Added an accessible explanation beside Pay and a Review previous payment link
+  to the existing recovery section. Do not simply clear uncertain reminders.
+- Preserved explicit server check/resume, booking redirect and expired-hold
+  recovery. After resuming checkout, paymentDetails now also receives its latest
+  returned state. Existing server-reported reservation_expired action clears the
+  reminder and asks for a new time; choosing a time reselects provider/consent.
+  No new persisted fields, payment permissions, API rules or business changes.
+- Four desktop/mobile WebKit fixture checks passed for visible explanation/link,
+  complete-but-blocked form, ready and failed checks retaining the block, expired
+  recovery, fresh selection/consent enabling Pay, fee visibility, single submit
+  and exact amount-free button label. git diff --check passed. No real payments,
+  API mutations, deployment, build or lint run for this task.
+
+## Consumer consultant designation display (2 November 2026)
+
+- v4.32.3 removes the visible Designation label from consumer consultant cards,
+  retaining the entered designation itself. Empty/whitespace-only designations
+  render no role row; qualifications remain independent and duplicate matching
+  qualification/designation text remains suppressed. Removed unused label CSS.
+- Traced publicConsultantProjection: absent/null/empty stored designations are
+  returned empty, never inferred from qualification or service. A displayed BAMS
+  may be the separate qualification; no specific production consultant was
+  identified or inspected. Historical booking designation snapshots remain
+  unchanged. No persisted fields, endpoints, permissions or rules changed.
+- One focused public-projection regression and four desktop/mobile WebKit card
+  tests passed, covering present/empty designations, qualifications, photo layout,
+  selection and overflow. git diff --check passed. No build/lint requested or
+  run for this change; no deployment or live data changes.
+
 ## Owner-requested lint/build validation (2 November 2026)
 
 - v4.32.2 fixes React Compiler preserve-manual-memoization lint errors in the

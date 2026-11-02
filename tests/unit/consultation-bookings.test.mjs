@@ -11,6 +11,15 @@ const consultant = { name: "Assigned Professional", designation: "Ayurvedic phys
 const input = { consultantId: "AS001", serviceId: "prenatal-doctor", preferredDate: "2099-10-25", preferredTimeSlot: "morning", appointmentStartTime: "09:30",
   expectedSlotStartTime: "09:30", expectedSlotEndTime: "11:45",
   bookingTermsAccepted: true, expectedCharge: 900.5, requestId: "consultation-attempt-0001", consumerNotes: "Please help with pregnancy lifestyle." };
+
+test("public consultant designation stays empty when unset and never falls back to qualification", () => {
+  const { publicConsultantProjection } = loadTypeScript("features/consultations/publicProjection.ts");
+  for (const designation of [undefined, null, ""]) {
+    const projected = publicConsultantProjection("AS001", { ...consultant, designation }, "prenatal-doctor");
+    assert.equal(projected.designation, "");
+    assert.equal(projected.qualification, "BAMS");
+  }
+});
 const fixture = (options = {}) => consultationPaymentFixture({ ...options, records: { "consultants/AS001": consultant, ...options.records } });
 const request = (body, method = "POST") => new Request("https://test.local/api/consumer/consultations", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 // Existing lifecycle tests now start from an actual prepared and verified synthetic payment.

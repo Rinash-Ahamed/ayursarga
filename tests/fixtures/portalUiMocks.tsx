@@ -213,6 +213,7 @@ const consultation = { ...metadata, id: "consultation-fixture", bookingReference
   preferredDate: "2099-10-25", preferredTimeSlot: "morning", slotStartTime: "09:30", slotEndTime: "11:45", status: "confirmed", confirmedDate: "2099-10-25", confirmedTime: null, confirmedAt: now,
   consumerNotes: "Guidance about pregnancy lifestyle", adminNotes: null, paymentStatus: "paid", paymentReference: "pay_fixture_private_reference" };
 export const listPublicConsultants = () => {
+  if (portalUiState.screen === "consumer-consultation-no-designation") return page([{ ...consultationProfessional, designation: "   ", qualification: "BAMS" }]);
   if (portalUiState.screen === "consumer-consultation-photo") return page([{ ...consultationProfessional, name: "Shafna", designation: "BAMS", qualification: "BAMS", yearsExperience: 3, consultantCharge: 300, imageUrl: "https://images.test/consultant.webp" }]);
   const staleFirstRead = portalUiState.screen === "consumer-consultation-refresh" && portalUiState.publicConsultantReads++ === 0;
   return page(portalUiState.screen === "consumer-consultation-empty" || staleFirstRead ? [] : [portalUiState.screen.endsWith("-restricted")
@@ -241,9 +242,18 @@ export const listConsultationSlots = async (_consultantId:string, service:string
   if (slotReads.fail) throw new Error("Appointment times could not be checked. Please try again.");
   return {slots:generateConsultationSlots(date, service, await getPublicConsultant()).filter(slot => slot.startTime !== slotReads.unavailableStart).map((slot,index)=>({...slot,status:portalUiState.screen === "admin-consultants-schedule" ? index === 0 ? "booked" as const : index === 1 ? "reserved" as const : "available" as const : "available" as const})),checkedAt:new Date().toISOString(),holdMinutes:10};
 };
-export const consultationPaymentStatus = async () => ({ checkout: { intentId: "fixture", state: "ready", bookingId: null, totalPaise: 99055, currency: "INR" } });
+export const paymentRecovery = { state: "ready", fail: false, calls: 0 };
+Object.assign(globalThis, { paymentRecovery });
+export const consultationPaymentStatus = async () => {
+  paymentRecovery.calls++;
+  if (paymentRecovery.fail) throw new Error("Payment status could not be checked. Contact support before paying again.");
+  return { checkout: { intentId: "fixture", state: paymentRecovery.state, bookingId: null, totalPaise: 99055, currency: "INR" } };
+};
 export const payForConsultation = async () => ({ bookingId: "consultation-fixture" });
-export const clearConsultationPaymentReminder = () => {};
+export const clearConsultationPaymentReminder = () => {
+  window.sessionStorage.removeItem("ayursarga-pending-consultation-payment:patient");
+  window.dispatchEvent(new Event("ayursarga-consultation-payment-change"));
+};
 export const getConsultationCancellationPolicy = async () => ({ policy: { ...DEFAULT_CONSULTATION_CANCELLATION_POLICY, conditions: "Exceptional circumstances require support review." } });
 export const saveConsultationCancellationPolicy = async (policy: object) => { portalUiState.calls++; return { policy: { ...policy, version: "saved-policy" } }; };
 const financeRecord = { id: "consultation-fixture", bookingId: "consultation-fixture", bookingReference: "AYURCONS01", consultantId: "AS001",

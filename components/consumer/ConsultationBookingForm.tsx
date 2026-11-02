@@ -72,7 +72,10 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
       const { consultationPaymentStatus, payForConsultation, clearConsultationPaymentReminder } = await import("@/services/payments/consultationCheckout");
       let result = (await consultationPaymentStatus(pendingPayment)).checkout;
       setPaymentDetails(result);
-      if (resume && result.state === "ready") result = await payForConsultation(result);
+      if (resume && result.state === "ready") {
+        result = await payForConsultation(result);
+        setPaymentDetails(result);
+      }
       if (result.bookingId) {
         clearConsultationPaymentReminder();
         router.push(`/app/bookings/consultations?booking=${encodeURIComponent(result.bookingId)}`);
@@ -111,7 +114,7 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
         <p>Choose your date and an available time, then select a consultant. Pay the full consultation fee securely through Razorpay. Your appointment is confirmed only after payment is verified. Online consultation is not an emergency service.</p>
         <nav className="portal-actions portal-flow-navigation" aria-label="Consultation navigation"><Link className="portal-button secondary" href="/#wellness">Choose another service</Link><Link className="portal-button secondary" href="/app/bookings/consultations">My online consultations</Link></nav>
       </section>
-      {pendingPayment && <section className="portal-card" aria-label="Pending consultation payment">
+      {pendingPayment && <section id="consultation-payment-recovery" className="portal-card" aria-label="Pending consultation payment">
         <h2>Check your previous payment</h2><p>Check your payment status before paying again. Closing the payment window does not always mean the payment failed.</p>
         {paymentDetails && <p>{paymentDetails.consultantName} · {paymentDetails.serviceName} · {formatDisplayDate(paymentDetails.date)} · {paymentDetails.timeWindow} · {formatCurrency(paymentDetails.totalPaise / 100)}</p>}
         {paymentDetails?.cancellationPolicy && <ConsultationCancellationInfo snapshot={paymentDetails.cancellationPolicy} status="confirmed" now={clock} />}
@@ -139,7 +142,7 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
               <span className="consultation-professional-banner">
                 <span className="consultation-professional-identity">
                   <strong className="consultation-professional-name">{item.name}</strong>
-                  {item.designation && <span className="consultation-professional-role"><small>Designation</small><span>{item.designation}</span></span>}
+                  {item.designation.trim() && <span className="consultation-professional-role">{item.designation}</span>}
                 </span>
                 <ConsultantPhoto name={item.name} imageUrl={item.imageUrl} size={160} />
               </span>
@@ -167,7 +170,8 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
         {error && <p className="portal-form-error full" role="alert">{error}</p>}
         {error && <div className="portal-actions full"><button type="button" className="portal-button secondary" disabled={busy || isLoading} onClick={() => { setConsultantId(""); setSlot(""); setConsent(false); void reload(); }}>Refresh consultants</button><button type="button" className="portal-button secondary" disabled={busy || Boolean(pendingPayment)} onClick={() => { setConsent(false); setError(null); setCancellationPolicy(null); setPolicyFailed(false); setPolicyRetry(value => value + 1); }}>Reload cancellation terms</button></div>}
         {!cancellationPolicy && <p className="full" role="status">{policyFailed ? "Cancellation terms could not be loaded. Please retry before paying." : "Loading agreed cancellation terms…"}{policyFailed && <button type="button" className="portal-button secondary" onClick={() => { setPolicyFailed(false); setPolicyRetry(value => value + 1); }}>Reload cancellation terms</button>}</p>}
-        <div className="portal-actions full"><button className="portal-button" disabled={busy || Boolean(pendingPayment) || !cancellationPolicy || !consent || !consultant || !date || !dateAllowed(date) || !appointment || appointmentSlots.loading || Boolean(appointmentSlots.error) || Boolean(loadError)}>{busy ? "Processing payment..." : consultant ? `Pay ${formatCurrency(consultant.consultantCharge)} & book appointment` : "Pay & book appointment"}</button></div>
+        {pendingPayment && <div className="full portal-form-note" id="consultation-payment-blocked" role="status"><p>A previous payment still needs checking. Review it before starting another payment to avoid paying twice.</p><a className="portal-button secondary" href="#consultation-payment-recovery">Review previous payment</a></div>}
+        <div className="portal-actions full"><button className="portal-button" aria-describedby={pendingPayment ? "consultation-payment-blocked" : undefined} disabled={busy || Boolean(pendingPayment) || !cancellationPolicy || !consent || !consultant || !date || !dateAllowed(date) || !appointment || appointmentSlots.loading || Boolean(appointmentSlots.error) || Boolean(loadError)}>{busy ? "Processing payment..." : "Pay & book appointment"}</button></div>
       </form>
     </>}
     </div>
