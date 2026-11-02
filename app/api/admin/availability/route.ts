@@ -3,6 +3,7 @@ import { isFirebaseAdminReady } from "@/services/firebase/admin";
 import { apiHealth, apiJson } from "@/services/api/server";
 import { AvailabilityOperationError, createAdminBlock } from "@/services/hospitals/availabilityAdmin";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
+import { isIsoDate, parseDateInputValue } from "@/utils/date";
 
 export const runtime = "nodejs";
 
@@ -12,9 +13,7 @@ export function GET() {
 
 function parseAvailabilityDate(value: unknown) {
   const dateValue = String(value ?? "").trim();
-  return /^\d{4}-\d{2}-\d{2}$/.test(dateValue)
-    ? new Date(`${dateValue}T00:00:00+05:30`)
-    : new Date(dateValue);
+  return isIsoDate(dateValue) ? parseDateInputValue(dateValue)! : new Date(NaN);
 }
 
 export async function POST(request: Request) {

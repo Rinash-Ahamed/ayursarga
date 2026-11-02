@@ -62,7 +62,7 @@ before(async () => {
 });
 
 test("private payment intents, receipts, financials and webhook journals deny every client role", async () => {
-  for (const collection of ["consultationPaymentIntents", "consultationPaymentReceipts", "consultationFinancials", "razorpayWebhookEvents", "cancellationPolicies"]) {
+  for (const collection of ["consultationPaymentIntents", "consultationPaymentReceipts", "consultationFinancials", "razorpayWebhookEvents", "cancellationPolicies", "invoiceReceipts", "invoicePaymentAttempts"]) {
     const path = `${collection}/private-${suffix}`;
     await seed(path, fields({ consumerId: ids.consumer, commissionPaise: 1000 }));
     for (const role of [undefined, "consumer", "hospital", "admin"]) {
@@ -115,7 +115,28 @@ test("hospital publication requires five images; live gallery changes cannot dro
     const pending = { ...data, ...fields({ status: "pending", isPublic: false, imageUrls: images.slice(0, count), activatedAt: null, activatedBy: null }) };
     await seed(pendingPath, pending);
     const result = await auditedUpdate(pendingPath, pending, { status: "active", isPublic: true, activatedBy: ids.admin }, "admin", "hospitals", "hospital_activated", ["activatedAt"]);
-    assert.equal(result.status, count === 5 ? 200 : 403);
+    assert.equal(result.status, 403); // Publication now requires the verified content-bound server endpoint.
+  }
+});
+
+test("pending contract changes and approval cannot bypass the server; agreement history is Admin-readable and immutable", async () => {
+  const path = `hospitals/contract-binding-${suffix}`;
+  const data = { ...metadata, ...fields({ status: "pending", isPublic: false, name: "Centre", legalName: "Original Entity",
+    description: "", email: "centre@example.test", phone: "9876543210", hospitalPhone1: "9876543210",
+    registeredAddress: "Registered address, Kerala", address: "Service address, Kerala", city: "Palakkad", district: "Palakkad", state: "Kerala",
+    commissionPercentage: 10, imageUrl: null, contractStatus: "generated", contractUrl: null, contractSignedAt: null, contractSignedBy: null }) };
+  await seed(path, data);
+  assert.equal((await auditedUpdate(path, data, { name: "Different Centre" }, "admin", "hospitals", "update")).status, 403);
+  assert.equal((await auditedUpdate(path, data, { contractStatus: "generated", contractGeneratedBy: ids.admin }, "admin", "hospitals", "contract_generated", ["contractGeneratedAt"])).status, 403);
+  assert.equal((await auditedUpdate(path, data, { contractStatus: "signed", contractUrl: "https://example.test/signed.pdf", contractSignedBy: ids.admin }, "admin", "hospitals", "contract_signed", ["contractSignedAt"])).status, 403);
+  const revision = `hospitalContractRevisions/revision-${suffix}`;
+  const record = fields({ hospitalId: centre, previousValues: { contractUrl: "https://example.test/old-signed.pdf" } });
+  await seed(revision, record);
+  assert.equal((await call(`/${revision}`, { role: "admin" })).status, 200);
+  for (const role of [undefined, "admin", "hospital", "consumer"]) {
+    if (role !== "admin") assert.equal((await call(`/${revision}`, { role })).status, 403);
+    assert.equal((await call(`/${revision}`, { role, method: "PATCH", body: { fields: record } })).status, 403);
+    assert.equal((await call(`/${revision}`, { role, method: "DELETE" })).status, 403);
   }
 });
 

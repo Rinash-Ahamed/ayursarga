@@ -5,7 +5,8 @@ export type ConsultantFinancialRecord = {
   grossPaise: number; commissionPaise: number; consultantPayablePaise: number; commissionPercentage: number;
   gatewayFeePaise: number | null; gatewayTaxPaise: number | null; refundedPaise: number;
   netSettlementPaise: number | null; netRevenuePaise: number | null;
-  paymentStatus: string; settlementStatus: "pending" | "processed" | "paid"; settlementHold: boolean;
+  paymentStatus: string; settlementStatus: "pending" | "processed" | "paid" | "closed"; settlementHold: boolean;
+  reviewResolution?: string | null; reviewResolvedAt?: string | null; reviewResolutionNotes?: string | null;
   reviewReason: string | null; settlementReference: string | null; updatedAt: string; createdAt: string;
   settlementDate?: string | null; settlementNotes?: string | null;
   lastAuditId: string;

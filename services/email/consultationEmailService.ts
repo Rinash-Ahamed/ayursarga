@@ -42,7 +42,7 @@ export function queueConsultationEmail(transaction: Transaction, firestore: Fire
   transaction.create(firestore.collection(COLLECTION).doc(`${input.eventId}-support`), {
     bookingId: input.bookingId, event: input.event, payloadHash: input.payloadHash ?? null, actorRole: input.actorRole,
     bookingAuditId: input.auditId, audience: "support", channel: "email",
-    recipient: "support@ayursarga.com", payload,
+    recipient: "info@ayursarga.com", payload,
     status: "pending", createdAt: input.now, createdBy: input.actorId,
     updatedAt: input.now, updatedBy: input.actorId, archivedAt: null, archivedBy: null, lastAuditId: input.auditId,
   });

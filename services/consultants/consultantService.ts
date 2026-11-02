@@ -50,20 +50,18 @@ export async function createConsultant(input: ConsultantFields) {
   return response.employeeId;
 }
 
-export function updateConsultant(id: string, input: ConsultantFields, _previous: DocumentData) {
-  void _previous;
+export function updateConsultant(id: string, input: ConsultantFields, previous: DocumentData) {
   const validation = validateConsultantFields(input);
   if (!validation.isValid) throw new Error(Object.values(validation.errors)[0] ?? "Consultant details are invalid.");
-  return saveConsultant(id, { action: "update", fields: validation.data });
+  return saveConsultant(id, { action: "update", fields: validation.data, expectedAuditId: previous.lastAuditId ?? "" });
 }
 
-export function setConsultantStatus(id: string, status: "active" | "inactive", _previous: DocumentData) {
-  void _previous;
-  return saveConsultant(id, { action: "status_change", status });
+export function setConsultantStatus(id: string, status: "active" | "inactive", previous: DocumentData) {
+  return saveConsultant(id, { action: "status_change", status, expectedAuditId: previous.lastAuditId ?? "" });
 }
 
 function saveConsultant(id: string, body: Record<string, unknown>) {
-  return authorizedApiRequest<{ ok: true }>(`/api/admin/consultants/${encodeURIComponent(id)}`, {
+  return authorizedApiRequest<{ ok: true; lastAuditId: string }>(`/api/admin/consultants/${encodeURIComponent(id)}`, {
     method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
     signedOutMessage: "Sign in as Admin before updating a consultant.",
     failureMessage: "We could not save the consultant. Refresh and try again.",

@@ -8,6 +8,7 @@ import { isFirebaseAdminReady } from "@/services/firebase/admin";
 import { apiHealth, apiJson } from "@/services/api/server";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { validateHospitalContractDetails } from "@/features/hospitals/contractDetails";
+import { hospitalContractContent, hospitalContractRevision } from "@/features/hospitals/contractApproval";
 
 export const runtime = "nodejs";
 
@@ -111,12 +112,25 @@ export async function PATCH(request: Request, context: { params: Promise<{ hospi
           Object.assign(changes, contractValidation.data);
         }
       }
+      if (hospital.status === "pending" && ["generated", "signed"].includes(String(hospital.contractStatus))
+        && hospitalContractContent(hospital) !== hospitalContractContent({ ...hospital, ...changes })) {
+        // Retain the earlier document and dates, but never reuse their approval
+        // for changed legal/commercial particulars.
+        changes.contractNeedsRegeneration = true;
+      }
     } else if (body.action === "contract_generated") {
       if (hospital.status !== "pending") return apiJson({ error: "Contracts can be generated only while the hospital is Pending." }, 409);
+      if (body.data?.expectedContent !== hospitalContractContent(hospital)) return apiJson({ error: "Hospital details changed. Close the preview and preview the latest contract before downloading." }, 409);
+      const particulars = validateHospitalContractDetails(hospital);
+      const profile = validateHospitalFields(hospital);
+      if (!particulars.isValid || !profile.isValid) return apiJson({ error: "Complete and save the hospital and contract particulars before generating the agreement." }, 409);
+      const content = hospitalContractContent(hospital);
       changes = {
-        contractStatus: hospital.contractStatus === "signed" ? "signed" : "generated",
+        contractStatus: hospital.contractStatus === "signed" && hospital.contractSignedContent === content ? "signed" : "generated",
         contractGeneratedAt: now,
         contractGeneratedBy: adminUid,
+        contractGeneratedContent: content,
+        contractNeedsRegeneration: false,
       };
     } else if (body.action === "contract_signed") {
       const contractUrl = String(body.data?.contractUrl ?? "").trim();
@@ -126,11 +140,21 @@ export async function PATCH(request: Request, context: { params: Promise<{ hospi
       if (!validContractUrl(contractUrl)) {
         return apiJson({ error: "Add a valid HTTPS link for the signed contract." }, 400);
       }
+      const content = hospitalContractContent(hospital);
+      if (hospital.contractNeedsRegeneration === true || body.data?.expectedContent !== content
+        || (hospital.contractGeneratedContent != null && hospital.contractGeneratedContent !== content)) {
+        return apiJson({ error: "The contract particulars changed. Generate the latest agreement and obtain its signature before continuing." }, 409);
+      }
+      const sameSignedRevision = hospital.contractStatus === "signed"
+        && (hospital.contractSignedContent === content || hospital.contractSignedContent == null && hospital.contractGeneratedContent == null);
       changes = {
         contractStatus: "signed",
-        contractSignedAt: hospital.contractSignedAt ?? now,
-        contractSignedBy: hospital.contractSignedBy ?? adminUid,
+        contractSignedAt: sameSignedRevision ? hospital.contractSignedAt ?? now : now,
+        contractSignedBy: sameSignedRevision ? hospital.contractSignedBy ?? adminUid : adminUid,
         contractUrl,
+        contractGeneratedContent: content,
+        contractSignedContent: content,
+        contractNeedsRegeneration: false,
       };
     } else if (body.action === "deactivate") {
       if (hospital.status !== "active") return apiJson({ error: "Only an Active hospital can be deactivated." }, 409);
@@ -166,6 +190,14 @@ export async function PATCH(request: Request, context: { params: Promise<{ hospi
         ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
       },
     });
+    if (body.action === "contract_generated" || body.action === "contract_signed" || changes.contractNeedsRegeneration === true) {
+      batch.set(firestore.collection("hospitalContractRevisions").doc(auditReference.id), {
+        hospitalId, action: body.action, previousValues: hospitalContractRevision(hospital),
+        updatedValues: hospitalContractRevision({ ...hospital, ...changes }),
+        createdAt: now, createdBy: adminUid, updatedAt: now, updatedBy: adminUid,
+        archivedAt: null, archivedBy: null, lastAuditId: auditReference.id,
+      });
+    }
     const officialEmailChanged = body.action === "update"
       && Object.hasOwn(changes, "email")
       && String(changes.email ?? "").trim().toLowerCase() !== String(hospital.email ?? "").trim().toLowerCase();

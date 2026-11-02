@@ -4,7 +4,7 @@ import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { apiJson } from "@/services/api/server";
 import { allowRequest } from "@/services/api/rateLimit";
 import { auditPayment, ConsultationPaymentError, isConsultationIntentId } from "@/services/payments/consultationPaymentsAdmin";
-import { getRazorpayReadiness } from "@/services/payments/razorpay";
+import { fetchRazorpayPayment, getRazorpayReadiness } from "@/services/payments/razorpay";
 import { isIsoDate, toDateInputValue } from "@/utils/date";
 
 export const runtime = "nodejs";
@@ -12,7 +12,7 @@ function record(id: string, data: DocumentData) {
   // Admin API still uses a whitelist: no draft contacts, provider payloads or credentials.
   const fields = ["bookingId", "bookingReference", "consultantId", "consultantName", "consumerName", "serviceName", "paymentId", "orderId", "mode",
     "grossPaise", "commissionPaise", "consultantPayablePaise", "commissionPercentage", "gatewayFeePaise", "gatewayTaxPaise", "refundedPaise", "netSettlementPaise", "netRevenuePaise",
-    "paymentStatus", "settlementStatus", "settlementHold", "reviewReason", "settlementReference", "settlementDate", "settlementNotes", "lastAuditId"];
+    "paymentStatus", "settlementStatus", "settlementHold", "reviewReason", "reviewResolution", "reviewResolvedAt", "reviewResolutionNotes", "settlementReference", "settlementDate", "settlementNotes", "lastAuditId"];
   return { id, ...Object.fromEntries(fields.map(key => [key, data[key] ?? null])),
     createdAt: data.createdAt?.toDate?.().toISOString() ?? null, updatedAt: data.updatedAt?.toDate?.().toISOString() ?? null };
 }
@@ -71,7 +71,7 @@ export async function PATCH(request: Request) {
       // A lost response retry of the exact transfer is harmless and does not append another audit.
       if (financial.settlementStatus === values.status && financial.settlementReference === values.reference
         && financial.settlementDate === values.date && financial.settlementNotes === values.notes) return record(current.id, financial);
-      if (financial.lastAuditId !== values.expectedAuditId || financial.settlementStatus === "paid") throw new ConsultationPaymentError("This settlement changed. Refresh before continuing.");
+      if (financial.lastAuditId !== values.expectedAuditId || ["paid", "closed"].includes(financial.settlementStatus)) throw new ConsultationPaymentError("This settlement changed. Refresh before continuing.");
       const booking = financial.bookingId ? (await transaction.get(firestore.collection("consultationBookings").doc(financial.bookingId))).data() : null;
       if (financial.settlementHold || financial.refundedPaise > 0 || financial.paymentStatus !== "paid" || !booking || !["confirmed", "completed"].includes(booking.status)) {
         throw new ConsultationPaymentError("Settlement is on hold. Resolve cancellation, refund or booking review before recording a payout.");
@@ -82,6 +82,48 @@ export async function PATCH(request: Request) {
         { settlementStatus: financial.settlementStatus, settlementReference: financial.settlementReference }, changes, uid, "admin");
       transaction.update(ref, { ...changes, ...meta });
       return record(current.id, { ...financial, ...changes, ...meta });
+    });
+    return apiJson({ record: updated });
+  } catch (error) { return failure(error); }
+}
+/** Closes only verified full refunds; never allocates partial refunds or moves money. */
+export async function POST(request: Request) {
+  try {
+    const { uid, firestore } = await requireActiveAdmin(request);
+    if (!allowRequest(`consultant-review:${uid}`, 20, 10 * 60 * 1000)) return apiJson({ error: "Please wait before checking more refunds." }, 429);
+    const body = await readJsonBody(request, 1500) as Record<string, unknown> | null;
+    if (!body || typeof body.id !== "string" || !isConsultationIntentId(body.id) || typeof body.expectedAuditId !== "string"
+      || typeof body.notes !== "string" || body.notes.trim().length < 3 || body.notes.length > 500
+      || Object.keys(body).some(key => !["id", "expectedAuditId", "notes"].includes(key))) return apiJson({ error: "Add a short review note before checking the refund." }, 400);
+    const ref = firestore.collection("consultationFinancials").doc(body.id);
+    const reviewNotes = body.notes.trim();
+    const initial = (await ref.get()).data();
+    if (!initial) throw new ConsultationPaymentError("Financial record not found.", 404);
+    if (initial.reviewResolution === "full_refund_verified" && initial.settlementStatus === "closed") return apiJson({ record: record(body.id, initial) });
+    if (initial.lastAuditId !== body.expectedAuditId) throw new ConsultationPaymentError("This record changed. Refresh before continuing.");
+    if (initial.mode !== getRazorpayReadiness().mode) throw new ConsultationPaymentError("Select the payment mode currently configured for Razorpay.", 409);
+    const payment = await fetchRazorpayPayment(initial.paymentId);
+    if (payment.id !== initial.paymentId || payment.order_id !== initial.orderId || payment.currency !== "INR" || !payment.captured
+      || payment.status !== "refunded" || payment.amount !== initial.grossPaise || payment.amount <= 0 || payment.amount_refunded !== payment.amount) {
+      throw new ConsultationPaymentError("Razorpay has not verified a full refund. Keep this payment on hold for reconciliation.", 409);
+    }
+    const updated = await firestore.runTransaction(async transaction => {
+      const snapshot = await transaction.get(ref);
+      const current = snapshot.data();
+      if (!current) throw new ConsultationPaymentError("Financial record not found.", 404);
+      if (current.reviewResolution === "full_refund_verified" && current.settlementStatus === "closed") return record(snapshot.id, current);
+      if (current.lastAuditId !== body.expectedAuditId || current.paymentId !== payment.id || current.orderId !== payment.order_id
+        || current.grossPaise !== payment.amount) throw new ConsultationPaymentError("This record changed. Refresh before continuing.");
+      if (!current.settlementHold || current.settlementStatus !== "pending" || current.settlementReference) throw new ConsultationPaymentError("A recorded transfer or another settlement status needs manual reconciliation. This case cannot be closed here.");
+      if (current.refundedPaise !== current.grossPaise || current.paymentStatus !== "refunded") throw new ConsultationPaymentError("The refund is not reflected in Ayursarga yet. Refresh after Razorpay updates the payment, then try again.");
+      const booking = current.bookingId ? (await transaction.get(firestore.collection("consultationBookings").doc(current.bookingId))).data() : null;
+      if (booking && booking.status !== "cancelled") throw new ConsultationPaymentError("Cancel the appointment before closing its refund review. This action does not cancel appointments.");
+      const changes = { settlementStatus: "closed", settlementHold: false, reviewResolution: "full_refund_verified",
+        reviewResolvedAt: new Date().toISOString(), reviewResolvedBy: uid, reviewResolutionNotes: reviewNotes, netRevenuePaise: null };
+      const meta = auditPayment(transaction, firestore, "consultationFinancials", snapshot.id,
+        { settlementStatus: current.settlementStatus, settlementHold: current.settlementHold, reviewReason: current.reviewReason }, changes, uid, "admin");
+      transaction.update(ref, { ...changes, ...meta });
+      return record(snapshot.id, { ...current, ...changes, ...meta });
     });
     return apiJson({ record: updated });
   } catch (error) { return failure(error); }

@@ -495,7 +495,7 @@ test("support receives all consultation events with an Admin link and independen
   const { f, id } = await seeded();
   assert.equal(f.calls.supportSmtp.length, 1);
   const first = f.calls.supportSmtp[0];
-  assert.equal(first.to, "support@ayursarga.com");
+  assert.equal(first.to, "info@ayursarga.com");
   assert.match(first.text, /Hello Ayursarga team,/);
   assert.match(first.text, /Consumer: Patient/);
   assert.match(first.text, /Consultant: Assigned Professional/);
@@ -512,6 +512,7 @@ test("support receives all consultation events with an Admin link and independen
   assert.equal((await update(f, id, cancel)).status, 200);
   assert.equal((await update(f, id, cancel)).status, 200);
   assert.equal(f.calls.supportSmtp.length, 3);
+  assert.ok(f.calls.supportSmtp.every(email => email.to === "info@ayursarga.com"));
   assert.match(f.calls.supportSmtp[2].text, /Original appointment date: 26\/10\/2099/);
   assert.match(f.calls.supportSmtp[2].text, /does not confirm.*refund/);
   assert.ok(f.values("consultationEmailEvents").every(event => event.status === "accepted"));

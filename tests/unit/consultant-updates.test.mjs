@@ -28,7 +28,7 @@ function fixture(options = {}) {
     "@/services/api/server": { apiJson: (body, status = 200) => Response.json(body, { status }) },
     "@/services/api/audit": { requestAuditDevice: () => ({ userAgent: "test" }) },
   });
-  return { writes, send: (body, id = "AS001") => PATCH(new Request("https://test.local/api/admin/consultants/AS001", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }), { params: Promise.resolve({ consultantId: id }) }) };
+  return { writes, send: (body, id = "AS001") => PATCH(new Request("https://test.local/api/admin/consultants/AS001", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ expectedAuditId: previous.lastAuditId ?? "", ...body }) }), { params: Promise.resolve({ consultantId: id }) }) };
 }
 test("full consultant edits including 31 dates and repeated saves preserve identity/photo and atomically audit current data", async () => {
   const f = fixture();

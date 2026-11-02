@@ -172,6 +172,9 @@ to deploy, rerun maintenance scripts, or modify live data.
   is separate from centre activation/publication. Enabling its account requires
   an active non-archived assigned centre and matching official email; disabled
   Auth accounts must use the existing controlled setup/activation workflow.
+  Each Users group owns its list/cursor/request/confirmation state. Failed or
+  delayed group switches must never retain the other role's actionable cards;
+  keep retry and group selection usable without a full-page error redirect.
 - Our Consultants is an Admin-only operational collection. Consultant records
   use verified Admin server endpoints for creation, profile edits, status changes
   and photos; direct client writes are denied. Keep shared server validation and
@@ -180,6 +183,12 @@ to deploy, rerun maintenance scripts, or modify live data.
   1,000-expression evaluation limit despite valid roles and fields. Consultants
   do not create authentication accounts. Their IDs use the sequential `AS001`
   format, and creates, profile edits, and Active/Inactive changes are audited.
+  Profile/status updates require the opened record's expectedAuditId, checked
+  transactionally against lastAuditId. Keep the form's original revision while
+  editing, return the committed revision and update local state; reload after a
+  photo save because it creates its own revision. Email edits must check normalized
+  uniqueness (excluding self) and write the same consultantSequence counter used
+  by creates to serialize competing email claims, including empty query results.
   Admin explicitly assigns online service categories; never infer assignments
   from names or designations. Public consultant discovery uses only the bounded
   `/api/public/consultants` whitelist (professional identity, charge and preferred
@@ -229,6 +238,15 @@ to deploy, rerun maintenance scripts, or modify live data.
 - Activation requires contract generation, signed-contract confirmation, and
   one valid signed-contract URL and signing date. Preserve created, signed, and
   activated dates and audit each transition.
+  Pending onboarding binds generated/signed approval to the shared canonical
+  contract particulars. Material edits require regeneration and a fresh signed
+  revision; stale previews/signing requests and activation must be rejected
+  server-side. Preserve earlier URLs/dates and append immutable snapshots to
+  Admin-readable, server-write-only hospitalContractRevisions atomically with
+  each contract audit. This history is separate from clearable auditLogs.
+  Direct client pending-hospital edits, contract generation/signing and activation
+  remain denied, including for Admin; use the verified server endpoints. Preserve
+  untouched legacy approvals and existing active centres without forced migration.
 - Consumer booking creation runs through the authenticated server endpoint and
   confirms new bookings immediately after checking current hospital/package
   eligibility and approved blocked dates in the same transaction. Set confirmed
@@ -304,14 +322,24 @@ to deploy, rerun maintenance scripts, or modify live data.
   Keep private commission/base-payable/settlement fields in server-only payment
   and financial collections, never Consumer-readable booking documents, public
   responses or checkout options. Consumers see only their total fee and safe
-  payment references/status. Legacy appointments are not retroactively charged.
+  payment references/status. Ready, own-consumer checkout may also project only
+  its saved Consumer name/email/phone for Razorpay prefill (phone +91); keep the
+  merchant name Ayursarga and never add consultant contacts or financial splits.
+  Legacy appointments are not retroactively charged.
   Captured-but-unbookable payments require an Admin review hold, not a false
   confirmation. Ayursarga bears gateway fees (reported fee includes tax); the
   consultant's snapshotted base fee is unchanged. Unknown fees/net values remain
   unknown. Admin Finance tracks external manual settlements as Pending,
   Processed or Paid with reference/date/notes and revision-checked atomic audit;
   this never initiates a bank transfer. Refund/cancellation holds require manual
-  review; no automatic refund allocation or payout reversal is implied. Admin can
+  review; no automatic refund allocation or payout reversal is implied. Admin may
+  close a review only after a fresh backend Razorpay check and the private ledger
+  both establish the matching full refund, with no processed/paid consultant
+  transfer and no active appointment. Audit the revision-checked closure, retain
+  original amounts and unknown net revenue, and use non-payable Closed status.
+  Later reconciliation/webhooks must retain the verified closure. Partial/no-refund
+  and previously transferred cases stay held; this never initiates a refund.
+  Admin can
   reschedule to a validated date/exact time, complete, or cancel; do not restore
   Confirm or Reject actions. Preserve legacy requested/rejected records without
   silently migrating them. Consumers may reschedule their own confirmed online
@@ -371,7 +399,7 @@ to deploy, rerun maintenance scripts, or modify live data.
   their unchanged lastAuditId as the originating revision. Never restart an
   already claimed/accepted/failed/unknown email or claim SMTP can be recalled.
   Consultation confirmations, reschedules and cancellations (by Admin or Consumer)
-  also email support@ayursarga.com and the assigned consultant using their
+  also email info@ayursarga.com directly (not its support alias) and the assigned consultant using their
   server-read registered email. Support uses its own private event and Admin
   appointment link; never copy the consultant onto a Consumer email. Existing
   historical events are not backfilled or resent. Centre bookings remain separate
@@ -425,6 +453,15 @@ to deploy, rerun maintenance scripts, or modify live data.
   only a per-page sort or change booking lifecycle statuses to achieve ordering.
 
 ## Change discipline and validation
+
+- Hospital commission invoices retain their issued content/number. Record external
+  receipts through Admin-only server endpoints, with integer-paise totals, revision
+  checks, outstanding-balance limits, valid non-future payment dates and atomic
+  audit/receipt/attempt writes. Deduplicate by invoice/reference and stable attempt;
+  never record money twice after an uncertain response or change an issued invoice
+  into a different invoice. invoiceReceipts and invoicePaymentAttempts are private
+  server-managed records, with all client reads/writes denied. Legacy invoices are
+  preserved without backfilling payment records.
 
 - Automatically bump the application version once per completed implementation
   task or explicitly grouped set of related changes, not per file edit, tool call,

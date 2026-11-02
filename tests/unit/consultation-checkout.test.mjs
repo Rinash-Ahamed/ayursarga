@@ -46,6 +46,20 @@ test("checkout confirms only the backend result, ignores duplicate callbacks and
   } finally { f.restore(); }
 });
 
+test("checkout prefills the consumer identity separately from the Ayursarga merchant name without extra fields", async () => {
+  const f = fixture(() => ({ checkout: { ...ready, bookingId: "confirmed-booking" } }));
+  try {
+    const outcome = f.checkout.payForConsultation({ ...ready, customer: { name: "Consumer Name", email: "consumer@example.test", contact: "+919876543210", commission: 100 } });
+    await Promise.resolve(); await Promise.resolve();
+    const options = f.options();
+    assert.equal(options.name, "Ayursarga");
+    assert.deepEqual(options.prefill, { name: "Consumer Name", email: "consumer@example.test", contact: "+919876543210" });
+    assert.equal(options.amount, ready.totalPaise);
+    await options.handler({ razorpay_payment_id: "pay_Test", razorpay_signature: "signature" });
+    assert.equal((await outcome).bookingId, "confirmed-booking");
+  } finally { f.restore(); }
+});
+
 test("closing checkout checks the saved payment without claiming success or creating another order", async () => {
   const f = fixture(() => ({ checkout: ready }));
   try {

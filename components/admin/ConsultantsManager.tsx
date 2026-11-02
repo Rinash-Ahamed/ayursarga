@@ -28,6 +28,7 @@ export function ConsultantsManager() {
   const [scheduleId, setScheduleId] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const editingSnapshot = useRef<(ConsultantDocument & { id: string }) | null>(null);
   const [fieldErrors, setFieldErrors] = useState<ConsultantValidationErrors>({});
   const [busyId, setBusyId] = useState<string | null>(null);
   const saving = useRef(false);
@@ -41,6 +42,7 @@ export function ConsultantsManager() {
 
   function resetEditor() {
     setEditingId(null);
+    editingSnapshot.current = null;
     setSelectedPhoto(null);
     setFieldErrors({});
     setActionError(null);
@@ -103,19 +105,24 @@ export function ConsultantsManager() {
     saving.current = true;
     setBusyId(consultant.id);
     try {
-      await updateConsultant(consultant.id, validation.data, consultant);
+      const original = editingSnapshot.current?.id === consultant.id ? editingSnapshot.current : consultant;
+      const saved = await updateConsultant(consultant.id, validation.data, original);
       let imageUrl = consultant.imageUrl;
       let photoError: string | null = null;
       if (selectedPhoto) {
         try { imageUrl = await uploadConsultantPhoto(consultant.id, selectedPhoto, consultant.imageUrl); }
         catch (caught) { photoError = caught instanceof Error ? caught.message : "The photo could not be saved."; }
       }
-      if (deferredSearch.trim() || photoError) await reload();
-      else patchItem(consultant.id, { ...validation.data, ...(imageUrl !== undefined ? { imageUrl } : {}) });
+      if (deferredSearch.trim() || selectedPhoto || photoError) await reload();
+      else patchItem(consultant.id, { ...validation.data, lastAuditId: saved.lastAuditId, ...(imageUrl !== undefined ? { imageUrl } : {}) });
       resetEditor();
       if (photoError) setActionError(`${consultant.employeeId}'s details were saved, but the photo could not be confirmed. Click Edit to check the photo before trying again. ${photoError}`);
       else setMessage(`${consultant.employeeId} has been updated.`);
     } catch (caught) {
+      if (caught instanceof Error && "status" in caught && caught.status === 409) {
+        setFieldErrors({ email: caught.message });
+        focusFirstInvalidField(form);
+      }
       setActionError(caught instanceof Error ? caught.message : "We could not update the consultant. Try again.");
     } finally {
       setBusyId(null);
@@ -131,8 +138,8 @@ export function ConsultantsManager() {
     setActionError(null);
     setMessage(null);
     try {
-      await setConsultantStatus(consultant.id, nextStatus, consultant);
-      patchItem(consultant.id, { status: nextStatus });
+      const saved = await setConsultantStatus(consultant.id, nextStatus, consultant);
+      patchItem(consultant.id, { status: nextStatus, lastAuditId: saved.lastAuditId });
       setMessage(`${consultant.employeeId} is now ${nextStatus}.`);
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : "We could not change the consultant status. Try again.");
@@ -193,7 +200,7 @@ export function ConsultantsManager() {
           {consultant.emergencyContactNo && <div><dt>Emergency contact</dt><dd>{consultant.emergencyContactNo}</dd></div>}
         </dl>
         <div className="portal-actions consultant-card-actions">
-          <button className="portal-button secondary" type="button" disabled={Boolean(busyId)} onClick={() => { setEditingId(consultant.id); setSelectedPhoto(null); setShowCreateForm(false); setFieldErrors({}); setActionError(null); setMessage(null); }}>Edit</button>
+          <button className="portal-button secondary" type="button" disabled={Boolean(busyId)} onClick={() => { editingSnapshot.current = consultant; setEditingId(consultant.id); setSelectedPhoto(null); setShowCreateForm(false); setFieldErrors({}); setActionError(null); setMessage(null); }}>Edit</button>
           <button className={`portal-button${consultant.status === "active" ? " danger" : ""}`} type="button" disabled={Boolean(busyId)} onClick={() => void toggleStatus(consultant)}>{consultant.status === "active" ? "Make inactive" : "Make active"}</button>
           <button className="portal-button secondary consultant-card-schedule-action" type="button" onClick={() => setScheduleId(consultant.id)}>View appointment slots</button>
         </div>

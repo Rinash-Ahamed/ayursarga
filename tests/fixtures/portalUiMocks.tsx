@@ -5,7 +5,7 @@ import { generateConsultationSlots } from "@/features/consultations/slots";
 import type { PublicConsultant } from "@/features/consultations/types";
 import type { ServiceDocument, TreatmentStatus } from "@/features/firestore/models";
 import { CONSUMER_PRIVACY_NOTICE_VERSION, CUSTOMER_TERMS_VERSION } from "@/features/consumers/privacyConsent";
-import { validateInvoiceInput, INVOICE_ISSUER, invoiceParty, type InvoiceInput } from "@/features/billing/invoices";
+import { validateInvoiceInput, INVOICE_ISSUER, invoiceParty, type InvoiceInput, type CommissionInvoice } from "@/features/billing/invoices";
 export { buildBrandedDocumentPdf } from "../../features/hospitals/contractPdf";
 
 export const portalUiState = { screen: "admin-dashboard", calls: 0, bookingRequests: 0, bookingInputs: [] as unknown[], cancelledBookings: 0, navigatedTo: "", unavailablePackage: false, availabilityReviews: [] as string[], holdAvailability: false, failAvailability: false, consultantWrites: [] as unknown[], publicConsultantReads: 0, autoConfirmedTreatment: "not_started" as TreatmentStatus };
@@ -33,10 +33,20 @@ const page = (documents: unknown[]) => Promise.resolve({ documents: portalUiStat
   : documents, cursor: null, hasMore: false });
 const firebaseUser = { uid: "patient" };
 export const listInvoices = async () => ({ documents: [], cursor: null, hasMore: false });
+let issuedInvoice: CommissionInvoice | null = null;
 export const createInvoice = async (input: InvoiceInput) => {
   portalUiState.calls++;
-  return { invoice: { ...input, ...validateInvoiceInput(input).totals, id: "invoice-fixture", invoiceNumber: "AS/2026/00001", status: "issued",
-    issuer: INVOICE_ISSUER, billTo: invoiceParty(hospital) } };
+  issuedInvoice = { ...input, ...validateInvoiceInput(input).totals, id: "invoice-fixture", invoiceNumber: "AS/2026/00001", status: "issued", paidPaise: 0, paymentStatus: "unpaid", lastAuditId: "invoice-issued",
+    issuer: INVOICE_ISSUER, billTo: invoiceParty(hospital) };
+  return { invoice: issuedInvoice };
+};
+export const recordInvoicePayment = async (input: { amount: string; date: string; reference: string; notes: string }) => {
+  if (!issuedInvoice) throw new Error("Invoice not found");
+  const paidPaise = (issuedInvoice.paidPaise ?? 0) + Math.round(Number(input.amount) * 100);
+  portalUiState.calls++;
+  issuedInvoice = { ...issuedInvoice, paidPaise, paymentStatus: paidPaise === issuedInvoice.totalPaise ? "paid" : "partially_paid", lastAuditId: "receipt-audit",
+    lastReceipt: { amountPaise: Math.round(Number(input.amount) * 100), date: input.date, reference: input.reference, notes: input.notes } };
+  return { invoice: issuedInvoice };
 };
 export async function verifyPasswordAction(code: string) {
   if (code !== "valid-test-code") throw new Error("Invalid link");
@@ -84,7 +94,11 @@ export default function MockNextElement({ src, href, children, alt, width, heigh
   return src ? <img src={src} alt={alt ?? ""} width={width} height={height} loading={props.loading as "lazy" | "eager" | undefined} onError={props.onError as () => void} /> : <a href={href} {...props}>{children}</a>;
 }
 const coverGallery = Array.from({ length: 6 }, (_, index) => `https://images.test/centre-${index}.webp`);
-export const getHospital = async () => ({ ...hospital, imageUrls: portalUiState.screen === "admin-gallery-incomplete" ? coverGallery.slice(0, 3) : coverGallery, status: portalUiState.screen === "admin-gallery-incomplete" ? "pending" : hospital.status, isPublic: portalUiState.screen === "admin-gallery-incomplete" ? false : hospital.isPublic, facilities: "Free WiFi\nFree parking" });
+export const getHospital = async () => ({ ...hospital, imageUrls: portalUiState.screen === "admin-gallery-incomplete" ? coverGallery.slice(0, 3) : coverGallery, status: portalUiState.screen === "admin-gallery-incomplete" ? "pending" : hospital.status, isPublic: portalUiState.screen === "admin-gallery-incomplete" ? false : hospital.isPublic, facilities: "Free WiFi\nFree parking",
+  ...(portalUiState.screen === "admin-contract-outdated" ? { status: "pending", isPublic: false, contractNeedsRegeneration: true,
+    registrationNumber: "123456", cinNumber: "NOT APPLICABLE", panNumber: "ABCDE1234F", gstin: "NOT APPLICABLE",
+    contractEffectiveDate: "2026-11-02", contractExpiryDate: "2029-11-02", emergencyContact: "9876543210", emergencyReferralHospital: "Nearby hospital" } : {}),
+});
 export const getHospitalCapacity = async () => ({ ...metadata, id: "centre", hospitalId: "centre", totalRooms: 10, occupiedRooms: 4, status: "active" });
 export const listAllHospitals = () => page(portalUiState.screen === "admin-hospitals-empty" ? [] : portalUiState.screen === "admin-hospital-cards" ? Array.from({ length: 6 }, (_, index) => ({ ...hospital, id: `centre-${index}`, name: `${hospital.name} ${index + 1}` })) : [hospital]);
 export const getHospitalPackageSummaries = async (ids: string[]) => {
@@ -105,7 +119,16 @@ export const getPublicHospital = async () => ({ ...hospital, blockedDateRanges: 
 export const getPublicHospitalService = async () => portalUiState.unavailablePackage ? null : { ...services[1], packageVersion: "a".repeat(64) };
 export const listAdminBookings = () => page(portalUiState.screen === "admin-bookings-empty" ? [] : operationalBookings());
 export const readDocumentsByIds = async (collectionPath: string, ids: string[]) => collectionPath === "hospitals" ? [hospital].filter((item) => ids.includes(item.id)) : collectionPath === "services" ? services.filter((item) => ids.includes(item.id)) : [];
-export const listUsers = (role: string) => page(portalUiState.screen === "admin-users-empty" ? [] : Array.from({ length: portalUiState.screen === "admin-user-cards" ? 10 : 1 }, (_, index) => ({ ...user, id: `${user.id}-${index}`, role, ...(portalUiState.screen === "admin-user-cards" ? { address: index === 0 ? `${hospital.address} ${"Long address and building details. ".repeat(12)}` : hospital.address } : {}), ...(portalUiState.screen === "admin-users-no-date" ? { createdAt: undefined } : {}) })));
+export const userListControl = { failRole: "", holdRole: "", distinctNames: false, pending: [] as (() => void)[] };
+Object.assign(globalThis, { userListControl });
+export const listUsers = async (role: string) => {
+  if (userListControl.failRole === role) throw new Error("Synthetic user-group failure");
+  const result = await page(portalUiState.screen === "admin-users-empty" ? [] : Array.from({ length: portalUiState.screen === "admin-user-cards" ? 10 : 1 }, (_, index) => ({ ...user, id: `${user.id}-${index}`, role,
+    ...(userListControl.distinctNames ? { name: `${role} account` } : {}),
+    ...(portalUiState.screen === "admin-user-cards" ? { address: index === 0 ? `${hospital.address} ${"Long address and building details. ".repeat(12)}` : hospital.address } : {}), ...(portalUiState.screen === "admin-users-no-date" ? { createdAt: undefined } : {}) })));
+  if (userListControl.holdRole === role) await new Promise<void>(resolve => userListControl.pending.push(resolve));
+  return result;
+};
 export const listConsultants = (options?: { cursor?: unknown }) => {
   if (portalUiState.screen === "admin-consultants-duplicates") {
     const record = (id: string) => ({ ...consultant, id, employeeId: id });
@@ -143,7 +166,12 @@ export const authorizedApiRequest = async (url?: string, options?: RequestInit) 
   ...(url?.endsWith("/image") ? { imageUrl: "https://images.test/consultant.webp" } : {}),
   imageUrls: url?.endsWith("/images") && options?.method === "PATCH" ? coverGallery.filter((image) => image !== JSON.parse(String(options.body)).imageUrl) : [] }; };
 export const updateHospital = async () => ({});
-export const recordHospitalContractGeneration = async () => ({});
+export const contractApprovalCalls: string[] = [];
+Object.assign(globalThis, { contractApprovalCalls });
+export const recordHospitalContractGeneration = async (_id: string, expectedContent: string) => {
+  contractApprovalCalls.push(expectedContent);
+  return portalUiState.screen === "admin-contract-outdated" ? { contractStatus: "generated", contractGeneratedAt: now, contractGeneratedContent: expectedContent, contractNeedsRegeneration: false } : {};
+};
 export const confirmHospitalContractSigning = async () => ({});
 export const activateHospital = async () => ({});
 export const deactivateHospital = async () => ({ status: "inactive" });
@@ -192,7 +220,7 @@ export const createConsultant = async (input: unknown) => {
   if ((globalThis as unknown as { duplicateCreation?: boolean }).duplicateCreation) throw Object.assign(new Error("This email is already used by a consultant. Open the existing record or use a different email."), { status: 409 });
   portalUiState.consultantWrites.push(input); return "AS002";
 };
-export const updateConsultant = async (_id: string, input: unknown) => { portalUiState.consultantWrites.push(input); return {}; };
+export const updateConsultant = async (_id: string, input: unknown) => { portalUiState.consultantWrites.push(input); if (input && typeof input === "object") Object.assign(consultant, input, { lastAuditId: "edited-consultant-audit" }); return { ok: true, lastAuditId: "edited-consultant-audit" }; };
 export const consultantPhotoUploads: { id: string; name: string; expected?: string | null }[] = [];
 Object.assign(globalThis, { consultantPhotoUploads });
 export const uploadConsultantPhoto = async (id: string, file: File, expected?: string | null) => {
@@ -201,7 +229,7 @@ export const uploadConsultantPhoto = async (id: string, file: File, expected?: s
   return `https://firebasestorage.googleapis.com/v0/b/test/o/consultants%2F${id}%2Fimages%2F00000000-0000-0000-0000-000000000001.webp?alt=media&token=test`;
 };
 export const updateUserProfile = async () => { portalUiState.calls++; };
-export const setConsultantStatus = async () => ({});
+export const setConsultantStatus = async () => ({ ok: true, lastAuditId: "status-consultant-audit" });
 export const clearAllAuditLogs = async () => { auditMfaCalls.clears++; return 0; };
 export const markAllNotificationsRead = async () => {};
 export const markNotificationRead = async () => {};
@@ -253,10 +281,17 @@ const financeRecord = { id: "consultation-fixture", bookingId: "consultation-fix
   commissionPercentage: 10, gatewayFeePaise: 234, gatewayTaxPaise: 36, refundedPaise: 0, netSettlementPaise: 98821, netRevenuePaise: 8771,
   paymentStatus: "paid", settlementStatus: "pending", settlementHold: false, reviewReason: null, settlementReference: null,
   createdAt: "2026-10-31T10:00:00Z", updatedAt: "2026-10-31T10:00:00Z", lastAuditId: "finance-audit" };
-export const listConsultantFinance = async () => ({ documents: [financeRecord], mode: "test", cursor: null, hasMore: false,
-  summary: { count: 1, grossPaise: 99055, commissionPaise: 9005, gatewayFeePaise: 234, refundedPaise: 0, pendingPayablePaise: financeRecord.settlementStatus === "paid" ? 0 : 90050, paidPayablePaise: financeRecord.settlementStatus === "paid" ? 90050 : 0, reviewCount: 0, unknownFeeCount: 0 } });
+export const listConsultantFinance = async () => {
+  if (portalUiState.screen === "admin-consultant-finance-refund" && financeRecord.settlementStatus !== "closed") Object.assign(financeRecord, { settlementHold: true, reviewReason: "refund_review", refundedPaise: financeRecord.grossPaise, paymentStatus: "refunded" });
+  return { documents: [financeRecord], mode: "test", cursor: null, hasMore: false,
+      summary: { count: 1, grossPaise: 99055, commissionPaise: 9005, gatewayFeePaise: 234, refundedPaise: financeRecord.refundedPaise, pendingPayablePaise: financeRecord.settlementStatus === "paid" || financeRecord.settlementStatus === "closed" || financeRecord.settlementHold ? 0 : 90050, paidPayablePaise: financeRecord.settlementStatus === "paid" ? 90050 : 0, reviewCount: financeRecord.settlementHold ? 1 : 0, unknownFeeCount: 0 } };
+};
 export const recordConsultantSettlement = async (input: { status: string; reference: string; date: string; notes: string }) => {
   portalUiState.calls++; Object.assign(financeRecord, { settlementStatus: input.status, settlementReference: input.reference, settlementDate: input.date, settlementNotes: input.notes }); return { record: { ...financeRecord } };
+};
+export const closeConsultantRefundReview = async (input: { notes: string }) => {
+  portalUiState.calls++; Object.assign(financeRecord, { settlementStatus: "closed", settlementHold: false, reviewResolution: "full_refund_verified", reviewResolvedAt: "2026-11-02T10:00:00Z", reviewResolutionNotes: input.notes });
+  return { record: { ...financeRecord } };
 };
 export const createConsultationBooking = async (input: unknown) => { portalUiState.consultantWrites.push(input); if (paymentRecovery.closeNext) { paymentRecovery.closeNext = false; throw new ConsultationCheckoutClosedError(); } if (paymentRecovery.failNext) { paymentRecovery.failNext = false; throw new Error("Payment could not be confirmed. Check My Bookings before paying again."); } return { ok: true, bookingId: "consultation-fixture", bookingReference: "AYURCONS01" }; };
 export const listConsultationBookings = () => page(portalUiState.screen === "admin-consultations-grid" ? Array.from({ length: 3 }, (_, index) => ({ ...consultation, id: `consultation-${index}`, bookingReference: `AYURGRID${index}`, consumerName: index === 0 ? "A consumer with a longer full name for wrapping" : consultation.consumerName })) : portalUiState.screen === "consumer-consultations-empty" ? [] : [{ ...consultation,

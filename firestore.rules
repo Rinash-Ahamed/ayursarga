@@ -252,6 +252,9 @@ service cloud.firestore {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
       let action = linkedAuditAction();
       return (action == 'update'
+          // Pending particulars must use the server endpoint so changing them
+          // invalidates approval and preserves an immutable contract revision.
+          && resource.data.status != 'pending'
           && changed.hasOnly([
             'name', 'description', 'email', 'phone', 'hospitalPhone1', 'hospitalPhone2',
             'registeredAddress', 'address', 'city', 'district', 'state',
@@ -269,52 +272,8 @@ service cloud.firestore {
           && request.resource.data.status == 'inactive'
           && request.resource.data.isPublic == false
           && changed.hasOnly(['status', 'isPublic', 'updatedAt', 'updatedBy', 'lastAuditId']))
-        || (action == 'contract_generated'
-          && resource.data.status == 'pending'
-          && request.resource.data.status == 'pending'
-          && request.resource.data.contractStatus in ['generated', 'signed']
-          && request.resource.data.contractGeneratedAt == request.time
-          && request.resource.data.contractGeneratedBy == request.auth.uid
-          && changed.hasOnly([
-            'contractStatus', 'contractGeneratedAt', 'contractGeneratedBy',
-            'contractSignedAt', 'contractSignedBy', 'contractUrl',
-            'contractSignedAt2', 'contractSignedBy2', 'contractUrl2', 'activatedAt', 'activatedBy',
-            'updatedAt', 'updatedBy', 'lastAuditId'
-          ]))
-        || (action == 'contract_signed'
-          && resource.data.status == 'pending'
-          && resource.data.contractStatus in ['generated', 'signed']
-          && request.resource.data.status == 'pending'
-          && request.resource.data.contractStatus == 'signed'
-          && request.resource.data.contractSignedAt
-            == (resource.data.contractSignedAt == null ? request.time : resource.data.contractSignedAt)
-          && request.resource.data.contractSignedBy
-            == (resource.data.contractSignedBy == null ? request.auth.uid : resource.data.contractSignedBy)
-          && request.resource.data.contractUrl is string
-          && request.resource.data.contractUrl.size() > 8
-          && request.resource.data.contractUrl.size() <= 500
-          && request.resource.data.contractUrl.matches('https://.+')
-          && changed.hasOnly([
-            'contractStatus', 'contractSignedAt', 'contractSignedBy', 'contractUrl',
-            'updatedAt', 'updatedBy', 'lastAuditId'
-          ]))
-        || (action == 'hospital_activated'
-          && resource.data.status in ['pending', 'inactive']
-          && resource.data.contractStatus == 'signed'
-          && resource.data.contractSignedAt != null
-          && resource.data.contractUrl is string
-          && resource.data.contractUrl.size() > 8
-          && resource.data.contractUrl.size() <= 500
-          && resource.data.contractUrl.matches('https://.+')
-          && request.resource.data.status == 'active'
-          && request.resource.data.isPublic == true
-          && request.resource.data.contractStatus == 'signed'
-          && request.resource.data.activatedAt == request.time
-          && request.resource.data.activatedBy == request.auth.uid
-          && changed.hasOnly([
-            'status', 'isPublic', 'activatedAt', 'activatedBy',
-            'updatedAt', 'updatedBy', 'lastAuditId'
-          ]))
+        // Generation, signing and activation are server-only. The Admin SDK
+        // endpoints enforce content binding and atomic revision/audit writes.
         || (action == 'archive'
           && request.resource.data.status == 'archived'
           && request.resource.data.isPublic == false
@@ -456,6 +415,12 @@ service cloud.firestore {
     match /consultants/{consultantId} {
       allow read: if isAdmin();
       // All mutations use verified Admin server endpoints and atomic audits.
+      allow create, update, delete: if false;
+    }
+
+    match /hospitalContractRevisions/{revisionId} {
+      // Immutable agreement history; not cleared with the general audit log.
+      allow read: if isAdmin();
       allow create, update, delete: if false;
     }
 
@@ -648,6 +613,8 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow create, update, delete: if false;
     }
+    match /invoiceReceipts/{receiptId} { allow read, write: if false; }
+    match /invoicePaymentAttempts/{attemptId} { allow read, write: if false; }
 
     match /{document=**} {
       allow read, write: if false;

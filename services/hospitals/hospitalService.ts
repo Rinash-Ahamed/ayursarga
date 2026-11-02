@@ -11,6 +11,7 @@ import {
 import { runStatusOrderedQuery, type StatusOrderedOptions } from "@/services/firestore/statusOrderedQuery";
 import { authorizedApiRequest, authorizedMutationRequest } from "@/services/api/client";
 import type { HospitalPackageSummary } from "@/features/hospitals/packageSummary";
+import { hospitalContractContent } from "@/features/hospitals/contractApproval";
 
 export function getHospitalPackageSummaries(hospitalIds: string[], signal?: AbortSignal) {
   return authorizedApiRequest<{ summaries: Record<string, HospitalPackageSummary> }>("/api/admin/hospitals/package-summary", {
@@ -73,8 +74,8 @@ function adminHospitalAction(id: string, action: "update" | "contract_generated"
 export const updateHospital = (id: string, input: HospitalAdminUpdate) =>
   adminHospitalAction(id, "update", input);
 
-export const recordHospitalContractGeneration = (id: string) =>
-  adminHospitalAction(id, "contract_generated");
+export const recordHospitalContractGeneration = (id: string, expectedContent: string) =>
+  adminHospitalAction(id, "contract_generated", { expectedContent });
 
 function validatedContractUrl(value: string, label: string) {
   const contractUrl = value.trim();
@@ -93,7 +94,7 @@ export function confirmHospitalContractSigning(id: string, previous: DocumentDat
     throw new Error("Download the contract PDF before confirming that the contract has been signed.");
   }
   const contractUrl = validatedContractUrl(contractUrlInput, "Contract URL");
-  return adminHospitalAction(id, "contract_signed", { contractUrl });
+  return adminHospitalAction(id, "contract_signed", { contractUrl, expectedContent: hospitalContractContent(previous) });
 }
 
 export function activateHospital(id: string, previous?: DocumentData) {

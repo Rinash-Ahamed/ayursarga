@@ -53,6 +53,7 @@ export async function payForConsultation(checkout: ConsultationCheckout): Promis
     const instance = new Razorpay({
       key: checkout.keyId, amount: checkout.totalPaise, currency: checkout.currency, order_id: checkout.orderId,
       name: "Ayursarga", description: "Online consultation", theme: { color: "#1f3d2b" },
+      ...(checkout.customer ? { prefill: { name: checkout.customer.name, email: checkout.customer.email, contact: checkout.customer.contact } } : {}),
       handler: async (result: CheckoutResult) => {
         if (handled) return;
         handled = true;

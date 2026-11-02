@@ -4,6 +4,7 @@ import { hasMinimumHospitalImages, MIN_PUBLIC_HOSPITAL_IMAGES } from "@/features
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
 import { apiHealth, apiJson } from "@/services/api/server";
+import { hasCurrentHospitalContract } from "@/features/hospitals/contractApproval";
 
 export const runtime = "nodejs";
 
@@ -45,6 +46,9 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
       || !hospital.contractSignedAt
       || !validContractUrl(hospital.contractUrl)) {
       return apiJson({ error: "Confirm the signed contract, URL, and signing date before activation." }, 409);
+    }
+    if (hospital.contractNeedsRegeneration === true || hospital.status === "pending" && !hasCurrentHospitalContract(hospital)) {
+      return apiJson({ error: "The hospital particulars changed. Generate and sign the latest contract before activation." }, 409);
     }
 
     const auditReference = firestore.collection("auditLogs").doc();

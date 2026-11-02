@@ -37,6 +37,7 @@ import { AdminHospitalCapacity } from "@/components/admin/HospitalCapacity";
 import { ContractPreviewDialog } from "@/components/admin/ContractPreviewDialog";
 import { validateHospitalContractDetails, type HospitalContractDetailErrors, type HospitalContractDetailField } from "@/features/hospitals/contractDetails";
 import { focusFirstInvalidField } from "@/utils/formFocus";
+import { hospitalContractContent, hasCurrentHospitalContract } from "@/features/hospitals/contractApproval";
 
 function formatDate(value: unknown) {
   return formatDisplayDateTime(value, "Not yet");
@@ -85,7 +86,7 @@ function ContractStepMarker({ step, done, active = false }: { step: number; done
 }
 
 type PendingHospitalAction = "activate" | "setup" | "deactivate";
-type ContractPreview = ReturnType<typeof buildHospitalContractPdf>;
+type ContractPreview = ReturnType<typeof buildHospitalContractPdf> & { expectedContent: string };
 
 export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   const router = useRouter();
@@ -120,7 +121,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
       return null;
     }
     setHospital(record);
-    setContractUrl(record?.contractUrl ?? "");
+    setContractUrl(record && hasCurrentHospitalContract(record) ? record.contractUrl ?? "" : "");
     setAssessmentRating(record?.ayursargaRating ?? null);
     setEditingContractParticulars(record ? !validateHospitalContractDetails({ ...record }).isValid : true);
     setLoading(false);
@@ -177,7 +178,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
       }
     }
     if (pendingAction === "activate") await runAction(async (record) => {
-      if (record.status === "pending" && (record.contractStatus !== "signed" || !record.contractUrl)) {
+      if (record.status === "pending" && (!hasCurrentHospitalContract(record) || !record.contractUrl)) {
         await confirmHospitalContractSigning(record.id, record, contractUrl);
       }
       await activateHospital(record.id, record.contractStatus === "signed" ? record : undefined);
@@ -201,7 +202,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
       return;
     }
     try {
-      setContractPreview(buildHospitalContractPdf(hospital));
+      setContractPreview({ ...buildHospitalContractPdf(hospital), expectedContent: hospitalContractContent(hospital) });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "We could not prepare the contract preview. Please try again.");
     }
@@ -224,6 +225,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     try {
       const changes = await updateHospital(hospital.id, validation.data);
       setHospital((current) => current ? { ...current, ...changes } : current);
+      if (changes.contractNeedsRegeneration) setContractUrl("");
       setEditingContractParticulars(false);
       setContractFieldErrors({});
       setMessage("The contract particulars have been saved.");
@@ -238,7 +240,8 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     if (!hospital || !contractPreview || busy) return;
     const preview = contractPreview;
     const downloaded = await runAction(async (record) => {
-      const changes = await recordHospitalContractGeneration(record.id);
+      const changes = await recordHospitalContractGeneration(record.id, preview.expectedContent);
+      if (changes.contractStatus !== "signed") setContractUrl("");
       const url = URL.createObjectURL(preview.blob);
       const link = document.createElement("a");
       link.href = url;
@@ -287,6 +290,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         state: validation.data.state,
       });
       setHospital((current) => current ? { ...current, ...changes } : current);
+      if (changes.contractNeedsRegeneration) setContractUrl("");
       setEditing(false);
       setFieldErrors({});
       setMessage("The hospital details have been updated.");
@@ -360,7 +364,8 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     }
   }
 
-  const contractStatus = hospital?.contractStatus ?? "not_generated";
+  const contractStatus = hospital?.status === "pending" && hospital.contractNeedsRegeneration
+    ? "not_generated" : hospital?.contractStatus ?? "not_generated";
   const imageCount = hospital ? new Set(getHospitalImageUrls(hospital)).size : 0;
   const imagesMissing = Math.max(0, MIN_PUBLIC_HOSPITAL_IMAGES - imageCount);
   const defaultContractEffectiveDate = hospital?.contractEffectiveDate ?? toDateInputValue();
@@ -374,7 +379,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   const signedAt = hospital && contractStatus === "signed" && isOnOrAfter(hospital.contractSignedAt, hospital.createdAt)
     ? hospital.contractSignedAt
     : null;
-  const contractReady = Boolean(signedAt && hospital?.contractUrl);
+  const contractReady = Boolean(signedAt && hospital?.contractUrl && (hospital.status !== "pending" || hasCurrentHospitalContract(hospital)));
   const activatedAt = hospital && hospital.status === "active" && signedAt && isOnOrAfter(hospital.activatedAt, signedAt)
     ? hospital.activatedAt
     : null;
@@ -473,7 +478,8 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
           <label>Emergency transfer (nearby hospital transfer in case of an emergency) *<input name="emergencyReferralHospital" defaultValue={hospital.emergencyReferralHospital ?? ""} maxLength={200} required disabled={!editingContractParticulars} aria-invalid={Boolean(contractFieldErrors.emergencyReferralHospital)} /><ContractFieldError field="emergencyReferralHospital" errors={contractFieldErrors} /></label>
           {editingContractParticulars && <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save contract particulars"}</button></div>}
         </form>}
-        {hospital.contractUrl && <p>Signed contract: <a className="portal-inline-link" href={hospital.contractUrl} target="_blank" rel="noreferrer">View contract</a></p>}
+        {hospital.status === "pending" && hospital.contractNeedsRegeneration && <p className="portal-form-error" role="status">The hospital particulars have changed. Preview and download the updated agreement, then add its signed copy before activation. The earlier signed agreement is kept.</p>}
+        {hospital.contractUrl && <p>{hospital.status === "pending" && !contractReady ? "Earlier signed contract" : "Signed contract"}: <a className="portal-inline-link" href={hospital.contractUrl} target="_blank" rel="noreferrer">View contract</a></p>}
         {hospital.status !== "active" && hospital.status !== "archived" && imagesMissing > 0 && <div id="hospital-activation-images-error" className="portal-form-error" role="status">
           <strong>Activation requires {MIN_PUBLIC_HOSPITAL_IMAGES} hospital images.</strong>
           <p>{imageCount} of {MIN_PUBLIC_HOSPITAL_IMAGES} required photos added. Add {imagesMissing} more {imagesMissing === 1 ? "photo" : "photos"} before activating this hospital, then return here to continue.</p>

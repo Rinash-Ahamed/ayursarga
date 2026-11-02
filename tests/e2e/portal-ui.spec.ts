@@ -475,6 +475,25 @@ test("Consultant Finance presents private breakdown and confirms an external set
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
 
+test("Finance closes full refund review through an accessible confirmation without offering payout", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "admin-consultant-finance-refund");
+  await page.getByText("View financial breakdown", { exact: true }).click();
+  await page.getByRole("button", { name: "Verify full refund & close review", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("button", { name: "Verify & close review", exact: true })).toBeDisabled();
+  expect(await page.evaluate(() => document.body.style.position)).toBe("fixed");
+  await dialog.getByLabel("Review note *", { exact: true }).fill("Verified full refund in Razorpay.");
+  await dialog.getByRole("button", { name: "Verify & close review", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator(".portal-finance-row .portal-status")).toHaveText("closed");
+  await page.getByRole("region", { name: "Consultant finance filters" }).getByRole("combobox").selectOption("closed");
+  await expect(page.locator(".portal-finance-row .portal-status")).toHaveText("closed");
+  await expect(page.getByRole("button", { name: "Record settlement", exact: true })).toHaveCount(0);
+  expect(await page.evaluate(() => document.body.style.position)).not.toBe("fixed");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
+
 test("Finance invoice section uses the shared portal heading style", async ({ page }) => {
   await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
   await mount(page, "admin-billing");
@@ -1295,6 +1314,20 @@ test("Admin billing previews and issues a branded commission invoice with a work
   expect(await page.evaluate(() => document.body.style.position)).not.toBe("fixed");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await expect(page.locator(".billing-invoice-card")).toContainText("AS/2026/00001");
+  await expect(page.locator(".billing-invoice-card")).toContainText("Unpaid");
+  await page.getByRole("button", { name: "Record payment", exact: true }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  expect(await page.evaluate(() => document.body.style.position)).toBe("fixed");
+  await page.getByRole("dialog").getByRole("button", { name: "Cancel", exact: true }).click();
+  expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { calls: number } }).consumerBookingFixture.calls)).toBe(1);
+  await page.getByRole("button", { name: "Record payment", exact: true }).click();
+  await page.getByRole("dialog").getByRole("spinbutton").fill("1180.00");
+  await page.getByRole("dialog").getByRole("textbox", { name: "Payment reference *", exact: true }).fill("BANK-RECEIPT-001");
+  await page.getByRole("dialog").getByRole("button", { name: "Record payment", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.locator(".billing-invoice-card .portal-status")).toHaveText("Paid");
+  await expect(page.locator(".billing-invoice-card")).toContainText("BANK-RECEIPT-001");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
 
 test("availability review requires confirmation and prevents duplicate submissions", async ({ page }) => {
@@ -1333,6 +1366,60 @@ test("availability review requires confirmation and prevents duplicate submissio
   await expect(dialog.getByRole("button", { name: "Confirm", exact: true })).toBeEnabled();
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
+});
+
+test("Admin Users isolate failed and delayed group loads so another group's accounts are never actionable", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "admin-users");
+  const cards = page.locator(".admin-user-grid .portal-row");
+  await expect(cards).toHaveCount(1);
+  await page.evaluate(() => {
+    const control = (window as unknown as { userListControl: { failRole: string; distinctNames: boolean } }).userListControl;
+    control.failRole = "hospital"; control.distinctNames = true;
+  });
+  await page.getByRole("button", { name: "Hospitals", exact: true }).click();
+  await expect(page.getByText(/We could not load the hospital users/).first()).toBeVisible();
+  await expect(cards).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Make inactive", exact: true })).toHaveCount(0);
+  await page.evaluate(() => { (window as unknown as { userListControl: { failRole: string; holdRole: string } }).userListControl.failRole = ""; });
+  await page.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect(cards.locator("h3")).toHaveText("hospital account");
+  await page.getByRole("button", { name: "Consumers", exact: true }).click();
+  await expect(cards.locator("h3")).toHaveText("consumer account");
+  await page.evaluate(() => { (window as unknown as { userListControl: { holdRole: string } }).userListControl.holdRole = "hospital"; });
+  await page.getByRole("button", { name: "Hospitals", exact: true }).click();
+  await expect(cards).toHaveCount(0);
+  await page.waitForFunction(() => (window as unknown as { userListControl: { pending: unknown[] } }).userListControl.pending.length === 1);
+  await page.getByRole("button", { name: "Consumers", exact: true }).click();
+  await expect(cards.locator("h3")).toHaveText("consumer account");
+  await page.evaluate(() => {
+    const control = (window as unknown as { userListControl: { holdRole: string; pending: (() => void)[] } }).userListControl;
+    control.holdRole = ""; control.pending.splice(0).forEach(resolve => resolve());
+  });
+  await expect(cards.locator("h3")).toHaveText("consumer account");
+  await page.getByRole("button", { name: "Hospitals", exact: true }).click();
+  await expect(cards.locator("h3")).toHaveText("hospital account");
+  await cards.getByRole("button", { name: "Make inactive", exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText("login access only");
+  await page.getByRole("dialog").getByRole("button", { name: "Cancel", exact: true }).click();
+});
+
+test("Admin pending contract changes require a new download and an empty signed-copy field before activation", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "admin-contract-outdated");
+  await expect(page.getByText(/The hospital particulars have changed/)).toBeVisible();
+  await expect(page.getByText("Earlier signed contract", { exact: false })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Activate hospital", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Preview Contract", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: /Download/ }).click();
+  await expect(page.getByRole("button", { name: "Activate hospital", exact: true })).toBeEnabled();
+  expect(await page.evaluate(() => (window as unknown as { contractApprovalCalls: string[] }).contractApprovalCalls.length)).toBe(1);
+  await page.getByRole("button", { name: "Activate hospital", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("textbox", { name: "Signed contract URL *", exact: true })).toHaveValue("");
+  await dialog.getByRole("button", { name: "Activate hospital", exact: true }).click();
+  await expect(dialog).toContainText("Add the signed contract URL before activating");
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
 });
 
 test("Admin user cards show created date and time for both groups with a safe legacy fallback", async ({ page }) => {

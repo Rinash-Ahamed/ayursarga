@@ -24,6 +24,24 @@ test("payment preparation snapshots private commission, returns only total, crea
   assert.equal(f.values("bookings").length, 0);
 });
 
+test("checkout identity comes only from the owned server profile and is withheld outside ready checkout", async () => {
+  const f = consultationPaymentFixture();
+  const response = await prepare(f, { ...paidInput, consumerName: "Forged", consumerEmail: "forged@example.test", consumerPhone: "1111111111" });
+  const { checkout } = await response.json();
+  assert.deepEqual(checkout.customer, { name: "Patient", email: "patient@example.com", contact: "+919876543210" });
+  assert.doesNotMatch(JSON.stringify(checkout), /commission|consultantPayable|baseCharge|private@example/);
+  const route = f.load("app/api/consumer/consultation-payments/[intentId]/route.ts");
+  const context = { params: Promise.resolve({ intentId: checkout.intentId }) };
+  f.actor.uid = "someone-else";
+  assert.equal((await route.GET(paymentRequest({}, "GET"), context)).status, 404);
+  f.actor.uid = "patient";
+  const projection = f.load("services/payments/consultationPaymentsAdmin.ts").consumerCheckout;
+  const intent = f.records.get(`consultationPaymentIntents/${checkout.intentId}`);
+  for (const state of ["confirmed", "abandoned", "paid_review", "creating"]) assert.equal(projection(checkout.intentId, { ...intent, state }).customer, undefined);
+  const legacy = projection(checkout.intentId, { ...intent, draft: {} });
+  assert.deepEqual(legacy.customer, {});
+});
+
 test("capture verification atomically confirms exactly one booking and records accurate commission/net amounts", async () => {
   const f = consultationPaymentFixture(); const checkout = (await (await prepare(f)).json()).checkout;
   f.capture(checkout);

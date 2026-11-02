@@ -11,13 +11,16 @@ export type InvoiceParty = { name: string; address: string; gstin: string; email
 export type CommissionInvoice = InvoiceInput & {
   id: string; invoiceNumber: string; status: "issued"; issuer: InvoiceParty; billTo: InvoiceParty;
   taxablePaise: number; cgstPaise: number; sgstPaise: number; igstPaise: number; totalPaise: number;
+  paidPaise?: number; lastAuditId?: string;
+  paymentStatus?: "unpaid" | "partially_paid" | "paid";
+  lastReceipt?: { amountPaise: number; date: string; reference: string; notes: string };
 };
 export const INVOICE_ISSUER: InvoiceParty = {
   name: "AYURSARGA PVT LTD", gstin: AYURSARGA_GSTIN, email: "info@ayursarga.com", state: "Kerala",
   address: `5/1957 KUZHALMANNAM ROAD, KODUVAYUR, PALAKKAD, KERALA ${AYURSARGA_REGISTERED_OFFICE_PIN}, INDIA`,
 };
 
-function decimalHundredths(value: unknown) {
+export function decimalHundredths(value: unknown) {
   if (typeof value !== "string" || !/^\d{1,9}(\.\d{1,2})?$/.test(value.trim())) return null;
   const [whole, fraction = ""] = value.trim().split(".");
   return Number(whole) * 100 + Number(fraction.padEnd(2, "0"));

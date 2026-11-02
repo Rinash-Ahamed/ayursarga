@@ -94,6 +94,10 @@ export type HospitalDocument = AuditedDocument & {
   contractSignedAt: Timestamp | null;
   contractSignedBy: string | null;
   contractUrl: string | null;
+  /** Server-managed binding to the particulars generated and signed in onboarding. */
+  contractGeneratedContent?: string | null;
+  contractSignedContent?: string | null;
+  contractNeedsRegeneration?: boolean;
   /** Legacy second-contract fields retained only for reading older hospital records. */
   contractSignedAt2?: Timestamp | null;
   contractSignedBy2?: string | null;

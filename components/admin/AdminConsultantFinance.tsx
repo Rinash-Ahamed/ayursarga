@@ -6,7 +6,7 @@ import { PortalToast } from "@/components/portal/PortalToast";
 import { AdminFinanceNavigation } from "@/components/admin/AdminFinanceNavigation";
 import { DateInput } from "@/components/forms/DateInput";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
-import { listConsultantFinance, recordConsultantSettlement, type ConsultantFinancePage } from "@/services/billing/consultantFinanceService";
+import { listConsultantFinance, recordConsultantSettlement, closeConsultantRefundReview, type ConsultantFinancePage } from "@/services/billing/consultantFinanceService";
 import type { ConsultantFinancialRecord } from "@/features/payments/consultationFinance";
 import { formatCurrency } from "@/utils/currency";
 import { formatDisplayDate, formatDisplayDateTime, toDateInputValue } from "@/utils/date";
@@ -23,6 +23,7 @@ export function AdminConsultantFinance() {
   const [error, setError, errorEvent] = useRepeatableMessage();
   const [message, setMessage, messageEvent] = useRepeatableMessage();
   const [pending, setPending] = useState<Parameters<typeof recordConsultantSettlement>[0] | null>(null);
+  const [review, setReview] = useState<{ item: ConsultantFinancialRecord; notes: string } | null>(null);
   const submitting = useRef(false);
   const revision = useRef(0);
   const load = useCallback(async (cursor: string | null = null) => {
@@ -61,6 +62,17 @@ export function AdminConsultantFinance() {
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Settlement update could not be confirmed."); }
     finally { submitting.current = false; setBusy(false); }
   }
+  async function closeReview() {
+    if (!review || submitting.current) return;
+    submitting.current = true; setBusy(true); setError(null); setMessage(null);
+    try {
+      const result = await closeConsultantRefundReview({ id: review.item.id, expectedAuditId: review.item.lastAuditId, notes: review.notes });
+      setItems(current => current.map(item => item.id === result.record.id ? result.record : item));
+      setReview(null); setMessage("Full refund verified. Review closed; no payout or refund was initiated.");
+      await load();
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "We could not close the review."); }
+    finally { submitting.current = false; setBusy(false); }
+  }
   const summary = page?.summary;
   const visible = items.filter(item => (!status || item.settlementStatus === status) && [item.bookingReference, item.consultantName, item.consumerName, item.paymentId, item.orderId, item.consultantId]
     .some(value => String(value ?? "").toLowerCase().includes(search.trim().toLowerCase())));
@@ -75,7 +87,7 @@ export function AdminConsultantFinance() {
       ["Net platform revenue", summary.unknownFeeCount || summary.refundedPaise || summary.reviewCount ? "Reconciliation pending" : money(summary.commissionPaise - summary.gatewayFeePaise)],
     ].map(([label, value]) => <article className="portal-card" key={label}><span>{label}</span><strong>{value}</strong></article>)}</div>}
     {summary && <p className="portal-form-note">{summary.count} verified payments · {summary.reviewCount} need review · {summary.unknownFeeCount} awaiting processing fees. Check your bank statement to confirm money has reached Ayursarga’s account.</p>}
-    <section className="portal-card portal-booking-filters portal-finance-filters" aria-label="Consultant finance filters"><label className="portal-filter-field">Search loaded transactions<input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Booking, consultant, consumer or payment reference" /></label><label className="portal-filter-field">Settlement status<select value={status} onChange={event => setStatus(event.target.value)}><option value="">All statuses</option><option value="pending">Pending</option><option value="processed">Processed</option><option value="paid">Paid</option></select></label><p className="portal-filter-note full">Search and status filters apply to loaded transactions. Summary totals cover the selected payment mode.</p></section>
+    <section className="portal-card portal-booking-filters portal-finance-filters" aria-label="Consultant finance filters"><label className="portal-filter-field">Search loaded transactions<input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Booking, consultant, consumer or payment reference" /></label><label className="portal-filter-field">Settlement status<select value={status} onChange={event => setStatus(event.target.value)}><option value="">All statuses</option><option value="pending">Pending</option><option value="processed">Processed</option><option value="paid">Paid</option><option value="closed">Closed — fully refunded</option></select></label><p className="portal-filter-note full">Search and status filters apply to loaded transactions. Summary totals cover the selected payment mode.</p></section>
     <PortalToast message={error} notification={errorEvent} tone="error" /><PortalToast message={message} notification={messageEvent} />
     {error && <p className="portal-form-error" role="alert">{error}</p>}
     {Boolean(page?.setupIssues?.length) && <section className="portal-card" aria-label="Payment setup review"><h3>Payments to check</h3><p>These are the latest 10 payments whose outcome is not yet confirmed. They are not included in collections. Check each receipt in Razorpay before asking the customer to pay again.</p>{page?.setupIssues?.map(issue => <p key={issue.id}>{issue.consultantName} · {money(issue.totalPaise)} · {formatStatus(issue.state)} · Receipt: <code>{issue.receipt}</code></p>)}</section>}
@@ -93,7 +105,9 @@ export function AdminConsultantFinance() {
         ["Settlement date", item.settlementDate ? formatDisplayDate(item.settlementDate) : "Not recorded"], ["Settlement notes", item.settlementNotes || "Not recorded"],
       ].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
       {item.settlementHold && <p className="portal-form-error">Settlement held: {formatStatus(item.reviewReason ?? "review required")}. Contact the responsible Admin before paying out.</p>}
-      {!item.settlementHold && item.settlementStatus !== "paid" && <form className="portal-form" onSubmit={event => submit(event, item)}>
+      {item.settlementHold && item.settlementStatus === "pending" && <div className="portal-actions"><button className="portal-button secondary" disabled={busy} onClick={() => { setError(null); setReview({ item, notes: "" }); }}>Verify full refund &amp; close review</button></div>}
+      {item.reviewResolution === "full_refund_verified" && <p className="portal-form-note">Review closed after a verified full refund on {formatDisplayDateTime(item.reviewResolvedAt)}. {item.reviewResolutionNotes} Original amounts are retained for history; no consultant payout is due from this closed case. Fees and any accounting adjustments remain subject to reconciliation.</p>}
+      {!item.settlementHold && !["paid", "closed"].includes(item.settlementStatus) && <form className="portal-form" onSubmit={event => submit(event, item)}>
         <label>Record settlement as<select name="status" disabled={busy} defaultValue="paid"><option value="processed">Processed</option><option value="paid">Paid</option></select></label>
         <label>Transfer reference *<input name="reference" required minLength={3} maxLength={120} disabled={busy} /></label>
         <label>Settlement date *<DateInput name="date" required max={toDateInputValue()} defaultValue={toDateInputValue()} disabled={busy} /></label>
@@ -105,6 +119,9 @@ export function AdminConsultantFinance() {
     {page?.hasMore && <div className="portal-actions"><button className="portal-button secondary" disabled={busy} onClick={() => void load(page.cursor)}>Load more transactions</button></div>}
     <PortalDialog open={Boolean(pending)} title="Record this consultant settlement?" message="Confirm the external transfer details. Ayursarga will record this status only; no money is transferred by this action." confirmLabel="Record settlement" busy={busy} onConfirm={() => void save()} onCancel={() => { if (!busy) setPending(null); }}>
       {pending && <p>{formatStatus(pending.status)} · {pending.reference} · {formatDisplayDate(pending.date)}</p>}
+    </PortalDialog>
+    <PortalDialog open={Boolean(review)} title="Close this refund review?" message="We will check Razorpay for a full refund. The appointment must already be cancelled, and no consultant transfer may have been recorded. Partial refunds stay on hold. This action does not move money." confirmLabel="Verify & close review" busy={busy} confirmDisabled={!review || review.notes.trim().length < 3} onConfirm={() => void closeReview()} onCancel={() => { if (!busy) { setReview(null); setError(null); } }}>
+      {review && <div className="portal-form"><label className="full">Review note *<textarea value={review.notes} maxLength={500} disabled={busy} onChange={event => setReview({ ...review, notes: event.target.value })} /></label>{error && <p className="portal-form-error full" role="alert">{error}</p>}</div>}
     </PortalDialog>
   </PortalShell>;
 }

@@ -1,4 +1,5 @@
 import { toTrimmedString } from "@/utils/text";
+import { isIsoDate } from "@/utils/date";
 
 export type HospitalContractDetails = {
   registrationNumber: string;
@@ -17,7 +18,6 @@ export type HospitalContractDetailErrors = Partial<Record<HospitalContractDetail
 const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const CIN_PATTERN = /^[LU][0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$/;
 const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export function validateHospitalContractDetails(input: Record<string, unknown>) {
   const data: HospitalContractDetails = {
@@ -25,8 +25,8 @@ export function validateHospitalContractDetails(input: Record<string, unknown>) 
     cinNumber: toTrimmedString(input.cinNumber, 21).toUpperCase(),
     panNumber: toTrimmedString(input.panNumber, 10).toUpperCase(),
     gstin: toTrimmedString(input.gstin, 20).toUpperCase(),
-    contractEffectiveDate: toTrimmedString(input.contractEffectiveDate, 10),
-    contractExpiryDate: toTrimmedString(input.contractExpiryDate, 10),
+    contractEffectiveDate: toTrimmedString(input.contractEffectiveDate, 32),
+    contractExpiryDate: toTrimmedString(input.contractExpiryDate, 32),
     emergencyContact: toTrimmedString(input.emergencyContact, 160),
     emergencyReferralHospital: toTrimmedString(input.emergencyReferralHospital, 200),
   };
@@ -36,9 +36,9 @@ export function validateHospitalContractDetails(input: Record<string, unknown>) 
   if (data.cinNumber !== "NOT APPLICABLE" && !CIN_PATTERN.test(data.cinNumber)) errors.cinNumber = "Enter a valid 21-character CIN or NOT APPLICABLE.";
   if (!PAN_PATTERN.test(data.panNumber)) errors.panNumber = "Enter a valid 10-character PAN.";
   if (data.gstin !== "NOT APPLICABLE" && !GSTIN_PATTERN.test(data.gstin)) errors.gstin = "Enter a valid GSTIN or NOT APPLICABLE.";
-  if (!DATE_PATTERN.test(data.contractEffectiveDate)) errors.contractEffectiveDate = "Select the agreement effective date.";
-  if (!DATE_PATTERN.test(data.contractExpiryDate)) errors.contractExpiryDate = "Select the expiry date.";
-  if (DATE_PATTERN.test(data.contractEffectiveDate) && DATE_PATTERN.test(data.contractExpiryDate)
+  if (!isIsoDate(data.contractEffectiveDate)) errors.contractEffectiveDate = "Select a valid agreement effective date.";
+  if (!isIsoDate(data.contractExpiryDate)) errors.contractExpiryDate = "Select a valid expiry date.";
+  if (isIsoDate(data.contractEffectiveDate) && isIsoDate(data.contractExpiryDate)
     && data.contractExpiryDate < data.contractEffectiveDate) {
     errors.contractExpiryDate = "The expiry date must be on or after the effective date.";
   }

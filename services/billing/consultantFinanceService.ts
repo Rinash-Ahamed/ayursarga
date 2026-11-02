@@ -13,3 +13,6 @@ export function listConsultantFinance(mode: string, cursor?: string | null) {
 export function recordConsultantSettlement(input: { id: string; expectedAuditId: string; status: string; reference: string; date: string; notes: string }) {
   return authorizedApiRequest<{ record: ConsultantFinancialRecord }>("/api/admin/consultant-finance", { ...options, method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input), failureMessage: "The settlement update could not be confirmed. Refresh before retrying." });
 }
+export function closeConsultantRefundReview(input: { id: string; expectedAuditId: string; notes: string }) {
+  return authorizedApiRequest<{ record: ConsultantFinancialRecord }>("/api/admin/consultant-finance", { ...options, method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input), failureMessage: "The refund review could not be closed. Refresh to check its status." });
+}

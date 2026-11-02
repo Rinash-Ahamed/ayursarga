@@ -8,7 +8,6 @@ import { setUserAccountStatus, listUsers } from "@/services/users/userService";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalFeedback } from "@/components/portal/PortalFeedback";
 import { PortalPagination } from "@/components/portal/PortalPagination";
-import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 import { PortalDialog } from "@/components/portal/PortalDialog";
 import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 import { PortalToast } from "@/components/portal/PortalToast";
@@ -19,6 +18,12 @@ type UserGroup = "consumer" | "hospital";
 
 export function UsersList() {
   const [group, setGroup] = useState<UserGroup>("consumer");
+  return <PortalShell role="admin" title="Users"><UserGroupRecords key={group} group={group} onGroupChange={setGroup} /></PortalShell>;
+}
+
+// Each group owns its records, cursor, requests and confirmation state. A failed
+// or delayed replacement must never leave another group's accounts actionable.
+function UserGroupRecords({ group, onGroupChange }: { group: UserGroup; onGroupChange: (group: UserGroup) => void }) {
   const [selectedUser, setSelectedUser] = useState<DocumentRecord<UserDocument> | null>(null);
   const submitting = useRef(false);
   const [busy, setBusy] = useState(false);
@@ -26,22 +31,22 @@ export function UsersList() {
   const [message, setMessage, messageNotification] = useRepeatableMessage();
   const loader = useCallback((cursor: StatusOrderedCursor | null) =>
     listUsers(group, { pageSize: 20, cursor }), [group]);
-  const { errorNotification: loadErrorNotification, items, error, isLoading, hasMore, loadMore, patchItem } = usePaginatedList<UserDocument, StatusOrderedCursor>(
+  const { errorNotification: loadErrorNotification, items, error, isLoading, hasMore, loadMore, reload, patchItem } = usePaginatedList<UserDocument, StatusOrderedCursor>(
     loader,
-    `We could not load the ${group} users. Refresh the page and try again.`,
+    `We could not load the ${group} users. Try again or choose another user group.`,
   );
   const groupLabel = group === "consumer" ? "Consumer" : "Hospital";
 
   function changeGroup(nextGroup: UserGroup) {
     if (submitting.current) return;
-    setGroup(nextGroup);
+    onGroupChange(nextGroup);
     setSelectedUser(null);
     setActionError(null);
     setMessage(null);
   }
 
   async function changeAccountStatus() {
-    if (!selectedUser || submitting.current) return;
+    if (!selectedUser || selectedUser.role !== group || submitting.current || isLoading || error) return;
     submitting.current = true;
     setBusy(true);
     setActionError(null);
@@ -60,14 +65,15 @@ export function UsersList() {
     }
   }
 
-  return <PortalShell role="admin" title="Users">
-    <PortalLoadGuard notification={loadErrorNotification} loading={isLoading} error={error} hasData={items.length > 0} fallbackHref="/admin" loadingMessage={`Loading ${group.toLowerCase()} users...`} />
+  return <>
     <p className="portal-empty portal-users-guidance">Choose a user group below to view its accounts. Admin accounts are managed separately.</p>
     <div className="portal-segmented" role="group" aria-label="User group">
       <button type="button" disabled={busy} aria-pressed={group === "consumer"} onClick={() => changeGroup("consumer")}>Consumers</button>
       <button type="button" disabled={busy} aria-pressed={group === "hospital"} onClick={() => changeGroup("hospital")}>Hospitals</button>
     </div>
-    <PortalFeedback notification={loadErrorNotification} error={items.length > 0 ? error : null} emptyTitle={`No ${groupLabel.toLowerCase()} users yet`} empty={!error && !isLoading && items.length === 0
+    {isLoading && items.length === 0 && <p role="status">Loading {group} users…</p>}
+    {error && <div className="portal-form-error" role="alert"><p>{error}</p><button className="portal-button secondary" type="button" disabled={isLoading} onClick={() => void reload()}>Try again</button></div>}
+    <PortalFeedback notification={loadErrorNotification} error={error} emptyTitle={`No ${groupLabel.toLowerCase()} users yet`} empty={!error && !isLoading && items.length === 0
       ? `No ${groupLabel.toLowerCase()} users yet. New ${groupLabel.toLowerCase()} accounts will appear here.`
       : undefined} />
     <PortalToast message={message} notification={messageNotification} />
@@ -85,7 +91,7 @@ export function UsersList() {
         </dl>
       </details>}
       <div className="portal-user-actions">
-        {["active", "inactive"].includes(item.status) && <button className={`portal-button ${item.status === "active" ? "danger" : "primary"}`} type="button" disabled={busy} onClick={() => {
+        {item.role === group && ["active", "inactive"].includes(item.status) && <button className={`portal-button ${item.status === "active" ? "danger" : "primary"}`} type="button" disabled={busy || isLoading || Boolean(error)} onClick={() => {
           setSelectedUser(item);
           setActionError(null);
           setMessage(null);
@@ -104,5 +110,5 @@ export function UsersList() {
       onConfirm={() => void changeAccountStatus()}
       onCancel={() => { if (!submitting.current) setSelectedUser(null); }}
     >{actionError && <p className="portal-field-error" role="alert">{actionError}</p>}</PortalDialog>
-  </PortalShell>;
+  </>;
 }

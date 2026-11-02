@@ -2,6 +2,120 @@
 
 Updated: 2 November 2026 (Asia/Calcutta).
 
+## Razorpay customer prefill and direct team email (v4.37.1)
+
+- Checkout previously supplied merchant name/order/amount but no Consumer prefill.
+  Ready own-consumer checkout now whitelists only saved draft Consumer name/email/
+  phone; the browser forwards name/email/contact (+91) through Razorpay prefill,
+  keeping Ayursarga as merchant name. No extra provider/DB request or customer
+  collection introduced. Financial splits, consultant contacts and medical notes
+  remain excluded. Non-ready responses omit this identity; ownership checks stay
+  unchanged. This supplies missing details for future payments, but Razorpay owns
+  receipt rendering and no live test payment/receipt verification was performed.
+- New consultation confirmation/reschedule/cancellation team events now target
+  info@ayursarga.com directly instead of its support alias. Keep audience/event IDs
+  named support for compatibility. Consumer/consultant recipients, independent
+  claims, audit linkage and stale-event protection are unchanged. Historical events
+  are not rewritten/retried; legal contract support address remains unchanged.
+- Google Workspace documents that self-sent alias messages may be found in Sent/
+  All Mail instead of Inbox, consistent with external personal mail arriving while
+  an app message does not appear. No production email/event logs inspected, so
+  alias routing is plausible, not a proven explanation for an individual message;
+  SMTP acceptance must not be reported as verified inbox delivery.
+- All 60 focused checkout/payment/email lifecycle regressions passed with fake
+  Razorpay/SMTP and no live data or emails. Build/lint/typecheck and deployment not requested.
+  No new Firestore rules/index changes needed for these two fixes; earlier pending
+  changes in this worktree remain separate and preserved.
+
+## Remaining Admin audit fixes (2 November 2026, v4.37.0)
+
+- Owner explicitly excluded the AS-prefixed consultant-name search issue. Its
+  existing name/employee-ID detection is unchanged; do not claim it is fixed.
+- Consultant edits and status changes now send/check expectedAuditId against the
+  transaction's current lastAuditId. The editor keeps its opened revision even if
+  list props refresh; successful saves return the committed revision for local
+  patches. Photo saves reload because the photo endpoint creates another revision.
+  Email changes use the bounded uniqueness helper (excluding self), including
+  inactive/archived records, and read/write the creation counter in the same
+  transaction to serialize edits against creates and other edits. Atomic audits
+  and original IDs, photos and historical snapshots remain intact.
+- Admin availability accepts real ISO calendar dates only and converts them to
+  India midnight. Contract effective/expiry validation uses isIsoDate, rejecting
+  impossible dates and overlong timestamp inputs instead of normalizing/truncating
+  them into valid dates. Existing stored records are not migrated.
+- Invoices now show unpaid/partially paid/paid, received/outstanding totals and
+  latest reference/date. A shared confirmation dialog records an external receipt
+  through PATCH /api/admin/invoices. Issued invoice content/number remain immutable;
+  new invoiceReceipts and invoicePaymentAttempts are server-private, atomically
+  committed with totals/audits, deduplicated by invoice/reference and stable request
+  identity. Invalid/future/pre-invoice dates, stale revisions and overpayments fail
+  without partial writes. No payment is collected by this recording action.
+- Owner approved only verified FULL-refund closure for Finance. POST
+  /api/admin/consultant-finance checks fresh Razorpay payment truth, configured mode,
+  matching order/amount and already-reconciled full-refund ledger. It requires
+  Pending/no transfer, a held current revision and no active appointment; partial,
+  no-refund, processed/paid transfer, and unsynchronized cases remain held. Closure
+  atomically audits non-payable Closed status and review notes/time, preserves
+  original amounts and unknown net revenue, and never refunds/transfers money.
+  Webhook/reconciliation rewrites preserve this verified closure and its metadata.
+- Executed 47 focused backend regressions successfully: new Admin follow-ups,
+  consultant updates/duplicate creation emails, invoices, consultation payments,
+  contract approval and company contract details. Browser final rerun: 18 passed
+  across desktop, phone-320 and WebKit phone for consultant edits/photos, invoice
+  issue/PDF/receipt/cancel, manual settlement and refund-review dialog/scroll/overflow.
+  Initial browser run found stale mock persistence after the new post-photo reload;
+  corrected the mock to represent persisted server data, then all 18 passed.
+  A final focused run also passed all 16 checks (8 follow-up checks rerun plus
+  8 original Search Center booking/reference/notification/legacy regressions),
+  for 55 distinct backend checks overall. The closure replay check forces a later
+  fee rewrite to verify resolution metadata survives actual reconciliation writes.
+  Closed-refund filter added and its dialog/filter flow rerun separately: all
+  3 desktop/phone-320/WebKit checks passed. git diff --check passed; no generated
+  tsconfig.tsbuildinfo or debug logs found.
+- No production data, email, payment, Auth or deployment operations performed.
+  Build/lint/typecheck and broad health/API audit were NOT run for this task (fresh
+  owner request required). Native rules coverage expanded to private receipt/attempt
+  collections but not executed: installed Java 8 is below emulator's Java 21 minimum.
+  Firestore rules deployment remains outstanding (includes earlier v4.36.1 contract
+  hardening); no new indexes required for these bounded queries.
+
+## Two high-priority Admin fixes (2 November 2026)
+
+- v4.36.1 fixes only the failed Users-group switch and pending contract approval
+  binding from the Admin audit; other medium/operational findings remain open.
+- Users keeps PortalShell stable but keys the group-specific list component so
+  records, cursors, requests and confirmation state cannot cross Consumer/Hospital
+  groups. Empty/error groups show no previous-role cards; actions also check role
+  and loading/error state. Inline load/error/retry replaces this screen's global
+  blocking error/redirect overlay, allowing retry or a different group. Delayed
+  responses from unmounted groups are discarded by the existing shared hook.
+- Shared contractApproval canonicalizes only printed particulars. Pending material
+  edits set server-managed contractNeedsRegeneration, retaining the earlier signed
+  URL/dates. Preview download sends its own captured expectedContent, not a later
+  record; generation/signing reject stale particulars. New approval binds
+  contractGeneratedContent/contractSignedContent, and pending activation verifies
+  the binding. New signing dates apply to the new revision; earlier agreements
+  remain in append-only hospitalContractRevisions snapshots committed with the
+  audit, independently of the clearable audit log. UI explains regeneration and
+  does not silently reuse an old signed URL. Untouched legacy approvals and active
+  centres remain available without backfill, migration or publication changes.
+- Firestore rules now require server endpoints for pending hospital edits and all
+  contract generation/signing/activation, closing direct-client bypasses. Private
+  revision history is readable only by active MFA Admin and cannot be written or
+  deleted by any client. Existing Hospital profile field/changed-field allowlists
+  exclude all approval metadata; public server projections remain whitelisted.
+  Required rules deployment to ayursarga-connect is NOT performed/authorized yet;
+  no new indexes are needed. Native emulator checks were added/updated but cannot
+  run with installed Java 8 (current emulator requires Java 21+). Source assertions
+  and fake transactions do not prove deployed/native permissions.
+- 25 focused local backend checks passed, including contract edit/regenerate/sign/
+  activate, stale previews, denied roles, failed atomic writes, immutable history,
+  legacy/active compatibility, galleries, user status and unchanged centre booking.
+  All 15 final browser checks passed for failed/held group loads, same-group retry, status controls,
+  contract guidance/download/blank signed URL and existing deactivation across
+  desktop, 320px phone and mobile WebKit. No live data, email, deployment, build,
+  lint or typecheck run for this task.
+
 ## Consultation consultant/support emails (2 November 2026)
 
 - v4.36.0 adds an independent support@ayursarga.com email event for new

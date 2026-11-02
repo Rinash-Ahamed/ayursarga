@@ -10,6 +10,7 @@ import { validConsultationSchedule } from "@/features/consultations/schedule";
 import { isConsultantDateAvailable } from "@/features/consultations/availability";
 import { isIsoDate, toDateInputValue } from "@/utils/date";
 import { isValidPhoneNumber } from "@/utils/phone";
+import { isValidEmail } from "@/utils/text";
 import { consultationFinancialTotals } from "@/features/payments/consultationFinance";
 import type { ConsultationCheckout } from "@/features/payments/checkout";
 import { reserveBookingReference } from "@/services/bookings/bookingReferenceAdmin";
@@ -44,13 +45,22 @@ function completedProfile(profile: Data | undefined) {
 export function consumerCheckout(id: string, value: Data): ConsultationCheckout {
   const expired = value.draft?.scheduleVersion === 2 && !value.bookingId && value.state === "ready" && !(value.holdExpiresAt > Date.now());
   const ready = !expired && value.state === "ready" && typeof value.orderId === "string" && value.mode === getRazorpayReadiness().mode;
+  // Own-consumer checkout only: use the server-saved profile snapshot, never
+  // browser-supplied contacts, consultant contacts, or internal financial data.
+  const customerName = typeof value.draft?.consumerName === "string" ? value.draft.consumerName.trim().slice(0, 120) : "";
+  const customerEmail = typeof value.draft?.consumerEmail === "string" ? value.draft.consumerEmail.trim().toLowerCase() : "";
+  const customerPhone = typeof value.draft?.consumerPhone === "string" ? value.draft.consumerPhone.trim() : "";
   return { intentId: id, state: expired ? "reservation_expired" : String(value.state), bookingId: typeof value.bookingId === "string" ? value.bookingId : null,
     bookingReference: typeof value.bookingReference === "string" ? value.bookingReference : null,
     totalPaise: Number(value.amountPaise), currency: "INR",
     ...(value.draft?.cancellationPolicy ? { cancellationPolicy: value.draft.cancellationPolicy } : {}),
     ...(value.draft ? { consultantName: String(value.draft.consultantName), serviceName: String(value.draft.serviceName),
       date: String(value.draft.preferredDate), timeWindow: `${value.draft.slotStartTime} - ${value.draft.slotEndTime}` } : {}),
-    ...(ready ? { keyId: razorpayCheckoutKey(), orderId: value.orderId } : {}) };
+    ...(ready ? { keyId: razorpayCheckoutKey(), orderId: value.orderId, customer: {
+      ...(customerName ? { name: customerName } : {}),
+      ...(isValidEmail(customerEmail) ? { email: customerEmail } : {}),
+      ...(isValidPhoneNumber(customerPhone) ? { contact: `+91${customerPhone}` } : {}),
+    } } : {}) };
 }
 
 export async function prepareConsultationPayment(firestore: Firestore, uid: string, body: Data) {
@@ -260,6 +270,7 @@ async function commitPayment(firestore: Firestore, id: string, payment: Razorpay
       const gatewayFeePaise = payment.fee ?? previous?.gatewayFeePaise ?? null;
       const needsReview = (!bookingSnap.exists && !bookable) || refundedPaise > 0 || event?.type.startsWith("refund.");
       const totals = consultationFinancialTotals({ grossPaise, commissionPaise, consultantPayablePaise, gatewayFeePaise, refundedPaise });
+      const reviewClosed = previous?.settlementStatus === "closed" && previous?.reviewResolution === "full_refund_verified" && refundedPaise === grossPaise;
       const record = { consumerName: intent.draft.consumerName, consultantId: intent.consultantId, consultantName: intent.draft.consultantName,
         serviceName: intent.draft.serviceName, bookingId: bookable || bookingSnap.exists ? id : null, bookingReference: bookingReference ?? null,
         paymentId: payment.id, orderId: payment.order_id, mode: intent.mode, grossPaise, commissionPaise, consultantPayablePaise,
@@ -269,7 +280,8 @@ async function commitPayment(firestore: Firestore, id: string, payment: Razorpay
         settlementStatus: previous?.settlementStatus ?? "pending", settlementReference: previous?.settlementReference ?? null,
         settlementDate: previous?.settlementDate ?? null, settlementNotes: previous?.settlementNotes ?? null,
         settlementRecordedAt: previous?.settlementRecordedAt ?? null, settlementRecordedBy: previous?.settlementRecordedBy ?? null,
-        settlementHold: Boolean(previous?.settlementHold || needsReview),
+        settlementHold: reviewClosed ? false : Boolean(previous?.settlementHold || needsReview),
+        ...(reviewClosed ? { reviewResolution: previous.reviewResolution, reviewResolvedAt: previous.reviewResolvedAt, reviewResolvedBy: previous.reviewResolvedBy, reviewResolutionNotes: previous.reviewResolutionNotes } : {}),
         reviewReason: previous?.reviewReason ?? (needsReview ? (refundedPaise > 0 || event?.type.startsWith("refund.") ? "refund_review" : "booking_unavailable") : null),
         createdAt: previous?.createdAt ?? now, createdBy: previous?.createdBy ?? uid, archivedAt: null, archivedBy: null };
       const changed = !previous || ["gatewayFeePaise", "gatewayTaxPaise", "refundedPaise", "paymentStatus", "settlementHold", "reviewReason"].some(key => record[key as keyof typeof record] !== previous[key]);
