@@ -193,6 +193,23 @@ test("date-first search excludes inactive, archived, unassigned, unavailable-day
   }
 });
 
+test("date-first search never offers payment-ineligible consultants while retaining pagination and legacy discovery", async () => {
+  const records = Object.fromEntries(Array.from({length:10}, (_,i) => [`consultants/AS${String(i+1).padStart(3,"0")}`, {...paidConsultant,employeeSequence:i+1}]));
+  records["consultants/AS001"].consultantCharge = 0;
+  records["consultants/AS002"].consultantCharge = 0.50;
+  delete records["consultants/AS003"].ayursargaCommissionPercentage;
+  records["consultants/AS004"].ayursargaCommissionPercentage = null;
+  const f = consultationPaymentFixture({records});
+  const get = cursor => f.load("app/api/consultations/availability/route.ts").GET(new Request(`https://test.local/api/consultations/availability?service=prenatal-doctor&date=${date}${cursor ? `&cursor=${cursor}` : ""}`));
+  const first = await (await get()).json();
+  assert.deepEqual(first.documents.map(item => item.id), ["AS005","AS006","AS007","AS008"]);
+  assert.equal(first.hasMore,true); assert.equal(first.cursor,8);
+  assert.deepEqual((await (await get(8)).json()).documents.map(item => item.id),["AS009","AS010"]);
+  // Keep legacy professional discovery separate from eligibility for a new paid booking.
+  const { publicConsultantProjection } = loadTypeScript("features/consultations/publicProjection.ts");
+  assert.equal(publicConsultantProjection("AS001",records["consultants/AS001"],"prenatal-doctor").consultantCharge,0);
+});
+
 test("date-first availability denies ineligible callers and throttles without any writes",async()=>{
   const request=new Request(`https://test.local/api/consultations/availability?service=prenatal-doctor&date=${date}`);
   const denied=consultationPaymentFixture({denied:true});

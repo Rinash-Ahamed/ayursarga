@@ -18,7 +18,7 @@ for (const [long, baselineHash] of [
   test(`partner contract stays five pages with unchanged exported text (${long ? "long" : "standard"} particulars)`, async ({page}) => {
     await page.setContent("<html></html>");
     await page.addScriptTag({content:bundle});
-    const result = await page.evaluate(long => (window as ContractFixture).contractPdfFixture(long), long);
+    const result = await page.evaluate(long => (window as unknown as ContractFixture).contractPdfFixture(long), long);
     expect(result.pdf).toMatch(/\/Count 5\b/);
     expect(textHash(result.pdf)).toBe(baselineHash);
     expect(result.pdf).toContain("/F1 9.1 Tf");
@@ -46,14 +46,14 @@ for (const [long, baselineHash] of [
 test("contract compaction leaves shared invoice PDF rendering byte-for-byte unchanged", async ({page}) => {
   await page.setContent("<html></html>");
   await page.addScriptTag({content:bundle});
-  const pdf = await page.evaluate(() => (window as ContractFixture).invoicePdfFixture());
+  const pdf = await page.evaluate(() => (window as unknown as ContractFixture).invoicePdfFixture());
   expect(createHash("sha256").update(pdf).digest("hex")).toBe("533a9b53cb108afaab50014bf3acb284fef8b5d7fa2879f45321e075b3494fc8");
 });
 
 test("compact HTML preview retains readable body text and equal unclipped signature boxes", async ({page}, info) => {
   await page.setContent("<html></html>");
   await page.addScriptTag({content:bundle});
-  const {html} = await page.evaluate(() => (window as ContractFixture).contractPdfFixture(true));
+  const {html} = await page.evaluate(() => (window as unknown as ContractFixture).contractPdfFixture(true));
   await page.route("https://contract.test/**", route => {
     const name = new URL(route.request().url()).pathname;
     return name === "/mainlogo.png" || name === "/harisesign.png"

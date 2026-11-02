@@ -283,13 +283,19 @@ to deploy, rerun maintenance scripts, or modify live data.
   denied; authenticated slot projections expose times/states, never identities.
   Durable private payment
   intents claim order creation before the provider POST; uncertain orders must
-  never be automatically recreated. Closing checkout may automatically abandon
-  its own provider-verified never-attempted order; Consumer may also choose
-  Ignore unpaid checkout. Require a matching created INR order with zero paid,
+  never be automatically recreated. By the owner's 2 November 2026 decision,
+  do not restore a Previous payment panel, Resume/Ignore controls, browser
+  payment-reminder storage/listeners or a Pay blocker based on that storage.
+  Keep current-form stable request IDs and all server capture/hold/idempotency
+  checks. Cross-page browser recovery hints are no longer retained; an ambiguous
+  outcome must still tell the consumer to check My Bookings/contact support
+  rather than imply failure or encourage another charge.
+  Closing checkout may automatically abandon its own provider-verified
+  never-attempted order. Require a matching created INR order with zero paid,
   full amount due and no payment attempts, plus transactional ownership, current
   state/revision and no booking/financial record. Audit an abandoned intent and
-  release only its own hold atomically; preserve all history. Clear recovery and
-  use a fresh request ID only after verified abandonment. Never ignore attempted,
+  release only its own hold atomically; preserve all history. Use a fresh
+  current-form request ID only after verified abandonment. Never ignore attempted,
   processing, authorized, paid, unknown or unreachable payments. Abandonment is
   not provider-order cancellation or a refund: any later captured payment goes
   to financial review and must never confirm an abandoned intent.

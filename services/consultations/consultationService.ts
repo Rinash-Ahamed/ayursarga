@@ -49,7 +49,7 @@ export async function createConsultationBooking(input: {
   await loadConsultationCheckout();
   const response = await preparePaidConsultation(input);
   const paid = await payForConsultation(response.checkout);
-  if (!paid.bookingId) throw new Error("Payment has not been confirmed. Check status before paying again.");
+  if (!paid.bookingId) throw new Error("Payment has not been confirmed. Check My Bookings or contact Ayursarga before paying again.");
   return { ok: true as const, bookingId: paid.bookingId, bookingReference: paid.bookingReference ?? "" };
 }
 

@@ -232,11 +232,11 @@ test("shared booking cards stay compact and readable across portals and consulta
       const badge = meta.querySelector(".portal-status")!.getBoundingClientRect();
       const commission = meta.querySelector(".operational-booking-commission")?.getBoundingClientRect();
       return { overlap: Math.min(price.right, badge.right) - Math.max(price.left, badge.left) > 1 && Math.min(price.bottom, badge.bottom) - Math.max(price.top, badge.top) > 1,
-        commissionOverlap: !!commission && Math.min(price.bottom, commission.bottom) - Math.max(price.top, commission.top) > 1,
+        commissionOverlap: !!commission && Math.min(price.right, commission.right) - Math.max(price.left, commission.left) > 1 && Math.min(price.bottom, commission.bottom) - Math.max(price.top, commission.top) > 1,
         overflow: meta.scrollWidth > meta.clientWidth + 1 };
     });
     expect(moneyLayout).toEqual({ overlap: false, commissionOverlap: false, overflow: false });
-    if (screen === "consumer-consultations-policy") await expect(cards.first().locator(".consultation-cancellation")).toBeVisible();
+    if (screen === "consumer-consultations-policy") await expect(cards.first().getByRole("region", { name: "Cancellation policy", exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     await page.screenshot({ path: testInfo.outputPath(`${screen}-compact.png`), fullPage: true });
   }
@@ -813,39 +813,42 @@ test("date-first consultation ignores delayed old dates and recovers from availa
   await expect(page.getByRole("radio",{name:/Assigned Consultation Professional/})).toBeVisible();
 });
 
-test("verified unpaid checkout can be ignored in one action without re-entering the form, while uncertain payments stay blocked", async ({ page }) => {
+test("consultation form ignores old payment hints without previous-payment controls or a completed-form blocker", async ({ page }) => {
   await page.route("**/*", route => route.fulfill({ contentType: "text/html", body: "<!doctype html><html><body></body></html>" }));
   await page.goto("https://ayursarga.test/");
-  await page.evaluate(() => sessionStorage.setItem("ayursarga-pending-consultation-payment:patient", "fixture"));
+  await page.evaluate(() => sessionStorage.setItem("ayursarga-pending-consultation-payment:patient", "old-opaque-checkout"));
   await mount(page, "consumer-consultation-new");
+  await expect(page.getByRole("region", { name: "Pending consultation payment" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Resume payment|Ignore unpaid checkout|Check payment status/ })).toHaveCount(0);
   await page.getByRole("textbox", { name: "Preferred appointment date *", exact: true }).fill("25/10/2099");
   await page.getByRole("combobox", { name: "Preferred time *", exact: true }).selectOption("09:30");
   await page.getByRole("radio").check();
   await page.getByRole("checkbox", { name: "I have read and agree to the applicable terms and policies.", exact: true }).check();
   const pay = page.getByRole("button", { name: "Pay & book appointment", exact: true });
-  await expect(pay).toBeDisabled();
-  await expect(pay).toHaveAttribute("aria-describedby", "consultation-payment-blocked");
-  await expect(page.locator("#consultation-payment-blocked")).toContainText("avoid paying twice");
-  await page.getByRole("link", { name: "Review previous payment", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Pending consultation payment" })).toBeInViewport();
-  await page.getByText("Payment details and help", { exact: true }).click();
-  await page.getByRole("button", { name: "Check payment status", exact: true }).click();
-  await expect(pay).toBeDisabled();
-  await page.getByRole("button", { name: "Ignore unpaid checkout", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Pending consultation payment" })).toContainText("A payment was attempted");
-  await expect(pay).toBeDisabled();
-  await page.evaluate(() => { (window as unknown as { paymentRecovery: { fail: boolean } }).paymentRecovery.fail = true; });
-  await page.getByRole("button", { name: "Check payment status", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Pending consultation payment" })).toContainText("Payment status could not be checked");
-  await expect(pay).toBeDisabled();
-  await page.evaluate(() => { const recovery = (window as unknown as { paymentRecovery: { fail: boolean; discardable: boolean } }).paymentRecovery; recovery.fail = false; recovery.discardable = true; });
-  await page.getByRole("button", { name: "Ignore unpaid checkout", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Pending consultation payment" })).toHaveCount(0);
-  await expect(page.getByRole("combobox", { name: "Preferred time *", exact: true })).toHaveValue("09:30");
-  await expect(page.getByRole("radio")).toBeChecked();
-  await expect(page.getByRole("checkbox", { name: "I have read and agree to the applicable terms and policies.", exact: true })).toBeChecked();
   await expect(pay).toBeEnabled();
-  expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { consultantWrites: unknown[] } }).consumerBookingFixture.consultantWrites.length)).toBe(0);
+  await expect(page.locator("#consultation-payment-blocked")).toHaveCount(0);
+  await pay.click();
+  expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { consultantWrites: unknown[] } }).consumerBookingFixture.consultantWrites.length)).toBe(1);
+});
+
+test("consultation retry after an uncertain response preserves the current request identity without previous-payment UI", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({ contentType: "text/html", body: "<!doctype html><html><body></body></html>" }));
+  await page.goto("https://ayursarga.test/");
+  await mount(page, "consumer-consultation-new");
+  await page.getByRole("textbox", { name: "Preferred appointment date *", exact: true }).fill("25/10/2099");
+  await page.getByRole("combobox", { name: "Preferred time *", exact: true }).selectOption("09:30");
+  await page.getByRole("radio").check();
+  await page.getByRole("checkbox", { name: "I have read and agree to the applicable terms and policies.", exact: true }).check();
+  await page.evaluate(() => { (window as unknown as { paymentRecovery: { failNext: boolean } }).paymentRecovery.failNext = true; });
+  const pay = page.getByRole("button", { name: "Pay & book appointment", exact: true });
+  await pay.click();
+  await expect(page.locator("form .portal-form-error")).toContainText("Check My Bookings");
+  await expect(page.getByRole("region", { name: "Pending consultation payment" })).toHaveCount(0);
+  await expect(pay).toBeEnabled();
+  await pay.click();
+  const attempts = await page.evaluate(() => (window as unknown as { consumerBookingFixture: { consultantWrites: {requestId:string}[] } }).consumerBookingFixture.consultantWrites);
+  expect(attempts).toHaveLength(2);
+  expect(attempts[0].requestId).toBe(attempts[1].requestId);
 });
 
 test("closing an unused checkout lets the same completed form pay again with a fresh request identity", async ({ page }) => {
@@ -1525,8 +1528,9 @@ test("consultant designation and preferred availability edit legacy records safe
   await charge.fill("900.50");
   await commission.fill("10");
   await expect(page.locator(".portal-edit-form .portal-form-note").filter({ hasText: "Consumer total:" })).toContainText("₹990.55");
-  const inputs = await page.locator('input[name="consultantCharge"], input[name="ayursargaCommissionPercentage"]').evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().top));
-  if (page.viewportSize()!.width > 700) expect(Math.abs(inputs[0] - inputs[1])).toBeLessThanOrEqual(1);
+  const inputs = await page.locator('input[name="consultantCharge"], input[name="ayursargaCommissionPercentage"]').evaluateAll((elements) => elements.map((element) => { const box=element.getBoundingClientRect(); return {left:box.left,top:box.top,bottom:box.bottom}; }));
+  if (Math.abs(inputs[0].left - inputs[1].left) > 1) expect(Math.abs(inputs[0].top - inputs[1].top)).toBeLessThanOrEqual(1);
+  else expect(inputs[1].top).toBeGreaterThanOrEqual(inputs[0].bottom);
   await page.getByRole("checkbox", { name: "Prenatal doctor consultation", exact: true }).check();
   await expect(page.getByRole("group", { name: "Preferred days", exact: true }).getByRole("checkbox")).toHaveCount(7);
   await page.getByRole("checkbox", { name: "Mon", exact: true }).check();

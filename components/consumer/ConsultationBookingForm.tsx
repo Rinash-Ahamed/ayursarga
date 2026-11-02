@@ -17,20 +17,17 @@ import { PortalShell } from "@/components/portal/PortalShell";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { DateInput } from "@/components/forms/DateInput";
 import { formatCurrency } from "@/utils/currency";
-import { isIsoDate, toDateInputValue, formatDisplayDate } from "@/utils/date";
-import { ConsultationCheckoutClosedError, type ConsultationCheckout } from "@/features/payments/checkout";
-import { useAuth } from "@/hooks/useAuth";
+import { isIsoDate, toDateInputValue } from "@/utils/date";
+import { ConsultationCheckoutClosedError } from "@/features/payments/checkout";
 import { ROUTES } from "@/config/routes";
 import { getConsultationCancellationPolicy } from "@/services/consultations/cancellationPolicyService";
 import { snapshotConsultationCancellation, type ConsultationCancellationPolicy } from "@/features/consultations/cancellationPolicy";
 import { ConsultationCancellationInfo } from "@/components/consultations/ConsultationCancellationInfo";
 import { usePortalClock } from "@/hooks/usePortalClock";
-import { useConsultationPaymentReminder } from "@/hooks/useConsultationPaymentReminder";
 
 const isFutureAppointmentDate = (value: string) => isIsoDate(value) && value >= toDateInputValue();
 
 export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
-  const { firebaseUser } = useAuth();
   const service = consultationService(serviceId);
   const router = useRouter();
   const [consultantId, setConsultantId] = useState("");
@@ -57,40 +54,15 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
     return () => { active = false; };
   }, [policyRetry]);
   const [busy, setBusy] = useState(false);
-  const pendingPayment = useConsultationPaymentReminder(firebaseUser?.uid);
-  const [paymentDetails, setPaymentDetails] = useState<ConsultationCheckout | null>(null);
   const [error, setError, notification] = useRepeatableMessage();
   const submitting = useRef(false);
   const attempt = useRef<{ key: string; id: string } | null>(null);
   const consultant = matchingConsultants.find((item) => item.id === consultantId);
   const dateAllowed = (value: string) => Boolean(consultant && isConsultantDateAvailable(value, consultant)
     && service && generateConsultationSlots(value, service.id, consultant).length);
-  async function checkPayment(action: "check" | "resume" | "ignore" = "check") {
-    if (!pendingPayment || submitting.current) return;
-    submitting.current = true; setBusy(true); setError(null);
-    try {
-      const { consultationPaymentStatus, abandonConsultationCheckout, payForConsultation, clearConsultationPaymentReminder } = await import("@/services/payments/consultationCheckout");
-      let result = (await (action === "ignore" ? abandonConsultationCheckout(pendingPayment) : consultationPaymentStatus(pendingPayment))).checkout;
-      setPaymentDetails(result);
-      if (action === "resume" && result.state === "ready") {
-        result = await payForConsultation(result);
-        setPaymentDetails(result);
-      }
-      if (result.bookingId) {
-        clearConsultationPaymentReminder();
-        router.push(`/app/bookings/consultations?booking=${encodeURIComponent(result.bookingId)}`);
-      } else if (result.state === "abandoned") {
-        clearConsultationPaymentReminder(); attempt.current = null; setPaymentDetails(null); setError(null); appointmentSlots.reload();
-      } else setError(result.state === "paid_review" ? "Payment received; your appointment needs Ayursarga review. Contact support and do not pay again." : result.state === "reservation_expired" ? "Your appointment hold has expired. Ignore this checkout only if you did not attempt payment. If money was debited, contact support before paying again." : "Payment is not confirmed yet. Resume this payment or contact Ayursarga if money was debited.");
-    } catch (failure) {
-      if (failure instanceof ConsultationCheckoutClosedError) { attempt.current = null; setPaymentDetails(null); setError(null); appointmentSlots.reload(); }
-      else setError(failure instanceof Error ? failure.message : "We could not check payment. Please contact support before paying again.");
-    }
-    finally { submitting.current = false; setBusy(false); }
-  }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submitting.current || !service || pendingPayment || !cancellationPolicy) return;
+    if (submitting.current || !service || !cancellationPolicy) return;
     const timing = appointment && consultant?.preferredSlotTimings[appointment.window];
     if (!consultant || !appointment || !timing || appointmentSlots.loading || appointmentSlots.error || loadError || !isIsoDate(date) || date < toDateInputValue() || !consent) {
       setError("Choose a consultant, date and preferred time window, and accept the booking terms."); return;
@@ -120,16 +92,6 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
         <p>Choose your date and an available time, then select a consultant. Pay the full consultation fee securely through Razorpay. Your appointment is confirmed only after payment is verified. Online consultation is not an emergency service.</p>
         <nav className="portal-actions portal-flow-navigation" aria-label="Consultation navigation"><Link className="portal-button secondary" href="/#wellness">Choose another service</Link><Link className="portal-button secondary" href="/app/bookings/consultations">My online consultations</Link></nav>
       </section>
-      {pendingPayment && <section id="consultation-payment-recovery" className="portal-card" aria-label="Pending consultation payment">
-        <h2>Previous checkout</h2><p>Resume your payment, or ignore this checkout if you did not attempt payment. Close any other payment window first. If money was debited, do not pay again.</p>
-        {error && <p className="portal-form-error" role="alert">{error}</p>}
-        <div className="portal-actions"><button type="button" className="portal-button" disabled={busy} onClick={() => void checkPayment("resume")}>Resume payment</button><button type="button" className="portal-button secondary" disabled={busy} onClick={() => void checkPayment("ignore")}>{busy ? "Please wait…" : "Ignore unpaid checkout"}</button></div>
-        <details><summary>Payment details and help</summary>
-          {paymentDetails && <p>{paymentDetails.consultantName} · {paymentDetails.serviceName} · {formatDisplayDate(paymentDetails.date)} · {paymentDetails.timeWindow} · {formatCurrency(paymentDetails.totalPaise / 100)}</p>}
-          {paymentDetails?.cancellationPolicy && <ConsultationCancellationInfo snapshot={paymentDetails.cancellationPolicy} status="confirmed" now={clock} />}
-          <div className="portal-actions"><button type="button" className="portal-button secondary" disabled={busy} onClick={() => void checkPayment()}>Check payment status</button><Link className="portal-button secondary" href="/app/support">Contact support</Link></div>
-        </details>
-      </section>}
       <PortalToast message={error} notification={notification} tone="error" />
       <PortalToast message={loadError} notification={loadNotification} tone="error" />
       <form className="portal-form portal-card consumer-consultation-form" onSubmit={submit}>
@@ -177,10 +139,9 @@ export function ConsultationBookingForm({ serviceId }: { serviceId: string }) {
           <label className="portal-consent-choice"><input type="checkbox" required checked={consent} onChange={(event) => setConsent(event.target.checked)} /><span>I have read and agree to the applicable terms and policies.</span></label>
         </fieldset>
         {error && <p className="portal-form-error full" role="alert">{error}</p>}
-        {error && <div className="portal-actions full"><button type="button" className="portal-button secondary" disabled={busy || isLoading} onClick={() => { setConsultantId(""); setSlot(""); setConsent(false); void reload(); }}>Refresh consultants</button><button type="button" className="portal-button secondary" disabled={busy || Boolean(pendingPayment)} onClick={() => { setConsent(false); setError(null); setCancellationPolicy(null); setPolicyFailed(false); setPolicyRetry(value => value + 1); }}>Reload cancellation terms</button></div>}
+        {error && <div className="portal-actions full"><button type="button" className="portal-button secondary" disabled={busy || isLoading} onClick={() => { setConsultantId(""); setSlot(""); setConsent(false); void reload(); }}>Refresh consultants</button><button type="button" className="portal-button secondary" disabled={busy} onClick={() => { setConsent(false); setError(null); setCancellationPolicy(null); setPolicyFailed(false); setPolicyRetry(value => value + 1); }}>Reload cancellation terms</button></div>}
         {!cancellationPolicy && <p className="full" role="status">{policyFailed ? "Cancellation terms could not be loaded. Please retry before paying." : "Loading agreed cancellation terms…"}{policyFailed && <button type="button" className="portal-button secondary" onClick={() => { setPolicyFailed(false); setPolicyRetry(value => value + 1); }}>Reload cancellation terms</button>}</p>}
-        {pendingPayment && <div className="full portal-form-note" id="consultation-payment-blocked" role="status"><p>A previous payment still needs checking. Review it before starting another payment to avoid paying twice.</p><a className="portal-button secondary" href="#consultation-payment-recovery">Review previous payment</a></div>}
-        <div className="portal-actions full"><button className="portal-button" aria-describedby={pendingPayment ? "consultation-payment-blocked" : undefined} disabled={busy || Boolean(pendingPayment) || !cancellationPolicy || !consent || !consultant || !date || !dateAllowed(date) || !appointment || appointmentSlots.loading || Boolean(appointmentSlots.error) || Boolean(loadError)}>{busy ? "Processing payment..." : "Pay & book appointment"}</button></div>
+        <div className="portal-actions full"><button className="portal-button" disabled={busy || !cancellationPolicy || !consent || !consultant || !date || !dateAllowed(date) || !appointment || appointmentSlots.loading || Boolean(appointmentSlots.error) || Boolean(loadError)}>{busy ? "Processing payment..." : "Pay & book appointment"}</button></div>
       </form>
     </>}
     </div>

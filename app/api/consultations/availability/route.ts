@@ -3,6 +3,7 @@ import { apiJson, logApiError } from "@/services/api/server";
 import { allowRequest } from "@/services/api/rateLimit";
 import { consultationService } from "@/features/consultations/catalog";
 import { publicConsultantProjection } from "@/features/consultations/publicProjection";
+import { getConsultantPricing } from "@/features/consultants/pricing";
 import { generateConsultationSlots } from "@/features/consultations/slots";
 import { readScheduleDay, slotState, SlotReservationError } from "@/services/consultations/slotReservationsAdmin";
 import type { AvailableConsultant } from "@/features/consultations/types";
@@ -32,7 +33,12 @@ export async function GET(request: Request) {
       // overlap checks; never return identities behind unavailable intervals.
       for (let offset = 0; offset < page.length; offset += 3) {
         const group = await Promise.all(page.slice(offset, offset + 3).map(async (doc): Promise<AvailableConsultant | null> => {
-          const provider = publicConsultantProjection(doc.id, doc.data(), service.id);
+          const data = doc.data();
+          const pricing = getConsultantPricing(data.consultantCharge, data.ayursargaCommissionPercentage);
+          // Match checkout's explicit commission and INR 1 minimum without
+          // changing legacy professional discovery or existing appointments.
+          if (!pricing || pricing.totalCharge < 1) return null;
+          const provider = publicConsultantProjection(doc.id, data, service.id);
           if (!provider) return null;
           const generated = generateConsultationSlots(date, service.id, provider, now);
           if (!generated.length) return null;

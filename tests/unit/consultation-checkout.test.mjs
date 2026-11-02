@@ -1,6 +1,5 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import { loadTypeScript } from "../helpers/loadTypeScript.mjs";
 
 class ApiError extends Error { constructor(status) { super("Request declined"); this.status = status; } }
@@ -19,15 +18,16 @@ function fixture(request) {
 }
 const ready = { intentId: "consultation-safe", state: "ready", orderId: "order_Test", keyId: "rzp_test_public", totalPaise: 11000, currency: "INR" };
 
-test("checkout persists its deterministic own-user recovery ID before networking, retaining ambiguous outcomes only", async () => {
+test("checkout sends the stable action identity without storing previous-payment state, including ambiguous failures", async () => {
   for (const error of [new Error("Connection lost"), new ApiError(503), new ApiError(400), new ApiError(409)]) {
     const f = fixture(() => {
-      assert.equal(f.storage.get("ayursarga-pending-consultation-payment:patient"), `consultation-${createHash("sha256").update("patient:stable-request").digest("hex")}`);
+      assert.equal(f.storage.size, 0);
       throw error;
     });
     try {
       await assert.rejects(f.checkout.preparePaidConsultation({ requestId: "stable-request" }));
-      assert.equal(f.storage.size, error.status === 400 || error.status === 409 ? 0 : 1);
+      assert.equal(f.storage.size, 0);
+      assert.equal(JSON.parse(f.calls[0][1].body).requestId, "stable-request");
     } finally { f.restore(); }
   }
 });
@@ -54,11 +54,11 @@ test("closing checkout checks the saved payment without claiming success or crea
     await Promise.resolve(); await Promise.resolve();
     await f.options().modal.ondismiss(); await rejected;
     assert.equal(f.calls.length, 1); assert.deepEqual(JSON.parse(f.calls[0][1].body), { action: "abandon" });
-    assert.equal(f.storage.size, 1);
+    assert.equal(f.storage.size, 0);
   } finally { f.restore(); }
 });
 
-test("closing a verified never-attempted checkout clears recovery and signals a fresh attempt without claiming payment success", async () => {
+test("closing a verified never-attempted checkout signals a fresh attempt without browser recovery state or false payment success", async () => {
   const f = fixture(() => ({ checkout: { ...ready, state: "abandoned" } }));
   try {
     const result = f.checkout.payForConsultation(ready);
@@ -72,7 +72,7 @@ test("closing a verified never-attempted checkout clears recovery and signals a 
   } finally { f.restore(); }
 });
 
-test("an uncertain ignore response retains recovery; a verified paid close opens the existing booking", async () => {
+test("an uncertain close reports unconfirmed payment; a verified paid close opens the existing booking", async () => {
   for (const paid of [false, true]) {
     const f = fixture(() => { if (!paid) throw new Error("Network unavailable"); return { checkout: { ...ready, bookingId: "existing-booking" } }; });
     try {
@@ -81,7 +81,7 @@ test("an uncertain ignore response retains recovery; a verified paid close opens
       await Promise.resolve(); await Promise.resolve();
       await f.options().modal.ondismiss();
       const confirmed = await outcome;
-      assert.equal(f.storage.size, paid ? 0 : 1);
+      assert.equal(f.storage.size, 0);
       if (paid) assert.equal(confirmed.bookingId, "existing-booking");
     } finally { f.restore(); }
   }

@@ -2,6 +2,35 @@
 
 Updated: 2 November 2026 (Asia/Calcutta).
 
+## Consultant audit and removal of previous-payment UI (2 November 2026)
+
+- v4.35.0 supersedes the v4.34.0 browser recovery UI below at the owner's request.
+  Removed Previous checkout, Resume/Ignore/check controls, reminder hook/storage/
+  events and its Pay blocker. Old browser hints are inert. Current-form request
+  identity and safe verified-unused-close abandonment remain, as do all backend
+  payment, slot, ownership, capture, financial-review and audit safeguards. No
+  historical/payment data deleted. Cross-page recovery hints are no longer kept;
+  uncertain/debited payments require My Bookings/support before another payment.
+- Fixed date-first availability offering consultants with absent commission or
+  total fees below INR 1, using shared pricing before schedule reads. Verified a
+  red/green regression, pagination and unchanged legacy public discovery. Fixed
+  three contract-test type assertions and false-positive responsive test geometry.
+- Owner-approved build, lint and typecheck passed. 146 backend tests, 116 browser
+  checks (desktop/320px/tablet/mobile WebKit), 4 contract checks and 5 production
+  HTTP checks passed. Fresh build health JSON was configuration/deep-configuration
+  ready (3/6 dependencies), themed health rendered. Public consultant and bounded
+  Search Center list/details/packages returned 200 after network-enabled rerun;
+  sandbox attempt failed on blocked proxy. Missing/invalid tokens returned 401.
+- Production lab reduced booking-shell gzip JS 486,380 to 485,450 bytes; public
+  discovery unchanged. LCP timings varied, so no general speed gain claimed.
+  Probe measures anonymous shells, not signed-in workflow/database duration.
+  See `docs/CONSULTATION_AUDIT_2026-11-02.md` for figures, coverage and limits.
+- No deployment/rules/index changes, live payments, email sending or authenticated
+  production mutations. Real Razorpay/SMTP/native Firestore contention remain
+  release checks; Java 8 blocks current emulator (needs 21+). Scaling follow-ups:
+  bounded legacy availability query cost, awaited SMTP latency and process-local
+  rate limits. Temporary production server stopped; build-info artifact removed.
+
 ## Simpler closed-checkout recovery (2 November 2026)
 
 - v4.34.0 adds Ignore unpaid checkout beside Resume payment. Details/check-status/

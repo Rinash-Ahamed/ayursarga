@@ -36,16 +36,21 @@ test("protected booking/consultant mutations reject missing and invalid tokens w
   const endpoints = [
     ["POST", "/api/consumer/bookings"], ["POST", "/api/consumer/consultations"],
     ["PATCH", `/api/consultations/consultation-${"0".repeat(64)}`],
+    ["POST", `/api/consumer/consultation-payments/consultation-${"0".repeat(64)}`],
     ["PATCH", "/api/hospital/bookings/local-smoke-not-a-real-record"], ["POST", "/api/admin/consultants"],
   ];
   for (const authorization of [null, "Bearer deliberately-invalid-smoke-token"]) for (const [method, path] of endpoints) {
-    const response = await read(path, { method, headers: { "Content-Type": "application/json", ...(authorization ? { Authorization: authorization } : {}) }, body: "{}" });
+    const response = await read(path, { method, headers: { "Content-Type": "application/json", ...(authorization ? { Authorization: authorization } : {}) }, body: path.includes("consultation-payments/") ? JSON.stringify({action:"abandon"}) : "{}" });
     assert.equal(response.status, 401, `${method} ${path}`);
     assert.equal(typeof (await response.json()).error, "string");
     assert.match(response.headers.get("cache-control"), /no-store/);
   }
   const details = await read("/api/consumer/bookings?id=local-smoke-not-a-real-record"); assert.equal(details.status, 401);
-  console.log("11 protected HTTP requests denied as expected; no authenticated writes attempted");
+  for (const path of ["/api/admin/consultant-finance?mode=test", "/api/consumer/consultation-cancellation-policy", "/api/admin/consultation-cancellation-policy"]) {
+    const response = await read(path); assert.equal(response.status, 401);
+    assert.match(response.headers.get("cache-control"), /no-store/);
+  }
+  console.log("16 protected HTTP requests denied as expected; no authenticated writes attempted");
 });
 
 test("public consultant queries enforce validation and execute the deployed bounded index without private fields", async () => {
