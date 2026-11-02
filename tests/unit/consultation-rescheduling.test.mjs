@@ -47,7 +47,7 @@ test("consumer reschedule commits once, retains payment and policy, releases/res
   assert.equal(saved.cancellationPolicy.refundDeadlineAt, "2099-10-25T04:30:00.000Z");
   assert.equal(f.records.get("consultationSlotDays/AS001_2099-10-25").entries["09:30"].state, "released");
   assert.equal(f.records.get("consultationSlotDays/AS001_2099-10-26").entries["10:00"].state, "booked");
-  assert.equal(f.values("consultationEmailEvents").filter(event => event.event === "rescheduled").length, 2);
+  assert.equal(f.values("consultationEmailEvents").filter(event => event.event === "rescheduled").length, 3);
   assert.match(f.calls.smtp[0].text, /25\/10\/2099/);
   assert.match(f.calls.smtp[0].text, /26\/10\/2099/);
   assert.equal(f.calls.consultantSmtp.length, 1);

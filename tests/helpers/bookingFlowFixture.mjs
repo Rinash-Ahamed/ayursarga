@@ -30,7 +30,7 @@ export function bookingFlowFixture(options = {}) {
   let sequence = Math.max(0, ...[...records.keys()].map((path) => Number(/\/auto-(\d+)$/.exec(path)?.[1] ?? 0)));
   let queue = Promise.resolve();
   let throwAfterCommit = options.throwAfterCommit ?? false;
-  const calls = { commits: 0, writes: [], fields: [], emails: [], smtp: [], consultantSmtp: [] };
+  const calls = { commits: 0, writes: [], fields: [], emails: [], smtp: [], consultantSmtp: [], supportSmtp: [] };
   const snapshot = (ref) => ({ id: ref.id, ref, exists: records.has(ref.path), data: () => records.get(ref.path), updateTime: Timestamp.now() });
   const firestore = {
     collection: (collection) => {
@@ -102,8 +102,9 @@ export function bookingFlowFixture(options = {}) {
       const event = events.find((record) => record.recipient === message.to);
       if (!event) throw new Error("Consultation SMTP must follow a committed claim");
       const consultant = event.audience === "consultant";
-      (consultant ? calls.consultantSmtp : calls.smtp).push(message);
-      if (consultant ? options.failConsultantEmail : options.failEmail) throw new Error("Simulated SMTP failure");
+      const support = event.audience === "support";
+      (consultant ? calls.consultantSmtp : support ? calls.supportSmtp : calls.smtp).push(message);
+      if (consultant ? options.failConsultantEmail : support ? options.failSupportEmail : options.failEmail) throw new Error("Simulated SMTP failure");
     } },
     "@/services/email/bookingEmailService": { scheduleBookingConfirmation: (kind, bookingId, booking) => {
       if (!calls.commits || records.get(`${kind === "hospital" ? "bookings" : "consultationBookings"}/${bookingId}`)?.status !== "confirmed") throw new Error("Email must follow a committed confirmation");

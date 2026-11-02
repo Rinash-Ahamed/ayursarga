@@ -36,7 +36,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
     const requestId = typeof input.requestId === "string" && /^[a-zA-Z0-9-]{16,100}$/.test(input.requestId) ? input.requestId : null;
     if (role === "admin" && action !== "completed" && !requestId) return apiJson({ error: "A valid action reference is required. Refresh and try again." }, 400);
     if (role === "consumer" && action === "reschedule" && (!requestId || typeof input.expectedAuditId !== "string" || !input.expectedAuditId || input.expectedAuditId.length > 160)) return apiJson({ error: "Refresh the appointment before rescheduling." }, 400);
-    const eventId = requestId ? `action-${createHash("sha256").update(`${uid}:${bookingId}:${requestId}`).digest("hex")}` : null;
+    const actionReference = requestId ?? (role === "consumer" && action === "cancelled" ? "consumer-cancellation" : null);
+    const eventId = actionReference ? `action-${createHash("sha256").update(`${uid}:${bookingId}:${actionReference}`).digest("hex")}` : null;
     const payloadHash = createHash("sha256").update(JSON.stringify([action, input.confirmedDate ?? null, input.confirmedTime ?? null,
       role === "admin" ? String(input.adminNotes ?? "").trim() : null, input.expectedAuditId ?? null])).digest("hex");
     const result = await firestore.runTransaction(async (transaction) => {
@@ -94,7 +95,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
         update.confirmedAt = booking.confirmedAt ?? now;
         if (validCancellationSnapshot(booking.cancellationPolicy)) update.cancellationPolicy = snapshotConsultationCancellation(booking.cancellationPolicy.policy, date, time, true);
       }
-      if (role === "admin" && action === "cancelled") {
+      if (action === "cancelled") {
         const consultant = await transaction.get(firestore.collection("consultants").doc(booking.consultantId));
         consultantContact = consultant.data() ?? {};
       }
@@ -137,7 +138,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
         message: `${booking.serviceName}: appointment ${action === "reschedule" ? "rescheduled" : action}.`,
         event: `consultation_${action}_${audit.id}`, actorId: uid, auditId: audit.id, now,
       });
-      const emailEventId = (role === "admin" && action !== "completed") || (role === "consumer" && action === "reschedule") ? eventId : null;
+      const emailEventId = action !== "completed" ? eventId : null;
       if (emailEventId) queueConsultationEmail(transaction, firestore, { eventId: emailEventId, bookingId,
         event: action === "reschedule" ? "rescheduled" : "cancelled", booking: { ...booking, ...update }, previous: booking,
         consultant: consultantContact, consultantFee: financial ? Number(financial.consultantPayablePaise) / 100 : undefined,

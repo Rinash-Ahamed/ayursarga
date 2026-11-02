@@ -19,7 +19,7 @@ export type BookingEmailData = {
   previousDate?: unknown;
   previousTime?: string | null;
   previousTimeWindow?: string;
-  audience?: "consumer" | "consultant";
+  audience?: "consumer" | "consultant" | "support";
 };
 
 const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character] || character);
@@ -29,16 +29,17 @@ export function bookingEmail(data: BookingEmailData) {
   if (url.protocol !== "https:" && !(["localhost", "127.0.0.1"].includes(url.hostname) && url.protocol === "http:")) throw new Error("A secure booking link is required.");
   const hospital = data.kind === "hospital";
   const consultant = !hospital && data.audience === "consultant";
+  const support = !hospital && data.audience === "support";
   const event = hospital ? "confirmed" : data.event ?? "confirmed";
   const subject = `Ayursarga booking ${event}${data.bookingReference ? `: ${data.bookingReference}` : ""}`;
-  const heading = hospital ? "Your hospital booking is confirmed" : consultant ? `Consultation ${event === "confirmed" ? "booked" : event}` : `Your online consultation is ${event}`;
+  const heading = hospital ? "Your hospital booking is confirmed" : consultant || support ? `Consultation ${event === "confirmed" ? "booked" : event}` : `Your online consultation is ${event}`;
   const rows: [string, string][] = [
     ["Booking reference", data.bookingReference || "See My Bookings"],
     [hospital ? "Hospital" : "Consultant", data.providerName],
     [hospital ? "Package" : "Service", data.serviceName],
     [hospital ? "Preferred start date / Expected Delivery Date" : event === "rescheduled" ? "Updated appointment date" : event === "cancelled" ? "Original appointment date" : "Appointment date", formatDisplayDate(data.date, "See My Bookings")],
   ];
-  if (consultant) rows.splice(2, 0, ["Consumer", data.consumerName]);
+  if (consultant || support) rows.splice(2, 0, ["Consumer", data.consumerName]);
   if (data.time) rows.push([event === "rescheduled" ? "Updated appointment time" : event === "cancelled" ? "Original appointment time" : "Appointment time", `${data.time} IST`]);
   else if (!hospital && data.timeWindow) rows.push([event === "cancelled" ? "Original appointment window" : "Appointment window", `${data.timeWindow} IST`]);
   if (event === "rescheduled") {
@@ -49,16 +50,18 @@ export function bookingEmail(data: BookingEmailData) {
   if (typeof data.amount === "number" && Number.isFinite(data.amount)) rows.push([hospital ? "Package amount" : "Consultation charge", formatCurrency(data.amount)]);
   if (hospital && typeof data.bystanderCount === "number") rows.push(["Bystanders", String(data.bystanderCount)]);
   if (hospital && data.additionalBystanderTotal) rows.push(["Additional bystander amount", formatCurrency(data.additionalBystanderTotal)]);
-  const greetingName = consultant ? data.providerName : data.consumerName;
+  const greetingName = support ? "Ayursarga team" : consultant ? data.providerName : data.consumerName;
   const greeting = greetingName ? `Hello ${greetingName},` : "Hello,";
-  const note = consultant
+  const note = support
+    ? `An online consultation has been ${event === "confirmed" ? "booked" : event}. ${event === "rescheduled" ? "The original and updated schedules are shown above. " : ""}Review the appointment in Admin for the latest details.${event === "cancelled" ? " Cancellation does not confirm that a refund has been issued." : ""}`
+    : consultant
     ? `An assigned consultation has been ${event === "confirmed" ? "booked" : event}. ${event === "rescheduled" ? "Please use the updated schedule shown above. " : ""}For appointment coordination, contact info@ayursarga.com and quote the booking reference.`
     : event === "rescheduled"
     ? "Your appointment has been rescheduled. Please use the updated date and time shown above. Contact info@ayursarga.com if this schedule does not suit you."
     : event === "cancelled"
       ? "Your appointment has been cancelled. For assistance or to arrange another appointment, contact info@ayursarga.com or explore Wellness Path on Ayursarga. This notice does not confirm a refund."
       : "You can view the latest booking details in your Ayursarga account. This confirmation is not a payment receipt.";
-  const actionLabel = consultant ? "Contact Ayursarga" : "View My Bookings";
+  const actionLabel = support ? "View appointment in Admin" : consultant ? "Contact Ayursarga" : "View My Bookings";
   const text = `Ayursarga\n\n${heading}\n\n${greeting}\n\n${rows.map(([label, value]) => `${label}: ${value}`).join("\n")}\n\n${note}\n\n${actionLabel}: ${url.href}\n\nNeed help? info@ayursarga.com`;
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;background:#f9f5ea;color:#243b2d;font-family:Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%">

@@ -39,6 +39,13 @@ export function queueConsultationEmail(transaction: Transaction, firestore: Fire
     status: "pending", createdAt: input.now, createdBy: input.actorId,
     updatedAt: input.now, updatedBy: input.actorId, archivedAt: null, archivedBy: null, lastAuditId: input.auditId,
   });
+  transaction.create(firestore.collection(COLLECTION).doc(`${input.eventId}-support`), {
+    bookingId: input.bookingId, event: input.event, payloadHash: input.payloadHash ?? null, actorRole: input.actorRole,
+    bookingAuditId: input.auditId, audience: "support", channel: "email",
+    recipient: "support@ayursarga.com", payload,
+    status: "pending", createdAt: input.now, createdBy: input.actorId,
+    updatedAt: input.now, updatedBy: input.actorId, archivedAt: null, archivedBy: null, lastAuditId: input.auditId,
+  });
   if (input.consultant !== undefined) {
     transaction.create(firestore.collection(COLLECTION).doc(`${input.eventId}-consultant`), {
       bookingId: input.bookingId, consultantId: String(booking.consultantId ?? ""), event: input.event,
@@ -54,11 +61,12 @@ export function queueConsultationEmail(transaction: Transaction, firestore: Fire
 
 /** Separate claims/outcomes: one recipient's failure never blocks the other. */
 export async function deliverConsultationEmails(firestore: Firestore, eventId: string) {
-  const [email, consultantEmail] = await Promise.all([
+  const [email, consultantEmail, supportEmail] = await Promise.all([
     deliverConsultationEmail(firestore, eventId),
     deliverConsultationEmail(firestore, `${eventId}-consultant`),
+    deliverConsultationEmail(firestore, `${eventId}-support`),
   ]);
-  return { email, consultantEmail };
+  return { email, consultantEmail, supportEmail };
 }
 
 /**
@@ -108,7 +116,8 @@ export async function deliverConsultationEmail(firestore: Firestore, eventId: st
         failureReason = event.recipient ? "invalid_email" : "missing_email";
         throw new Error("Invalid saved recipient");
       }
-      const url = new URL(event.audience === "consultant" ? "/contact" : "/app/bookings/consultations", authEmailSiteUrl());
+      const url = new URL(event.audience === "consultant" ? "/contact"
+        : event.audience === "support" ? "/admin/bookings/consultations" : "/app/bookings/consultations", authEmailSiteUrl());
       if (event.audience !== "consultant") url.searchParams.set("booking", event.bookingId);
       const template = bookingEmail({ ...event.payload, amount: event.payload.amount ?? undefined,
         kind: "consultation", audience: event.audience ?? "consumer", event: event.event, bookingUrl: url.href } as BookingEmailData);
@@ -122,7 +131,7 @@ export async function deliverConsultationEmail(firestore: Firestore, eventId: st
     await firestore.runTransaction(async (transaction) => {
       const current = await transaction.get(reference);
       if (current.data()?.status !== "sending") return;
-      const admins = event.audience === "consultant" && status === "failed"
+      const admins = ["consultant", "support"].includes(event.audience) && status === "failed"
         ? await consultationAdminRecipients(transaction, firestore) : [];
       const audit = firestore.collection("auditLogs").doc();
       const now = Timestamp.now();
@@ -131,10 +140,11 @@ export async function deliverConsultationEmail(firestore: Firestore, eventId: st
         actorRole: event.actorRole, previousValues: { status: "sending" }, updatedValues: { status, failureReason }, timestamp: now, source: "server" });
       for (const admin of admins) addConsultationNotification(transaction, firestore, {
         recipientId: admin, recipientRole: "admin", bookingId: event.bookingId, bookingReference: event.payload.bookingReference,
-        message: failureReason === "missing_email" || failureReason === "invalid_email"
+        message: event.audience === "support" ? "The support team email could not be confirmed. Review this appointment and coordinate directly."
+          : failureReason === "missing_email" || failureReason === "invalid_email"
           ? "Consultant email is missing or invalid. Update the consultant contact and coordinate this appointment directly."
           : "Consultant email could not be confirmed. Contact the consultant directly.",
-        event: `consultant_email_failed_${eventId}`, actorId: event.createdBy, auditId: audit.id, now,
+        event: `${event.audience}_email_failed_${eventId}`, actorId: event.createdBy, auditId: audit.id, now,
       });
     });
     return { status };

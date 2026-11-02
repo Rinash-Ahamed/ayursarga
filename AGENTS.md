@@ -366,13 +366,16 @@ to deploy, rerun maintenance scripts, or modify live data.
   automatically resend an event after an ambiguous SMTP result.
   Before claiming a pending consultation email, transactionally check the current
   appointment status and originating booking audit revision. Mark obsolete
-  events superseded with an atomic audit instead of sending; apply this to both
+  events superseded with an atomic audit instead of sending; apply this to all
   recipients and all consultation email types. Legacy pending events may use
   their unchanged lastAuditId as the originating revision. Never restart an
   already claimed/accepted/failed/unknown email or claim SMTP can be recalled.
-  New consultation bookings, Admin reschedules and Admin cancellations also
-  email the assigned consultant using their server-read registered email.
-  Consultant and Consumer delivery claims/outcomes are independent; missing
+  Consultation confirmations, reschedules and cancellations (by Admin or Consumer)
+  also email support@ayursarga.com and the assigned consultant using their
+  server-read registered email. Support uses its own private event and Admin
+  appointment link; never copy the consultant onto a Consumer email. Existing
+  historical events are not backfilled or resent. Centre bookings remain separate
+  and have no reschedule option. Each recipient's delivery claim/outcome is independent; missing
   consultant email and delivery failure must be recorded and surfaced to Admin.
   Consultants still have no Auth accounts/dashboard. Do not include protected
   Consumer booking links in their emails. WhatsApp sending is not configured

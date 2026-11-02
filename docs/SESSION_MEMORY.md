@@ -2,6 +2,44 @@
 
 Updated: 2 November 2026 (Asia/Calcutta).
 
+## Consultation consultant/support emails (2 November 2026)
+
+- v4.36.0 adds an independent support@ayursarga.com email event for new
+  consultation confirmations, reschedules and cancellations. Consultant emails
+  now include Consumer cancellations, not just Admin cancellations; Consumer
+  confirmations/reschedules remain unchanged and cancellation also receives its
+  own confirmation notice. Centre bookings are untouched; no centre reschedule
+  option was added. This is consultation-only, not a new hospital email workflow.
+- All recipient events commit with the booking audit, then use separate durable
+  delivery claims/outcomes through existing SMTP. Support templates include
+  Consumer, consultant, reference and original/updated IST schedule, with an Admin
+  link; consultant emails never link to protected Consumer pages. No commission
+  fields are added to email payloads or Consumer records. Support failure creates
+  an Admin bell notice; Admin mutation feedback includes its independent status.
+- Consumer cancellation reads current assigned consultant contact in the same
+  transaction and uses the supplied request identity (stable derived fallback for
+  legacy callers). Repeated actions cannot duplicate events. Each audience uses
+  the existing stale-revision/status guard and suppresses obsolete pending mail;
+  failed/uncertain SMTP is never automatically replayed. Historical events are
+  not backfilled, resent or modified by migration.
+- 78 focused local tests passed covering verified-payment confirmation, ownership
+  and policy denials, Admin/Consumer changes, independent email failures, retries,
+  stale mail and unchanged Search Center booking. All 40 consultation-booking
+  checks also passed on the final rerun with support stale-suppression and
+  independent support-delivery assertions. These are fake-provider/
+  transactional fixtures, not actual inbox delivery or native Firestore emulator
+  permission coverage. Existing rules deny all client email-event access; no new
+  rule/index/environment configuration required. No live email, data mutation
+  or deployment performed.
+- Subsequent owner-requested validation for v4.36.0: production build passed
+  (85 pages), ESLint passed and standalone typecheck passed. Fresh local production
+  server passed all 5 HTTP smoke tests: health JSON configuration/deep-configuration
+  ready (3/6 dependencies), themed deep-health page rendered, protected requests
+  returned 401, public consultants and bounded Search Center list/details/packages
+  returned 200 without management metadata. These do not verify SMTP inbox delivery
+  or authenticated live writes. Temporary production server stopped and generated
+  tsconfig.tsbuildinfo removed. No version bump for validation-only continuation.
+
 ## Consultant audit and removal of previous-payment UI (2 November 2026)
 
 - v4.35.0 supersedes the v4.34.0 browser recovery UI below at the owner's request.

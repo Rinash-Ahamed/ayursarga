@@ -119,7 +119,9 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
       const result = await updateConsultationBooking(action.booking.id, { action: action.status, requestId: action.requestId, expectedAuditId: action.booking.lastAuditId,
         ...(action.status === "reschedule" ? { confirmedDate: date, confirmedTime: time } : {}), ...(role === "admin" ? { adminNotes: notes } : {}) });
       patchItem(action.booking.id, result.changes);
-      const deliveries = [[result.email, "consumer"], [result.consultantEmail, "consultant"]] as const;
+      const deliveries = role === "admin"
+        ? [[result.email, "consumer"], [result.consultantEmail, "consultant"], [result.supportEmail, "support"]] as const
+        : [[result.email, "consumer"]] as const;
       const accepted = deliveries.filter(([delivery]) => delivery?.status === "accepted").map(([delivery, recipient]) => consultationEmailFeedback(delivery, recipient));
       const warnings = deliveries.filter(([delivery]) => delivery && delivery.status !== "accepted").map(([delivery, recipient]) => consultationEmailFeedback(delivery, recipient));
       setMessage(`Appointment ${action.status === "reschedule" ? "rescheduled" : formatStatus(action.status).toLowerCase()}. ${accepted.join(" ")}`.trim());

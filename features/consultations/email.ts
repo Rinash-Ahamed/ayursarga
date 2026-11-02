@@ -1,7 +1,7 @@
 export type ConsultationEmailStatus = "pending" | "sending" | "accepted" | "failed" | "unknown" | "superseded";
 export type ConsultationEmailResult = { status: ConsultationEmailStatus };
 
-export function consultationEmailFeedback(result?: ConsultationEmailResult, recipient: "consumer" | "consultant" = "consumer") {
+export function consultationEmailFeedback(result?: ConsultationEmailResult, recipient: "consumer" | "consultant" | "support" = "consumer") {
   if (!result) return "";
   if (result.status === "superseded") return `An outdated ${recipient} email was not sent because the appointment has changed. Check the latest appointment details.`;
   if (result.status === "accepted") return `The ${recipient} email was accepted by the mail service; inbox delivery is not guaranteed.`;
