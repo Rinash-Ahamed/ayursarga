@@ -3,6 +3,8 @@ export type ConsultationEmailResult = { status: ConsultationEmailStatus };
 
 export function consultationEmailFeedback(result?: ConsultationEmailResult, recipient: "consumer" | "consultant" | "support" = "consumer") {
   if (!result) return "";
+  if (result.status === "pending") return `The appointment was saved. The ${recipient} email is queued for sending.`;
+  if (result.status === "sending") return `The appointment was saved. The ${recipient} email is being processed.`;
   if (result.status === "superseded") return `An outdated ${recipient} email was not sent because the appointment has changed. Check the latest appointment details.`;
   if (result.status === "accepted") return `The ${recipient} email was accepted by the mail service; inbox delivery is not guaranteed.`;
   if (result.status === "failed") return `The appointment was saved, but the mail service did not confirm the ${recipient} email. Please contact the ${recipient} directly; the email will not be resent automatically.`;

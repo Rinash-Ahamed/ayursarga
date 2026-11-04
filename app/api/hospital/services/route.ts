@@ -1,3 +1,5 @@
+import { withApiTiming } from "@/services/api/timing";
+import { encodeMutation } from "@/services/api/mutation";
 import { Timestamp } from "firebase-admin/firestore";
 import { createHash } from "node:crypto";
 import { validatePackagePayload } from "@/features/hospitals/packages";
@@ -10,11 +12,11 @@ import { requestAuditDevice } from "@/services/api/audit";
 
 export const runtime = "nodejs";
 
-export function GET() {
+function handleGET() {
   return apiHealth("/api/hospital/services", [{ name: "firebaseAdmin", ready: isFirebaseAdminReady() }]);
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     if (!allowRequest(requestFingerprint(request, "hospital-service-create"), 30, 10 * 60 * 1000)) {
       return apiJson({ error: "Too many package updates were sent. Please wait and try again." }, 429);
@@ -53,12 +55,12 @@ export async function POST(request: Request) {
       archivedBy: null,
       lastAuditId: auditReference.id,
     };
-    const duplicate = await firestore.runTransaction(async (transaction) => {
+    const result = await firestore.runTransaction(async (transaction) => {
       const [hospitalSnapshot, existing] = await transaction.getAll(firestore.collection("hospitals").doc(hospitalId), serviceReference);
       if (!hospitalSnapshot.exists || hospitalSnapshot.data()?.status !== "active") throw new AdminAuthorizationError("Only an active hospital can add packages.", 403);
       if (existing.exists) {
         if (existing.data()?.hospitalId !== hospitalId || existing.data()?.createdBy !== uid) throw new AdminAuthorizationError("This package request is unavailable.", 403);
-        return true;
+        return { duplicate: true, service: { id: serviceReference.id, ...existing.data()! } };
       }
       transaction.create(serviceReference, service);
       transaction.set(auditReference, {
@@ -66,9 +68,9 @@ export async function POST(request: Request) {
         actorId: uid, actorRole: "hospital", previousValues: null, updatedValues: service,
         timestamp: now, source: "server", device: requestAuditDevice(request),
       });
-      return false;
+      return { duplicate: false, service: { id: serviceReference.id, ...service } };
     });
-    return apiJson({ ok: true, serviceId: serviceReference.id, duplicate }, duplicate ? 200 : 201);
+    return apiJson({ ok: true, serviceId: serviceReference.id, duplicate: result.duplicate, service: encodeMutation(result.service) }, result.duplicate ? 200 : 201);
   } catch (error) {
     if (error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
     if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
@@ -76,3 +78,6 @@ export async function POST(request: Request) {
     return apiJson({ error: "We could not add the package. Please try again." }, 503);
   }
 }
+
+export const GET = withApiTiming("GET /api/hospital/services", handleGET);
+export const POST = withApiTiming("POST /api/hospital/services", handlePOST);

@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { AdminAuthorizationError, requireActiveUser } from "@/services/firebase/adminAuthorization";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { allowRequest } from "@/services/api/rateLimit";
@@ -9,7 +10,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 /** New WellnessPath requests require verified payment. Hospital booking route is independent. */
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const { uid, firestore } = await requireActiveUser(request, ["consumer"]);
     if (!allowRequest(`consultation-payment:${uid}`, 20, 10 * 60 * 1000)) return apiJson({ error: "Please wait before trying again." }, 429);
@@ -22,3 +23,5 @@ export async function POST(request: Request) {
     return apiJson({ error: "Payment setup could not be confirmed. Contact Ayursarga before starting another payment." }, 503);
   }
 }
+
+export const POST = withApiTiming("POST /api/consumer/consultations", handlePOST);

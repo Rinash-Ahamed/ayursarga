@@ -30,11 +30,12 @@ export function bookingFlowFixture(options = {}) {
   let sequence = Math.max(0, ...[...records.keys()].map((path) => Number(/\/auto-(\d+)$/.exec(path)?.[1] ?? 0)));
   let queue = Promise.resolve();
   let throwAfterCommit = options.throwAfterCommit ?? false;
-  const calls = { commits: 0, writes: [], fields: [], emails: [], smtp: [], consultantSmtp: [], supportSmtp: [] };
+  const calls = { commits: 0, writes: [], fields: [], emails: [], smtp: [], consultantSmtp: [], supportSmtp: [], after: [] };
   const snapshot = (ref) => ({ id: ref.id, ref, exists: records.has(ref.path), data: () => records.get(ref.path), updateTime: Timestamp.now() });
   const firestore = {
     collection: (collection) => {
       const buildQuery = (filters = [], maximum = 100, ordering = null, after = null) => ({
+        select: (...fields) => { calls.fields.push(fields); return buildQuery(filters, maximum, ordering, after); },
         where: (field, operator, value) => buildQuery([...filters, { field, operator, value }], maximum, ordering, after),
         limit: (value) => buildQuery(filters, value, ordering, after),
         orderBy: (field, direction) => buildQuery(filters, maximum, { field, direction }, after),
@@ -96,6 +97,7 @@ export function bookingFlowFixture(options = {}) {
     },
   };
   const overrides = {
+    "next/server": { after: callback => calls.after.push(callback) },
     "@/services/auth/authEmailService": { authEmailSiteUrl: () => "https://ayursarga.com" },
     "@/services/email/emailService": { sendEmail: async (message) => {
       const events = [...records.values()].filter((record) => record.status === "sending" && record.payload);
@@ -127,6 +129,7 @@ export function bookingFlowFixture(options = {}) {
     ...(options.overrides ?? {}),
   };
   return { actor, profile, firestore, records, calls,
+    flushAfter: async () => { while (calls.after.length) await calls.after.shift()(); },
     load: (path) => loadTypeScript(path, overrides),
     values: (collection) => [...records].filter(([path]) => path.startsWith(`${collection}/`)).map(([path, data]) => ({ id: path.split("/")[1], ...data })),
   };

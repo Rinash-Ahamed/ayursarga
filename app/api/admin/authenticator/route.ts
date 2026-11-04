@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { createHash } from "node:crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
@@ -10,7 +11,7 @@ import { isAdminSessionAfterCutoff } from "@/features/auth/adminMfa";
 export const runtime = "nodejs";
 
 /** Self-service replacement only with an existing, recently MFA-authenticated Admin session. */
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   if (!isAdminMfaRecoveryEnabled()) return apiJson({ error: "Authenticator replacement is disabled." }, 403);
   try {
     const { uid, decoded, auth, firestore } = await requireActiveAdmin(request);
@@ -82,3 +83,5 @@ export async function POST(request: Request) {
     return apiJson({ error: "Replacement could not be confirmed. Sign out and sign in again to check setup. Contact the project owner before retrying." }, 503);
   }
 }
+
+export const POST = withApiTiming("POST /api/admin/authenticator", handlePOST);

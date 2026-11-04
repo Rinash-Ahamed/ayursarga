@@ -1,10 +1,11 @@
+import { withApiTiming } from "@/services/api/timing";
 import { type NextRequest, NextResponse } from "next/server";
 import { apiJson } from "@/services/api/server";
 import { platformHealthReport } from "@/services/api/platformHealth";
 
 export const runtime = "nodejs";
 
-export function GET(request: NextRequest) {
+function handleGET(request: NextRequest) {
   if (request.headers.get("accept")?.includes("text/html")) {
     const destination = new URL("/health", request.url);
     if (new URL(request.url).searchParams.get("deep") === "true") destination.searchParams.set("deep", "true");
@@ -14,3 +15,5 @@ export function GET(request: NextRequest) {
   const report = platformHealthReport(new URL(request.url).searchParams.get("deep") === "true");
   return apiJson(report, report.status === "ok" ? 200 : 503);
 }
+
+export const GET = withApiTiming("GET /api/health", handleGET);

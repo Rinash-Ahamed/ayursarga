@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { FieldValue } from "firebase-admin/firestore";
 import { validateHospitalFields } from "@/features/hospitals/validation";
 import { hasMinimumHospitalImages, MIN_PUBLIC_HOSPITAL_IMAGES } from "@/features/hospitals/images";
@@ -8,7 +9,7 @@ import { hasCurrentHospitalContract } from "@/features/hospitals/contractApprova
 
 export const runtime = "nodejs";
 
-export function GET() {
+function handleGET() {
   return apiHealth("/api/admin/hospitals/[hospitalId]/activate", [{ name: "firebaseAdmin", ready: isFirebaseAdminReady() }]);
 }
 
@@ -22,7 +23,7 @@ function validContractUrl(value: unknown) {
   }
 }
 
-export async function POST(request: Request, context: { params: Promise<{ hospitalId: string }> }) {
+async function handlePOST(request: Request, context: { params: Promise<{ hospitalId: string }> }) {
   try {
     const { uid: adminUid, auth, firestore } = await requireActiveAdmin(request);
     const { hospitalId } = await context.params;
@@ -143,3 +144,6 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
     return apiJson({ error: "We could not activate the hospital. Check the server Firebase configuration and try again." }, 503);
   }
 }
+
+export const GET = withApiTiming("GET /api/admin/hospitals/[hospitalId]/activate", handleGET);
+export const POST = withApiTiming("POST /api/admin/hospitals/[hospitalId]/activate", handlePOST);

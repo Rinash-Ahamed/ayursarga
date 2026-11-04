@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { Timestamp } from "firebase-admin/firestore";
 import { validatePackagePayload } from "@/features/hospitals/packages";
 import { AdminAuthorizationError, requireActiveUser } from "@/services/firebase/adminAuthorization";
@@ -15,7 +16,7 @@ class ReviewError extends Error {
 const validId = (value: unknown): value is string => typeof value === "string" && value.length > 0 && value.length <= 160 && !value.includes("/");
 
 /** A bounded, atomic hospital-scoped review; never approve an unseen revision. */
-export async function POST(request: Request, context: { params: Promise<{ hospitalId: string }> }) {
+async function handlePOST(request: Request, context: { params: Promise<{ hospitalId: string }> }) {
   try {
     if (!allowRequest(requestFingerprint(request, "admin-package-review"), 50, 10 * 60 * 1000)) return apiJson({ error: "Too many reviews. Please wait and try again." }, 429);
     const { uid, firestore } = await requireActiveUser(request, ["admin"]);
@@ -80,3 +81,5 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
     return apiJson({ error: "We could not save the review. Refresh and try again." }, 503);
   }
 }
+
+export const POST = withApiTiming("POST /api/admin/hospitals/[hospitalId]/packages", handlePOST);

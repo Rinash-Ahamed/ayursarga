@@ -12,6 +12,29 @@ import { formatAppointmentRange } from "@/features/consultations/slots";
 const COLLECTION = "consultationEmailEvents";
 type AppointmentEmailEvent = "confirmed" | "rescheduled" | "cancelled";
 
+function currentEmail(event: Record<string, unknown>, appointment?: Record<string, unknown> | null) {
+  const revision = event.bookingAuditId ?? event.lastAuditId;
+  return Boolean(appointment && appointment.archivedAt == null && ["confirmed", "rescheduled", "cancelled"].includes(String(event.event))
+    && typeof revision === "string" && revision === appointment.lastAuditId
+    && appointment.status === (event.event === "cancelled" ? "cancelled" : "confirmed"));
+}
+
+/** Safe response metadata only; this never claims or sends an email. */
+export async function consultationEmailStatuses(firestore: Firestore, eventId: string, bookingId: string) {
+  const unknown = { email: { status: "unknown" as const }, consultantEmail: { status: "unknown" as const }, supportEmail: { status: "unknown" as const } };
+  try {
+    const [consumer, consultant, support, booking] = await firestore.getAll(
+      ...[eventId, `${eventId}-consultant`, `${eventId}-support`].map(id => firestore.collection(COLLECTION).doc(id)),
+      firestore.collection("consultationBookings").doc(bookingId));
+    const state = (snapshot: FirebaseFirestore.DocumentSnapshot): ConsultationEmailResult => {
+      const event = snapshot.data();
+      if (!event || !["pending", "sending", "accepted", "failed", "unknown", "superseded"].includes(event.status)) return { status: "unknown" };
+      return { status: event.status === "pending" && !currentEmail(event, booking.data()) ? "superseded" : event.status };
+    };
+    return { email: state(consumer), consultantEmail: state(consultant), supportEmail: state(support) };
+  } catch { return unknown; }
+}
+
 /** Called inside the appointment transaction, after all its reads. No SMTP here. */
 export function queueConsultationEmail(transaction: Transaction, firestore: Firestore, input: {
   eventId: string; bookingId: string; event: AppointmentEmailEvent; booking: Record<string, unknown>;
@@ -86,12 +109,7 @@ export async function deliverConsultationEmail(firestore: Firestore, eventId: st
         ? (await transaction.get(firestore.collection("consultationBookings").doc(event.bookingId))).data() : null;
       // Legacy pending events retain their originating booking audit in lastAuditId.
       // New events snapshot it separately because delivery updates lastAuditId.
-      const bookingAuditId = event.bookingAuditId ?? event.lastAuditId;
-      const expectedStatus = event.event === "cancelled" ? "cancelled" : "confirmed";
-      const current = appointment && appointment.archivedAt == null
-        && ["confirmed", "rescheduled", "cancelled"].includes(event.event)
-        && typeof bookingAuditId === "string" && bookingAuditId === appointment.lastAuditId
-        && appointment.status === expectedStatus;
+      const current = currentEmail(event, appointment);
       const audit = firestore.collection("auditLogs").doc();
       const now = Timestamp.now();
       if (!current) {
@@ -131,7 +149,7 @@ export async function deliverConsultationEmail(firestore: Firestore, eventId: st
     await firestore.runTransaction(async (transaction) => {
       const current = await transaction.get(reference);
       if (current.data()?.status !== "sending") return;
-      const admins = ["consultant", "support"].includes(event.audience) && status === "failed"
+      const admins = status === "failed"
         ? await consultationAdminRecipients(transaction, firestore) : [];
       const audit = firestore.collection("auditLogs").doc();
       const now = Timestamp.now();
@@ -141,6 +159,7 @@ export async function deliverConsultationEmail(firestore: Firestore, eventId: st
       for (const admin of admins) addConsultationNotification(transaction, firestore, {
         recipientId: admin, recipientRole: "admin", bookingId: event.bookingId, bookingReference: event.payload.bookingReference,
         message: event.audience === "support" ? "The support team email could not be confirmed. Review this appointment and coordinate directly."
+          : event.audience === "consumer" ? "The customer email could not be confirmed. Contact the customer about this appointment."
           : failureReason === "missing_email" || failureReason === "invalid_email"
           ? "Consultant email is missing or invalid. Update the consultant contact and coordinate this appointment directly."
           : "Consultant email could not be confirmed. Contact the consultant directly.",
@@ -150,6 +169,22 @@ export async function deliverConsultationEmail(firestore: Firestore, eventId: st
     return { status };
   } catch {
     // A lost database acknowledgement may follow successful SMTP acceptance.
+    // Record uncertainty, when the database is reachable, without repeating SMTP.
+    try {
+      await firestore.runTransaction(async transaction => {
+        const event = (await transaction.get(reference)).data();
+        if (event?.status !== "sending") return;
+        const admins = await consultationAdminRecipients(transaction, firestore);
+        const audit = firestore.collection("auditLogs").doc();
+        const now = Timestamp.now();
+        transaction.update(reference, { status: "unknown", failureReason: "delivery_outcome_unknown", updatedAt: now, updatedBy: event.createdBy, lastAuditId: audit.id });
+        transaction.create(audit, { action: "update", module: COLLECTION, recordId: eventId, actorId: event.createdBy,
+          actorRole: event.actorRole, previousValues: { status: "sending" }, updatedValues: { status: "unknown", failureReason: "delivery_outcome_unknown" }, timestamp: now, source: "server" });
+        for (const admin of admins) addConsultationNotification(transaction, firestore, { recipientId: admin, recipientRole: "admin", bookingId: event.bookingId,
+          bookingReference: event.payload.bookingReference, message: "An appointment email's delivery could not be verified. Check with the recipient before sending another copy.",
+          event: `email_unknown_${eventId}`, actorId: event.createdBy, auditId: audit.id, now });
+      });
+    } catch { /* Preserve the durable claim if the database is still unavailable. */ }
     return { status: "unknown" };
   }
 }

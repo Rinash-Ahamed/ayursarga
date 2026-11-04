@@ -454,6 +454,24 @@ to deploy, rerun maintenance scripts, or modify live data.
 
 ## Change discipline and validation
 
+- Keep Vercel server execution in bom1 beside the existing asia-south1 Firestore
+  database through vercel.json. This takes effect on app deployment, not by moving
+  database data. All API methods use shared request-local withApiTiming; retain
+  revocation/profile/MFA checks. Timing headers and slow logs contain only fixed
+  route templates, numeric stages and status, never request data or identifiers.
+- Consultation changes return committed data and truthful email queue statuses;
+  Next after processes the existing durable per-recipient email events after the
+  response. Preserve current-revision checks, single claims, failure/uncertainty
+  audits and Admin alerts; never retry ambiguous SMTP. Password reset replies
+  stay generic and run the same eligibility/link/SMTP checks in bounded after work.
+- Availability discovery batches at most eight day documents and retains both
+  bounded legacy date lookups/overflow guards. Read only schedule fields from
+  historical bookings, never contacts/notes. Atomic checkout/reschedule overlap
+  validation stays authoritative. Independent Finance reads run together, not
+  across sequential waves. Safe fully-loaded unfiltered lists may insert committed
+  create snapshots locally; preserve filtered/paginated refreshes and photo audit
+  revisions. Never construct a fake successful record from submitted fields alone.
+
 - Hospital commission invoices retain their issued content/number. Record external
   receipts through Admin-only server endpoints, with integer-paise totals, revision
   checks, outstanding-balance limits, valid non-future payment dates and atomic

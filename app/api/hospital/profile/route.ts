@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { Timestamp } from "firebase-admin/firestore";
 import { DEFAULT_CENTRE_GUIDELINE_VALUES } from "@/features/hospitals/guidelines";
 import { MAX_ADDITIONAL_BYSTANDERS } from "@/features/hospitals/bystanders";
@@ -20,7 +21,7 @@ const PROFILE_FIELDS = [
 
 const GUIDELINE_IDS = Object.keys(DEFAULT_CENTRE_GUIDELINE_VALUES) as Array<keyof typeof DEFAULT_CENTRE_GUIDELINE_VALUES>;
 
-export function GET() {
+function handleGET() {
   return apiHealth("/api/hospital/profile", [{ name: "firebaseAdmin", ready: isFirebaseAdminReady() }]);
 }
 
@@ -69,7 +70,7 @@ function validatedBystanderPolicy(body: Record<string, unknown>) {
   };
 }
 
-export async function PATCH(request: Request) {
+async function handlePATCH(request: Request) {
   try {
     if (!allowRequest(requestFingerprint(request, "hospital-profile"), 30, 10 * 60 * 1000)) {
       return apiJson({ error: "Too many profile updates were sent. Please wait and try again." }, 429);
@@ -147,3 +148,6 @@ export async function PATCH(request: Request) {
     return apiJson({ error: "We could not save the hospital profile. Please try again." }, 503);
   }
 }
+
+export const GET = withApiTiming("GET /api/hospital/profile", handleGET);
+export const PATCH = withApiTiming("PATCH /api/hospital/profile", handlePATCH);

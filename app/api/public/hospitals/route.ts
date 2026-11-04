@@ -1,3 +1,4 @@
+import { withApiTiming, timeApiStep } from "@/services/api/timing";
 import { FieldPath } from "firebase-admin/firestore";
 import { hasPublishedPackage } from "@/features/hospitals/packageReview";
 import { apiJson, logApiError } from "@/services/api/server";
@@ -7,7 +8,7 @@ import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
 
 export const runtime = "nodejs";
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   // These projections include approved block dates. Do not serve stale availability.
   try {
     if (!allowRequest(requestFingerprint(request, "public-hospitals"), 600, 10 * 60 * 1000)) {
@@ -32,11 +33,11 @@ export async function GET(request: Request) {
           serviceQuery = serviceQuery.startAfter(cursorSnapshot);
         }
       }
-      const serviceSnapshot = await serviceQuery.get();
+      const serviceSnapshot = await timeApiStep("database", () => serviceQuery.get());
       const page = serviceSnapshot.docs.slice(0, pageSize);
       const hospitalIds = [...new Set(page.filter((document) => hasPublishedPackage(document.data())).map((document) => String(document.data().hospitalId ?? "")).filter(Boolean))];
       const hospitalSnapshots = hospitalIds.length
-        ? await firestore.getAll(...hospitalIds.map((id) => firestore.collection("hospitals").doc(id)))
+        ? await timeApiStep("database", () => firestore.getAll(...hospitalIds.map((id) => firestore.collection("hospitals").doc(id))))
         : [];
       const documents = hospitalSnapshots
         .filter((document) => document.exists && document.data()?.status === "active" && document.data()?.isPublic === true)
@@ -80,7 +81,7 @@ export async function GET(request: Request) {
         hospitalQuery = hospitalQuery.startAfter(cursorSnapshot);
       }
     }
-    const snapshot = await hospitalQuery.get();
+    const snapshot = await timeApiStep("database", () => hospitalQuery.get());
     const page = snapshot.docs.slice(0, pageSize);
     return apiJson({
       documents: page.map((document) => publicHospitalListProjection(document.id, document.data())),
@@ -92,3 +93,5 @@ export async function GET(request: Request) {
     return apiJson({ error: "Ayurvedic centers are temporarily unavailable." }, 503);
   }
 }
+
+export const GET = withApiTiming("GET /api/public/hospitals", handleGET);

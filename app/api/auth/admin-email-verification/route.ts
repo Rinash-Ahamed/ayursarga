@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { AdminAuthorizationError, requireVerifiedFirebaseUser } from "@/services/firebase/adminAuthorization";
 import { isAuthEmailReady, sendAdminVerificationEmail } from "@/services/auth/authEmailService";
 import { allowRequest } from "@/services/api/rateLimit";
@@ -6,7 +7,7 @@ import { apiJson } from "@/services/api/server";
 export const runtime = "nodejs";
 
 /** Password-only exception for setup, never operational Admin access. No client recipient/URL. */
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const { uid, decoded, auth, firestore } = await requireVerifiedFirebaseUser(request);
     const profile = (await firestore.collection("users").doc(uid).get()).data();
@@ -29,3 +30,5 @@ export async function POST(request: Request) {
     return apiJson({ error: "Verification email delivery could not be confirmed. Check your inbox before requesting another link." }, 502);
   }
 }
+
+export const POST = withApiTiming("POST /api/auth/admin-email-verification", handlePOST);

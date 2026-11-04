@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { apiHealth, apiJson } from "@/services/api/server";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
@@ -5,11 +6,11 @@ import { isFirebaseAdminReady } from "@/services/firebase/admin";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-export function GET() {
+function handleGET() {
   return apiHealth("/api/admin/audits", [{ name: "firebaseAdmin", ready: isFirebaseAdminReady() }]);
 }
 
-export async function DELETE(request: Request) {
+async function handleDELETE(request: Request) {
   try {
     if (request.headers.get("x-ayursarga-confirm") !== "clear-all-audits") {
       return apiJson({ error: "Confirm the permanent audit-log removal before continuing." }, 400);
@@ -34,3 +35,6 @@ export async function DELETE(request: Request) {
     return apiJson({ error: "We could not clear the audit log. Check the server Firebase Admin configuration and try again." }, 503);
   }
 }
+
+export const GET = withApiTiming("GET /api/admin/audits", handleGET);
+export const DELETE = withApiTiming("DELETE /api/admin/audits", handleDELETE);

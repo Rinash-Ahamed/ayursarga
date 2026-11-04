@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { AdminAuthorizationError, requireActiveUser } from "@/services/firebase/adminAuthorization";
 import { apiJson, logApiError } from "@/services/api/server";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
@@ -6,7 +7,7 @@ import { canAccessBooking, ensureBookingReference } from "@/services/bookings/bo
 
 export const runtime = "nodejs";
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const { uid, role, profile, firestore } = await requireActiveUser(request, ["admin", "hospital", "consumer"]);
     if (!allowRequest(requestFingerprint(request, `booking-references:${uid}`), 120, 10 * 60 * 1000)) return apiJson({ error: "Please wait before loading more booking references." }, 429);
@@ -33,3 +34,5 @@ export async function POST(request: Request) {
     return apiJson({ error: "Booking references are temporarily unavailable. Please try again." }, 503);
   }
 }
+
+export const POST = withApiTiming("POST /api/bookings/references", handlePOST);

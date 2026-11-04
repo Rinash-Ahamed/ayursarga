@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { FieldValue } from "firebase-admin/firestore";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { apiJson } from "@/services/api/server";
@@ -6,7 +7,7 @@ import { requestAuditDevice } from "@/services/api/audit";
 
 export const runtime = "nodejs";
 
-export async function PATCH(request: Request, context: { params: Promise<{ userId: string }> }) {
+async function handlePATCH(request: Request, context: { params: Promise<{ userId: string }> }) {
   try {
     const { uid, firestore, auth } = await requireActiveAdmin(request);
     const { userId } = await context.params;
@@ -59,3 +60,5 @@ export async function PATCH(request: Request, context: { params: Promise<{ userI
     return apiJson({ error: "We could not change this account. Refresh the list and try again." }, 503);
   }
 }
+
+export const PATCH = withApiTiming("PATCH /api/admin/users/[userId]/status", handlePATCH);

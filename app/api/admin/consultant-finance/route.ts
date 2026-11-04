@@ -1,3 +1,4 @@
+import { withApiTiming, timeApiStep } from "@/services/api/timing";
 import { AggregateField, Timestamp, type DocumentData } from "firebase-admin/firestore";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
@@ -16,7 +17,7 @@ function record(id: string, data: DocumentData) {
   return { id, ...Object.fromEntries(fields.map(key => [key, data[key] ?? null])),
     createdAt: data.createdAt?.toDate?.().toISOString() ?? null, updatedAt: data.updatedAt?.toDate?.().toISOString() ?? null };
 }
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   try {
     const { firestore } = await requireActiveAdmin(request);
     const params = new URL(request.url).searchParams;
@@ -32,18 +33,17 @@ export async function GET(request: Request) {
       if (!previous.exists || previous.data()!.mode !== mode) return apiJson({ error: "Finance page changed. Refresh and try again." }, 409);
       query = query.startAfter(previous);
     }
-    const [page, aggregates, setupIssues] = await Promise.all([query.get(), scope.aggregate({
+    const [page, aggregates, setupIssues, pending, paid, review, feeUnknown] = await timeApiStep("database", () => Promise.all([query.get(), scope.aggregate({
       // Aggregations stay bounded server-side, not full-collection downloads.
       count: AggregateField.count(), grossPaise: AggregateField.sum("grossPaise"), commissionPaise: AggregateField.sum("commissionPaise"),
       gatewayFeePaise: AggregateField.sum("gatewayFeePaise"), refundedPaise: AggregateField.sum("refundedPaise"),
     }).get(), firestore.collection("consultationPaymentIntents").where("mode", "==", mode)
-      .where("state", "in", ["creating", "order_unknown"]).orderBy("createdAt", "desc").limit(10).get()]);
-    const [pending, paid, review, feeUnknown] = await Promise.all([
+      .where("state", "in", ["creating", "order_unknown"]).orderBy("createdAt", "desc").limit(10).get(),
       scope.where("settlementStatus", "in", ["pending", "processed"]).where("settlementHold", "==", false).aggregate({ payable: AggregateField.sum("consultantPayablePaise") }).get(),
       scope.where("settlementStatus", "==", "paid").aggregate({ payable: AggregateField.sum("consultantPayablePaise") }).get(),
       scope.where("settlementHold", "==", true).count().get(),
       scope.where("gatewayFeePaise", "==", null).count().get(),
-    ]);
+    ]));
     const docs = page.docs.slice(0, 20);
     return apiJson({ documents: docs.map(doc => record(doc.id, doc.data())), cursor: docs.at(-1)?.id ?? null, hasMore: page.size > 20, mode,
       setupIssues: setupIssues.docs.map(doc => ({ id: doc.id, receipt: doc.data().receipt, state: doc.data().state,
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
       summary: { ...aggregates.data(), pendingPayablePaise: pending.data().payable, paidPayablePaise: paid.data().payable, reviewCount: review.data().count, unknownFeeCount: feeUnknown.data().count } });
   } catch (error) { return failure(error); }
 }
-export async function PATCH(request: Request) {
+async function handlePATCH(request: Request) {
   try {
     const { uid, firestore } = await requireActiveAdmin(request);
     if (!allowRequest(`consultant-settlement:${uid}`, 30, 10 * 60 * 1000)) return apiJson({ error: "Please wait before updating settlements again." }, 429);
@@ -87,7 +87,7 @@ export async function PATCH(request: Request) {
   } catch (error) { return failure(error); }
 }
 /** Closes only verified full refunds; never allocates partial refunds or moves money. */
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const { uid, firestore } = await requireActiveAdmin(request);
     if (!allowRequest(`consultant-review:${uid}`, 20, 10 * 60 * 1000)) return apiJson({ error: "Please wait before checking more refunds." }, 429);
@@ -132,3 +132,7 @@ function failure(error: unknown) {
   if (error instanceof AdminAuthorizationError || error instanceof RequestBodyError || error instanceof ConsultationPaymentError) return apiJson({ error: error.message }, error.status);
   return apiJson({ error: "Finance is unavailable right now. Refresh to try again, or contact Ayursarga support if this continues." }, 503);
 }
+
+export const GET = withApiTiming("GET /api/admin/consultant-finance", handleGET);
+export const PATCH = withApiTiming("PATCH /api/admin/consultant-finance", handlePATCH);
+export const POST = withApiTiming("POST /api/admin/consultant-finance", handlePOST);

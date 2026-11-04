@@ -25,7 +25,7 @@ export function consultationPaymentFixture(options = {}) {
   };
   let f;
   f = bookingFlowFixture({ deferInitialThrowUntilBooking: true, ...options, records: { "consultants/AS001": paidConsultant, ...options.records }, overrides: {
-    "@/services/payments/razorpay": provider, "next/server": { after: () => {} },
+    "@/services/payments/razorpay": provider, "next/server": { after: callback => f.calls.after.push(callback) },
     "@/services/firebase/admin": { getFirebaseAdminFirestore: () => f.firestore }, ...options.overrides,
   } });
   function capture(checkout, changes = {}) {

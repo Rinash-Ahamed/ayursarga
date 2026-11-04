@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { Timestamp } from "firebase-admin/firestore";
 import { AdminAuthorizationError, requireActiveUser } from "@/services/firebase/adminAuthorization";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
@@ -7,11 +8,11 @@ import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
 
 export const runtime = "nodejs";
 
-export function GET() {
+function handleGET() {
   return apiHealth("/api/notifications/read", [{ name: "firebaseAdmin", ready: isFirebaseAdminReady() }]);
 }
 
-export async function PATCH(request: Request) {
+async function handlePATCH(request: Request) {
   try {
     if (!allowRequest(requestFingerprint(request, "notification-read"), 80, 10 * 60 * 1000)) {
       return apiJson({ error: "Too many notification updates were sent. Please wait and try again." }, 429);
@@ -43,3 +44,6 @@ export async function PATCH(request: Request) {
     return apiJson({ error: "We could not update the notifications. Please try again." }, 503);
   }
 }
+
+export const GET = withApiTiming("GET /api/notifications/read", handleGET);
+export const PATCH = withApiTiming("PATCH /api/notifications/read", handlePATCH);

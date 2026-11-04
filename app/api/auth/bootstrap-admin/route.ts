@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { FieldValue } from "firebase-admin/firestore";
 import { APPROVED_ADMIN_EMAIL } from "@/features/auth/constants";
 import { apiHealth, apiJson, logApiError } from "@/services/api/server";
@@ -9,13 +10,13 @@ import {
 
 export const runtime = "nodejs";
 
-export function GET() {
+function handleGET() {
   return apiHealth("/api/auth/bootstrap-admin", [
     { name: "firebaseAdmin", ready: isFirebaseAdminReady() },
   ]);
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const { uid, decoded, firestore } = await requireVerifiedFirebaseUser(request);
     const email = decoded.email?.trim().toLowerCase() ?? "";
@@ -92,3 +93,6 @@ export async function POST(request: Request) {
     return apiJson({ error: "Admin recovery is temporarily unavailable." }, 503);
   }
 }
+
+export const GET = withApiTiming("GET /api/auth/bootstrap-admin", handleGET);
+export const POST = withApiTiming("POST /api/auth/bootstrap-admin", handlePOST);

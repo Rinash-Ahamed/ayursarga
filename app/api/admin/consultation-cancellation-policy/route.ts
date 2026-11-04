@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { Timestamp } from "firebase-admin/firestore";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
@@ -8,11 +9,11 @@ import { parseConsultationCancellationPolicy, DEFAULT_CONSULTATION_CANCELLATION_
 
 export const runtime = "nodejs";
 class PolicyConflict extends Error {}
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   try { const { firestore } = await requireActiveAdmin(request); return apiJson({ policy: await readConsultationCancellationPolicy(firestore) }); }
   catch (error) { return failure(error); }
 }
-export async function PATCH(request: Request) {
+async function handlePATCH(request: Request) {
   try {
     const { uid, firestore } = await requireActiveAdmin(request);
     if (!allowRequest(`cancellation-policy:${uid}`, 20, 600000)) return apiJson({ error: "Please wait before updating the policy again." }, 429);
@@ -44,3 +45,6 @@ function failure(error: unknown) {
   if (error instanceof PolicyConflict) return apiJson({ error: error.message }, 409);
   return apiJson({ error: "Cancellation policy could not be loaded or saved." }, 503);
 }
+
+export const GET = withApiTiming("GET /api/admin/consultation-cancellation-policy", handleGET);
+export const PATCH = withApiTiming("PATCH /api/admin/consultation-cancellation-policy", handlePATCH);

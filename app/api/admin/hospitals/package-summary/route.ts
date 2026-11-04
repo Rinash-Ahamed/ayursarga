@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { requireActiveAdmin, AdminAuthorizationError } from "@/services/firebase/adminAuthorization";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { apiJson } from "@/services/api/server";
@@ -6,7 +7,7 @@ import { allowRequest } from "@/services/api/rateLimit";
 
 export const runtime = "nodejs";
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const { firestore, uid } = await requireActiveAdmin(request);
     if (!allowRequest(`hospital-package-summary:${uid}`, 60, 60_000)) {
@@ -68,3 +69,5 @@ export async function POST(request: Request) {
     return apiJson({ error: "Package status could not be loaded. Please try again." }, 503);
   }
 }
+
+export const POST = withApiTiming("POST /api/admin/hospitals/package-summary", handlePOST);

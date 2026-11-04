@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { ServiceDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import { inactiveLast } from "@/utils/statusOrder";
@@ -150,11 +150,13 @@ export function ServicesManager() {
   const loader = useCallback((cursor: StatusOrderedCursor | null) => hospitalId
     ? listHospitalServices(hospitalId, { pageSize: 20, cursor }, deferredSearch)
     : Promise.resolve({ documents: [], cursor: null, hasMore: false }), [deferredSearch, hospitalId]);
-  const { errorNotification: loadErrorNotification, items, error: loadError, isLoading, hasMore, reload, loadMore, patchItem, removeItem } = usePaginatedList<ServiceDocument, StatusOrderedCursor>(
+  const { errorNotification: loadErrorNotification, items, error: loadError, isLoading, hasMore, reload, loadMore, patchItem, removeItem, prependItem } = usePaginatedList<ServiceDocument, StatusOrderedCursor>(
     loader,
     "We could not load your packages. Refresh the page and try again.",
   );
   const usedInCreate = useMemo(() => usedProcedures(items.map(workingPackage)), [items]);
+  const listView = useRef({ search: deferredSearch, isLoading, hasMore, reload });
+  useEffect(() => { listView.current = { search: deferredSearch, isLoading, hasMore, reload }; }, [deferredSearch, isLoading, hasMore, reload]);
   const orderedItems = useMemo(() => inactiveLast(sortPackagesByDuration(items.map(workingPackage))), [items]);
 
   function beginAction(id: string) {
@@ -175,7 +177,9 @@ export function ServicesManager() {
       createRequestId.current = null;
       setHasPackageAmount(false);
       setCreateFormKey((current) => current + 1);
-      await reload();
+      const view = listView.current;
+      if (saved.service && saved.service.archivedAt == null && saved.service.status !== "archived" && !view.search && !view.hasMore && !view.isLoading) prependItem(saved.service);
+      else await view.reload();
       setActionMessage(saved.duplicate ? "This package is already saved. You can review it below." : "Draft saved. Submit it for approval so customers can view and book it.");
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : "We could not add the package. Check the details and try again.");

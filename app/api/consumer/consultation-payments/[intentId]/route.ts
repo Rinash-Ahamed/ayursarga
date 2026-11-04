@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { after } from "next/server";
 import { AdminAuthorizationError, requireActiveUser } from "@/services/firebase/adminAuthorization";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
@@ -10,14 +11,14 @@ import { deliverConsultationEmails } from "@/services/email/consultationEmailSer
 export const runtime = "nodejs";
 export const maxDuration = 60;
 type Context = { params: Promise<{ intentId: string }> };
-export async function GET(request: Request, context: Context) {
+async function handleGET(request: Request, context: Context) {
   try {
     const { uid, firestore } = await requireActiveUser(request, ["consumer"]);
     const { intentId } = await context.params;
     return apiJson({ checkout: consumerCheckout(intentId, await ownedConsultationIntent(firestore, uid, intentId)) });
   } catch (error) { return failure(error); }
 }
-export async function POST(request: Request, context: Context) {
+async function handlePOST(request: Request, context: Context) {
   try {
     const { uid, firestore } = await requireActiveUser(request, ["consumer"]);
     if (!allowRequest(`consultation-verify:${uid}`, 40, 10 * 60 * 1000)) return apiJson({ error: "Please wait before checking payment again." }, 429);
@@ -42,3 +43,6 @@ function failure(error: unknown) {
   if (error instanceof AdminAuthorizationError || error instanceof RequestBodyError || error instanceof ConsultationPaymentError) return apiJson({ error: error.message }, error.status);
   return apiJson({ error: "Payment verification is pending. Check your booking status or contact Ayursarga before paying again." }, 503);
 }
+
+export const GET = withApiTiming("GET /api/consumer/consultation-payments/[intentId]", handleGET);
+export const POST = withApiTiming("POST /api/consumer/consultation-payments/[intentId]", handlePOST);

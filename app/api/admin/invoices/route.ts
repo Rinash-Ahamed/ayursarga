@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { createHash } from "node:crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
@@ -12,7 +13,7 @@ export const runtime = "nodejs";
 class InvoiceError extends Error { constructor(message: string, public status: number) { super(message); } }
 const validId = (id: string) => /^[a-f0-9]{64}$/.test(id);
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   try {
     const { firestore } = await requireActiveAdmin(request);
     const query = new URL(request.url).searchParams;
@@ -42,7 +43,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const { uid, firestore } = await requireActiveAdmin(request);
     if (!allowRequest(`invoice-create:${uid}`, 30, 10 * 60 * 1000)) return apiJson({ error: "Please wait before generating more invoices." }, 429);
@@ -90,7 +91,7 @@ export async function POST(request: Request) {
 }
 
 /** Record money received outside the app; never changes the issued invoice. */
-export async function PATCH(request: Request) {
+async function handlePATCH(request: Request) {
   try {
     const { uid, firestore } = await requireActiveAdmin(request);
     if (!allowRequest(`invoice-receipt:${uid}`, 30, 10 * 60 * 1000)) return apiJson({ error: "Please wait before recording more payments." }, 429);
@@ -143,3 +144,7 @@ export async function PATCH(request: Request) {
     return apiJson({ error: "Payment could not be confirmed. Retry with the same reference to avoid recording it twice." }, 503);
   }
 }
+
+export const GET = withApiTiming("GET /api/admin/invoices", handleGET);
+export const POST = withApiTiming("POST /api/admin/invoices", handlePOST);
+export const PATCH = withApiTiming("PATCH /api/admin/invoices", handlePATCH);

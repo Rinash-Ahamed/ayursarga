@@ -3,7 +3,7 @@
 import type { ServiceDocument } from "@/features/firestore/models";
 import { COLLECTIONS } from "@/constants/firestore";
 import { runStatusOrderedQuery, type StatusOrderedOptions } from "@/services/firestore/statusOrderedQuery";
-import { authorizedApiRequest, authorizedMutationRequest } from "@/services/api/client";
+import { authorizedApiRequest, authorizedMutationRequest, decodeMutation } from "@/services/api/client";
 
 type ServiceInput = Pick<ServiceDocument,
   "hospitalId" | "name" | "description" | "price" | "packageDurationDays" | "procedures" |
@@ -29,16 +29,17 @@ export function listHospitalServices(
   });
 }
 
-export const createService = (input: ServiceInput, requestId?: string) => {
+export const createService = async (input: ServiceInput, requestId?: string) => {
   const { hospitalId: _hospitalId, ...packageInput } = input;
   void _hospitalId;
-  return authorizedApiRequest<{ ok: true; serviceId: string; duplicate?: boolean }>("/api/hospital/services", {
+  const response = await authorizedApiRequest<{ ok: true; serviceId: string; duplicate?: boolean; service?: Record<string, unknown> }>("/api/hospital/services", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...packageInput, requestId }),
     signedOutMessage: "Your Hospital session has expired. Sign in again to add a package.",
     failureMessage: "We could not add the package. Please try again.",
   });
+  return { ...response, service: response.service ? decodeMutation(response.service) as ServiceDocument & { id: string } : undefined };
 };
 
 export function updateService(id: string, input: Partial<Omit<ServiceInput, "hospitalId">>, expectedAuditId?: string) {

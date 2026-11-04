@@ -15,7 +15,11 @@ async function seeded() {
 }
 const body = booking => ({ action: "reschedule", requestId: "consumer-reschedule-0001", expectedAuditId: booking.lastAuditId,
   confirmedDate: "2099-10-26", confirmedTime: "10:00" });
-const update = (f, id, input) => f.load("app/api/consultations/[bookingId]/route.ts").PATCH(paymentRequest(input, "PATCH"), { params: Promise.resolve({ bookingId: id }) });
+const update = async (f, id, input) => {
+  const response = await f.load("app/api/consultations/[bookingId]/route.ts").PATCH(paymentRequest(input, "PATCH"), { params: Promise.resolve({ bookingId: id }) });
+  await f.flushAfter();
+  return response;
+};
 const slots = (f, id, query = "") => f.load("app/api/consultations/slots/route.ts").GET(new Request(`https://test.local/api/consultations/slots?consultantId=AS001&service=prenatal-doctor&date=2099-10-25&excludeBookingId=${id}${query}`));
 
 test("one-time consumer rescheduling uses the scheduled IST start and includes the exact 24-hour cutoff", () => {

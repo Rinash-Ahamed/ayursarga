@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
 import { apiHealth, apiJson } from "@/services/api/server";
@@ -6,11 +7,11 @@ import { readJsonBody, RequestBodyError } from "@/services/api/request";
 
 export const runtime = "nodejs";
 
-export function GET() {
+function handleGET() {
   return apiHealth("/api/admin/availability/[availabilityId]", [{ name: "firebaseAdmin", ready: isFirebaseAdminReady() }]);
 }
 
-export async function PATCH(request: Request, context: { params: Promise<{ availabilityId: string }> }) {
+async function handlePATCH(request: Request, context: { params: Promise<{ availabilityId: string }> }) {
   try {
     const { uid: adminUid, firestore } = await requireActiveAdmin(request);
     const body = await readJsonBody(request, 1_000) as { action?: "approve" | "reject" | "cancel" } | null;
@@ -41,3 +42,6 @@ export async function PATCH(request: Request, context: { params: Promise<{ avail
     return apiJson({ error: "We could not update availability. Refresh and try again." }, 503);
   }
 }
+
+export const GET = withApiTiming("GET /api/admin/availability/[availabilityId]", handleGET);
+export const PATCH = withApiTiming("PATCH /api/admin/availability/[availabilityId]", handlePATCH);

@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { apiJson, logApiError } from "@/services/api/server";
 import { getFirebaseAdminFirestore } from "@/services/firebase/admin";
 import { publicHospitalProjection, validPublicDocumentId } from "@/services/hospitals/publicProjection";
@@ -5,7 +6,7 @@ import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
 
 export const runtime = "nodejs";
 
-export async function GET(request: Request, context: { params: Promise<{ hospitalId: string }> }) {
+async function handleGET(request: Request, context: { params: Promise<{ hospitalId: string }> }) {
   // Fresh availability is required before offering a booking for selected dates.
   try {
     if (!allowRequest(requestFingerprint(request, "public-hospital-detail"), 900, 10 * 60 * 1000)) {
@@ -25,3 +26,5 @@ export async function GET(request: Request, context: { params: Promise<{ hospita
     return apiJson({ error: "This Ayurvedic centre is temporarily unavailable." }, 503);
   }
 }
+
+export const GET = withApiTiming("GET /api/public/hospitals/[hospitalId]", handleGET);

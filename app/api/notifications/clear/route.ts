@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { Timestamp } from "firebase-admin/firestore";
 import { AdminAuthorizationError, requireActiveUser } from "@/services/firebase/adminAuthorization";
 import { apiJson, logApiError } from "@/services/api/server";
@@ -7,7 +8,7 @@ import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
 
 export const runtime = "nodejs";
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const { uid, role, firestore } = await requireActiveUser(request, ["admin", "hospital"]);
     if (!allowRequest(requestFingerprint(request, `notification-clear:${uid}`), 30, 10 * 60 * 1000)) return apiJson({ error: "Please wait before clearing notifications again." }, 429);
@@ -42,3 +43,5 @@ export async function POST(request: Request) {
     return apiJson({ error: "We could not clear your notifications. Please try again." }, 503);
   }
 }
+
+export const POST = withApiTiming("POST /api/notifications/clear", handlePOST);

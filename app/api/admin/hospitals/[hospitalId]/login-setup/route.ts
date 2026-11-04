@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { FieldValue } from "firebase-admin/firestore";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { apiHealth, apiJson } from "@/services/api/server";
@@ -8,11 +9,11 @@ import { allowRequest } from "@/services/api/rateLimit";
 
 export const runtime = "nodejs";
 
-export function GET() {
+function handleGET() {
   return apiHealth("/api/admin/hospitals/[hospitalId]/login-setup", [{ name: "firebaseAdmin", ready: isFirebaseAdminReady() }, { name: "email", ready: isAuthEmailReady() }]);
 }
 
-export async function POST(request: Request, context: { params: Promise<{ hospitalId: string }> }) {
+async function handlePOST(request: Request, context: { params: Promise<{ hospitalId: string }> }) {
   let deliveringEmail = false;
   try {
     const { uid: adminUid, auth, firestore } = await requireActiveAdmin(request);
@@ -161,3 +162,6 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
       : "Hospital login setup is unavailable. Check the server Firebase Admin and email configuration and try again." }, 503);
   }
 }
+
+export const GET = withApiTiming("GET /api/admin/hospitals/[hospitalId]/login-setup", handleGET);
+export const POST = withApiTiming("POST /api/admin/hospitals/[hospitalId]/login-setup", handlePOST);

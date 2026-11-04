@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { Timestamp } from "firebase-admin/firestore";
 import { mutationJson } from "@/services/api/mutation";
 import { validatePackagePayload } from "@/features/hospitals/packages";
@@ -14,11 +15,11 @@ export const runtime = "nodejs";
 
 type ServiceAction = "update" | "status" | "archive" | "submit";
 
-export function GET() {
+function handleGET() {
   return apiHealth("/api/hospital/services/[serviceId]", [{ name: "firebaseAdmin", ready: isFirebaseAdminReady() }]);
 }
 
-export async function PATCH(request: Request, context: { params: Promise<{ serviceId: string }> }) {
+async function handlePATCH(request: Request, context: { params: Promise<{ serviceId: string }> }) {
   try {
     if (!allowRequest(requestFingerprint(request, "hospital-service-update"), 50, 10 * 60 * 1000)) {
       return apiJson({ error: "Too many package updates were sent. Please wait and try again." }, 429);
@@ -102,3 +103,6 @@ export async function PATCH(request: Request, context: { params: Promise<{ servi
     return apiJson({ error: "We could not update the package. Please try again." }, 503);
   }
 }
+
+export const GET = withApiTiming("GET /api/hospital/services/[serviceId]", handleGET);
+export const PATCH = withApiTiming("PATCH /api/hospital/services/[serviceId]", handlePATCH);

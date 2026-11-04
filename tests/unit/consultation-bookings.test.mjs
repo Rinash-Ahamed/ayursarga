@@ -40,7 +40,11 @@ async function create(f, body = input) {
   const deliveries = await f.load("services/email/consultationEmailService.ts").deliverConsultationEmails(f.firestore, `confirmation-${checkout.bookingId}`);
   return Response.json({ bookingId: checkout.bookingId, bookingReference: checkout.bookingReference, ...deliveries }, { status: f.values("consultationBookings").length > previous ? 201 : 200 });
 }
-async function update(f, id, body) { return f.load("app/api/consultations/[bookingId]/route.ts").PATCH(request(body, "PATCH"), { params: Promise.resolve({ bookingId: id }) }); }
+async function update(f, id, body) {
+  const response = await f.load("app/api/consultations/[bookingId]/route.ts").PATCH(request(body, "PATCH"), { params: Promise.resolve({ bookingId: id }) });
+  await f.flushAfter();
+  return response;
+}
 
 test("consultation creation snapshots actual charge, provider, Consumer and consent with one atomic audit and Admin bell", async () => {
   const f = fixture();
@@ -319,7 +323,7 @@ test("Admin reschedules a confirmed consultation, emails old and new schedule on
   const body = { action: "reschedule", requestId: "reschedule-attempt-0001", expectedAuditId: savedBefore.lastAuditId,
     confirmedDate: "2099-10-26", confirmedTime: "10:30", adminNotes: "Please be ready five minutes before your consultation.", consultantCharge: 1 };
   const response = await update(f, id, body);
-  assert.equal(response.status, 200); assert.equal((await response.json()).email.status, "accepted");
+  assert.equal(response.status, 200); assert.equal((await response.json()).email.status, "pending");
   assert.equal((await update(f, id, body)).status, 200);
   const saved = f.records.get(`consultationBookings/${id}`);
   assert.equal(saved.status, "confirmed"); assert.equal(saved.confirmedTime, "10:30"); assert.equal(saved.confirmedEndTime,"11:00"); assert.equal(saved.consultantCharge, 900.5);
@@ -374,7 +378,7 @@ test("Admin cancellation emails the original schedule after saving and retries n
   const { f, id } = await seeded(); f.actor.role = "admin"; f.actor.uid = "admin";
   const body = { action: "cancelled", requestId: "cancellation-attempt-0001" };
   const response = await update(f, id, body); assert.equal(response.status, 200);
-  assert.equal((await response.json()).email.status, "accepted");
+  assert.equal((await response.json()).email.status, "pending");
   assert.equal((await update(f, id, body)).status, 200);
   assert.equal((await update(f, id, { ...body, requestId: "cancellation-attempt-0002" })).status, 200);
   assert.equal(f.records.get(`consultationBookings/${id}`).status, "cancelled");
@@ -409,11 +413,11 @@ test("SMTP failure or an unknown delivery outcome never undo bookings or resend 
     const response = await update(f, id, body);
     assert.equal(response.status, 200);
     const result = await response.json();
-    assert.equal(result.email.status, options.failEmail ? "failed" : "unknown");
+    assert.equal(result.email.status, "pending");
     assert.equal(f.records.get(`consultationBookings/${id}`).status, "cancelled");
     const before = f.calls.smtp.length;
     const retry = await update(f, id, body); assert.equal(retry.status, 200);
-    assert.ok(["failed", "sending"].includes((await retry.json()).email.status));
+    assert.ok(["failed", "sending", "unknown"].includes((await retry.json()).email.status));
     assert.equal(f.calls.smtp.length, before);
   }
 });
@@ -477,7 +481,7 @@ test("assigned consultants receive independent branded emails for booking, resch
   f.actor.role = "admin"; f.actor.uid = "admin";
   const reschedule = { action: "reschedule", requestId: "consultant-reschedule-001", confirmedDate: "2099-10-26", confirmedTime: "10:30" };
   const response = await update(f, id, reschedule);
-  assert.equal((await response.json()).consultantEmail.status, "accepted");
+  assert.equal((await response.json()).consultantEmail.status, "pending");
   assert.equal((await update(f, id, reschedule)).status, 200);
   assert.equal(f.calls.consultantSmtp.length, 2);
   assert.match(f.calls.consultantSmtp[1].text, /Original appointment date: 25\/10\/2099/);
@@ -503,7 +507,7 @@ test("support receives all consultation events with an Admin link and independen
   assert.doesNotMatch(first.text, /commission|payable|My Bookings|Please help with pregnancy lifestyle/i);
   f.actor.role = "admin"; f.actor.uid = "admin";
   const reschedule = { action: "reschedule", requestId: "support-reschedule-001", confirmedDate: "2099-10-26", confirmedTime: "10:30" };
-  assert.equal((await (await update(f, id, reschedule)).json()).supportEmail.status, "accepted");
+  assert.equal((await (await update(f, id, reschedule)).json()).supportEmail.status, "pending");
   assert.equal((await update(f, id, reschedule)).status, 200);
   assert.equal(f.calls.supportSmtp.length, 2);
   assert.match(f.calls.supportSmtp[1].text, /Original appointment date: 25\/10\/2099/);
@@ -539,8 +543,8 @@ test("support failure is independent, visible to Admin and never automatically r
   f.actor.role = "admin"; f.actor.uid = "admin";
   const body = { action: "cancelled", requestId: "support-failure-001" };
   const result = await (await update(f, id, body)).json();
-  assert.equal(result.supportEmail.status, "failed");
-  assert.equal(result.email.status, "accepted"); assert.equal(result.consultantEmail.status, "accepted");
+  assert.equal(result.supportEmail.status, "pending");
+  assert.equal(result.email.status, "pending"); assert.equal(result.consultantEmail.status, "pending");
   await update(f, id, body);
   assert.equal(f.calls.supportSmtp.length, 2);
   assert.ok(f.values("consultationEmailEvents").filter(event => event.audience === "support").every(event => event.failureReason === "email_not_confirmed"));
@@ -554,9 +558,9 @@ test("consultant and consumer mail failures do not block each other or replay on
     const body = { action: "cancelled", requestId: "independent-email-0001" };
     const response = await update(f, id, body); assert.equal(response.status, 200);
     const result = await response.json();
-    assert.equal(result.email.status, options.failEmail ? "failed" : "accepted");
-    assert.equal(result.consultantEmail.status, options.failConsultantEmail ? "failed" : "accepted");
-    assert.equal(result.supportEmail.status, "accepted");
+    assert.equal(result.email.status, "pending");
+    assert.equal(result.consultantEmail.status, "pending");
+    assert.equal(result.supportEmail.status, "pending");
     assert.equal((await update(f, id, body)).status, 200);
     assert.equal(f.calls.smtp.length, 2); assert.equal(f.calls.consultantSmtp.length, 2);
     if (options.failConsultantEmail) {

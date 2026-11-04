@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { FieldValue } from "firebase-admin/firestore";
 import { validateConsultantFields } from "@/features/consultants/validation";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
@@ -8,7 +9,7 @@ import { assertUniqueCreationEmail, DuplicateCreationEmailError } from "@/servic
 
 export const runtime = "nodejs";
 
-export async function PATCH(request: Request, context: { params: Promise<{ consultantId: string }> }) {
+async function handlePATCH(request: Request, context: { params: Promise<{ consultantId: string }> }) {
   try {
     const { uid, firestore } = await requireActiveAdmin(request);
     const { consultantId } = await context.params;
@@ -59,3 +60,5 @@ export async function PATCH(request: Request, context: { params: Promise<{ consu
     return apiJson({ error: "We could not save the consultant. Refresh and try again." }, 503);
   }
 }
+
+export const PATCH = withApiTiming("PATCH /api/admin/consultants/[consultantId]", handlePATCH);

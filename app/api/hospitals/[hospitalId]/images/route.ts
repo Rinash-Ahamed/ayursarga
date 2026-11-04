@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { readImageUpload } from "@/services/images/readImageUpload";
@@ -13,7 +14,7 @@ import { getHospitalImageUrls, hasMinimumHospitalImages, MIN_PUBLIC_HOSPITAL_IMA
 export const runtime = "nodejs";
 const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;
 
-export function GET() {
+function handleGET() {
   return apiHealth("/api/hospitals/[hospitalId]/images", [{ name: "firebaseStorage", ready: isFirebaseAdminStorageReady() }]);
 }
 
@@ -70,7 +71,7 @@ function failure(error: unknown) {
   return apiJson({ error: "We could not save the hospital images. Please try again." }, 503);
 }
 
-export async function POST(request: Request, context: { params: Promise<{ hospitalId: string }> }) {
+async function handlePOST(request: Request, context: { params: Promise<{ hospitalId: string }> }) {
   try {
     const actor = await authorize(request, context);
     if (actor.imageCount >= MAX_HOSPITAL_IMAGES) throw new ImageError("A centre can have up to 10 images.", 409);
@@ -97,7 +98,7 @@ export async function POST(request: Request, context: { params: Promise<{ hospit
   } catch (error) { return failure(error); }
 }
 
-export async function PATCH(request: Request, context: { params: Promise<{ hospitalId: string }> }) {
+async function handlePATCH(request: Request, context: { params: Promise<{ hospitalId: string }> }) {
   try {
     const actor = await authorize(request, context);
     const body = await readJsonBody(request, 2_000) as { imageUrl?: unknown } | null;
@@ -106,3 +107,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ hospi
     return apiJson({ ok: true, imageUrls });
   } catch (error) { return failure(error); }
 }
+
+export const GET = withApiTiming("GET /api/hospitals/[hospitalId]/images", handleGET);
+export const POST = withApiTiming("POST /api/hospitals/[hospitalId]/images", handlePOST);
+export const PATCH = withApiTiming("PATCH /api/hospitals/[hospitalId]/images", handlePATCH);

@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { createHash } from "node:crypto";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { BOOKING_TERMS_VERSION, CONSUMER_PRIVACY_NOTICE_VERSION, CUSTOMER_TERMS_VERSION } from "@/features/consumers/privacyConsent";
@@ -47,7 +48,7 @@ function dateBlocked(hospital: FirebaseFirestore.DocumentData, start: Date, end:
 
 // Only resolve labels for bookings owned by this Consumer. Historical centres
 // may no longer be public; never expose their full management documents.
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   try {
     const { uid, firestore } = await requireActiveUser(request, ["consumer"]);
     if (!allowRequest(requestFingerprint(request, `consumer-booking-details:${uid}`), 120, 10 * 60 * 1000)) {
@@ -88,7 +89,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const { uid, profile, firestore } = await requireActiveUser(request, ["consumer"]);
     if (!allowRequest(requestFingerprint(request, `consumer-booking:${uid}`), 20, 10 * 60 * 1000)) {
@@ -234,3 +235,6 @@ export async function POST(request: Request) {
     return apiJson({ error: "We could not place your booking. Please try again." }, 503);
   }
 }
+
+export const GET = withApiTiming("GET /api/consumer/bookings", handleGET);
+export const POST = withApiTiming("POST /api/consumer/bookings", handlePOST);

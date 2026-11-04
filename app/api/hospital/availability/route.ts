@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { AdminAuthorizationError, requireActiveUser } from "@/services/firebase/adminAuthorization";
 import { apiHealth, apiJson, logApiError } from "@/services/api/server";
@@ -9,7 +10,7 @@ import { formatDisplayDate } from "@/utils/date";
 
 export const runtime = "nodejs";
 
-export function GET() {
+function handleGET() {
   return apiHealth("/api/hospital/availability", [{ name: "firebaseAdmin", ready: isFirebaseAdminReady() }]);
 }
 
@@ -30,7 +31,7 @@ function indiaDateKey(date: Date) {
 
 function dateLabel(date: Date) { return formatDisplayDate(date); }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     if (!allowRequest(requestFingerprint(request, "hospital-availability"), 20, 10 * 60 * 1000)) {
       return apiJson({ error: "Too many availability requests were sent. Please wait and try again." }, 429);
@@ -123,3 +124,6 @@ export async function POST(request: Request) {
     return apiJson({ error: "We could not send the availability request. Please try again." }, 503);
   }
 }
+
+export const GET = withApiTiming("GET /api/hospital/availability", handleGET);
+export const POST = withApiTiming("POST /api/hospital/availability", handlePOST);

@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { randomUUID } from "node:crypto";
 import { apiHealth, apiJson, logApiError } from "@/services/api/server";
 import { isContactEmailReady, sendContactEmail } from "@/services/contact/contactEmailService";
@@ -10,11 +11,11 @@ import { isTurnstileReady, verifyEnquiryTurnstile } from "@/services/contact/tur
 export const runtime = "nodejs";
 
 const MAX_REQUEST_BYTES = 16_000;
-export function GET() {
+function handleGET() {
   return apiHealth("/api/contact", [{ name: "email", ready: isContactEmailReady() }, { name: "turnstile", ready: isTurnstileReady() }]);
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const requestId = `ENQ-${randomUUID()}`;
   const receivedAt = new Date().toISOString();
   let source: ContactSource = "contact";
@@ -57,3 +58,6 @@ export async function POST(request: Request) {
     return reply({ error: "We could not confirm your enquiry was sent. Please contact info@ayursarga.com before sending again." }, 502);
   }
 }
+
+export const GET = withApiTiming("GET /api/contact", handleGET);
+export const POST = withApiTiming("POST /api/contact", handlePOST);

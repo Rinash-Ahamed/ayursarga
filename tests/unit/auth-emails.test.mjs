@@ -60,9 +60,11 @@ test("generated reset links use a fixed configured return URL, stay server-only 
 
 function resetFixture(options = {}) {
   const calls = { lookups: 0, emails: [], logs: [] };
+  const background = [];
   const user = { uid: "partner", disabled: false, ...options.user };
   const profile = { email: "partner@example.com", name: "Hospital", role: "hospital", status: "active", ...options.profile };
   const route = loadTypeScript("app/api/auth/password-reset/route.ts", {
+    "next/server": { after: callback => background.push(callback) },
     "@/services/firebase/admin": {
       getFirebaseAdminAuth: () => ({ getUserByEmail: async () => { calls.lookups++; if (options.unknown) throw { code: "auth/user-not-found" }; return user; } }),
       getFirebaseAdminFirestore: () => ({ collection: () => ({ doc: () => ({ get: async () => ({ data: () => options.missingProfile ? undefined : profile }) }) }) }),
@@ -72,7 +74,11 @@ function resetFixture(options = {}) {
     "@/services/api/server": { apiJson: (data, status = 200) => Response.json(data, { status }) },
     "@/services/api/rateLimit": { requestFingerprint: () => "fingerprint", allowRequest: (key) => key === "fingerprint" ? !options.ipLimited : !options.emailLimited },
   });
-  return { calls, ...route };
+  return { calls, ...route, rawPOST: route.POST, flushAfter: async () => { while (background.length) await background.shift()(); }, POST: async (...args) => {
+    const response = await route.POST(...args);
+    while (background.length) await background.shift()();
+    return response;
+  } };
 }
 
 test("public resets send only to eligible portal accounts without returning action links or account existence", async () => {
@@ -84,6 +90,16 @@ test("public resets send only to eligible portal accounts without returning acti
     const eligible = !options.unknown && !options.user?.disabled && !options.missingProfile && !["consumer", "admin"].includes(options.profile?.role) && options.profile?.status !== "archived" && options.profile?.email !== "someone-else@example.com";
     assert.equal(fixture.calls.emails.length, eligible ? 1 : 0);
   }
+});
+
+test("reset responds generically before any account lookup or SMTP work starts", async () => {
+  const f = resetFixture();
+  const response = await f.rawPOST(resetRequest());
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { ok: true });
+  assert.equal(f.calls.lookups, 0); assert.equal(f.calls.emails.length, 0);
+  await f.flushAfter();
+  assert.equal(f.calls.lookups, 1); assert.equal(f.calls.emails.length, 1);
 });
 
 test("Admin reset delivery is restricted to the approved Admin address", async () => {

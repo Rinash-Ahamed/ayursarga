@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { after } from "next/server";
 import { readRawJsonBody, RequestBodyError } from "@/services/api/request";
 import { apiJson } from "@/services/api/server";
@@ -10,7 +11,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 const EVENTS = new Set(["payment.captured", "payment.failed", "refund.created", "refund.processed", "refund.failed"]);
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const raw = await readRawJsonBody(request, 64_000);
     if (!verifyRazorpayWebhookSignature(raw, request.headers.get("x-razorpay-signature"))) return apiJson({ error: "Invalid signature." }, 400);
@@ -41,3 +42,5 @@ export async function POST(request: Request) {
     return apiJson({ error: "Payment event could not be recorded. Retry later." }, 503);
   }
 }
+
+export const POST = withApiTiming("POST /api/payments/razorpay/webhook", handlePOST);

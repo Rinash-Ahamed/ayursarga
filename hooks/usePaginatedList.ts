@@ -46,6 +46,9 @@ export function usePaginatedList<T, TCursor = NonNullable<QueryPage<T>["cursor"]
   const removeItem = useCallback((id: string) => {
     setItems((current) => current.filter((item) => item.id !== id));
   }, []);
+  const prependItem = useCallback((record: DocumentRecord<T>) => {
+    setItems(current => uniqueRecords([record, ...current.filter(item => item.id !== record.id)]));
+  }, []);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => { void reload(); }, 0);
@@ -56,5 +59,5 @@ export function usePaginatedList<T, TCursor = NonNullable<QueryPage<T>["cursor"]
   }, [reload]);
 
   const orderedItems = useMemo(() => inactiveLast(items), [items]);
-  return { items: orderedItems, error, errorNotification, isLoading, hasMore, reload, loadMore, patchItem, removeItem };
+  return { items: orderedItems, error, errorNotification, isLoading, hasMore, reload, loadMore, patchItem, removeItem, prependItem };
 }

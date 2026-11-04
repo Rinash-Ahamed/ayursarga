@@ -1,4 +1,5 @@
 import "server-only";
+import { timeApiStep } from "@/services/api/timing";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 
@@ -66,7 +67,7 @@ async function request(path: string, body?: JsonObject): Promise<unknown> {
   const writing = body !== undefined;
   let response: Response;
   try {
-    response = await fetch(`${API_URL}${path}`, {
+    response = await timeApiStep("provider", () => fetch(`${API_URL}${path}`, {
       method: writing ? "POST" : "GET",
       headers: {
         Authorization: `Basic ${Buffer.from(`${config.keyId}:${config.keySecret}`).toString("base64")}`,
@@ -75,7 +76,7 @@ async function request(path: string, body?: JsonObject): Promise<unknown> {
       },
       body: writing ? JSON.stringify(body) : undefined,
       cache: "no-store", redirect: "error", signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
+    }));
   } catch {
     // Never forward provider errors, credentials, customer data or request bodies.
     throw new RazorpayError("NETWORK", "Razorpay could not be reached. Reconcile any uncertain order before retrying.", writing);

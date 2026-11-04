@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { requireActiveUser, AdminAuthorizationError } from "@/services/firebase/adminAuthorization";
 import { apiJson, logApiError } from "@/services/api/server";
 import { allowRequest } from "@/services/api/rateLimit";
@@ -9,7 +10,7 @@ import { isIsoDate, toDateInputValue } from "@/utils/date";
 import { consumerRescheduleEligibility } from "@/features/consultations/rescheduling";
 
 export const runtime = "nodejs";
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   try {
     const { uid, role, firestore } = await requireActiveUser(request, ["admin", "consumer"]);
     if (!allowRequest(`consultation-slots:${uid}`, 180, 60_000)) return apiJson({ error: "Please wait a moment before checking times again." }, 429);
@@ -39,3 +40,5 @@ export async function GET(request: Request) {
     return apiJson({ error: "Appointment times could not be checked. Please try again." }, 503);
   }
 }
+
+export const GET = withApiTiming("GET /api/consultations/slots", handleGET);

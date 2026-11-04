@@ -5,6 +5,7 @@ import type { PortalRole } from "@/features/auth/contracts";
 import { isPortalRole } from "@/features/auth/roles";
 import { hasAdminTotpSession, isAdminSessionAfterCutoff } from "@/features/auth/adminMfa";
 import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from "@/services/firebase/admin";
+import { timeApiStep } from "@/services/api/timing";
 
 export class AdminAuthorizationError extends Error {
   constructor(message: string, public readonly status: 401 | 403) {
@@ -24,7 +25,7 @@ export async function requireVerifiedFirebaseUser(request: Request) {
   try {
     const auth = getFirebaseAdminAuth();
     const firestore = getFirebaseAdminFirestore();
-    const decoded = await auth.verifyIdToken(token, true);
+    const decoded = await timeApiStep("auth", () => auth.verifyIdToken(token, true));
     return { uid: decoded.uid, decoded: decoded as DecodedIdToken, auth, firestore };
   } catch (error) {
     if (error instanceof AdminAuthorizationError) throw error;
@@ -35,7 +36,7 @@ export async function requireVerifiedFirebaseUser(request: Request) {
 export async function requireActiveUser(request: Request, allowedRoles?: readonly PortalRole[]) {
   try {
     const { uid, decoded, auth, firestore } = await requireVerifiedFirebaseUser(request);
-    const profileSnapshot = await firestore.collection("users").doc(decoded.uid).get();
+    const profileSnapshot = await timeApiStep("profile", () => firestore.collection("users").doc(decoded.uid).get());
     const profile = profileSnapshot.data();
     if (!profileSnapshot.exists || profile?.status !== "active") {
       throw new AdminAuthorizationError("Your Ayursarga account is not active.", 403);

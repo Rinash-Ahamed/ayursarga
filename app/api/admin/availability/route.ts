@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
 import { apiHealth, apiJson } from "@/services/api/server";
@@ -7,7 +8,7 @@ import { isIsoDate, parseDateInputValue } from "@/utils/date";
 
 export const runtime = "nodejs";
 
-export function GET() {
+function handleGET() {
   return apiHealth("/api/admin/availability", [{ name: "firebaseAdmin", ready: isFirebaseAdminReady() }]);
 }
 
@@ -16,7 +17,7 @@ function parseAvailabilityDate(value: unknown) {
   return isIsoDate(dateValue) ? parseDateInputValue(dateValue)! : new Date(NaN);
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const { uid: adminUid, firestore } = await requireActiveAdmin(request);
     const body = await readJsonBody(request, 4_000) as Record<string, unknown> | null;
@@ -38,3 +39,6 @@ export async function POST(request: Request) {
     return apiJson({ error: "We could not block these dates. Review the dates and try again." }, 503);
   }
 }
+
+export const GET = withApiTiming("GET /api/admin/availability", handleGET);
+export const POST = withApiTiming("POST /api/admin/availability", handlePOST);

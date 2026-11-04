@@ -1,4 +1,6 @@
-import { FieldValue } from "firebase-admin/firestore";
+import { withApiTiming } from "@/services/api/timing";
+import { Timestamp } from "firebase-admin/firestore";
+import { encodeMutation } from "@/services/api/mutation";
 import { validateConsultantFields } from "@/features/consultants/validation";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { apiJson } from "@/services/api/server";
@@ -7,7 +9,7 @@ import { assertUniqueCreationEmail, DuplicateCreationEmailError } from "@/servic
 
 export const runtime = "nodejs";
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const { uid: adminUid, firestore } = await requireActiveAdmin(request);
     const body = await readJsonBody(request, 8_000) as Record<string, unknown> | null;
@@ -28,7 +30,7 @@ export async function POST(request: Request) {
       const employeeSequence = currentSequence + 1;
       const employeeId = `AS${String(employeeSequence).padStart(3, "0")}`;
       const consultantReference = firestore.collection("consultants").doc(employeeId);
-      const now = FieldValue.serverTimestamp();
+      const now = Timestamp.now();
       const consultantData = {
         employeeId,
         employeeSequence,
@@ -54,9 +56,9 @@ export async function POST(request: Request) {
           ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
         },
       });
-      return employeeId;
+      return { employeeId, consultant: { id: employeeId, ...consultantData } };
     });
-    return apiJson({ ok: true, employeeId: result }, 201);
+    return apiJson({ ok: true, employeeId: result.employeeId, consultant: encodeMutation(result.consultant) }, 201);
   } catch (error) {
     if (error instanceof DuplicateCreationEmailError) return apiJson({ error: error.message, field: "email" }, error.status);
     if (error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
@@ -65,3 +67,5 @@ export async function POST(request: Request) {
     return apiJson({ error: "We could not add the consultant. Please try again." }, 503);
   }
 }
+
+export const POST = withApiTiming("POST /api/admin/consultants", handlePOST);

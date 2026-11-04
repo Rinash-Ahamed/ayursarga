@@ -1,6 +1,62 @@
 # Session handoff
 
-Updated: 2 November 2026 (Asia/Calcutta).
+Updated: 4 November 2026 (Asia/Calcutta).
+
+## Cross-portal API performance (4 November 2026, v4.37.2)
+
+- Owner authorized implementation after the read-only performance audit. No
+  deployment, live operational mutation, test payment or email was performed.
+  Production remains the earlier release until the updated application is deployed.
+- Read-only provider metadata confirmed Vercel functions in iad1 (US) and
+  Firestore in asia-south1 (Mumbai); response routing also showed bom1::iad1.
+  New vercel.json selects bom1 for the next app deployment. No database move,
+  Firebase upgrade, new indexes, or SMTP/Razorpay credential changes are needed.
+- Production baseline: three sequential samples per public endpoint, all 200.
+  Health total milliseconds: 2451/259/259; public hospitals pageSize=6:
+  2236/1143/864 (5661 bytes, four records); prenatal-doctor consultants:
+  607/853/739 (1175 bytes, two records). These include client/network/platform
+  time; the first slow sample alone does not prove a cold start. No authenticated
+  mutation timing was measured. Post-deployment comparisons remain required;
+  local tests do not establish a live percentage improvement.
+- All 44 API route files (69 HTTP methods) now use shared request-local
+  Server-Timing and numeric slow-handler logs. Stages cover shared revocation
+  verification/profile reads, selected database work and Razorpay fetches.
+  Fixed route templates only: no identifiers, query strings, tokens, payloads or
+  personal data in timing logs. Timings exclude framework startup/network and
+  overlapping stages must not be summed. Authorization/MFA/revocation checks
+  remain intact, with no authorization cache or security bypass.
+- Finance starts seven independent queries together. Date-first availability
+  batches up to eight day documents and parallelizes bounded legacy queries;
+  legacy reads select schedule fields only, preserving overlap/overflow guards.
+  Payment holds, atomic booking/reschedule checks and historical data remain intact.
+- Consultation changes return committed updates and truthful queued email states
+  before SMTP, using Next after with existing durable per-recipient events.
+  Revision checks and single claims prevent stale/duplicate sends. Delivery failures
+  (including Consumer emails) and uncertain outcomes produce audited Admin alerts
+  when the database is reachable; ambiguous SMTP is never automatically resent.
+  Password resets acknowledge generically before bounded after work performs the
+  same eligible-account checks, link generation and SMTP. This does not claim
+  delivery, and live inbox receipt remains untested.
+- Consultant/package creates return encoded committed snapshots. Fully loaded,
+  unfiltered idle lists update locally; filtered/paginated views and consultant
+  photo saves retain refresh behavior and audit revisions. No fake success records.
+- Focused backend regressions: 149/149 passed across API performance, booking,
+  payment/slot conflicts, role denials, auth emails, consultant updates, package
+  approval, rescheduling and audit follow-ups. Focused mocked-browser regressions:
+  15/15 passed on desktop, 320px phone and WebKit phone, covering create/read
+  counts, consultant edits/photos, Finance and availability confirmation.
+  These are local fixtures, not native Firestore emulator or real-device/live
+  permission/payment/email delivery verification. Firestore rules are unchanged.
+- Final validation: ESLint passed, standalone typecheck passed after correcting
+  a nullable appointment helper type, and the production build passed (85 static
+  pages generated). Same-build temporary production server on port 3187 returned
+  200 for /api/health?deep=true (deep-configuration/ok, all six dependencies ready,
+  Server-Timing present) and 200 themed HTML for /health?deep=true. These checks
+  do not probe live database connectivity, email receipt or Razorpay capture.
+  Stopped only that temporary server. Removed generated tsconfig.tsbuildinfo and
+  restored the owner's pre-existing next-env.d.ts dev route-types import after
+  Next regenerated it. No dependency versions changed; package/lock are 4.37.2.
+
 
 ## Production app redeployment (2 November 2026, v4.37.1)
 

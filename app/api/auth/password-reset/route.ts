@@ -1,3 +1,5 @@
+import { withApiTiming } from "@/services/api/timing";
+import { after } from "next/server";
 import { createHash } from "node:crypto";
 import { APPROVED_ADMIN_EMAIL } from "@/features/auth/constants";
 import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from "@/services/firebase/admin";
@@ -9,8 +11,9 @@ import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
 import { isValidEmail } from "@/utils/text";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     if (request.headers.get("sec-fetch-site") === "cross-site") return apiJson({ error: "Use the password reset form on Ayursarga." }, 403);
     const site = authEmailSiteUrl();
@@ -24,7 +27,7 @@ export async function POST(request: Request) {
     if (!isEmailReady()) return apiJson({ error: "Password reset email is temporarily unavailable. Please contact Ayursarga." }, 503);
     const key = createHash("sha256").update(`password-reset:${email}`).digest("hex");
     if (!allowRequest(key, 3, 30 * 60 * 1000) || !allowRequest("password-reset:delivery", 100, 60 * 60 * 1000)) return apiJson({ ok: true });
-    try {
+    after(async () => { try {
       const auth = getFirebaseAdminAuth();
       const user = await auth.getUserByEmail(email);
       const profile = (await getFirebaseAdminFirestore().collection("users").doc(user.uid).get()).data();
@@ -38,7 +41,7 @@ export async function POST(request: Request) {
       // Identical response for absent/ineligible accounts and delivery failures.
       // Never log reset codes, recipient addresses, SMTP credentials or raw errors.
       if ((error as { code?: string })?.code !== "auth/user-not-found") console.error("Ayursarga password reset delivery could not be completed.");
-    }
+    } });
     return apiJson({ ok: true });
   } catch (error) {
     if (error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
@@ -46,3 +49,5 @@ export async function POST(request: Request) {
     return apiJson({ error: "Password reset is temporarily unavailable. Please try again later." }, 503);
   }
 }
+
+export const POST = withApiTiming("POST /api/auth/password-reset", handlePOST);

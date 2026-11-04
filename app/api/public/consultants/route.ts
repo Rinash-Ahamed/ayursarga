@@ -1,3 +1,4 @@
+import { withApiTiming, timeApiStep } from "@/services/api/timing";
 import { getFirebaseAdminFirestore } from "@/services/firebase/admin";
 import { apiJson, logApiError } from "@/services/api/server";
 import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
@@ -6,7 +7,7 @@ import { publicConsultantProjection } from "@/features/consultations/publicProje
 
 export const runtime = "nodejs";
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   try {
     if (!allowRequest(requestFingerprint(request, "public-consultants"), 180, 10 * 60 * 1000)) return apiJson({ error: "Please wait before searching again." }, 429);
     const params = new URL(request.url).searchParams;
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
     const consultantId = params.get("consultantId");
     if (consultantId !== null) {
       if (!/^AS[0-9]{3,}$/.test(consultantId)) return apiJson({ error: "Invalid consultant." }, 400);
-      const snapshot = await getFirebaseAdminFirestore().collection("consultants").doc(consultantId).get();
+      const snapshot = await timeApiStep("database", () => getFirebaseAdminFirestore().collection("consultants").doc(consultantId).get());
       const consultant = snapshot.exists ? publicConsultantProjection(snapshot.id, snapshot.data()!, service.id) : null;
       return apiJson({ consultant });
     }
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
       .where("status", "==", "active").where("consultationServices", "array-contains", service.id)
       .orderBy("employeeSequence", "asc");
     if (rawCursor) query = query.startAfter(Number(rawCursor));
-    const snapshot = await query.limit(13).get();
+    const snapshot = await timeApiStep("database", () => query.limit(13).get());
     const page = snapshot.docs.slice(0, 12);
     return apiJson({ documents: page.map((doc) => publicConsultantProjection(doc.id, doc.data(), service.id)).filter(Boolean),
       cursor: page.length ? Number(page[page.length - 1].data().employeeSequence) : null, hasMore: snapshot.docs.length > 12 });
@@ -34,3 +35,5 @@ export async function GET(request: Request) {
     return apiJson({ error: "We could not load consultation professionals. Please try again." }, 503);
   }
 }
+
+export const GET = withApiTiming("GET /api/public/consultants", handleGET);

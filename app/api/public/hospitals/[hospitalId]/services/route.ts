@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { apiJson, logApiError } from "@/services/api/server";
 import { hasPublishedPackage } from "@/features/hospitals/packageReview";
 import { getFirebaseAdminFirestore } from "@/services/firebase/admin";
@@ -6,7 +7,7 @@ import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
 
 export const runtime = "nodejs";
 
-export async function GET(request: Request, context: { params: Promise<{ hospitalId: string }> }) {
+async function handleGET(request: Request, context: { params: Promise<{ hospitalId: string }> }) {
   try {
     if (!allowRequest(requestFingerprint(request, "public-hospital-services"), 900, 10 * 60 * 1000)) {
       return apiJson({ error: "Too many package requests were sent. Please wait a moment and try again." }, 429);
@@ -51,3 +52,5 @@ export async function GET(request: Request, context: { params: Promise<{ hospita
     return apiJson({ error: "Centre packages are temporarily unavailable." }, 503);
   }
 }
+
+export const GET = withApiTiming("GET /api/public/hospitals/[hospitalId]/services", handleGET);

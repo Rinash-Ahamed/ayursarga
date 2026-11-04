@@ -6,7 +6,7 @@ import type { ConsultantFields } from "@/features/consultants/validation";
 import { validateConsultantFields } from "@/features/consultants/validation";
 import { COLLECTIONS } from "@/constants/firestore";
 import { runStatusOrderedQuery, type StatusOrderedOptions } from "@/services/firestore/statusOrderedQuery";
-import { authorizedApiRequest } from "@/services/api/client";
+import { authorizedApiRequest, decodeMutation } from "@/services/api/client";
 import { consultantPhotoFileError } from "@/features/consultants/photo";
 
 export async function uploadConsultantPhoto(consultantId: string, file: File, expectedImageUrl?: string | null) {
@@ -40,14 +40,14 @@ export function listConsultants(options: StatusOrderedOptions = {}, searchTerm =
 export async function createConsultant(input: ConsultantFields) {
   const validation = validateConsultantFields(input);
   if (!validation.isValid) throw new Error(Object.values(validation.errors)[0] ?? "Consultant details are invalid.");
-  const response = await authorizedApiRequest<{ ok: true; employeeId: string }>("/api/admin/consultants", {
+  const response = await authorizedApiRequest<{ ok: true; employeeId: string; consultant?: Record<string, unknown> }>("/api/admin/consultants", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(validation.data),
     signedOutMessage: "Sign in as Admin before adding a consultant.",
     failureMessage: "We could not add the consultant.",
   });
-  return response.employeeId;
+  return { employeeId: response.employeeId, consultant: response.consultant ? decodeMutation(response.consultant) as ConsultantDocument & { id: string } : undefined };
 }
 
 export function updateConsultant(id: string, input: ConsultantFields, previous: DocumentData) {

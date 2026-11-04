@@ -1,3 +1,5 @@
+import { withApiTiming, timeApiStep } from "@/services/api/timing";
+import { after } from "next/server";
 import { createHash } from "node:crypto";
 import { Timestamp } from "firebase-admin/firestore";
 import { AdminAuthorizationError, requireActiveUser } from "@/services/firebase/adminAuthorization";
@@ -10,7 +12,7 @@ import { consultationAdminRecipients, addConsultationNotification } from "@/serv
 import { publicConsultantProjection } from "@/features/consultations/publicProjection";
 import { validConsultationSchedule } from "@/features/consultations/schedule";
 import { isConsultantDateAvailable } from "@/features/consultations/availability";
-import { queueConsultationEmail, deliverConsultationEmails } from "@/services/email/consultationEmailService";
+import { queueConsultationEmail, deliverConsultationEmails, consultationEmailStatuses } from "@/services/email/consultationEmailService";
 import { auditPayment } from "@/services/payments/consultationPaymentsAdmin";
 import { consultationCancellationEligibility, validCancellationSnapshot, snapshotConsultationCancellation } from "@/features/consultations/cancellationPolicy";
 import { generateConsultationSlots } from "@/features/consultations/slots";
@@ -21,7 +23,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 class ConsultationError extends Error { constructor(message: string, public status: number) { super(message); } }
 
-export async function PATCH(request: Request, context: { params: Promise<{ bookingId: string }> }) {
+async function handlePATCH(request: Request, context: { params: Promise<{ bookingId: string }> }) {
   try {
     const { uid, role, firestore } = await requireActiveUser(request, ["admin", "consumer"]);
     const { bookingId } = await context.params;
@@ -40,7 +42,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
     const eventId = actionReference ? `action-${createHash("sha256").update(`${uid}:${bookingId}:${actionReference}`).digest("hex")}` : null;
     const payloadHash = createHash("sha256").update(JSON.stringify([action, input.confirmedDate ?? null, input.confirmedTime ?? null,
       role === "admin" ? String(input.adminNotes ?? "").trim() : null, input.expectedAuditId ?? null])).digest("hex");
-    const result = await firestore.runTransaction(async (transaction) => {
+    const result = await timeApiStep("database", () => firestore.runTransaction(async (transaction) => {
       const reference = firestore.collection("consultationBookings").doc(bookingId);
       const snapshot = await transaction.get(reference);
       const booking = snapshot.data();
@@ -144,8 +146,12 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
         consultant: consultantContact, consultantFee: financial ? Number(financial.consultantPayablePaise) / 100 : undefined,
         actorId: uid, actorRole: role === "admin" ? "admin" : "consumer", auditId: audit.id, now, payloadHash });
       return { changes: update, emailEventId };
-    });
-    const delivery = result.emailEventId ? await deliverConsultationEmails(firestore, result.emailEventId) : undefined;
+    }));
+    const delivery = result.emailEventId ? await timeApiStep("database", () => consultationEmailStatuses(firestore, result.emailEventId!, bookingId)) : undefined;
+    if (result.emailEventId) {
+      const emailEventId = result.emailEventId;
+      after(() => deliverConsultationEmails(firestore, emailEventId).then(() => undefined));
+    }
     return mutationJson(result.changes, delivery);
   } catch (error) {
     if (error instanceof AdminAuthorizationError || error instanceof RequestBodyError || error instanceof ConsultationError || error instanceof SlotReservationError) return apiJson({ error: error.message }, error.status);
@@ -153,3 +159,5 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
     return apiJson({ error: "We could not update this consultation. Try again." }, 503);
   }
 }
+
+export const PATCH = withApiTiming("PATCH /api/consultations/[bookingId]", handlePATCH);

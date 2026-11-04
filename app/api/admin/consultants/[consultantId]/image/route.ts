@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { randomUUID } from "node:crypto";
 import { Timestamp } from "firebase-admin/firestore";
 import { requireActiveAdmin, AdminAuthorizationError } from "@/services/firebase/adminAuthorization";
@@ -12,7 +13,7 @@ export const runtime = "nodejs";
 class PhotoError extends Error {
   constructor(message: string, public readonly status: number) { super(message); }
 }
-export async function POST(request: Request, context: { params: Promise<{ consultantId: string }> }) {
+async function handlePOST(request: Request, context: { params: Promise<{ consultantId: string }> }) {
   try {
     const { uid, firestore } = await requireActiveAdmin(request);
     const { consultantId } = await context.params;
@@ -52,3 +53,5 @@ export async function POST(request: Request, context: { params: Promise<{ consul
     return apiJson({ error: "We could not save the consultant photo. Refresh to check the current photo before trying again." }, 503);
   }
 }
+
+export const POST = withApiTiming("POST /api/admin/consultants/[consultantId]/image", handlePOST);

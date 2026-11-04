@@ -32,6 +32,8 @@ const page = (documents: unknown[]) => Promise.resolve({ documents: portalUiStat
   ? Array.from({ length: 4 }, (_, index) => ({ ...documents[index % documents.length] as object, id: `order-${index}`, status: index % 2 ? "active" : "inactive" }))
   : documents, cursor: null, hasMore: false });
 const firebaseUser = { uid: "patient" };
+export const creationReads = { consultants: 0, packages: 0 };
+Object.assign(globalThis, { creationReads });
 export const listInvoices = async () => ({ documents: [], cursor: null, hasMore: false });
 let issuedInvoice: CommissionInvoice | null = null;
 export const createInvoice = async (input: InvoiceInput) => {
@@ -105,7 +107,7 @@ export const getHospitalPackageSummaries = async (ids: string[]) => {
   if ((globalThis as unknown as { packageSummaryFailure?: boolean }).packageSummaryFailure) throw new Error("Unavailable");
   return { summaries: Object.fromEntries(ids.map((id, index) => [id, { total: index === 1 ? 0 : 4, pending: index === 1 ? 0 : 1, approved: index === 1 ? 0 : 1, draft: index === 1 ? 0 : 1, changesRequested: index === 1 ? 0 : 1 }])) };
 };
-export const listHospitalServices = () => page(portalUiState.screen === "hospital-services-empty" ? [] : portalUiState.screen.endsWith("package-review") ? services.map((service) => ({ ...service, status: "inactive", reviewStatus: portalUiState.screen.startsWith("admin") ? "pending" : "draft", publishedAt: null, draftPackage: { name: service.name, description: service.description, packageDurationDays: service.packageDurationDays, procedures: service.procedures, otherProcedures: [], price: 28000 } })) : services);
+export const listHospitalServices = () => { creationReads.packages++; return page(portalUiState.screen === "hospital-services-empty" ? [] : portalUiState.screen.endsWith("package-review") ? services.map((service) => ({ ...service, status: "inactive", reviewStatus: portalUiState.screen.startsWith("admin") ? "pending" : "draft", publishedAt: null, draftPackage: { name: service.name, description: service.description, packageDurationDays: service.packageDurationDays, procedures: service.procedures, otherProcedures: [], price: 28000 } })) : services); };
 const operationalBookings = () => bookings.map((booking, index) => index === 0 ? { ...booking, hospitalName: undefined, serviceName: undefined, serviceId: "package-14" } : booking);
 export const listHospitalBookings = () => page(portalUiState.screen === "hospital-bookings-empty" ? [] : operationalBookings());
 export const listConsumerBookings = () => page(portalUiState.screen === "consumer-bookings-empty" ? [] : bookings.map((booking, index) => ({ ...booking, serviceId: "package-14", hospitalName: index === 0 ? undefined : hospital.name, serviceName: index === 0 ? undefined : "14-day package", treatmentStatus: index === 0 ? "not_started" : "started", confirmedDate: index === 1 ? now : null, confirmedTime: index === 1 ? "10:30" : null, consumerNotes: "Please confirm room accessibility.", hospitalNotes: index === 1 ? "Your preferred care dates are available." : null, bystanderCount: 2, additionalBystanderTotal: 500 })));
@@ -130,6 +132,7 @@ export const listUsers = async (role: string) => {
   return result;
 };
 export const listConsultants = (options?: { cursor?: unknown }) => {
+  creationReads.consultants++;
   if (portalUiState.screen === "admin-consultants-duplicates") {
     const record = (id: string) => ({ ...consultant, id, employeeId: id });
     return Promise.resolve(options?.cursor
@@ -184,7 +187,7 @@ export const createHospital = async () => {
 export const sendHospitalLoginSetup = async () => "test@example.com";
 export const updateHospitalProfile = async () => ({});
 export const saveHospitalCapacity = async () => ({});
-export const createService = async () => ({});
+export const createService = async (input: object) => ({ serviceId: "new-package", service: { ...metadata, ...input, id: "new-package", name: "10-day package", status: "inactive", reviewStatus: "draft", draftPackage: input } });
 export const updateService = async () => ({});
 export const submitService = async () => { portalUiState.calls++; return { reviewStatus: "pending", lastAuditId: "submitted-audit" }; };
 export const reviewHospitalPackages = async (_hospitalId: string, packages: { id: string; auditId: string }[], action: "approve" | "request_changes", reason: string) => {
@@ -218,7 +221,7 @@ export const setUserAccountStatus = async (_user: unknown, status: string) => {
 };
 export const createConsultant = async (input: unknown) => {
   if ((globalThis as unknown as { duplicateCreation?: boolean }).duplicateCreation) throw Object.assign(new Error("This email is already used by a consultant. Open the existing record or use a different email."), { status: 409 });
-  portalUiState.consultantWrites.push(input); return "AS002";
+  portalUiState.consultantWrites.push(input); return { employeeId: "AS002", consultant: { ...consultant, ...input as object, id: "AS002", employeeId: "AS002", employeeSequence: 2 } };
 };
 export const updateConsultant = async (_id: string, input: unknown) => { portalUiState.consultantWrites.push(input); if (input && typeof input === "object") Object.assign(consultant, input, { lastAuditId: "edited-consultant-audit" }); return { ok: true, lastAuditId: "edited-consultant-audit" }; };
 export const consultantPhotoUploads: { id: string; name: string; expected?: string | null }[] = [];

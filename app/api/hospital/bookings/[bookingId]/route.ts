@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { Timestamp } from "firebase-admin/firestore";
 import { mutationJson } from "@/services/api/mutation";
 import { AdminAuthorizationError, requireActiveUser } from "@/services/firebase/adminAuthorization";
@@ -23,7 +24,7 @@ const TREATMENT_TRANSITIONS: Record<string, readonly string[]> = {
   completed: [],
 };
 
-export function GET() {
+function handleGET() {
   return apiHealth("/api/hospital/bookings/[bookingId]", [{ name: "firebaseAdmin", ready: isFirebaseAdminReady() }]);
 }
 
@@ -34,7 +35,7 @@ function parseDate(value: unknown) {
   return Number.isNaN(date.getTime()) ? null : Timestamp.fromDate(date);
 }
 
-export async function PATCH(request: Request, context: { params: Promise<{ bookingId: string }> }) {
+async function handlePATCH(request: Request, context: { params: Promise<{ bookingId: string }> }) {
   try {
     if (!allowRequest(requestFingerprint(request, "hospital-booking-update"), 60, 10 * 60 * 1000)) {
       return apiJson({ error: "Too many booking updates were sent. Please wait and try again." }, 429);
@@ -115,3 +116,6 @@ export async function PATCH(request: Request, context: { params: Promise<{ booki
     return apiJson({ error: "We could not update the booking. Please try again." }, 503);
   }
 }
+
+export const GET = withApiTiming("GET /api/hospital/bookings/[bookingId]", handleGET);
+export const PATCH = withApiTiming("PATCH /api/hospital/bookings/[bookingId]", handlePATCH);

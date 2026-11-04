@@ -1,7 +1,7 @@
 "use client";
 import { ConsultantSchedule } from "@/components/admin/ConsultantSchedule";
 
-import { useCallback, useDeferredValue, useRef, useState, type FormEvent } from "react";
+import { useCallback, useDeferredValue, useEffect, useRef, useState, type FormEvent } from "react";
 import type { ConsultantDocument } from "@/features/firestore/models";
 import type { StatusOrderedCursor } from "@/services/firestore/statusOrderedQuery";
 import { CONSULTANT_WEEK_DAYS, CONSULTANT_DAY_LABELS, consultantFormValues, validateConsultantFields, formatConsultantTimeSlot, type ConsultantValidationErrors } from "@/features/consultants/validation";
@@ -38,7 +38,9 @@ export function ConsultantsManager() {
   const [searchTerm, setSearchTerm] = useState("");
   const deferredSearch = useDeferredValue(searchTerm);
   const loader = useCallback((cursor: StatusOrderedCursor | null) => listConsultants({ pageSize: 20, cursor }, deferredSearch), [deferredSearch]);
-  const { errorNotification: loadErrorNotification, items, error: loadError, isLoading, hasMore, reload, loadMore, patchItem } = usePaginatedList<ConsultantDocument, StatusOrderedCursor>(loader, "We could not load the consultant list. Refresh and try again.");
+  const { errorNotification: loadErrorNotification, items, error: loadError, isLoading, hasMore, reload, loadMore, patchItem, prependItem } = usePaginatedList<ConsultantDocument, StatusOrderedCursor>(loader, "We could not load the consultant list. Refresh and try again.");
+  const listView = useRef({ search: deferredSearch, isLoading, hasMore, reload });
+  useEffect(() => { listView.current = { search: deferredSearch, isLoading, hasMore, reload }; }, [deferredSearch, isLoading, hasMore, reload]);
 
   function resetEditor() {
     setEditingId(null);
@@ -64,7 +66,7 @@ export function ConsultantsManager() {
     saving.current = true;
     setBusyId("create");
     try {
-      const employeeId = await createConsultant(validation.data);
+      const { employeeId, consultant: created } = await createConsultant(validation.data);
       let photoError: string | null = null;
       if (selectedPhoto) {
         try { await uploadConsultantPhoto(employeeId, selectedPhoto); }
@@ -74,7 +76,9 @@ export function ConsultantsManager() {
       setSelectedPhoto(null);
       setShowCreateForm(false);
       setFieldErrors({});
-      await reload();
+      const view = listView.current;
+      if (created && !selectedPhoto && !view.search.trim() && !view.hasMore && !view.isLoading) prependItem(created);
+      else await view.reload();
       if (photoError) setActionError(`${employeeId} was added, but the photo could not be saved. Do not add the consultant again. Click Edit on their card to check the photo before trying again. ${photoError}`);
       else setMessage(`${employeeId} has been added to Our Consultants.`);
     } catch (caught) {

@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { Timestamp } from "firebase-admin/firestore";
 import { mutationJson } from "@/services/api/mutation";
 import { validateHospitalImageUrls, hasMinimumHospitalImages, MIN_PUBLIC_HOSPITAL_IMAGES } from "@/features/hospitals/images";
@@ -23,7 +24,7 @@ const EDITABLE_FIELDS = new Set([
 type HospitalAdminAction = "update" | "contract_generated" | "contract_signed" | "deactivate" | "archive";
 const HOSPITAL_ADMIN_ACTIONS: readonly HospitalAdminAction[] = ["update", "contract_generated", "contract_signed", "deactivate", "archive"];
 
-export function GET() {
+function handleGET() {
   return apiHealth("/api/admin/hospitals/[hospitalId]", [{ name: "firebaseAdmin", ready: isFirebaseAdminReady() }]);
 }
 
@@ -37,7 +38,7 @@ function validContractUrl(value: unknown) {
   }
 }
 
-export async function PATCH(request: Request, context: { params: Promise<{ hospitalId: string }> }) {
+async function handlePATCH(request: Request, context: { params: Promise<{ hospitalId: string }> }) {
   try {
     const { uid: adminUid, auth, firestore } = await requireActiveAdmin(request);
     const body = await readJsonBody(request, 32_000) as { action?: HospitalAdminAction; data?: Record<string, unknown> } | null;
@@ -252,3 +253,6 @@ export async function PATCH(request: Request, context: { params: Promise<{ hospi
     return apiJson({ error: "We could not update the hospital. Check the server Firebase configuration and try again." }, 503);
   }
 }
+
+export const GET = withApiTiming("GET /api/admin/hospitals/[hospitalId]", handleGET);
+export const PATCH = withApiTiming("PATCH /api/admin/hospitals/[hospitalId]", handlePATCH);

@@ -6,6 +6,31 @@ import { getCalendarMonthRange } from "../../utils/date";
 const styles = ["node_modules/tailwindcss/lib/css/preflight.css", "app/globals.css", "app/portal.css"].map((file) => readFileSync(file, "utf8")).join("\n");
 const screens = ["admin-dashboard", "admin-hospitals", "admin-details", "admin-consultants", "admin-users", "admin-bookings", "admin-availability", "admin-audits", "hospital-dashboard", "hospital-profile", "hospital-services", "hospital-bookings", "hospital-availability", "hospital-password", "admin-login", "hospital-login", "admin-forgot", "hospital-forgot"];
 
+test("confirmed create results update Admin and Hospital lists without a redundant read", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "admin-consultants");
+  await expect(page.getByRole("button", { name: "Edit", exact: true })).toHaveCount(1);
+  const reads = () => page.evaluate(() => (window as unknown as { creationReads: { consultants: number; packages: number } }).creationReads);
+  const before = (await reads()).consultants;
+  await page.getByRole("button", { name: "Add New", exact: true }).click();
+  const form = page.locator("form").first();
+  for (const [name, value] of Object.entries({ name: "New Professional", email: "new@example.test", contactNo: "9876543210", whatsappNo: "9876543210", qualification: "BAMS", yearsExperience: "3", consultantCharge: "300", ayursargaCommissionPercentage: "10" })) await form.locator(`input[name="${name}"]`).fill(value);
+  await form.getByRole("button", { name: "Add consultant", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "New Professional", exact: true })).toBeVisible();
+  expect((await reads()).consultants).toBe(before);
+  await mount(page, "hospital-services");
+  const packageForm = page.locator(".portal-service-form");
+  const initialReads = (await reads()).packages;
+  await packageForm.locator('select[name="packageDurationDays"]').selectOption("10");
+  await packageForm.locator('input[name="price"]').fill("10000");
+  await packageForm.locator('input[name="procedure_headMassage"]').check();
+  await packageForm.locator('input[name="procedureDays_headMassage"]').fill("3");
+  await packageForm.getByRole("button", { name: "Save draft", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "10-day package", exact: true })).toBeVisible();
+  expect((await reads()).packages).toBe(initialReads);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
+
 test("Admin consultant schedule distinguishes available booked and reserved times without management writes", async ({page})=>{
   await mount(page,"admin-consultants-schedule");
   await page.getByRole("button",{name:"View appointment slots",exact:true}).click();

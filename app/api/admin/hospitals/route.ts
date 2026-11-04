@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { FieldValue } from "firebase-admin/firestore";
 import { DEFAULT_CENTRE_GUIDELINE_VALUES } from "@/features/hospitals/guidelines";
 import { validateHospitalFields } from "@/features/hospitals/validation";
@@ -9,11 +10,11 @@ import { assertUniqueCreationEmail, DuplicateCreationEmailError } from "@/servic
 
 export const runtime = "nodejs";
 
-export function GET() {
+function handleGET() {
   return apiHealth("/api/admin/hospitals", [{ name: "firebaseAdmin", ready: isFirebaseAdminReady() }]);
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const { uid: adminUid, firestore } = await requireActiveAdmin(request);
     const body = await readJsonBody(request, 32_000) as Record<string, unknown> | null;
@@ -93,3 +94,6 @@ export async function POST(request: Request) {
     return apiJson({ error: "We could not create the hospital. Check the server Firebase configuration and try again." }, 503);
   }
 }
+
+export const GET = withApiTiming("GET /api/admin/hospitals", handleGET);
+export const POST = withApiTiming("POST /api/admin/hospitals", handlePOST);

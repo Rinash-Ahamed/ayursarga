@@ -1,3 +1,4 @@
+import { withApiTiming } from "@/services/api/timing";
 import { Timestamp } from "firebase-admin/firestore";
 import { mutationJson } from "@/services/api/mutation";
 import { AdminAuthorizationError, requireActiveUser } from "@/services/firebase/adminAuthorization";
@@ -9,11 +10,11 @@ import { requestAuditDevice } from "@/services/api/audit";
 
 export const runtime = "nodejs";
 
-export function GET() {
+function handleGET() {
   return apiHealth("/api/hospital/capacity", [{ name: "firebaseAdmin", ready: isFirebaseAdminReady() }]);
 }
 
-export async function PATCH(request: Request) {
+async function handlePATCH(request: Request) {
   try {
     if (!allowRequest(requestFingerprint(request, "hospital-capacity"), 30, 10 * 60 * 1000)) {
       return apiJson({ error: "Too many room updates were sent. Please wait and try again." }, 429);
@@ -72,3 +73,6 @@ export async function PATCH(request: Request) {
     return apiJson({ error: "We could not update room availability. Please try again." }, 503);
   }
 }
+
+export const GET = withApiTiming("GET /api/hospital/capacity", handleGET);
+export const PATCH = withApiTiming("PATCH /api/hospital/capacity", handlePATCH);
