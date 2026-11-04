@@ -454,6 +454,14 @@ to deploy, rerun maintenance scripts, or modify live data.
 
 ## Change discipline and validation
 
+- API bodies use the shared bounded streaming readers, including privileged MFA
+  actions. Keep default abuse fingerprints stable across caller-controlled
+  User-Agent changes; process-local limits are not distributed quotas. API logs
+  use sanitized diagnostic codes and opaque enquiry references, never raw caught
+  messages/stacks, credentials, contacts or arbitrary payload context. Baseline
+  CSP must not be mistaken for a full script policy; test auth/checkout before
+  enforcing broader restrictions or changing public rendering strategy.
+
 - Keep Vercel server execution in bom1 beside the existing asia-south1 Firestore
   database through vercel.json. This takes effect on app deployment, not by moving
   database data. All API methods use shared request-local withApiTiming; retain

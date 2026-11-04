@@ -2,6 +2,45 @@
 
 Updated: 4 November 2026 (Asia/Calcutta).
 
+## Security audit and local hardening (4 November 2026, v4.37.3)
+
+- Owner requested a broad security check and fixes. Full report:
+  docs/SECURITY_AUDIT_2026-11-04.md. Reviewed API/role/MFA/ownership boundaries,
+  Firebase/Storage rules, financial privacy, payment verification, uploads,
+  XSS/SSRF/CSRF/CORS surfaces, logs, dependency advisories and public headers.
+- Fixed User-Agent bucket rotation by excluding it from default fingerprints;
+  in-memory limits remain process-local, not a durable/global anti-abuse limit.
+  MFA replacement now uses bounded 2KB streaming JSON validation. Shared API
+  error logs omit raw messages/stacks and arbitrary context; ten Admin route
+  files now use the same safe logger rather than raw caught-error logging.
+- Added baseline CSP (object-src none, base-uri self, frame-ancestors none) without
+  changing script/style loading or dynamic rendering. Full script CSP requires
+  staged Google/Turnstile/Razorpay integration testing before enforcement.
+- Final focused security/workflow run: 208/208 passed across 26 local test files,
+  including new hardening guards. Initial test fixture/API-async assumptions and
+  a sandbox-blocked test Git subprocess were corrected; no security rule disabled.
+  Source credential scan also passes; separate read-only scan of 504 tracked text
+  files found no matching private-key material/service-account/public-secret env
+  assignments. This is limited pattern evidence, not a full Git-history audit.
+- npm audit production-only and full both reported zero known vulnerabilities;
+  no dependencies upgraded. Production read-only home/Admin/Hospital login GETs
+  returned 200 with HSTS/nosniff/DENY/referrer/permissions headers, no existing CSP.
+- Important owner action: rotate any still-valid Firebase Admin key and Gmail
+  app password previously pasted into the conversation. Do not print/revoke them
+  automatically. Cross-instance abuse protection also needs an edge/shared-store
+  decision, with plan/cost review. No exploit evidence established.
+- Native rules tests not run: available Java is 8, installed firebase-tools needs
+  21+. No JDK installed; no deployed rules/IAM/Firewall parity claim. No production
+  data changes, emails, payments or deployment. Version/lock synchronized to 4.37.3.
+- Owner subsequently approved fresh validation: ESLint, standalone typecheck and
+  production build passed for 4.37.3 (85 static pages). Same-build local production
+  server on port 3187 returned 200 for deep health JSON (deep-configuration/ok,
+  all six dependencies ready), themed health HTML and Admin/Hospital login HTML;
+  baseline CSP present on all four responses. Configuration health does not prove
+  live database, email or payment operations. Stopped only the temporary server,
+  removed generated tsconfig.tsbuildinfo and preserved the existing next-env.d.ts
+  dev route-types import. No deployment or fresh live workflow test.
+
 ## Cross-portal API performance (4 November 2026, v4.37.2)
 
 - Owner authorized implementation after the read-only performance audit. No

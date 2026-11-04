@@ -22,7 +22,7 @@ function fixture(options = {}) {
       if (options.denied) throw new AuthError(options.denied);
       return { uid: "admin", firestore, auth: { getUser: async () => ({ disabled: !!options.disabled }) } };
     } },
-    "@/services/api/server": { apiJson: (body, status = 200) => Response.json(body, { status }) },
+    "@/services/api/server": { apiJson: (body, status = 200) => Response.json(body, { status }), logApiError: () => {} },
     "@/services/api/audit": { requestAuditDevice: () => ({ userAgent: "test" }) },
   });
   return { writes, send: (body = { status: "inactive", expectedAuditId: "old" }, userId = "user") => PATCH(new Request("https://test.local/api/admin/users/user/status", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }), { params: Promise.resolve({ userId }) }) };

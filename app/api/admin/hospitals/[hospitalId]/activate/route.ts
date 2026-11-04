@@ -4,7 +4,7 @@ import { validateHospitalFields } from "@/features/hospitals/validation";
 import { hasMinimumHospitalImages, MIN_PUBLIC_HOSPITAL_IMAGES } from "@/features/hospitals/images";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
-import { apiHealth, apiJson } from "@/services/api/server";
+import { apiHealth, apiJson, logApiError } from "@/services/api/server";
 import { hasCurrentHospitalContract } from "@/features/hospitals/contractApproval";
 
 export const runtime = "nodejs";
@@ -133,14 +133,14 @@ async function handlePOST(request: Request, context: { params: Promise<{ hospita
           auth.revokeRefreshTokens(uid),
         ]),
       ]).catch((authError) => {
-        console.error("Hospital was activated, but Firebase Auth account synchronization needs attention", authError instanceof Error ? authError.message : authError);
+        logApiError("/api/admin/hospitals/[hospitalId]/activate auth-sync", authError);
       });
     }
 
     return apiJson({ ok: true });
   } catch (error) {
     if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
-    console.error("Hospital activation failed", error instanceof Error ? error.message : error);
+    logApiError("/api/admin/hospitals/[hospitalId]/activate", error);
     return apiJson({ error: "We could not activate the hospital. Check the server Firebase configuration and try again." }, 503);
   }
 }

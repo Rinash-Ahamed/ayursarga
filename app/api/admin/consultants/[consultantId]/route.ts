@@ -2,7 +2,7 @@ import { withApiTiming } from "@/services/api/timing";
 import { FieldValue } from "firebase-admin/firestore";
 import { validateConsultantFields } from "@/features/consultants/validation";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
-import { apiJson } from "@/services/api/server";
+import { apiJson, logApiError } from "@/services/api/server";
 import { requestAuditDevice } from "@/services/api/audit";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { assertUniqueCreationEmail, DuplicateCreationEmailError } from "@/services/admin/uniqueCreationEmail";
@@ -56,7 +56,7 @@ async function handlePATCH(request: Request, context: { params: Promise<{ consul
   } catch (error) {
     if (error instanceof DuplicateCreationEmailError) return apiJson({ error: error.message, field: "email" }, error.status);
     if (error instanceof RequestBodyError || error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
-    console.error("Consultant update failed", error instanceof Error ? error.message : "Unknown error");
+    logApiError("/api/admin/consultants/[consultantId]", error);
     return apiJson({ error: "We could not save the consultant. Refresh and try again." }, 503);
   }
 }

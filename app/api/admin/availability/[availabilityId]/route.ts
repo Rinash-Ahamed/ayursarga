@@ -1,7 +1,7 @@
 import { withApiTiming } from "@/services/api/timing";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
-import { apiHealth, apiJson } from "@/services/api/server";
+import { apiHealth, apiJson, logApiError } from "@/services/api/server";
 import { approveAvailabilityRequest, AvailabilityOperationError, closeAvailability } from "@/services/hospitals/availabilityAdmin";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
 
@@ -38,7 +38,7 @@ async function handlePATCH(request: Request, context: { params: Promise<{ availa
     if (error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
     if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
     if (error instanceof AvailabilityOperationError) return apiJson({ error: error.message }, error.status);
-    console.error("Availability update failed", error instanceof Error ? error.message : error);
+    logApiError("/api/admin/availability/[availabilityId]", error);
     return apiJson({ error: "We could not update availability. Refresh and try again." }, 503);
   }
 }

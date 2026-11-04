@@ -36,10 +36,26 @@ function fixture() {
     "firebase-admin/firestore": { FieldValue: { serverTimestamp: () => "timestamp" } },
   });
   const send = (body = { confirmation: "replace-my-authenticator", factorId: "factor-original" }, token = true) => route.POST(new Request("https://test.local/api/admin/authenticator", {
-    method: "POST", headers: token ? { Authorization: "Bearer synthetic" } : {}, body: JSON.stringify(body),
+    method: "POST", headers: { "Content-Type": "application/json", ...(token ? { Authorization: "Bearer synthetic" } : {}) }, body: JSON.stringify(body),
   }));
-  return { state, send };
+  return { state, send, POST: route.POST };
 }
+
+test("replacement rejects oversized, malformed and non-JSON bodies before any factor mutation", async () => {
+  for (const [body, headers, status] of [
+    [JSON.stringify({ confirmation: "x".repeat(2100) }), { "Content-Type": "application/json" }, 413],
+    ["{", { "Content-Type": "application/json" }, 400],
+    ["{}", { "Content-Type": "text/plain" }, 415],
+  ]) {
+    const f = fixture();
+    const response = await f.POST(new Request("https://test.local/api/admin/authenticator", {
+      method: "POST", headers: { Authorization: "Bearer synthetic", ...headers }, body,
+    }));
+    assert.equal(response.status, status);
+    assert.equal(f.state.calls.length, 0);
+    assert.equal(f.state.audits.size, 0);
+  }
+});
 
 test("replacement is server-flagged and requires an active Admin with native TOTP, password and verified email", async () => {
   const f = fixture(); f.state.enabled = false; assert.equal((await f.send()).status, 403); f.state.enabled = true;

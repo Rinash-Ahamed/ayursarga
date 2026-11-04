@@ -32,7 +32,10 @@ const PUBLIC_SHORT_CACHE_HEADERS = {
 };
 
 function compactContext(context: ApiLogContext) {
-  return Object.fromEntries(Object.entries(context).filter(([, value]) => value !== undefined));
+  // Only our opaque enquiry reference is needed to join email and server logs.
+  // Do not copy arbitrary context, provider messages, payloads or contacts.
+  return typeof context.requestId === "string" && /^ENQ-[a-f0-9-]{36}$/i.test(context.requestId)
+    ? { requestId: context.requestId } : {};
 }
 
 export function apiJson(
@@ -71,9 +74,9 @@ export function logApiError(route: string, error: unknown, context: ApiLogContex
     severity: "ERROR",
     event: "api_error",
     route,
-    errorName: typeof errorRecord?.name === "string" ? errorRecord.name : "Error",
-    errorCode: typeof errorRecord?.code === "string" ? errorRecord.code : undefined,
-    message: error instanceof Error ? error.message : "An unknown server error occurred.",
+    errorName: typeof errorRecord?.name === "string" && /^[A-Za-z]{1,60}$/.test(errorRecord.name) ? errorRecord.name : "Error",
+    errorCode: typeof errorRecord?.code === "number" && Number.isSafeInteger(errorRecord.code) ? errorRecord.code
+      : typeof errorRecord?.code === "string" && /^[a-z0-9_/-]{1,80}$/i.test(errorRecord.code) ? errorRecord.code : undefined,
     context: compactContext(context),
     timestamp: new Date().toISOString(),
   }));

@@ -9,7 +9,8 @@ const MAX_BUCKETS = 5_000;
 export function requestFingerprint(request: Request, namespace: string, options: { includeUserAgent?: boolean } = {}) {
   const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   const address = forwarded || request.headers.get("x-real-ip")?.trim() || "unknown";
-  const agent = options.includeUserAgent === false ? "" : request.headers.get("user-agent")?.slice(0, 160) || "unknown";
+  // A caller can change User-Agent freely; it must not reset an abuse bucket.
+  const agent = options.includeUserAgent === true ? request.headers.get("user-agent")?.slice(0, 160) || "unknown" : "";
   return createHash("sha256").update(`${namespace}:${address}:${agent}`).digest("hex");
 }
 

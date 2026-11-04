@@ -6,7 +6,7 @@ import { validateHospitalLocationUrl } from "@/features/hospitals/location";
 import { validateHospitalFields } from "@/features/hospitals/validation";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
-import { apiHealth, apiJson } from "@/services/api/server";
+import { apiHealth, apiJson, logApiError } from "@/services/api/server";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { validateHospitalContractDetails } from "@/features/hospitals/contractDetails";
 import { hospitalContractContent, hospitalContractRevision } from "@/features/hospitals/contractApproval";
@@ -241,7 +241,7 @@ async function handlePATCH(request: Request, context: { params: Promise<{ hospit
         auth.updateUser(uid, { disabled: true }),
         auth.revokeRefreshTokens(uid),
       ])).catch((authError) => {
-        console.error("Hospital access was closed in Firestore, but Firebase Auth disabling needs attention", authError instanceof Error ? authError.message : authError);
+        logApiError("/api/admin/hospitals/[hospitalId] auth-sync", authError);
       });
     }
 
@@ -249,7 +249,7 @@ async function handlePATCH(request: Request, context: { params: Promise<{ hospit
   } catch (error) {
     if (error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
     if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
-    console.error("Admin hospital update failed", error instanceof Error ? error.message : error);
+    logApiError("/api/admin/hospitals/[hospitalId]", error);
     return apiJson({ error: "We could not update the hospital. Check the server Firebase configuration and try again." }, 503);
   }
 }

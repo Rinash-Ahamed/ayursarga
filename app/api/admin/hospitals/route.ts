@@ -4,7 +4,7 @@ import { DEFAULT_CENTRE_GUIDELINE_VALUES } from "@/features/hospitals/guidelines
 import { validateHospitalFields } from "@/features/hospitals/validation";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
-import { apiHealth, apiJson } from "@/services/api/server";
+import { apiHealth, apiJson, logApiError } from "@/services/api/server";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { assertUniqueCreationEmail, DuplicateCreationEmailError } from "@/services/admin/uniqueCreationEmail";
 
@@ -90,7 +90,7 @@ async function handlePOST(request: Request) {
     if (error instanceof DuplicateCreationEmailError) return apiJson({ error: error.message, field: "email" }, error.status);
     if (error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
     if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
-    console.error("Hospital creation failed", error instanceof Error ? error.message : error);
+    logApiError("/api/admin/hospitals", error);
     return apiJson({ error: "We could not create the hospital. Check the server Firebase configuration and try again." }, 503);
   }
 }

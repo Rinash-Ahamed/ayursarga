@@ -1,7 +1,7 @@
 import { withApiTiming } from "@/services/api/timing";
 import { FieldValue } from "firebase-admin/firestore";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
-import { apiJson } from "@/services/api/server";
+import { apiJson, logApiError } from "@/services/api/server";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { requestAuditDevice } from "@/services/api/audit";
 
@@ -56,7 +56,7 @@ async function handlePATCH(request: Request, context: { params: Promise<{ userId
     return apiJson(result);
   } catch (error) {
     if (error instanceof AdminAuthorizationError || error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
-    console.error("User account status update failed", error instanceof Error ? error.message : "Unknown error");
+    logApiError("/api/admin/users/[userId]/status", error);
     return apiJson({ error: "We could not change this account. Refresh the list and try again." }, 503);
   }
 }

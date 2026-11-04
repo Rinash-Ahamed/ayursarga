@@ -73,7 +73,7 @@ test("missing either key blocks submissions and reports configuration as unavail
   const f = fixture(t);
   delete process.env.TURNSTILE_SECRET_KEY;
   assert.equal((await f.POST(request())).status, 503);
-  assert.deepEqual((await f.GET().json()).find((check) => check.name === "turnstile"), { name: "turnstile", ready: false });
+  assert.deepEqual((await (await f.GET()).json()).find((check) => check.name === "turnstile"), { name: "turnstile", ready: false });
   process.env.TURNSTILE_SECRET_KEY = "synthetic-secret";
   delete process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   assert.equal((await f.POST(request())).status, 503);

@@ -1,7 +1,7 @@
 import { withApiTiming } from "@/services/api/timing";
 import { requireActiveAdmin, AdminAuthorizationError } from "@/services/firebase/adminAuthorization";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
-import { apiJson } from "@/services/api/server";
+import { apiJson, logApiError } from "@/services/api/server";
 import type { HospitalPackageSummary } from "@/features/hospitals/packageSummary";
 import { allowRequest } from "@/services/api/rateLimit";
 
@@ -65,7 +65,7 @@ async function handlePOST(request: Request) {
     return apiJson({ summaries });
   } catch (error) {
     if (error instanceof AdminAuthorizationError || error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
-    console.error("Hospital package summary unavailable", error instanceof Error ? error.message : "Unknown error");
+    logApiError("/api/admin/hospitals/package-summary", error);
     return apiJson({ error: "Package status could not be loaded. Please try again." }, 503);
   }
 }

@@ -1,7 +1,7 @@
 import { withApiTiming } from "@/services/api/timing";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
-import { apiHealth, apiJson } from "@/services/api/server";
+import { apiHealth, apiJson, logApiError } from "@/services/api/server";
 import { AvailabilityOperationError, createAdminBlock } from "@/services/hospitals/availabilityAdmin";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { isIsoDate, parseDateInputValue } from "@/utils/date";
@@ -35,7 +35,7 @@ async function handlePOST(request: Request) {
     if (error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
     if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
     if (error instanceof AvailabilityOperationError) return apiJson({ error: error.message }, error.status);
-    console.error("Availability block creation failed", error instanceof Error ? error.message : error);
+    logApiError("/api/admin/availability", error);
     return apiJson({ error: "We could not block these dates. Review the dates and try again." }, 503);
   }
 }

@@ -1,6 +1,6 @@
 import { withApiTiming } from "@/services/api/timing";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
-import { apiHealth, apiJson } from "@/services/api/server";
+import { apiHealth, apiJson, logApiError } from "@/services/api/server";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
 
 export const runtime = "nodejs";
@@ -31,7 +31,7 @@ async function handleDELETE(request: Request) {
     return apiJson({ error: "The audit log is unusually large. Run Clear all audits again to finish." }, 409);
   } catch (error) {
     if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
-    console.error("Audit log clearing failed", error instanceof Error ? error.message : error);
+    logApiError("/api/admin/audits", error);
     return apiJson({ error: "We could not clear the audit log. Check the server Firebase Admin configuration and try again." }, 503);
   }
 }

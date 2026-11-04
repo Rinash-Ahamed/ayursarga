@@ -83,7 +83,7 @@ test("new reference, reported source and server timestamp correlate email and lo
   assert.doesNotMatch(f.emails[0].text, /attacker-controlled|1900-01-01/);
 });
 
-test("changing User-Agent cannot evade the contact limit while other API fingerprint behavior is unchanged", async (t) => {
+test("changing User-Agent cannot evade contact or other API limits", async (t) => {
   const f = fixture(t, true);
   for (let attempt = 0; attempt < 6; attempt++) {
     const response = await f.POST(request(valid, { Origin: "https://contact.test", "X-Forwarded-For": "203.0.113.8", "User-Agent": `client-${attempt}` }));
@@ -93,7 +93,7 @@ test("changing User-Agent cannot evade the contact limit while other API fingerp
   const { requestFingerprint } = loadTypeScript("services/api/rateLimit.ts");
   const a = request(valid, { "X-Forwarded-For": "203.0.113.8", "User-Agent": "one" });
   const b = request(valid, { "X-Forwarded-For": "203.0.113.8", "User-Agent": "two" });
-  assert.notEqual(requestFingerprint(a, "other-api"), requestFingerprint(b, "other-api"));
+  assert.equal(requestFingerprint(a, "other-api"), requestFingerprint(b, "other-api"));
   assert.equal(requestFingerprint(a, "contact", { includeUserAgent: false }), requestFingerprint(b, "contact", { includeUserAgent: false }));
 });
 

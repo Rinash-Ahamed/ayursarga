@@ -6,6 +6,7 @@ import { isAdminMfaRecoveryEnabled } from "@/config/adminMfaRecovery";
 import { allowRequest } from "@/services/api/rateLimit";
 import { requestAuditDevice } from "@/services/api/audit";
 import { apiJson } from "@/services/api/server";
+import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { isAdminSessionAfterCutoff } from "@/features/auth/adminMfa";
 
 export const runtime = "nodejs";
@@ -19,7 +20,7 @@ async function handlePOST(request: Request) {
     if (!Number.isFinite(age) || age < -60 || age > 300) {
       return apiJson({ error: "Verify your Admin password and current authenticator code again." }, 401);
     }
-    const body = await request.json().catch(() => null);
+    const body = await readJsonBody(request, 2_000) as Record<string, unknown> | null;
     if (!body || body.confirmation !== "replace-my-authenticator" || typeof body.factorId !== "string"
       || !body.factorId || body.factorId.length > 256 || Object.keys(body).some(key => !["confirmation", "factorId"].includes(key))) {
       return apiJson({ error: "Confirm replacement of your own authenticator before continuing." }, 400);
@@ -78,7 +79,7 @@ async function handlePOST(request: Request) {
     }
     return apiJson({ ok: true });
   } catch (error) {
-    if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
+    if (error instanceof AdminAuthorizationError || error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
     // Do not expose provider errors, tokens or credentials.
     return apiJson({ error: "Replacement could not be confirmed. Sign out and sign in again to check setup. Contact the project owner before retrying." }, 503);
   }

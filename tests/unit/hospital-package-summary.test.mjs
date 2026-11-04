@@ -29,7 +29,7 @@ function fixture(options = {}) {
   }
   const { POST } = loadTypeScript("app/api/admin/hospitals/package-summary/route.ts", {
     "@/services/firebase/adminAuthorization": { AdminAuthorizationError:AuthError, requireActiveAdmin:async () => { if(options.denied) throw new AuthError(options.denied); return {firestore:{collection:name => {assert.equal(name,"services");return query();}, runTransaction:async (callback,settings)=>{assert.deepEqual(settings,{readOnly:true});return callback({get:aggregate=>aggregate.get()});}}}; } },
-    "@/services/api/server": {apiJson:(body,status=200)=>Response.json(body,{status})},
+    "@/services/api/server": {apiJson:(body,status=200)=>Response.json(body,{status}),logApiError:()=>{}},
     "@/services/api/rateLimit": {allowRequest:()=>!options.rateLimited},
   });
   return { queries, sendRequest: POST, send: body => POST(new Request("https://test.local/api/admin/hospitals/package-summary", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)})) };

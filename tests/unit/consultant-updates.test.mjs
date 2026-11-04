@@ -25,7 +25,7 @@ function fixture(options = {}) {
   } };
   const { PATCH } = loadTypeScript("app/api/admin/consultants/[consultantId]/route.ts", {
     "@/services/firebase/adminAuthorization": { AdminAuthorizationError: AuthError, requireActiveAdmin: async () => { if (options.denied) throw new AuthError(options.denied); return { uid: "admin", firestore }; } },
-    "@/services/api/server": { apiJson: (body, status = 200) => Response.json(body, { status }) },
+    "@/services/api/server": { apiJson: (body, status = 200) => Response.json(body, { status }), logApiError: () => {} },
     "@/services/api/audit": { requestAuditDevice: () => ({ userAgent: "test" }) },
   });
   return { writes, send: (body, id = "AS001") => PATCH(new Request("https://test.local/api/admin/consultants/AS001", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ expectedAuditId: previous.lastAuditId ?? "", ...body }) }), { params: Promise.resolve({ consultantId: id }) }) };

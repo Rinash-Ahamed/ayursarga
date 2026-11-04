@@ -3,7 +3,7 @@ import { Timestamp } from "firebase-admin/firestore";
 import { encodeMutation } from "@/services/api/mutation";
 import { validateConsultantFields } from "@/features/consultants/validation";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
-import { apiJson } from "@/services/api/server";
+import { apiJson, logApiError } from "@/services/api/server";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { assertUniqueCreationEmail, DuplicateCreationEmailError } from "@/services/admin/uniqueCreationEmail";
 
@@ -63,7 +63,7 @@ async function handlePOST(request: Request) {
     if (error instanceof DuplicateCreationEmailError) return apiJson({ error: error.message, field: "email" }, error.status);
     if (error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
     if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
-    console.error("Consultant creation failed", error instanceof Error ? error.message : error);
+    logApiError("/api/admin/consultants", error);
     return apiJson({ error: "We could not add the consultant. Please try again." }, 503);
   }
 }
