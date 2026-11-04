@@ -13,6 +13,7 @@ const modules = [
   "@/services/auth/adminMfaReplacementService",
   "@/services/billing/invoiceService",
   "@/services/billing/consultantFinanceService",
+  "@/services/billing/consultationRefundService",
   "@/services/payments/consultationCheckout",
   "@/services/consultations/cancellationPolicyService",
 ];

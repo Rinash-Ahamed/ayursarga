@@ -1,6 +1,7 @@
 import { formatCurrency } from "@/utils/currency";
 import { formatDisplayDate, formatDisplayDateTime } from "@/utils/date";
 import { bookingActorLabel } from "@/features/bookings/changeReason";
+import { refundStatusLabel, type ConsultationRefundSummary } from "@/features/payments/refunds";
 
 export type BookingEmailData = {
   kind: "hospital" | "consultation";
@@ -15,7 +16,7 @@ export type BookingEmailData = {
   bystanderCount?: number;
   additionalBystanderTotal?: number;
   bookingUrl: string;
-  event?: "confirmed" | "rescheduled" | "cancelled";
+  event?: "confirmed" | "rescheduled" | "cancelled" | "refund_updated";
   timeWindow?: string;
   previousDate?: unknown;
   previousTime?: string | null;
@@ -26,6 +27,7 @@ export type BookingEmailData = {
   rescheduleReason?: string;
   rescheduledByRole?: "admin" | "consumer";
   rescheduledAt?: unknown;
+  refundSummary?: ConsultationRefundSummary;
 };
 
 const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character] || character);
@@ -37,8 +39,9 @@ export function bookingEmail(data: BookingEmailData) {
   const consultant = !hospital && data.audience === "consultant";
   const support = !hospital && data.audience === "support";
   const event = data.event ?? "confirmed";
-  const subject = `Ayursarga booking ${event}${data.bookingReference ? `: ${data.bookingReference}` : ""}`;
-  const heading = hospital ? `Your hospital booking is ${event}` : consultant || support ? `Consultation ${event === "confirmed" ? "booked" : event}` : `Your online consultation is ${event}`;
+  const refundEvent = event === "refund_updated";
+  const subject = `Ayursarga ${refundEvent ? "refund update" : `booking ${event}`}${data.bookingReference ? `: ${data.bookingReference}` : ""}`;
+  const heading = refundEvent ? "Online consultation refund update" : hospital ? `Your hospital booking is ${event}` : consultant || support ? `Consultation ${event === "confirmed" ? "booked" : event}` : `Your online consultation is ${event}`;
   const rows: [string, string][] = [
     ["Booking reference", data.bookingReference || "See My Bookings"],
     [hospital ? "Hospital" : "Consultant", data.providerName],
@@ -55,21 +58,30 @@ export function bookingEmail(data: BookingEmailData) {
     const changedAt = formatDisplayDateTime(data.rescheduledAt);
     if (changedAt) rows.push(["Rescheduled on", `${changedAt} IST`]);
   }
-  if (event === "cancelled") rows.push(["Cancelled by", bookingActorLabel(data.cancelledByRole)], ["Cancellation reason", data.cancellationReason || "Reason not recorded"]);
+  if (event === "cancelled" || refundEvent) rows.push(["Cancelled by", bookingActorLabel(data.cancelledByRole)], ["Cancellation reason", data.cancellationReason || "Reason not recorded"]);
+  if ((event === "cancelled" || refundEvent) && data.refundSummary && !consultant) {
+    rows.push(["Refund status", refundStatusLabel(data.refundSummary.status)], ["Refund amount", formatCurrency(data.refundSummary.amountPaise / 100)]);
+    if (data.refundSummary.reference) rows.push(["Refund reference", data.refundSummary.reference]);
+  }
   if (hospital && data.location) rows.push(["Location", data.location]);
   if (typeof data.amount === "number" && Number.isFinite(data.amount)) rows.push([hospital ? "Package amount" : "Consultation charge", formatCurrency(data.amount)]);
   if (hospital && typeof data.bystanderCount === "number") rows.push(["Bystanders", String(data.bystanderCount)]);
   if (hospital && data.additionalBystanderTotal) rows.push(["Additional bystander amount", formatCurrency(data.additionalBystanderTotal)]);
   const greetingName = support ? "Ayursarga team" : consultant ? data.providerName : data.consumerName;
   const greeting = greetingName ? `Hello ${greetingName},` : "Hello,";
-  const note = support
+  const refundNote = data.refundSummary?.status === "refunded" ? "The refund shown above has been processed by Razorpay. Bank credit timing may vary."
+    : data.refundSummary?.status === "initiated" ? "Your refund has been initiated. It is not yet confirmed as processed."
+    : data.refundSummary?.status === "failed" ? "The refund could not be completed. Ayursarga must review the payment before another request."
+    : "The refund outcome is being checked. This is not confirmation that a refund has been processed.";
+  const note = refundEvent ? consultant ? "A refund update has been recorded for this cancelled consultation. Contact Ayursarga for payment coordination."
+    : `${refundNote} The appointment remains cancelled. Contact info@ayursarga.com and quote the booking reference if you need assistance.` : support
     ? `An online consultation has been ${event === "confirmed" ? "booked" : event}. ${event === "rescheduled" ? "The original and updated schedules are shown above. " : ""}Review the appointment in Admin for the latest details.${event === "cancelled" ? " Cancellation does not confirm that a refund has been issued." : ""}`
     : consultant
     ? `An assigned consultation has been ${event === "confirmed" ? "booked" : event}. ${event === "rescheduled" ? "Please use the updated schedule shown above. " : ""}For appointment coordination, contact info@ayursarga.com and quote the booking reference.`
     : event === "rescheduled"
     ? "Your appointment has been rescheduled. Please use the updated date and time shown above. Contact info@ayursarga.com if this schedule does not suit you."
     : event === "cancelled"
-      ? `Your ${hospital ? "hospital booking" : "appointment"} has been cancelled. For assistance or to make another booking, contact info@ayursarga.com. This notice does not confirm a refund.`
+      ? `Your ${hospital ? "hospital booking" : "appointment"} has been cancelled. For assistance or to make another booking, contact info@ayursarga.com. ${data.refundSummary ? refundNote : "This notice does not confirm a refund."}`
       : "You can view the latest booking details in your Ayursarga account. This confirmation is not a payment receipt.";
   const actionLabel = support ? "View appointment in Admin" : consultant ? "Contact Ayursarga" : "View My Bookings";
   const text = `Ayursarga\n\n${heading}\n\n${greeting}\n\n${rows.map(([label, value]) => `${label}: ${value}`).join("\n")}\n\n${note}\n\n${actionLabel}: ${url.href}\n\nNeed help? info@ayursarga.com`;
@@ -77,7 +89,7 @@ export function bookingEmail(data: BookingEmailData) {
 <body style="margin:0;background:#f9f5ea;color:#243b2d;font-family:Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:24px 12px">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#fff;border:1px solid #e2e5dc;border-radius:20px;overflow:hidden">
-<tr><td style="padding:28px 24px;background:#1f3d2b;border-bottom:3px solid #c9a66b"><div style="font-family:Georgia,serif;font-size:30px;color:#fff">Ayursarga</div><p style="margin:8px 0 0;color:#e3d1af;font-size:11px;letter-spacing:1.5px">BOOKING ${event === "confirmed" ? "CONFIRMATION" : event === "rescheduled" ? "RESCHEDULED" : "CANCELLATION"}</p></td></tr>
+<tr><td style="padding:28px 24px;background:#1f3d2b;border-bottom:3px solid #c9a66b"><div style="font-family:Georgia,serif;font-size:30px;color:#fff">Ayursarga</div><p style="margin:8px 0 0;color:#e3d1af;font-size:11px;letter-spacing:1.5px">${refundEvent ? "REFUND UPDATE" : `BOOKING ${event === "confirmed" ? "CONFIRMATION" : event === "rescheduled" ? "RESCHEDULED" : "CANCELLATION"}`}</p></td></tr>
 <tr><td style="padding:28px 24px"><h1 style="margin:0 0 20px;color:#1f3d2b;font-family:Georgia,serif;font-size:28px;font-weight:400;line-height:1.3">${heading}</h1>
 <p style="font-size:15px;line-height:1.7">${escapeHtml(greeting)}</p>
 <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-size:14px;line-height:1.6">${rows.map(([label, value]) => `<tr><th scope="row" align="left" valign="top" style="width:42%;padding:12px 10px 12px 0;border-bottom:1px solid #e2e5dc;color:#526253;font-weight:400">${label}</th><td valign="top" style="padding:12px 0;border-bottom:1px solid #e2e5dc;overflow-wrap:anywhere;word-break:break-word;font-weight:700">${escapeHtml(value)}</td></tr>`).join("")}</table>

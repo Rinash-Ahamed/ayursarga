@@ -2,6 +2,73 @@
 
 Updated: 4 November 2026 (Asia/Calcutta).
 
+## Admin consultation Cancel & Refund (4 November 2026, v4.40.0)
+
+- Owner approved consultation-only refund execution, a simple Admin dialog and
+  accurate gateway/commission capture. Admin Cancel & Refund saves cancellation
+  through the existing revision-checked slot/email API, then submits the approved
+  refund. Already-cancelled appointments offer Issue refund. Partial failures
+  clearly retain cancellation; the dialog never restores an appointment or claims
+  an unknown payment outcome succeeded. Consumer cancellations remain eligible
+  quotes requiring Admin refund processing, not automatic money movement.
+- New verified Admin-only /api/admin/consultation-refunds GET quote and POST
+  refund/check use bounded bodies, current booking revisions, separate reasons,
+  integer paise, saved cancellation time and agreed policy snapshots. Within-window
+  configured allowances are suggested; later/above-policy/legacy exceptions need
+  explicit approval. Existing 48-hour snapshots are not rewritten. Recorded
+  consultant transfers block this action for manual Finance reconciliation.
+- Private consultationRefunds records reserve a Finance refundPendingId lock
+  before contacting Razorpay. Creates bind actor/booking/request/hash and the
+  provider's immutable receipt/body/X-Refund-Idempotency key. Other requests and
+  payouts cannot race the claim. Limit amounts using verified payment and existing
+  pending/processed provider refunds; failed attempts are preserved, not deleted.
+  Unknown outcomes retain their lock. Explicit Admin recovery locates the receipt
+  or reuses only that same approved provider key/body, never a fresh refund key.
+- Provider refund adapters validate IDs, payment, INR, amount, receipt and
+  pending/processed/failed state, whitelist bank references and omit raw customer
+  data. Webhooks fetch individual refund records and permit safe recovery after
+  payment-journal partial commits. Refund outcomes/totals are applied before the
+  general payment journal so its updates do not invalidate all pending emails.
+  Late capture events refresh only known refunds through provider GETs, never
+  initiate refunds. Terminal states cannot regress on delayed responses.
+- Booking refundSummary contains only status, amount, timestamps and provider/
+  bank references. Consumer/Admin booking details and Admin Finance show it on the
+  same booking ID. Hospital payment flows and permissions remain unchanged;
+  Hospitals cannot access consultations. Refund update emails have a distinct
+  branded event/subject, independent customer/consultant/info claims, current
+  revisions and honest pending/failed/unknown wording. Consultant emails do not
+  show the customer's total refund or private platform commission.
+- Finance preserves historical commission/base-payable snapshots and captures
+  actual Razorpay fee including GST, with tax separately as a component. Do not
+  add tax twice, subtract gateway fees from customer refunds or invent unknown
+  fees. Processed refund proof is retained even if a follow-up payment GET fails;
+  previously verified charges remain available. Net revenue/settlements remain
+  on review holds after refunds; partial refunds and transferred cases are not
+  automatically allocated or reversed. Commission metric now says before refund
+  adjustments. Verified full-refund closure remains a separate controlled action.
+- Validation: 83 focused backend regressions passed; subsequent final checks
+  passed 28 payment/refund tests and all 15 dedicated refund cases, including the
+  added email-ordering and follow-up lookup-failure cases. Nine mocked browser
+  cases passed across desktop, 320px phone and mobile WebKit. One later WebKit
+  cancellation regression timed out waiting for button stability under parallel
+  validation; screenshot showed a visible enabled button, and the unchanged test
+  passed in isolation. No forced clicks or product CSS changes hid this timeout.
+  Final production build, lint and standalone typecheck passed.
+  Same-build local /api/health?deep=true JSON and themed /health?deep=true returned
+  200 with all six dependencies ready in deep-configuration mode; unauthenticated
+  refund GET/POST returned 401. Temporary production server was stopped and
+  generated route import/build-cache/debug artifacts cleaned up.
+  Native emulator
+  rules tests were updated but not executed: local Java remains 8, while current
+  Firebase tooling requires 21+. No real payments, refunds or SMTP sends tested.
+- Owner separately requested rules deployment: scoped non-interactive
+  firestore:rules deployment to ayursarga-connect exited 0 and released the rules.
+  Only new rules diff explicitly denies all client access to consultationRefunds;
+  no indexes, Storage rules or app deployment performed. No new environment
+  variables; keep refund.created/processed/failed enabled on the existing matching
+  Razorpay mode webhook. A deployed Razorpay Test-mode booking/refund remains
+  required before live use; configuration health is not provider E2E proof.
+
 ## Build/lint validation and refund design review (4 November 2026)
 
 - Owner requested build/lint and a refund diagnosis, then described a proposed

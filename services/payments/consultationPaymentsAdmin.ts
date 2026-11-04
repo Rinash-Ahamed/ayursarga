@@ -279,6 +279,7 @@ async function commitPayment(firestore: Firestore, id: string, payment: Razorpay
         paymentStatus: refundedPaise === grossPaise ? "refunded" : refundedPaise > 0 ? "partially_refunded" : "paid",
         settlementStatus: previous?.settlementStatus ?? "pending", settlementReference: previous?.settlementReference ?? null,
         settlementDate: previous?.settlementDate ?? null, settlementNotes: previous?.settlementNotes ?? null,
+        ...(previous?.latestRefundId ? { latestRefundId: previous.latestRefundId, refundPendingId: previous.refundPendingId ?? null, refundSummary: previous.refundSummary ?? null } : {}),
         settlementRecordedAt: previous?.settlementRecordedAt ?? null, settlementRecordedBy: previous?.settlementRecordedBy ?? null,
         settlementHold: reviewClosed ? false : Boolean(previous?.settlementHold || needsReview),
         ...(reviewClosed ? { reviewResolution: previous.reviewResolution, reviewResolvedAt: previous.reviewResolvedAt, reviewResolvedBy: previous.reviewResolvedBy, reviewResolutionNotes: previous.reviewResolutionNotes } : {}),

@@ -62,7 +62,7 @@ before(async () => {
 });
 
 test("private payment intents, receipts, financials and webhook journals deny every client role", async () => {
-  for (const collection of ["consultationPaymentIntents", "consultationPaymentReceipts", "consultationFinancials", "razorpayWebhookEvents", "cancellationPolicies", "invoiceReceipts", "invoicePaymentAttempts"]) {
+  for (const collection of ["consultationPaymentIntents", "consultationPaymentReceipts", "consultationFinancials", "consultationRefunds", "razorpayWebhookEvents", "cancellationPolicies", "invoiceReceipts", "invoicePaymentAttempts"]) {
     const path = `${collection}/private-${suffix}`;
     await seed(path, fields({ consumerId: ids.consumer, commissionPaise: 1000 }));
     for (const role of [undefined, "consumer", "hospital", "admin"]) {

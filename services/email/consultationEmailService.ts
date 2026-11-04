@@ -11,13 +11,13 @@ import { formatAppointmentRange } from "@/features/consultations/slots";
 
 const COLLECTION = "consultationEmailEvents";
 const HOSPITAL_COLLECTION = "hospitalBookingEmailEvents";
-type AppointmentEmailEvent = "confirmed" | "rescheduled" | "cancelled";
+type AppointmentEmailEvent = "confirmed" | "rescheduled" | "cancelled" | "refund_updated";
 
 function currentEmail(event: Record<string, unknown>, appointment?: Record<string, unknown> | null) {
   const revision = event.bookingAuditId ?? event.lastAuditId;
-  return Boolean(appointment && appointment.archivedAt == null && ["confirmed", "rescheduled", "cancelled"].includes(String(event.event))
+  return Boolean(appointment && appointment.archivedAt == null && ["confirmed", "rescheduled", "cancelled", "refund_updated"].includes(String(event.event))
     && typeof revision === "string" && revision === appointment.lastAuditId
-    && appointment.status === (event.event === "cancelled" ? "cancelled" : "confirmed"));
+    && appointment.status === (["cancelled", "refund_updated"].includes(String(event.event)) ? "cancelled" : "confirmed"));
 }
 
 /** Safe response metadata only; this never claims or sends an email. */
@@ -54,7 +54,8 @@ export function queueConsultationEmail(transaction: Transaction, firestore: Fire
     previousTime: typeof previous.confirmedTime === "string" ? (typeof previous.confirmedEndTime === "string" ? formatAppointmentRange(previous.confirmedTime, previous.confirmedEndTime) : previous.confirmedTime) : null,
     previousTimeWindow: `${previous.slotStartTime} - ${previous.slotEndTime}`,
     amount: typeof booking.consultantCharge === "number" ? booking.consultantCharge : null,
-    ...(input.event === "cancelled" ? { cancellationReason: booking.cancellationReason ?? null, cancelledByRole: booking.cancelledByRole ?? null } : {}),
+    ...(["cancelled", "refund_updated"].includes(input.event) ? { cancellationReason: booking.cancellationReason ?? null, cancelledByRole: booking.cancelledByRole ?? null,
+      refundSummary: booking.refundSummary ?? null } : {}),
     ...(input.event === "rescheduled" ? { rescheduleReason: booking.rescheduleReason ?? null, rescheduledByRole: booking.rescheduledByRole ?? null,
       rescheduledAt: booking.rescheduledAt ?? null } : {}),
   };

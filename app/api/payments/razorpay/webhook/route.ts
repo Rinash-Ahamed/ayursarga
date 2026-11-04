@@ -3,7 +3,8 @@ import { after } from "next/server";
 import { readRawJsonBody, RequestBodyError } from "@/services/api/request";
 import { apiJson } from "@/services/api/server";
 import { getFirebaseAdminFirestore } from "@/services/firebase/admin";
-import { fetchRazorpayOrder, fetchRazorpayPayment, verifyRazorpayWebhookSignature } from "@/services/payments/razorpay";
+import { fetchRazorpayOrder, fetchRazorpayPayment, fetchRazorpayRefund, verifyRazorpayWebhookSignature } from "@/services/payments/razorpay";
+import { reconcileConsultationRefund, refreshKnownConsultationRefund } from "@/services/payments/consultationRefundsAdmin";
 import { hashPaymentValue, reconcileConsultationPayment, ConsultationPaymentError } from "@/services/payments/consultationPaymentsAdmin";
 import { deliverConsultationEmails } from "@/services/email/consultationEmailService";
 
@@ -26,13 +27,27 @@ async function handlePOST(request: Request) {
     const firestore = getFirebaseAdminFirestore();
     const digest = hashPaymentValue(raw);
     const prior = (await firestore.collection("razorpayWebhookEvents").doc(hashPaymentValue(eventId)).get()).data();
-    if (prior) return prior.digest === digest ? apiJson({ ok: true, duplicate: true }) : apiJson({ error: "Event reference conflict." }, 409);
+    if (prior && prior.digest !== digest) return apiJson({ error: "Event reference conflict." }, 409);
+    // Refund state reconciliation may have failed after the payment journal
+    // committed. Replay the safe provider GET, never a refund-create request.
+    if (prior && !body.event.startsWith("refund.")) return apiJson({ ok: true, duplicate: true });
     const payment = await fetchRazorpayPayment(paymentId);
     if (!payment.order_id) return apiJson({ ok: true, ignored: true });
     const order = await fetchRazorpayOrder(payment.order_id);
     if (!order.receipt?.startsWith("cp_")) return apiJson({ ok: true, ignored: true });
     const receipt = (await firestore.collection("consultationPaymentReceipts").doc(order.receipt).get()).data();
     if (!receipt) return apiJson({ error: "Payment intent is not available yet." }, 503);
+    if (body.event.startsWith("refund.")) {
+      const refundId = body.payload?.refund?.entity?.id;
+      if (typeof refundId !== "string" || !/^rfnd_[A-Za-z0-9]{1,64}$/.test(refundId)) return apiJson({ error: "Missing refund reference." }, 400);
+      const result = await reconcileConsultationRefund(firestore, await fetchRazorpayRefund(paymentId, refundId));
+      if (result?.emailEventId) { const event = result.emailEventId; after(() => deliverConsultationEmails(firestore, event).then(() => undefined)); }
+    } else {
+      const result = await refreshKnownConsultationRefund(firestore, String(receipt.intentId));
+      if (result?.emailEventId) { const event = result.emailEventId; after(() => deliverConsultationEmails(firestore, event).then(() => undefined)); }
+    }
+    // Apply the verified refund outcome (including booking payment totals) first.
+    // The general payment journal must not invalidate its queued email revision.
     const checkout = await reconcileConsultationPayment(firestore, String(receipt.intentId), paymentId, { id: eventId, digest, type: body.event }, { payment, order });
     if (checkout.bookingId) after(() => deliverConsultationEmails(firestore, `confirmation-${checkout.intentId}`).then(() => undefined));
     return apiJson({ ok: true });

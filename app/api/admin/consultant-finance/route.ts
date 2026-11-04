@@ -13,7 +13,7 @@ function record(id: string, data: DocumentData) {
   // Admin API still uses a whitelist: no draft contacts, provider payloads or credentials.
   const fields = ["bookingId", "bookingReference", "consultantId", "consultantName", "consumerName", "serviceName", "paymentId", "orderId", "mode",
     "grossPaise", "commissionPaise", "consultantPayablePaise", "commissionPercentage", "gatewayFeePaise", "gatewayTaxPaise", "refundedPaise", "netSettlementPaise", "netRevenuePaise",
-    "paymentStatus", "settlementStatus", "settlementHold", "reviewReason", "reviewResolution", "reviewResolvedAt", "reviewResolutionNotes", "settlementReference", "settlementDate", "settlementNotes", "lastAuditId"];
+    "paymentStatus", "settlementStatus", "settlementHold", "reviewReason", "reviewResolution", "reviewResolvedAt", "reviewResolutionNotes", "settlementReference", "settlementDate", "settlementNotes", "lastAuditId", "refundSummary"];
   return { id, ...Object.fromEntries(fields.map(key => [key, data[key] ?? null])),
     createdAt: data.createdAt?.toDate?.().toISOString() ?? null, updatedAt: data.updatedAt?.toDate?.().toISOString() ?? null };
 }
@@ -114,7 +114,7 @@ async function handlePOST(request: Request) {
       if (current.reviewResolution === "full_refund_verified" && current.settlementStatus === "closed") return record(snapshot.id, current);
       if (current.lastAuditId !== body.expectedAuditId || current.paymentId !== payment.id || current.orderId !== payment.order_id
         || current.grossPaise !== payment.amount) throw new ConsultationPaymentError("This record changed. Refresh before continuing.");
-      if (!current.settlementHold || current.settlementStatus !== "pending" || current.settlementReference) throw new ConsultationPaymentError("A recorded transfer or another settlement status needs manual reconciliation. This case cannot be closed here.");
+      if (!current.settlementHold || current.settlementStatus !== "pending" || current.settlementReference || current.refundPendingId) throw new ConsultationPaymentError("A pending refund, recorded transfer or another settlement status needs reconciliation. This case cannot be closed here.");
       if (current.refundedPaise !== current.grossPaise || current.paymentStatus !== "refunded") throw new ConsultationPaymentError("The refund is not reflected in Ayursarga yet. Refresh after Razorpay updates the payment, then try again.");
       const booking = current.bookingId ? (await transaction.get(firestore.collection("consultationBookings").doc(current.bookingId))).data() : null;
       if (booking && booking.status !== "cancelled") throw new ConsultationPaymentError("Cancel the appointment before closing its refund review. This action does not cancel appointments.");

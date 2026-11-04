@@ -62,7 +62,7 @@ function object(value: unknown): JsonObject {
 }
 const nonNegativeInteger = (value: unknown): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 
-async function request(path: string, body?: JsonObject): Promise<unknown> {
+async function request(path: string, body?: JsonObject, idempotencyKey?: string): Promise<unknown> {
   const config = requireConfiguration();
   const writing = body !== undefined;
   let response: Response;
@@ -73,6 +73,7 @@ async function request(path: string, body?: JsonObject): Promise<unknown> {
         Authorization: `Basic ${Buffer.from(`${config.keyId}:${config.keySecret}`).toString("base64")}`,
         Accept: "application/json",
         ...(writing ? { "Content-Type": "application/json" } : {}),
+        ...(idempotencyKey ? { "X-Refund-Idempotency": idempotencyKey } : {}),
       },
       body: writing ? JSON.stringify(body) : undefined,
       cache: "no-store", redirect: "error", signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -86,6 +87,50 @@ async function request(path: string, body?: JsonObject): Promise<unknown> {
   }
   try { return await response.json(); }
   catch { throw new RazorpayError("INVALID_RESPONSE", "Razorpay returned an unreadable response.", writing); }
+}
+
+export type RazorpayRefund = { id: string; payment_id: string; amount: number; currency: "INR";
+  status: "pending" | "processed" | "failed"; receipt: string | null; bankReference: string | null };
+function parseRefund(value: unknown): RazorpayRefund {
+  const refund = object(value);
+  if (refund.entity !== "refund" || typeof refund.id !== "string" || !/^rfnd_[A-Za-z0-9]{1,64}$/.test(refund.id)
+    || typeof refund.payment_id !== "string" || !PAYMENT_ID.test(refund.payment_id) || refund.currency !== "INR"
+    || !nonNegativeInteger(refund.amount) || refund.amount === 0 || !["pending", "processed", "failed"].includes(String(refund.status))
+    || !(refund.receipt == null || typeof refund.receipt === "string")) throw new RazorpayError("INVALID_RESPONSE", "Refund details could not be verified.");
+  const bank = object(refund.acquirer_data);
+  const reference = [bank.arn, bank.rrn, bank.utr].find(v => typeof v === "string" && /^[A-Za-z0-9 -]{1,100}$/.test(v));
+  return { id: refund.id, payment_id: refund.payment_id, amount: refund.amount, currency: "INR",
+    status: refund.status as RazorpayRefund["status"], receipt: typeof refund.receipt === "string" ? refund.receipt : null,
+    bankReference: typeof reference === "string" ? reference : null };
+}
+export async function createRazorpayRefund(paymentId: string, amount: number, receipt: string) {
+  if (!PAYMENT_ID.test(paymentId) || !nonNegativeInteger(amount) || amount === 0 || !/^ar_[a-f0-9]{32}$/.test(receipt)) throw new RazorpayError("VALIDATION", "Invalid refund request.");
+  // The exact immutable receipt/body/key are reused after uncertain responses.
+  try {
+    const refund = parseRefund(await request(`/payments/${paymentId}/refund`, { amount, receipt, speed: "normal" }, receipt));
+    if (refund.payment_id !== paymentId || refund.amount !== amount || refund.receipt !== receipt) throw new Error("Mismatch");
+    return refund;
+  } catch (error) {
+    // Malformed successful replies and conflicts must never permit a new refund key.
+    if (error instanceof RazorpayError && error.code !== "INVALID_RESPONSE") throw error;
+    throw new RazorpayError("INVALID_RESPONSE", "Refund delivery needs verification. Do not submit another refund.", true);
+  }
+}
+export async function fetchRazorpayRefund(paymentId: string, refundId: string) {
+  if (!PAYMENT_ID.test(paymentId) || !/^rfnd_[A-Za-z0-9]{1,64}$/.test(refundId)) throw new RazorpayError("VALIDATION", "Invalid refund reference.");
+  const refund = parseRefund(await request(`/payments/${paymentId}/refunds/${refundId}`));
+  if (refund.payment_id !== paymentId || refund.id !== refundId) throw new RazorpayError("INVALID_RESPONSE", "Refund does not match this payment.");
+  return refund;
+}
+export async function listRazorpayRefunds(paymentId: string) {
+  if (!PAYMENT_ID.test(paymentId)) throw new RazorpayError("VALIDATION", "Invalid payment reference.");
+  const result = object(await request(`/payments/${paymentId}/refunds?count=100`));
+  if (result.entity !== "collection" || !Array.isArray(result.items) || result.items.length >= 100 || result.count !== result.items.length) throw new RazorpayError("INVALID_RESPONSE", "Refund history needs manual reconciliation.");
+  return result.items.map(item => {
+    const refund = parseRefund(item);
+    if (refund.payment_id !== paymentId) throw new RazorpayError("INVALID_RESPONSE", "Refund belongs to another payment.");
+    return refund;
+  });
 }
 
 export type RazorpayOrder = {
@@ -163,9 +208,10 @@ function parsePayment(value: unknown, paymentId: string): RazorpayPayment {
     throw new RazorpayError("INVALID_RESPONSE", "Razorpay returned an unexpected payment.");
   }
   // Deliberately exclude provider customer/contact/card/bank details.
+  const validFee = nonNegativeInteger(payment.fee) && (payment.tax == null || nonNegativeInteger(payment.tax) && payment.tax <= payment.fee);
   return { id: paymentId, order_id: payment.order_id, amount: payment.amount, currency: "INR",
     status: payment.status as RazorpayPayment["status"], captured: payment.captured, amount_refunded: payment.amount_refunded,
-    fee: nonNegativeInteger(payment.fee) ? payment.fee : null, tax: nonNegativeInteger(payment.tax) ? payment.tax : null };
+    fee: validFee ? payment.fee as number : null, tax: validFee && nonNegativeInteger(payment.tax) ? payment.tax : null };
 }
 
 function validSignature(payload: string | Uint8Array, signature: string | null, secret: string) {

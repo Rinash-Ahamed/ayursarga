@@ -35,6 +35,10 @@ import { bookingChangeReason } from "@/features/bookings/changeReason";
 import { BookingChangeReasonField } from "@/components/bookings/BookingChangeReasonField";
 import { CancellationDetails } from "@/components/bookings/CancellationDetails";
 import { RescheduleDetails } from "@/components/consultations/RescheduleDetails";
+import { ConsultationRefundDetails } from "@/components/consultations/ConsultationRefundDetails";
+import { ConsultationRefundDialog } from "@/components/admin/ConsultationRefundDialog";
+import { submitConsultationRefund } from "@/services/billing/consultationRefundService";
+import { refundStatusLabel } from "@/features/payments/refunds";
 
 type Appointment = DocumentRecord<ConsultationBookingDocument>;
 type Action = { booking: Appointment; status: "reschedule" | "completed" | "cancelled"; requestId: string };
@@ -52,6 +56,7 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
   }, [firebaseUser, role, bookingId]);
   const { items, error: loadError, errorNotification, isLoading, hasMore, loadMore, patchItem, reload } = usePaginatedList<ConsultationBookingDocument>(loader, "We could not load online consultations. Please try again.");
   const [action, setAction] = useState<Action | null>(null);
+  const [refundBooking, setRefundBooking] = useState<Appointment | null>(null);
   const [reason, setReason] = useState("");
   const [availability, setAvailability] = useState<PublicConsultant | null>(null);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
@@ -140,6 +145,17 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
     } catch (failure) { setError(failure instanceof Error ? failure.message : "We could not update the appointment."); }
     finally { submitting.current = false; setBusy(false); }
   }
+  async function checkRefund(booking: Appointment) {
+    if (submitting.current) return;
+    submitting.current = true; setBusy(true); setError(null);
+    try {
+      const changes = await submitConsultationRefund({ bookingId: booking.id, action: "check" });
+      patchItem(booking.id, changes);
+      if (changes.refundSummary && ["failed", "unknown", "checking"].includes(changes.refundSummary.status)) setError(refundStatusLabel(changes.refundSummary.status));
+      else setMessage(changes.refundSummary ? refundStatusLabel(changes.refundSummary.status) : "Refund status checked.");
+    } catch (failure) { setError(failure instanceof Error ? failure.message : "Refund could not be verified."); }
+    finally { submitting.current = false; setBusy(false); }
+  }
   return <PortalShell role={role} title="Online consultations">
     {role === "admin" && <AdminBookingNavigation active="consultation" detail={Boolean(bookingId)} />}
     <div className="portal-flow-page">
@@ -190,7 +206,7 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
         <div><dt>Booked on</dt><dd>{formatBookingPlacedAt(booking.createdAt)}</dd></div>
         <div><dt>Preferred date</dt><dd>{formatDisplayDate(booking.preferredDate)}</dd></div>
         {booking.paymentStatus && <div><dt>Payment</dt><dd>{formatStatus(booking.paymentStatus)}{role === "admin" && booking.paymentReference ? ` · ${booking.paymentReference}` : ""}</dd></div>}
-        {booking.paymentStatus && booking.status === "cancelled" && <div><dt>Refund information</dt><dd>Cancellation does not automatically refund payment. Contact Ayursarga for review under the cancellation policy.</dd></div>}
+        {booking.paymentStatus && booking.status === "cancelled" && !booking.refundSummary && <div><dt>Refund information</dt><dd>Cancellation does not automatically refund payment. Contact Ayursarga for review under the cancellation policy.</dd></div>}
         <div><dt>Preferred window</dt><dd>{formatConsultantTimeSlot(booking.preferredTimeSlot, { [booking.preferredTimeSlot]: { startTime: booking.slotStartTime, endTime: booking.slotEndTime } })}</dd></div>
         {booking.confirmedDate && <div><dt>Scheduled appointment</dt><dd>{formatDisplayDate(booking.confirmedDate)} · {booking.confirmedTime && booking.confirmedEndTime ? formatAppointmentRange(booking.confirmedTime, booking.confirmedEndTime) : booking.confirmedTime ?? `${booking.slotStartTime} - ${booking.slotEndTime}`} IST</dd></div>}
         {role === "admin" && <><div><dt>Consumer</dt><dd>{booking.consumerName}</dd></div><div><dt>Email</dt><dd>{booking.consumerEmail}</dd></div><div><dt>Phone</dt><dd>{booking.consumerPhone}</dd></div></>}
@@ -199,6 +215,7 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
       </dl>
       <CancellationDetails booking={booking} />
       <RescheduleDetails booking={booking} />
+      <ConsultationRefundDetails summary={booking.refundSummary} />
       </div>
       <div className="consumer-booking-meta"><span className="portal-status" data-status={booking.status}>{formatStatus(booking.status)}</span><div className="consumer-booking-cost"><span>Consultation charge</span><strong>{formatCurrency(booking.consultantCharge)}</strong></div></div>
       {role === "consumer" && <ConsultationCancellationInfo snapshot={booking.cancellationPolicy} status={booking.status} totals={booking.paymentTotals} outcome={booking.cancellationOutcome} now={clock} />}
@@ -206,11 +223,14 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
       <div className="operational-booking-actions"><div className="portal-actions">
         {(role === "admin" && ["requested", "confirmed"].includes(booking.status) || role === "consumer" && reschedule.allowed) && <button className="portal-button secondary" disabled={busy} onClick={() => open(booking, "reschedule")}>Reschedule</button>}
         {role === "admin" && booking.status === "confirmed" && <button className="portal-button" disabled={busy} onClick={() => open(booking, "completed")}>Mark completed</button>}
+        {role === "admin" && booking.paymentIntentId && ["confirmed", "cancelled"].includes(booking.status) && booking.paymentStatus !== "refunded" && (!booking.refundSummary || booking.refundSummary.status === "failed") && <button className="portal-button danger" disabled={busy} onClick={() => setRefundBooking(booking)}>{booking.status === "cancelled" ? "Issue refund" : "Cancel & Refund"}</button>}
+        {role === "admin" && booking.refundSummary && ["checking", "unknown", "initiated"].includes(booking.refundSummary.status) && <button className="portal-button secondary" disabled={busy} onClick={() => void checkRefund(booking)}>Check refund status</button>}
         {["requested", "confirmed"].includes(booking.status) && (role === "admin" || !booking.cancellationPolicy || (clock !== null && consultationCancellationEligibility(booking.cancellationPolicy, booking.status, booking.paymentTotals ?? null, clock).allowed)) && <button className="portal-button danger" disabled={busy} onClick={() => open(booking, "cancelled")}>Cancel appointment</button>}
       </div></div>
     </article>; })}</div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
     </div>
+    {role === "admin" && refundBooking && <ConsultationRefundDialog booking={refundBooking} onClose={() => setRefundBooking(null)} onSaved={(changes, feedback) => { patchItem(refundBooking.id, changes); if (feedback) { if (changes.refundSummary && ["failed", "unknown", "checking"].includes(changes.refundSummary.status)) setError(feedback); else setMessage(feedback); } }} />}
     <PortalDialog open={Boolean(action)} title={action ? `${action.status === "reschedule" ? "Reschedule" : action.status === "completed" ? "Complete" : "Cancel"} appointment?` : "Appointment"}
       message={action?.status === "reschedule" ? role === "consumer" ? "Confirm your new appointment date and time. This uses your one-time reschedule; your payment stays with this booking." : "Save the revised schedule and email the consumer after it is saved." : action?.status === "cancelled" && role === "admin" ? "Cancel this appointment and email the consumer after it is saved." : "The status changes only after you confirm."} tone={action?.status === "cancelled" ? "danger" : "default"}
       busy={busy} confirmDisabled={action?.status === "cancelled" ? !bookingChangeReason(reason) : action?.status === "reschedule" && (!bookingChangeReason(reason) || role === "consumer" && !consumerRescheduleEligibility(action.booking, clock ?? NaN).allowed || availabilityLoading || !availability || !dateAllowed(date) || appointmentSlots.loading || Boolean(appointmentSlots.error) || !appointmentSlots.slots.some(slot => slot.startTime === time && slot.status === "available"))} onCancel={() => { if (!submitting.current) setAction(null); }} onConfirm={() => void confirm()}>

@@ -302,12 +302,22 @@ export const closeConsultantRefundReview = async (input: { notes: string }) => {
 };
 export const createConsultationBooking = async (input: unknown) => { portalUiState.consultantWrites.push(input); if (paymentRecovery.closeNext) { paymentRecovery.closeNext = false; throw new ConsultationCheckoutClosedError(); } if (paymentRecovery.failNext) { paymentRecovery.failNext = false; throw new Error("Payment could not be confirmed. Check My Bookings before paying again."); } return { ok: true, bookingId: "consultation-fixture", bookingReference: "AYURCONS01" }; };
 export const listConsultationBookings = () => page(portalUiState.screen === "admin-consultations-grid" ? Array.from({ length: 3 }, (_, index) => ({ ...consultation, id: `consultation-${index}`, bookingReference: `AYURGRID${index}`, consumerName: index === 0 ? "A consumer with a longer full name for wrapping" : consultation.consumerName })) : portalUiState.screen === "consumer-consultations-empty" ? [] : [{ ...consultation,
+  ...(portalUiState.screen.startsWith("admin-consultations-refund") ? { paymentIntentId: consultation.id, paymentTotals: { paidPaise: 99055, refundedPaise: 0 } } : {}),
   ...(portalUiState.screen === "consumer-consultations-rescheduled" ? { consumerRescheduleCount: 1 } : {}),
   ...(portalUiState.screen === "consumer-consultations-policy" || portalUiState.screen === "consumer-consultations-expired" ? {
     cancellationPolicy: snapshotConsultationCancellation(DEFAULT_CONSULTATION_CANCELLATION_POLICY, portalUiState.screen.endsWith("expired") ? "2000-01-01" : "2099-10-25", "09:30"),
     paymentTotals: { paidPaise: 99055, refundedPaise: 0 },
   } : {}) }]);
 export const getConsultationBooking = async () => consultation;
+export const getConsultationRefundQuote = async (bookingId: string) => ({ bookingId, lastAuditId: "consultation-audit", maximumPaise: 99055,
+  suggestedPaise: portalUiState.screen.endsWith("exception") ? 0 : 99055, exceptionRequired: portalUiState.screen.endsWith("exception"), blocked: null });
+export const submitConsultationRefund = async (input: { action: "refund" | "check"; amountPaise?: number }) => {
+  portalUiState.consultantWrites.push(input);
+  await Promise.resolve();
+  return { status: "cancelled", lastAuditId: "refund-saved", refundSummary: {
+    status: input.action === "check" ? "refunded" : portalUiState.screen.endsWith("unknown") ? "unknown" : "initiated",
+    amountPaise: input.amountPaise ?? 99055, reference: "rfnd_Fixture", bankReference: null, requestedAt: "2026-11-04T06:00:00Z", updatedAt: "2026-11-04T06:00:00Z" } };
+};
 export const updateConsultationBooking = async (_id: string, input: { action: string; confirmedDate?: string; confirmedTime?: string; adminNotes?: string; cancellationReason?: string; rescheduleReason?: string }) => {
   portalUiState.consultantWrites.push(input);
   await Promise.resolve();

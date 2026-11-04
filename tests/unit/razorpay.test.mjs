@@ -55,6 +55,32 @@ test("readiness is side-effect-free, secret-free and separates API/webhook confi
   assert.equal(requests.length, 0);
 });
 
+test("refund creation binds the immutable body and idempotency key, validates replies, and whitelists bank references", async () => {
+  const receipt = `ar_${"a".repeat(32)}`;
+  const refund = { entity:"refund", id:"rfnd_Test123",payment_id:payment.id,amount:100,currency:"INR",status:"pending",receipt,
+    acquirer_data:{arn:"BANK123"}, notes:{secret:"private"} };
+  globalThis.fetch = async (url, options) => { requests.push({url,options}); return Response.json(refund); };
+  const actual = await helpers.createRazorpayRefund(payment.id,100,receipt);
+  assert.equal(actual.status,"pending"); assert.equal(actual.bankReference,"BANK123"); assert.equal(actual.notes,undefined);
+  assert.equal(requests[0].options.headers["X-Refund-Idempotency"],receipt);
+  assert.deepEqual(JSON.parse(requests[0].options.body),{amount:100,receipt,speed:"normal"});
+  globalThis.fetch = async () => Response.json({...refund,amount:101});
+  await assert.rejects(helpers.createRazorpayRefund(payment.id,100,receipt), errorCode("INVALID_RESPONSE",true));
+  globalThis.fetch = async () => Response.json({...refund,payment_id:"pay_Other"});
+  await assert.rejects(helpers.fetchRazorpayRefund(payment.id,refund.id));
+});
+
+test("gateway fee includes tax only once; missing or inconsistent reported fees are never guessed", async () => {
+  globalThis.fetch = async () => Response.json({...payment,fee:234,tax:36});
+  assert.equal((await helpers.fetchRazorpayPayment(payment.id)).fee,234);
+  assert.equal((await helpers.fetchRazorpayPayment(payment.id)).tax,36);
+  globalThis.fetch = async () => Response.json({...payment,fee:20,tax:36});
+  assert.equal((await helpers.fetchRazorpayPayment(payment.id)).fee,null);
+  assert.equal((await helpers.fetchRazorpayPayment(payment.id)).tax,null);
+  globalThis.fetch = async () => Response.json({...payment,fee:null,tax:null});
+  assert.equal((await helpers.fetchRazorpayPayment(payment.id)).fee,null);
+});
+
 test("rupees become integer paise without silently rounding invalid money inputs", () => {
   for (const [input, output] of [["123.45", 12345], ["0.29", 29], [12.3, 1230], [0, 0], [" 1.01 ", 101]]) assert.equal(helpers.rupeesToPaise(input), output);
   for (const value of [-1, NaN, Infinity, "1.001", "1e3", "1,000", "", "abc", null, [100], 0.1 + 0.2, "9007199254740991"]) {

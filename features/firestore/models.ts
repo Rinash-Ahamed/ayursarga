@@ -213,6 +213,7 @@ export type ConsultationBookingDocument = AuditedDocument & import("@/features/b
   cancellationPolicy?: import("@/features/consultations/cancellationPolicy").ConsultationCancellationSnapshot;
   cancellationOutcome?: import("@/features/consultations/cancellationPolicy").ConsultationCancellationOutcome;
   paymentTotals?: import("@/features/consultations/cancellationPolicy").ConsultationPaymentTotals;
+  refundSummary?: import("@/features/payments/refunds").ConsultationRefundSummary;
   paymentStatus?: "paid" | "partially_refunded" | "refunded";
   paymentReference?: string;
   paymentIntentId?: string;

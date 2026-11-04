@@ -6,6 +6,47 @@ import { getCalendarMonthRange } from "../../utils/date";
 const styles = ["node_modules/tailwindcss/lib/css/preflight.css", "app/globals.css", "app/portal.css"].map((file) => readFileSync(file, "utf8")).join("\n");
 const screens = ["admin-dashboard", "admin-hospitals", "admin-details", "admin-consultants", "admin-users", "admin-bookings", "admin-availability", "admin-audits", "hospital-dashboard", "hospital-profile", "hospital-services", "hospital-bookings", "hospital-availability", "hospital-password", "admin-login", "hospital-login", "admin-forgot", "hospital-forgot"];
 
+test("Admin Cancel & Refund stays in one responsive dialog and saves cancellation before a single refund", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
+  await mount(page, "admin-consultations-refund");
+  await page.getByRole("button", {name:"Cancel & Refund",exact:true}).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByLabel("Refund amount (₹)")).toHaveValue("990.55");
+  await expect(dialog.getByRole("button",{name:"Confirm refund",exact:true})).toBeDisabled();
+  await dialog.getByLabel("Refund reason").fill("Customer requested a full refund");
+  expect(await page.evaluate(() => document.body.style.position)).toBe("fixed");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await dialog.getByRole("button",{name:"Confirm refund",exact:true}).dblclick();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByText("Refund initiated",{exact:true})).toBeVisible();
+  const writes = await page.evaluate(() => (window as unknown as {consumerBookingFixture:{consultantWrites: {action:string}[]}}).consumerBookingFixture.consultantWrites);
+  expect(writes.map(value => value.action)).toEqual(["cancelled","refund"]);
+  await expect(page.getByRole("button",{name:"Check refund status",exact:true})).toBeVisible();
+});
+
+test("exceptional refunds require approval and uncertain refunds recover without another cancellation", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({ status:204,body:"" }));
+  await mount(page,"admin-consultations-refund-exception");
+  await page.getByRole("button",{name:"Cancel & Refund",exact:true}).click();
+  let dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Refund amount (₹)").fill("990.55");
+  await dialog.getByLabel("Refund reason").fill("Exceptional circumstances approved by Ayursarga");
+  await expect(dialog.getByRole("button",{name:"Confirm refund",exact:true})).toBeDisabled();
+  await dialog.getByRole("checkbox").check();
+  await expect(dialog.getByRole("button",{name:"Confirm refund",exact:true})).toBeEnabled();
+  await dialog.getByRole("button",{name:"Cancel",exact:true}).click();
+  expect(await page.evaluate(() => (window as unknown as {consumerBookingFixture:{consultantWrites: object[]}}).consumerBookingFixture.consultantWrites.length)).toBe(0);
+  await mount(page,"admin-consultations-refund-unknown");
+  await page.getByRole("button",{name:"Cancel & Refund",exact:true}).click();
+  dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Refund reason").fill("Refund requested by customer");
+  await dialog.getByRole("button",{name:"Confirm refund",exact:true}).click();
+  await expect(page.getByText("Refund verification pending",{exact:true})).toBeVisible();
+  await page.getByRole("button",{name:"Check refund status",exact:true}).click();
+  await expect(page.getByText("Refunded",{exact:true}).first()).toBeVisible();
+  await expect(page.getByRole("button",{name:"Check refund status",exact:true})).toHaveCount(0);
+});
+
 test("cancellation reasons are required, reset on dismiss, and show the cancelling role in Admin and Consumer", async ({ page }) => {
   await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
   for (const screen of ["admin-bookings-cancellable", "admin-consultations", "consumer-consultations"]) {

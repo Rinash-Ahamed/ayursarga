@@ -11,6 +11,7 @@ import type { ConsultantFinancialRecord } from "@/features/payments/consultation
 import { formatCurrency } from "@/utils/currency";
 import { formatDisplayDate, formatDisplayDateTime, toDateInputValue } from "@/utils/date";
 import { formatStatus } from "@/utils/text";
+import { ConsultationRefundDetails } from "@/components/consultations/ConsultationRefundDetails";
 
 const money = (value: number | null) => value === null ? "Awaiting verification" : formatCurrency(value / 100);
 export function AdminConsultantFinance() {
@@ -81,7 +82,7 @@ export function AdminConsultantFinance() {
     <section className="portal-flow-intro portal-section-heading"><h2>Consultant Finance</h2><p>Review consultation payments, Ayursarga’s commission and amounts owed to consultants. Ayursarga pays the payment processing fees. Transfer consultant payments through your bank, then record the details here.</p></section>
     <div className="portal-actions portal-finance-toolbar"><label className="portal-filter-field">Payment mode<select value={mode} disabled={busy} onChange={event => { setPage(null); setItems([]); setBusy(true); setError(null); setMode(event.target.value); setMessage(null); }}><option value="live">Live payments</option><option value="test">Test payments</option></select></label><button className="portal-button secondary" disabled={busy} onClick={() => void load()}>Refresh</button></div>
     {summary && <div className="portal-finance-stats">{[
-      ["Gross collections", money(summary.grossPaise)], ["Ayursarga commission", money(summary.commissionPaise)],
+      ["Gross collections", money(summary.grossPaise)], ["Commission before refund adjustments", money(summary.commissionPaise)],
       ["Gateway charges (including tax)", money(summary.gatewayFeePaise)], ["Consultant payouts pending", money(summary.pendingPayablePaise)],
       ["Consultant payouts paid", money(summary.paidPayablePaise)], ["Refunds verified", money(summary.refundedPaise)],
       ["Net platform revenue", summary.unknownFeeCount || summary.refundedPaise || summary.reviewCount ? "Reconciliation pending" : money(summary.commissionPaise - summary.gatewayFeePaise)],
@@ -105,6 +106,7 @@ export function AdminConsultantFinance() {
         ["Settlement date", item.settlementDate ? formatDisplayDate(item.settlementDate) : "Not recorded"], ["Settlement notes", item.settlementNotes || "Not recorded"],
       ].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
       {item.settlementHold && <p className="portal-form-error">Settlement held: {formatStatus(item.reviewReason ?? "review required")}. Contact the responsible Admin before paying out.</p>}
+      <ConsultationRefundDetails summary={item.refundSummary ?? undefined} />
       {item.settlementHold && item.settlementStatus === "pending" && <div className="portal-actions"><button className="portal-button secondary" disabled={busy} onClick={() => { setError(null); setReview({ item, notes: "" }); }}>Verify full refund &amp; close review</button></div>}
       {item.reviewResolution === "full_refund_verified" && <p className="portal-form-note">Review closed after a verified full refund on {formatDisplayDateTime(item.reviewResolvedAt)}. {item.reviewResolutionNotes} Original amounts are retained for history; no consultant payout is due from this closed case. Fees and any accounting adjustments remain subject to reconciliation.</p>}
       {!item.settlementHold && !["paid", "closed"].includes(item.settlementStatus) && <form className="portal-form" onSubmit={event => submit(event, item)}>

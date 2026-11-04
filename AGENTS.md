@@ -354,6 +354,33 @@ to deploy, rerun maintenance scripts, or modify live data.
   original amounts and unknown net revenue, and use non-payable Closed status.
   Later reconciliation/webhooks must retain the verified closure. Partial/no-refund
   and previously transferred cases stay held; this never initiates a refund.
+  Owner-approved consultation refunds are the explicit money-moving exception:
+  Admin may Cancel & Refund through one shared dialog, or refund an already
+  cancelled consultation. Save cancellation through its existing audited slot/
+  email transaction first; a failed refund never restores an appointment. The
+  Admin-only consultation-refunds endpoint requires a separate reason, integer
+  paise amount, current booking revision and explicit approval outside the agreed
+  refund allowance. Preserve old policy snapshots and use cancellation time for
+  eligibility, not the later time an Admin opens the refund dialog. A recorded
+  consultant transfer remains a manual-reconciliation case, not an automatic
+  payout reversal. Search Center payments/refunds are not introduced by this.
+  Claim a private consultationRefunds record and Finance lock atomically before
+  the provider POST. Cap refunds to verified paid money minus existing/in-flight
+  refunds; serialize requests and payouts on the Finance document. Recovery must
+  locate the provider receipt or reuse only its immutable X-Refund-Idempotency
+  key/body after explicit Admin action. Never invent a new key after an uncertain
+  result. Verify individual refund records for pending/processed/failed states;
+  signed refund webhook retries must recover even if the payment journal already
+  committed. Preserve all claims, failures and audit records. Consumer-readable
+  refundSummary exposes only amount/status/times/provider references, never
+  commission or payout fields. Hospitals cannot access consultation refunds.
+  Refund update emails use their own event type in the existing branded journal,
+  current-revision checks and independent customer/consultant/team claims.
+  Gateway fee is Razorpay's reported total including GST; tax is a component,
+  never added twice. Unknown/inconsistent fees stay unknown. Refunds retain the
+  historical commission/base-payable snapshots and hold net revenue/settlement
+  adjustments for reconciliation rather than claiming original commission is
+  still earned or automatically reversing consultant transfers.
   Admin can
   reschedule to a validated date/exact time, complete, or cancel; do not restore
   Confirm or Reject actions. Preserve legacy requested/rejected records without
