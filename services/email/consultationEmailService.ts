@@ -10,6 +10,7 @@ import { consultantDisplayName } from "@/features/consultants/name";
 import { formatAppointmentRange } from "@/features/consultations/slots";
 
 const COLLECTION = "consultationEmailEvents";
+const HOSPITAL_COLLECTION = "hospitalBookingEmailEvents";
 type AppointmentEmailEvent = "confirmed" | "rescheduled" | "cancelled";
 
 function currentEmail(event: Record<string, unknown>, appointment?: Record<string, unknown> | null) {
@@ -53,6 +54,9 @@ export function queueConsultationEmail(transaction: Transaction, firestore: Fire
     previousTime: typeof previous.confirmedTime === "string" ? (typeof previous.confirmedEndTime === "string" ? formatAppointmentRange(previous.confirmedTime, previous.confirmedEndTime) : previous.confirmedTime) : null,
     previousTimeWindow: `${previous.slotStartTime} - ${previous.slotEndTime}`,
     amount: typeof booking.consultantCharge === "number" ? booking.consultantCharge : null,
+    ...(input.event === "cancelled" ? { cancellationReason: booking.cancellationReason ?? null, cancelledByRole: booking.cancelledByRole ?? null } : {}),
+    ...(input.event === "rescheduled" ? { rescheduleReason: booking.rescheduleReason ?? null, rescheduledByRole: booking.rescheduledByRole ?? null,
+      rescheduledAt: booking.rescheduledAt ?? null } : {}),
   };
   transaction.create(firestore.collection(COLLECTION).doc(input.eventId), {
     bookingId: input.bookingId, event: input.event, payloadHash: input.payloadHash ?? null, actorRole: input.actorRole,
@@ -98,15 +102,42 @@ export async function deliverConsultationEmails(firestore: Firestore, eventId: s
  * recorded outcome instead of sending another copy.
  */
 export async function deliverConsultationEmail(firestore: Firestore, eventId: string): Promise<ConsultationEmailResult> {
-  const reference = firestore.collection(COLLECTION).doc(eventId);
+  return deliverBookingEmail(firestore, eventId, "consultation");
+}
+
+/** Search Center cancellations use their own private journal and the same single-claim sender. */
+export function queueHospitalCancellationEmail(transaction: Transaction, firestore: Firestore, input: {
+  eventId: string; bookingId: string; booking: Record<string, unknown>; actorId: string; actorRole: "admin" | "consumer"; auditId: string; now: unknown;
+}) {
+  const booking = input.booking;
+  transaction.create(firestore.collection(HOSPITAL_COLLECTION).doc(input.eventId), {
+    bookingId: input.bookingId, bookingAuditId: input.auditId, event: "cancelled", audience: "consumer", channel: "email",
+    actorRole: input.actorRole, recipient: String(booking.consumerEmail ?? "").trim().toLowerCase(),
+    payload: { consumerName: String(booking.consumerName ?? ""), bookingReference: String(booking.bookingReference ?? ""),
+      providerName: String(booking.hospitalName ?? ""), serviceName: String(booking.serviceName ?? ""),
+      location: String(booking.hospitalLocation ?? ""), date: booking.confirmedDate ?? booking.preferredDate,
+      time: booking.confirmedTime ?? null, amount: booking.servicePrice ?? null,
+      cancellationReason: booking.cancellationReason, cancelledByRole: booking.cancelledByRole },
+    status: "pending", createdAt: input.now, createdBy: input.actorId, updatedAt: input.now, updatedBy: input.actorId,
+    archivedAt: null, archivedBy: null, lastAuditId: input.auditId,
+  });
+}
+
+export function deliverHospitalCancellationEmail(firestore: Firestore, eventId: string) {
+  return deliverBookingEmail(firestore, eventId, "hospital");
+}
+
+async function deliverBookingEmail(firestore: Firestore, eventId: string, kind: "consultation" | "hospital"): Promise<ConsultationEmailResult> {
+  const collection = kind === "hospital" ? HOSPITAL_COLLECTION : COLLECTION;
+  const reference = firestore.collection(collection).doc(eventId);
   try {
     const claim = await firestore.runTransaction(async (transaction) => {
       const snapshot = await transaction.get(reference);
       const event = snapshot.data();
       if (!event) return { status: "unknown" as const, event: null };
       if (event.status !== "pending") return { status: event.status as ConsultationEmailResult["status"], event: null };
-      const appointment = typeof event.bookingId === "string" && /^consultation-[a-f0-9]{64}$/.test(event.bookingId)
-        ? (await transaction.get(firestore.collection("consultationBookings").doc(event.bookingId))).data() : null;
+      const validId = typeof event.bookingId === "string" && (kind === "consultation" ? /^consultation-[a-f0-9]{64}$/.test(event.bookingId) : Boolean(event.bookingId) && event.bookingId.length <= 160 && !event.bookingId.includes("/"));
+      const appointment = validId ? (await transaction.get(firestore.collection(kind === "hospital" ? "bookings" : "consultationBookings").doc(event.bookingId))).data() : null;
       // Legacy pending events retain their originating booking audit in lastAuditId.
       // New events snapshot it separately because delivery updates lastAuditId.
       const current = currentEmail(event, appointment);
@@ -115,13 +146,13 @@ export async function deliverConsultationEmail(firestore: Firestore, eventId: st
       if (!current) {
         transaction.update(reference, { status: "superseded", supersededAt: now, failureReason: "appointment_changed",
           updatedAt: now, updatedBy: event.createdBy, lastAuditId: audit.id });
-        transaction.create(audit, { action: "update", module: COLLECTION, recordId: eventId, actorId: event.createdBy,
+        transaction.create(audit, { action: "update", module: collection, recordId: eventId, actorId: event.createdBy,
           actorRole: event.actorRole, previousValues: { status: "pending" },
           updatedValues: { status: "superseded", failureReason: "appointment_changed" }, timestamp: now, source: "server" });
         return { status: "superseded" as const, event: null };
       }
       transaction.update(reference, { status: "sending", updatedAt: now, updatedBy: event.createdBy, lastAuditId: audit.id });
-      transaction.create(audit, { action: "update", module: COLLECTION, recordId: eventId, actorId: event.createdBy,
+      transaction.create(audit, { action: "update", module: collection, recordId: eventId, actorId: event.createdBy,
         actorRole: event.actorRole, previousValues: { status: "pending" }, updatedValues: { status: "sending" }, timestamp: now, source: "server" });
       return { status: "sending" as const, event };
     });
@@ -134,11 +165,11 @@ export async function deliverConsultationEmail(firestore: Firestore, eventId: st
         failureReason = event.recipient ? "invalid_email" : "missing_email";
         throw new Error("Invalid saved recipient");
       }
-      const url = new URL(event.audience === "consultant" ? "/contact"
+      const url = new URL(kind === "hospital" ? "/app/bookings" : event.audience === "consultant" ? "/contact"
         : event.audience === "support" ? "/admin/bookings/consultations" : "/app/bookings/consultations", authEmailSiteUrl());
       if (event.audience !== "consultant") url.searchParams.set("booking", event.bookingId);
       const template = bookingEmail({ ...event.payload, amount: event.payload.amount ?? undefined,
-        kind: "consultation", audience: event.audience ?? "consumer", event: event.event, bookingUrl: url.href } as BookingEmailData);
+        kind, audience: event.audience ?? "consumer", event: event.event, bookingUrl: url.href } as BookingEmailData);
       await sendEmail({ to: event.recipient, replyTo: "info@ayursarga.com", ...template });
       status = "accepted";
     } catch {
@@ -154,16 +185,17 @@ export async function deliverConsultationEmail(firestore: Firestore, eventId: st
       const audit = firestore.collection("auditLogs").doc();
       const now = Timestamp.now();
       transaction.update(reference, { status, failureReason, updatedAt: now, updatedBy: event.createdBy, lastAuditId: audit.id });
-      transaction.create(audit, { action: "update", module: COLLECTION, recordId: eventId, actorId: event.createdBy,
+      transaction.create(audit, { action: "update", module: collection, recordId: eventId, actorId: event.createdBy,
         actorRole: event.actorRole, previousValues: { status: "sending" }, updatedValues: { status, failureReason }, timestamp: now, source: "server" });
       for (const admin of admins) addConsultationNotification(transaction, firestore, {
         recipientId: admin, recipientRole: "admin", bookingId: event.bookingId, bookingReference: event.payload.bookingReference,
         message: event.audience === "support" ? "The support team email could not be confirmed. Review this appointment and coordinate directly."
-          : event.audience === "consumer" ? "The customer email could not be confirmed. Contact the customer about this appointment."
+          : event.audience === "consumer" ? kind === "hospital" ? "The cancellation email could not be confirmed. Contact the customer about this booking." : "The customer email could not be confirmed. Contact the customer about this appointment."
           : failureReason === "missing_email" || failureReason === "invalid_email"
           ? "Consultant email is missing or invalid. Update the consultant contact and coordinate this appointment directly."
           : "Consultant email could not be confirmed. Contact the consultant directly.",
         event: `${event.audience}_email_failed_${eventId}`, actorId: event.createdBy, auditId: audit.id, now,
+        ...(kind === "hospital" ? { bookingKind: "hospital" as const } : {}),
       });
     });
     return { status };
@@ -178,11 +210,12 @@ export async function deliverConsultationEmail(firestore: Firestore, eventId: st
         const audit = firestore.collection("auditLogs").doc();
         const now = Timestamp.now();
         transaction.update(reference, { status: "unknown", failureReason: "delivery_outcome_unknown", updatedAt: now, updatedBy: event.createdBy, lastAuditId: audit.id });
-        transaction.create(audit, { action: "update", module: COLLECTION, recordId: eventId, actorId: event.createdBy,
+        transaction.create(audit, { action: "update", module: collection, recordId: eventId, actorId: event.createdBy,
           actorRole: event.actorRole, previousValues: { status: "sending" }, updatedValues: { status: "unknown", failureReason: "delivery_outcome_unknown" }, timestamp: now, source: "server" });
         for (const admin of admins) addConsultationNotification(transaction, firestore, { recipientId: admin, recipientRole: "admin", bookingId: event.bookingId,
           bookingReference: event.payload.bookingReference, message: "An appointment email's delivery could not be verified. Check with the recipient before sending another copy.",
-          event: `email_unknown_${eventId}`, actorId: event.createdBy, auditId: audit.id, now });
+          event: `email_unknown_${eventId}`, actorId: event.createdBy, auditId: audit.id, now,
+          ...(kind === "hospital" ? { bookingKind: "hospital" as const } : {}) });
       });
     } catch { /* Preserve the durable claim if the database is still unavailable. */ }
     return { status: "unknown" };

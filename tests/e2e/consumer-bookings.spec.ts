@@ -50,7 +50,13 @@ test("booking history identifies the centre, package, dates, prices and response
   await checkLayout(page);
   await page.screenshot({ path: testInfo.outputPath("booking-history.png"), fullPage: true });
   await cards.first().getByRole("button", { name: "Cancel booking" }).click();
+  const cancellation = page.getByRole("dialog");
+  await expect(cancellation.getByRole("button", { name: "Cancel booking", exact: true })).toBeDisabled();
+  await cancellation.getByLabel("Cancellation reason").fill("My care plans have changed");
+  await cancellation.getByRole("button", { name: "Cancel booking", exact: true }).click();
   await expect(cards.first().locator(".portal-status")).toHaveText("cancelled");
+  await expect(cards.first()).toContainText("Cancelled byCustomer");
+  await expect(cards.first()).toContainText("My care plans have changed");
   await expect(cards.first().getByRole("button")).toHaveCount(0);
   expect(errors).toEqual([]);
 });

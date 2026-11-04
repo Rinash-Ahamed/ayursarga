@@ -5,6 +5,7 @@ import { getTreatmentProgress, getTreatmentStatus, treatmentStatusLabel } from "
 import { formatBystanders } from "@/features/hospitals/searchContext";
 import { formatCurrency } from "@/utils/currency";
 import { formatDisplayDate } from "@/utils/date";
+import { CancellationDetails } from "@/components/bookings/CancellationDetails";
 
 export function PortalBookingSummary({ booking, showCommission = false, showTreatmentBadge = false, children }: {
   booking: BookingDocument; showCommission?: boolean; showTreatmentBadge?: boolean; children?: ReactNode;
@@ -29,6 +30,7 @@ export function PortalBookingSummary({ booking, showCommission = false, showTrea
         {bookingDateFacts(booking).map((fact) => <div key={fact.label}><dt>{fact.label}</dt><dd>{fact.value}</dd></div>)}
         {(booking.status === "confirmed" || booking.status === "completed") && <div><dt>Treatment</dt><dd>{getTreatmentProgress(treatment).label}</dd></div>}
       </dl>
+      <CancellationDetails booking={booking} />
       {booking.consumerNotes && <div className="consumer-booking-note"><strong>Customer note</strong><p>{booking.consumerNotes}</p></div>}
       {booking.hospitalNotes && <div className="consumer-booking-note"><strong>Centre response</strong><p>{booking.hospitalNotes}</p></div>}
     </div>

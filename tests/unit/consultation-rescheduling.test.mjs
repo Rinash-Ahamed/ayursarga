@@ -13,7 +13,7 @@ async function seeded() {
   assert.equal((await verify(f, checkout.intentId)).status, 200);
   return { f, id: checkout.intentId };
 }
-const body = booking => ({ action: "reschedule", requestId: "consumer-reschedule-0001", expectedAuditId: booking.lastAuditId,
+const body = booking => ({ action: "reschedule", rescheduleReason: "Appointment plans have changed", requestId: "consumer-reschedule-0001", expectedAuditId: booking.lastAuditId,
   confirmedDate: "2099-10-26", confirmedTime: "10:00" });
 const update = async (f, id, input) => {
   const response = await f.load("app/api/consultations/[bookingId]/route.ts").PATCH(paymentRequest(input, "PATCH"), { params: Promise.resolve({ bookingId: id }) });

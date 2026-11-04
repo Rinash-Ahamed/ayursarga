@@ -141,7 +141,7 @@ export type BookingStatus =
 
 export type TreatmentStatus = "not_started" | "started" | "ongoing" | "completed";
 
-export type BookingDocument = AuditedDocument & {
+export type BookingDocument = AuditedDocument & import("@/features/bookings/cancellation").CancellationDetails & {
   bookingReference?: string;
   consumerId: string;
   consumerName: string;
@@ -209,7 +209,7 @@ export type ConsultantDocument = AuditedDocument & {
   status: "active" | "inactive";
 };
 
-export type ConsultationBookingDocument = AuditedDocument & {
+export type ConsultationBookingDocument = AuditedDocument & import("@/features/bookings/cancellation").CancellationDetails & import("@/features/consultations/rescheduling").RescheduleDetails & {
   cancellationPolicy?: import("@/features/consultations/cancellationPolicy").ConsultationCancellationSnapshot;
   cancellationOutcome?: import("@/features/consultations/cancellationPolicy").ConsultationCancellationOutcome;
   paymentTotals?: import("@/features/consultations/cancellationPolicy").ConsultationPaymentTotals;
@@ -271,7 +271,7 @@ export type PaymentDocument = AuditedDocument & {
 export type NotificationDocument = AuditedDocument & {
   recipientId: string;
   recipientRole: "admin" | "hospital" | "consumer";
-  type: "availability_requested" | "availability_approved" | "availability_rejected" | "availability_cancelled" | "booking_created" | "consultation_updated" | "package_submitted" | "package_reviewed";
+  type: "availability_requested" | "availability_approved" | "availability_rejected" | "availability_cancelled" | "booking_created" | "booking_cancelled" | "consultation_updated" | "package_submitted" | "package_reviewed";
   bookingReference?: string;
   title: string;
   message: string;

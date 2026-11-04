@@ -222,6 +222,21 @@ to deploy, rerun maintenance scripts, or modify live data.
 
 ## Hospital and booking workflow
 
+- New Admin/Consumer cancellations require a separate validated 3-500 character
+  cancellationReason. Derive cancelledByRole/cancelledBy/cancelledAt on the server,
+  save with the booking audit and private email event atomically, and include the
+  reason and Customer/Ayursarga team actor label in branded emails and booking
+  details. Never infer the reason from general notes or backfill old cancellations.
+  Search Center cancellation uses /api/bookings/{bookingId}/cancel with ownership,
+  revision and not-started-treatment checks; direct client cancellation and edits
+  to cancellation metadata stay denied. Its hospitalBookingEmailEvents journal
+  is server-only and uses the shared single-claim sender, current-revision checks
+  and Admin failure alerts; keep the existing customer-only email recipient.
+  Consultation cancellation retains its own policy/payment/slot transaction and
+  customer/consultant/team recipients. Preserve old pending action hash retries
+  without generating a new cancellation or inventing a reason. No new centre
+  refund policy, payment processing or rescheduling is implied by cancellation.
+
 - Admin hospital/consultant creation rejects a normalized duplicate email within
   its own collection, including inactive/archived records. The same email may
   belong to one hospital and one consultant. Reuse the shared bounded duplicate
@@ -351,6 +366,13 @@ to deploy, rerun maintenance scripts, or modify live data.
   must not consume another allowance, and Admin changes must never reset it.
   Consumer slot exclusion is allowed only for their owned matching eligible
   appointment; never accept arbitrary exclusion IDs or client-side counters.
+  New Admin and Consumer reschedules require a separate 3-500 character reason
+  through shared booking-change validation. Commit the trimmed reason, trusted
+  actor role/UID and timestamp with the schedule audit; preserve earlier metadata
+  in audit history. Include the reason and actor in all existing reschedule email
+  recipients and booking details. Bind reasons to action retry hashes; legacy
+  no-reason retries may recover only their already-committed original event.
+  Never invent historical reasons or introduce Search Center rescheduling.
   Preserve direct client booking/slot write denials and existing agreed policy
   versions when recalculating deadlines. Hospital package bookings remain
   immediately confirmed and unaffected.

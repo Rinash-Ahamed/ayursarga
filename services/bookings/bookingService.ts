@@ -5,11 +5,10 @@ import type { BookingDocument, BookingStatus, TreatmentStatus } from "@/features
 import { getTreatmentStatus } from "@/features/bookings/treatmentStatus";
 import { COLLECTIONS } from "@/constants/firestore";
 import {
-  firestoreTimestamp, runFilteredQuery, readDocument,
+  runFilteredQuery, readDocument,
   type QueryPage, type DocumentRecord,
   type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
-import { getAuditActorId, updateAuditedDocument } from "@/services/firestore/auditService";
 import { authorizedApiRequest, authorizedMutationRequest } from "@/services/api/client";
 import { toDateInputValue } from "@/utils/date";
 
@@ -132,9 +131,12 @@ export function listAdminBookings(
   return listBookings(filters, options);
 }
 
-export const cancelConsumerBooking = (id: string, previousValues?: DocumentData) => updateAuditedDocument(COLLECTIONS.bookings, id, {
-  status: "cancelled", updatedAt: firestoreTimestamp.server(), updatedBy: getAuditActorId(),
-}, { action: "status_change", actorRole: "consumer" }, previousValues);
+export function cancelHospitalBooking(id: string, cancellationReason: string, expectedAuditId: string) {
+  return authorizedMutationRequest<BookingDocument>(`/api/bookings/${encodeURIComponent(id)}/cancel`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cancellationReason, expectedAuditId }),
+    signedOutMessage: "Sign in again to cancel this booking.", failureMessage: "Cancellation could not be confirmed. Refresh the booking before trying again.",
+  });
+}
 
 export type HospitalBookingUpdate = {
   status: Extract<BookingStatus, "confirmed" | "reschedule_requested" | "rejected">;

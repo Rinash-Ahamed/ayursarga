@@ -2,6 +2,112 @@
 
 Updated: 4 November 2026 (Asia/Calcutta).
 
+## Build/lint validation and refund design review (4 November 2026)
+
+- Owner requested build/lint and a refund diagnosis, then described a proposed
+  Admin Cancel & Refund workflow and requested an architecture review, stressing
+  that the Admin interface must stay simple. No refund execution was implemented
+  or authorized by this review. Current cancellation records eligibility and
+  settlement holds; Finance verifies an externally completed full refund only.
+  There is no Razorpay refund-create call. Consultation refund webhooks currently
+  reconcile payment totals; individual refund lifecycle records are still needed.
+- Proposed direction: one Admin dialog with booking, reason, verified remaining
+  refundable amount and confirmation, explicit within-24-hour exception approval,
+  backend idempotent refund execution and per-refund verification. Keep booking
+  cancellation separate from refund status, preserve policy snapshots, cap amounts
+  to verified paid minus prior/in-flight refunds, and never reopen a cancelled
+  appointment merely because its refund fails. Consultant payouts already made
+  require careful reconciliation. Hospital payment/refund integration is separate;
+  Hospitals must never receive consultation data. No operational changes made.
+- First build caught a nullable legacy package lookup in the new centre
+  cancellation endpoint. Added an explicit service existence guard before
+  packageTitle; removed one unused test import reported by lint. Five focused
+  cancellation regressions passed after the fix. These are validation corrections
+  to the existing feature; version remains 4.39.0.
+- Rerun production build passed (including its TypeScript phase); lint passed
+  with zero warnings/errors. Same-build local production health checks returned
+  200 for /api/health?deep=true (Accept application/json) and /health?deep=true;
+  all six configuration dependencies ready, deep-configuration mode, themed
+  markup and expanded checks present. Configuration checks do not prove live
+  delivery or payment/refund operations. Temporary server stopped; restored
+  generated next-env route import to the existing dev path. No deployment.
+
+## Required consultation rescheduling reasons (4 November 2026, v4.39.0)
+
+- Owner approved required reasons for Admin and Consumer online consultation
+  rescheduling. Reused one shared 3-500 character validator and form field for
+  cancellation/rescheduling rather than duplicating their input rules.
+- The verified schedule transaction saves the trimmed reason, trusted actor role,
+  UID and timestamp with its audit. Prior reason/actor metadata remains in audit
+  snapshots. Action hashes bind the reason; already-committed legacy no-reason
+  retries retain their original event, but new no-reason changes are rejected.
+- Booking details and existing customer/consultant/info rescheduling email events
+  show the reason and who changed the appointment, with original/new schedules
+  and the change timestamp. Dynamic content remains escaped. Legacy missing
+  metadata is not invented or backfilled; no historical email was resent.
+- Preserved transactional slot release/reservation, Consumer once-only inclusive
+  24-hour cutoff, payment and cancellation-policy snapshots, role isolation,
+  stale-email suppression and independent recipient delivery claims. Search
+  Center rescheduling remains unavailable. No new rules/index/config changes
+  needed for this extension; previous cancellation rules are still pending deploy.
+- Validation: 87 focused backend regressions passed, including invalid reasons,
+  concurrency/slots, atomic failure, legacy retry hashes, actor trust, escaped
+  three-recipient email snapshots and unchanged payment/policy behavior. Twelve
+  mocked Playwright checks passed on desktop, 320px phone and mobile WebKit:
+  required/reset reasons, duplicate-click prevention, responsive locked dialogs,
+  saved actor/reason and honest email failure feedback. Initial sandbox worker
+  launch was denied (EPERM); authorized local retry passed. git diff --check passed.
+- No live SMTP, payment or database mutations; no deployment, native rules engine,
+  production build, lint or typecheck run for this task. Browser tests are mocked
+  and are not physical iOS/Android certification. Package/lock now use 4.39.0.
+
+## Cancellation reasons and actor emails (4 November 2026, v4.38.0)
+
+- Owner approved required cancellation reasons and clear cancelling-party labels
+  for Admin/Consumer cancellations in both booking flows. Shared validation trims
+  3-500 characters and rejects invalid types/control characters. Server-derived
+  cancellationReason/cancelledByRole/cancelledBy/cancelledAt commit with the booking
+  audit and email event. General appointment notes are not treated as the reason.
+- Consultation PATCH preserves current policy/refund/slot-release logic and all
+  three independent customer/consultant/info recipients. New cancellation action
+  hashes bind the reason; old no-reason pending action hashes remain replayable
+  only for their already-committed original event. Old bookings are not backfilled.
+- Search Center previously cancelled through a direct client audited write and
+  had no cancellation email/Admin cancel UI. Added verified POST
+  /api/bookings/{bookingId}/cancel for Admin and owning Consumer, revision-checked
+  and restricted to cancellable, not-started care. No centre rescheduling/refund
+  feature introduced. Duplicate same-actor/reason requests return the saved result;
+  conflicts cannot overwrite the original cancellation or duplicate its email.
+- Search Center uses its own private hospitalBookingEmailEvents journal and the
+  existing shared single-claim SMTP sender (now internally supports both kinds).
+  Rechecks current booking revision/status, supersedes stale mail, preserves
+  failed/unknown claims and raises Admin delivery alerts with centre-booking links.
+  Its existing customer-only email recipient stays unchanged. Legacy missing care
+  labels resolve privately before queuing; financial/contact data is not projected.
+- Branded HTML and text cancellation emails include Cancelled by (Customer or
+  Ayursarga team) and Cancellation reason. Admin/Consumer booking details show
+  these too; Hospital details use the same shared summary. Legacy missing fields
+  show Not recorded/Reason not recorded, never invented values or new email events.
+- Shared PortalDialog/reason field covers centre cancellation, including Admin;
+  consultation dialogs require the same separate field. Confirm stays disabled
+  until valid, dismiss clears the reason, synchronous guards stop double clicks,
+  and failures remain inline without falsely claiming email delivery or refunds.
+- Firestore rules now deny direct client cancellation and cancellation-metadata
+  edits, including Admin, and explicitly deny all client access to the new email
+  journal. Other Hospital treatment/legacy transitions remain unchanged. Updated
+  emulator cases, but did not run native rules tests (last available Java is 8;
+  firebase-tools needs 21+). No indexes, Storage rules or environment changes.
+- Validation: 94 focused cancellation/email/payment/slot/API checks passed, plus
+  43 Search Center/rescheduling/audit/security regressions (137 total). Nine
+  mocked browser tests passed on desktop, narrow phones and WebKit, including
+  reason validation/reset, role labels, clean responsive dialogs and email failure
+  feedback. Fixtures updated for required reasons and the confirmed server delta.
+  No live SMTP, production mutations, native rules engine, build, lint or typecheck
+  run for this feature. Prior 4.37.3 build results do not validate these edits.
+- Release requires coordinated application + Firestore rules deployment; old
+  browser clients must refresh rather than use the now-denied SDK cancellation.
+  Neither deployment was performed. Package/lock synchronized to feature 4.38.0.
+
 ## Security audit and local hardening (4 November 2026, v4.37.3)
 
 - Owner requested a broad security check and fixes. Full report:

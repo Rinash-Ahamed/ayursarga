@@ -191,9 +191,10 @@ test("existing hospital bookings: direct creation and permanent deletion stay de
   }
 });
 
-test("Consumer cancellation remains audited and cannot alter price or cancel another Consumer's care", async () => {
+test("cancellation is server-only and cannot bypass its reason/email transaction", async () => {
   const own = await booking("cancel");
-  assert.equal((await auditedUpdate(own.path, own.data, { status: "cancelled" }, "consumer")).status, 200);
+  assert.equal((await auditedUpdate(own.path, own.data, { status: "cancelled" }, "consumer")).status, 403);
+  assert.equal((await auditedUpdate(own.path, own.data, { status: "cancelled", cancellationReason: "Changed plans" }, "admin")).status, 403);
   const other = await booking("other-cancel");
   assert.equal((await auditedUpdate(other.path, other.data, { status: "cancelled" }, "other")).status, 403);
   assert.equal((await auditedUpdate(other.path, other.data, { status: "cancelled", servicePrice: 1 }, "consumer")).status, 403);
@@ -225,13 +226,15 @@ test("consultations remain separate: Admin/own Consumer reads only and no client
   }
 });
 
-test("consultation delivery records deny every client role", async () => {
-  const path = `consultationEmailEvents/local-email-${suffix}`;
-  await seed(path, { ...metadata, ...fields({ status: "accepted", recipient: "private@example.com" }) });
-  for (const role of [undefined, "admin", "consumer", "hospital", "other", "inactive"]) {
-    assert.equal((await call(`/${path}`, { role })).status, 403);
-    assert.equal((await call(`/${path}`, { role, method: "PATCH", body: { fields: fields({ status: "pending" }) } })).status, 403);
-    assert.equal((await call(`/${path}`, { role, method: "DELETE" })).status, 403);
+test("consultation and hospital cancellation delivery records deny every client role", async () => {
+  for (const collection of ["consultationEmailEvents", "hospitalBookingEmailEvents"]) {
+    const path = `${collection}/local-email-${suffix}`;
+    await seed(path, { ...metadata, ...fields({ status: "accepted", recipient: "private@example.com" }) });
+    for (const role of [undefined, "admin", "consumer", "hospital", "other", "inactive"]) {
+      assert.equal((await call(`/${path}`, { role })).status, 403);
+      assert.equal((await call(`/${path}`, { role, method: "PATCH", body: { fields: fields({ status: "pending" }) } })).status, 403);
+      assert.equal((await call(`/${path}`, { role, method: "DELETE" })).status, 403);
+    }
   }
 });
 

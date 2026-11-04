@@ -84,7 +84,7 @@ test("consultation change responds before SMTP while retaining atomic queues and
   f.capture(checkout); assert.equal((await verify(f, checkout.intentId)).status, 200);
   f.calls.after.length = 0;
   f.actor.role = "admin"; f.actor.uid = "admin";
-  const response = await f.load("app/api/consultations/[bookingId]/route.ts").PATCH(bookingTestRequest("/api/consultations", { action: "cancelled", requestId: "performance-cancellation-0001" }), { params: Promise.resolve({ bookingId: checkout.intentId }) });
+  const response = await f.load("app/api/consultations/[bookingId]/route.ts").PATCH(bookingTestRequest("/api/consultations", { action: "cancelled", cancellationReason: "Plans have changed", requestId: "performance-cancellation-0001" }), { params: Promise.resolve({ bookingId: checkout.intentId }) });
   assert.equal(response.status, 200); assert.equal(sends, 0);
   const result = await response.json();
   assert.equal(result.email.status, "pending"); assert.equal(result.consultantEmail.status, "pending"); assert.equal(result.supportEmail.status, "pending");

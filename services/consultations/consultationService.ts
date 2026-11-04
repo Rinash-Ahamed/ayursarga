@@ -62,7 +62,7 @@ export function getConsultationBooking(id: string) {
   return readDocument<ConsultationBookingDocument>("consultationBookings", id);
 }
 
-export async function updateConsultationBooking(id: string, input: { action: "reschedule" | "completed" | "cancelled"; requestId: string; expectedAuditId: string; confirmedDate?: string; confirmedTime?: string; adminNotes?: string }) {
+export async function updateConsultationBooking(id: string, input: { action: "reschedule" | "completed" | "cancelled"; requestId: string; expectedAuditId: string; confirmedDate?: string; confirmedTime?: string; adminNotes?: string; cancellationReason?: string; rescheduleReason?: string }) {
   const result = await authorizedApiRequest<{ changes: Record<string, unknown>; email?: ConsultationEmailResult; consultantEmail?: ConsultationEmailResult; supportEmail?: ConsultationEmailResult }>(`/api/consultations/${encodeURIComponent(id)}`, {
     method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
     signedOutMessage: "Sign in again to update this consultation.", failureMessage: "We could not update the consultation. Try again.",

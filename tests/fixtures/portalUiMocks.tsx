@@ -112,14 +112,18 @@ const operationalBookings = () => bookings.map((booking, index) => index === 0 ?
 export const listHospitalBookings = () => page(portalUiState.screen === "hospital-bookings-empty" ? [] : operationalBookings());
 export const listConsumerBookings = () => page(portalUiState.screen === "consumer-bookings-empty" ? [] : bookings.map((booking, index) => ({ ...booking, serviceId: "package-14", hospitalName: index === 0 ? undefined : hospital.name, serviceName: index === 0 ? undefined : "14-day package", treatmentStatus: index === 0 ? "not_started" : "started", confirmedDate: index === 1 ? now : null, confirmedTime: index === 1 ? "10:30" : null, consumerNotes: "Please confirm room accessibility.", hospitalNotes: index === 1 ? "Your preferred care dates are available." : null, bystanderCount: 2, additionalBystanderTotal: 500 })));
 export const getConsumerBookingDetails = async () => ({ details: { "booking-0": { hospitalName: hospital.name, serviceName: "14-day package", hospitalLocation: "Palakkad, Kerala" } } });
-export const cancelConsumerBooking = async () => { portalUiState.cancelledBookings++; };
+export const cancelHospitalBooking = async (_id: string, cancellationReason: string) => {
+  portalUiState.cancelledBookings++;
+  return { status: "cancelled" as const, cancellationReason, cancelledByRole: portalUiState.screen.startsWith("admin") ? "admin" as const : "consumer" as const,
+    cancelledBy: "patient", cancelledAt: now, lastAuditId: "cancelled-audit" };
+};
 export const createBookingRequest = async (input: unknown) => { portalUiState.bookingRequests++; portalUiState.bookingInputs.push(input); return { ok: true, bookingId: "booking-0", bookingReference: "AYUR000000" }; };
 export const getPortalBooking = async (id: string) => portalUiState.screen.endsWith("auto-confirmed") && id === autoConfirmedBooking.id
   ? { ...autoConfirmedBooking, treatmentStatus: portalUiState.autoConfirmedTreatment, status: portalUiState.autoConfirmedTreatment === "completed" ? "completed" : "confirmed" }
   : bookings.find((booking) => booking.id === id) ?? null;
 export const getPublicHospital = async () => ({ ...hospital, blockedDateRanges: (globalThis as unknown as { bookingSoldOut?: boolean }).bookingSoldOut ? [{ startDate: Timestamp.fromDate(new Date("2099-10-25T00:00:00+05:30")), endDate: Timestamp.fromDate(new Date("2099-10-25T00:00:00+05:30")) }] : [] });
 export const getPublicHospitalService = async () => portalUiState.unavailablePackage ? null : { ...services[1], packageVersion: "a".repeat(64) };
-export const listAdminBookings = () => page(portalUiState.screen === "admin-bookings-empty" ? [] : operationalBookings());
+export const listAdminBookings = () => page(portalUiState.screen === "admin-bookings-empty" ? [] : portalUiState.screen === "admin-bookings-cancellable" ? [{ ...bookings[0], treatmentStatus: "not_started" }] : operationalBookings());
 export const readDocumentsByIds = async (collectionPath: string, ids: string[]) => collectionPath === "hospitals" ? [hospital].filter((item) => ids.includes(item.id)) : collectionPath === "services" ? services.filter((item) => ids.includes(item.id)) : [];
 export const userListControl = { failRole: "", holdRole: "", distinctNames: false, pending: [] as (() => void)[] };
 Object.assign(globalThis, { userListControl });
@@ -304,10 +308,10 @@ export const listConsultationBookings = () => page(portalUiState.screen === "adm
     paymentTotals: { paidPaise: 99055, refundedPaise: 0 },
   } : {}) }]);
 export const getConsultationBooking = async () => consultation;
-export const updateConsultationBooking = async (_id: string, input: { action: string; confirmedDate?: string; confirmedTime?: string; adminNotes?: string }) => {
+export const updateConsultationBooking = async (_id: string, input: { action: string; confirmedDate?: string; confirmedTime?: string; adminNotes?: string; cancellationReason?: string; rescheduleReason?: string }) => {
   portalUiState.consultantWrites.push(input);
   await Promise.resolve();
-  return { changes: { ...input, ...(input.action === "reschedule" ? {confirmedEndTime:generateConsultationSlots(input.confirmedDate!, consultation.serviceId, consultationProfessional).find(slot=>slot.startTime===input.confirmedTime)?.endTime, ...(portalUiState.screen.startsWith("consumer") ? {consumerRescheduleCount:1} : {})} : {}), status: input.action === "reschedule" ? "confirmed" : input.action, lastAuditId: "consultation-updated" },
+  return { changes: { ...input, ...(input.action === "reschedule" ? { rescheduledByRole: portalUiState.screen.startsWith("admin") ? "admin" as const : "consumer" as const, rescheduledBy: "patient", rescheduledAt: now } : {}), ...(input.action === "cancelled" ? { cancelledByRole: portalUiState.screen.startsWith("admin") ? "admin" as const : "consumer" as const } : {}), ...(input.action === "reschedule" ? {confirmedEndTime:generateConsultationSlots(input.confirmedDate!, consultation.serviceId, consultationProfessional).find(slot=>slot.startTime===input.confirmedTime)?.endTime, ...(portalUiState.screen.startsWith("consumer") ? {consumerRescheduleCount:1} : {})} : {}), status: input.action === "reschedule" ? "confirmed" : input.action, lastAuditId: "consultation-updated" },
     email: input.action !== "completed" ? { status: portalUiState.screen === "admin-consultations-email-failure" ? "failed" : "accepted" } : undefined,
     consultantEmail: input.action !== "completed" ? { status: portalUiState.screen === "admin-consultations-consultant-email-failure" ? "failed" : "accepted" } : undefined };
 };

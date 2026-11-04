@@ -41,6 +41,8 @@ async function create(f, body = input) {
   return Response.json({ bookingId: checkout.bookingId, bookingReference: checkout.bookingReference, ...deliveries }, { status: f.values("consultationBookings").length > previous ? 201 : 200 });
 }
 async function update(f, id, body) {
+  if ((body.action ?? body.status) === "reschedule" && !Object.hasOwn(body, "rescheduleReason")) body = { ...body, rescheduleReason: "Appointment plans have changed" };
+  if ((body.action ?? body.status) === "cancelled" && !Object.hasOwn(body, "cancellationReason")) body = { ...body, cancellationReason: "Plans have changed" };
   const response = await f.load("app/api/consultations/[bookingId]/route.ts").PATCH(request(body, "PATCH"), { params: Promise.resolve({ bookingId: id }) });
   await f.flushAfter();
   return response;

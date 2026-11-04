@@ -6,7 +6,9 @@ import { ROUTES } from "@/config/routes";
 import type { BookingDocument } from "@/features/firestore/models";
 import { getTreatmentProgress, getTreatmentStatus } from "@/features/bookings/treatmentStatus";
 import { emptyQueryPage, type DocumentRecord, type QueryPageOptions } from "@/services/firestore/firestoreService";
-import { cancelConsumerBooking, getConsumerBookingDetails, getPortalBooking, listConsumerBookings } from "@/services/bookings/bookingService";
+import { getConsumerBookingDetails, getPortalBooking, listConsumerBookings } from "@/services/bookings/bookingService";
+import { HospitalCancellationDialog } from "@/components/bookings/HospitalCancellationDialog";
+import { CancellationDetails } from "@/components/bookings/CancellationDetails";
 import { bookingDateFacts, bookingReferenceLabel, bookingStatusLabel } from "@/features/bookings/display";
 import { formatBystanders } from "@/features/hospitals/searchContext";
 import { formatCurrency } from "@/utils/currency";
@@ -22,8 +24,7 @@ import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 
 export function ConsumerBookings({ bookingId }: { bookingId?: string } = {}) {
   const { firebaseUser } = useAuth();
-  const [actionError, setActionError, actionErrorNotification] = useRepeatableMessage();
-  const [busy, setBusy] = useState<string | null>(null);
+  const [pendingCancellation, setPendingCancellation] = useState<DocumentRecord<BookingDocument> | null>(null);
   const [actionMessage, setActionMessage, actionMessageNotification] = useRepeatableMessage();
   const [detailsError, setDetailsError] = useState(false);
   const loader = useCallback(async (cursor: QueryPageOptions["cursor"]) => {
@@ -45,21 +46,7 @@ export function ConsumerBookings({ bookingId }: { bookingId?: string } = {}) {
     loader,
     "We could not load your bookings. Refresh the page and try again.",
   );
-  const error = actionError ?? loadError;
-
-  async function cancel(item: DocumentRecord<BookingDocument>) {
-    if (busy) return;
-    setBusy(item.id); setActionError(null); setActionMessage(null);
-    try {
-      await cancelConsumerBooking(item.id, item);
-      patchItem(item.id, { status: "cancelled" });
-      setActionMessage("The booking has been cancelled.");
-    } catch {
-      setActionError("We could not cancel this booking. Refresh the page and try again.");
-    } finally {
-      setBusy(null);
-    }
-  }
+  const error = loadError;
 
   return <PortalShell role="consumer" title="My bookings">
     <div className="consumer-booking-toolbar">
@@ -77,7 +64,6 @@ export function ConsumerBookings({ bookingId }: { bookingId?: string } = {}) {
     <PortalLoadGuard notification={loadErrorNotification} loading={isLoading} error={loadError} hasData={items.length > 0} fallbackHref="/" loadingMessage="Loading your bookings…" />
     <PortalFeedback notification={loadErrorNotification} error={items.length > 0 ? loadError : null} emptyTitle="No hospital bookings yet" empty={!error && !isLoading && items.length === 0 ? "Bookings placed through Search hospitals will appear here with their centre, package, care dates and current status." : undefined} />
     <PortalToast message={actionMessage} notification={actionMessageNotification} />
-    <PortalToast message={actionError} notification={actionErrorNotification} tone="error" />
     {detailsError && <p className="portal-form-error" role="status">Centre and package names could not be loaded. Your booking dates and status are still shown. Refresh to try again.</p>}
     <div className="portal-list consumer-booking-list">
       {items.map((booking) => <article className="portal-row consumer-booking-row" key={booking.id}>
@@ -91,6 +77,7 @@ export function ConsumerBookings({ bookingId }: { bookingId?: string } = {}) {
             <div><dt>Accompanying</dt><dd>{formatBystanders(booking.bystanderCount ?? 1)}{(booking.additionalBystanderTotal ?? 0) > 0 && <small>{formatCurrency(booking.additionalBystanderTotal!)} additional</small>}</dd></div>
             {bookingDateFacts(booking).map((fact) => <div key={fact.label}><dt>{fact.label}</dt><dd>{fact.value}</dd></div>)}
           </dl>
+          <CancellationDetails booking={booking} />
           {booking.hospitalNotes && <div className="consumer-booking-note"><strong>Centre response</strong><p>{booking.hospitalNotes}</p></div>}
           {booking.consumerNotes && <details className="consumer-booking-notes"><summary>Your request notes</summary><p>{booking.consumerNotes}</p></details>}
           {booking.status === "requested" && <p className="consumer-booking-pending">Your booking has been placed and is awaiting the centre&apos;s confirmation. Your appointment is not confirmed yet.</p>}
@@ -103,11 +90,14 @@ export function ConsumerBookings({ bookingId }: { bookingId?: string } = {}) {
           <span className="portal-status" data-status={booking.status}>{bookingStatusLabel(booking.status)}</span>
           <div className="consumer-booking-cost"><span>Package amount</span><strong className="consumer-booking-price">{formatCurrency(booking.servicePrice)}</strong><small>At time of request</small></div>
           {["requested", "confirmed", "reschedule_requested"].includes(booking.status) && getTreatmentStatus(booking) === "not_started" && <div className="portal-actions">
-            <button className="portal-button secondary" disabled={busy !== null} onClick={() => void cancel(booking)}>{busy === booking.id ? "Cancelling…" : "Cancel booking"}</button>
+            <button className="portal-button danger" disabled={pendingCancellation !== null} onClick={() => setPendingCancellation(booking)}>Cancel booking</button>
           </div>}
         </div>
       </article>)}
     </div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
+    {pendingCancellation && <HospitalCancellationDialog key={pendingCancellation.id} booking={pendingCancellation} onClose={() => setPendingCancellation(null)} onSaved={changes => {
+      patchItem(pendingCancellation.id, changes); setPendingCancellation(null); setActionMessage("The booking has been cancelled.");
+    }} />}
   </PortalShell>;
 }

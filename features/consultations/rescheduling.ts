@@ -2,6 +2,12 @@ import { isIsoDate } from "@/utils/date";
 import { validCancellationSnapshot } from "@/features/consultations/cancellationPolicy";
 
 export const CONSUMER_RESCHEDULE_HOURS = 24;
+export type RescheduleDetails = {
+  rescheduleReason?: string;
+  rescheduledByRole?: "admin" | "consumer";
+  rescheduledBy?: string;
+  rescheduledAt?: import("firebase/firestore").Timestamp;
+};
 /** Shared display/server rule. The mutation must evaluate it on the current transaction snapshot. */
 export function consumerRescheduleEligibility(value: unknown, now: number) {
   const booking = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};

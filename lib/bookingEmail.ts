@@ -1,5 +1,6 @@
 import { formatCurrency } from "@/utils/currency";
-import { formatDisplayDate } from "@/utils/date";
+import { formatDisplayDate, formatDisplayDateTime } from "@/utils/date";
+import { bookingActorLabel } from "@/features/bookings/changeReason";
 
 export type BookingEmailData = {
   kind: "hospital" | "consultation";
@@ -20,6 +21,11 @@ export type BookingEmailData = {
   previousTime?: string | null;
   previousTimeWindow?: string;
   audience?: "consumer" | "consultant" | "support";
+  cancellationReason?: string;
+  cancelledByRole?: "admin" | "consumer";
+  rescheduleReason?: string;
+  rescheduledByRole?: "admin" | "consumer";
+  rescheduledAt?: unknown;
 };
 
 const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character] || character);
@@ -30,9 +36,9 @@ export function bookingEmail(data: BookingEmailData) {
   const hospital = data.kind === "hospital";
   const consultant = !hospital && data.audience === "consultant";
   const support = !hospital && data.audience === "support";
-  const event = hospital ? "confirmed" : data.event ?? "confirmed";
+  const event = data.event ?? "confirmed";
   const subject = `Ayursarga booking ${event}${data.bookingReference ? `: ${data.bookingReference}` : ""}`;
-  const heading = hospital ? "Your hospital booking is confirmed" : consultant || support ? `Consultation ${event === "confirmed" ? "booked" : event}` : `Your online consultation is ${event}`;
+  const heading = hospital ? `Your hospital booking is ${event}` : consultant || support ? `Consultation ${event === "confirmed" ? "booked" : event}` : `Your online consultation is ${event}`;
   const rows: [string, string][] = [
     ["Booking reference", data.bookingReference || "See My Bookings"],
     [hospital ? "Hospital" : "Consultant", data.providerName],
@@ -45,7 +51,11 @@ export function bookingEmail(data: BookingEmailData) {
   if (event === "rescheduled") {
     rows.push(["Original appointment date", formatDisplayDate(data.previousDate, "See My Bookings")]);
     rows.push(["Original appointment time", `${data.previousTime || data.previousTimeWindow || "See My Bookings"} IST`]);
+    rows.push(["Rescheduled by", bookingActorLabel(data.rescheduledByRole)], ["Rescheduling reason", data.rescheduleReason || "Reason not recorded"]);
+    const changedAt = formatDisplayDateTime(data.rescheduledAt);
+    if (changedAt) rows.push(["Rescheduled on", `${changedAt} IST`]);
   }
+  if (event === "cancelled") rows.push(["Cancelled by", bookingActorLabel(data.cancelledByRole)], ["Cancellation reason", data.cancellationReason || "Reason not recorded"]);
   if (hospital && data.location) rows.push(["Location", data.location]);
   if (typeof data.amount === "number" && Number.isFinite(data.amount)) rows.push([hospital ? "Package amount" : "Consultation charge", formatCurrency(data.amount)]);
   if (hospital && typeof data.bystanderCount === "number") rows.push(["Bystanders", String(data.bystanderCount)]);
@@ -59,7 +69,7 @@ export function bookingEmail(data: BookingEmailData) {
     : event === "rescheduled"
     ? "Your appointment has been rescheduled. Please use the updated date and time shown above. Contact info@ayursarga.com if this schedule does not suit you."
     : event === "cancelled"
-      ? "Your appointment has been cancelled. For assistance or to arrange another appointment, contact info@ayursarga.com or explore Wellness Path on Ayursarga. This notice does not confirm a refund."
+      ? `Your ${hospital ? "hospital booking" : "appointment"} has been cancelled. For assistance or to make another booking, contact info@ayursarga.com. This notice does not confirm a refund.`
       : "You can view the latest booking details in your Ayursarga account. This confirmation is not a payment receipt.";
   const actionLabel = support ? "View appointment in Admin" : consultant ? "Contact Ayursarga" : "View My Bookings";
   const text = `Ayursarga\n\n${heading}\n\n${greeting}\n\n${rows.map(([label, value]) => `${label}: ${value}`).join("\n")}\n\n${note}\n\n${actionLabel}: ${url.href}\n\nNeed help? info@ayursarga.com`;

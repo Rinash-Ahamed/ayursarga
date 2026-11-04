@@ -131,21 +131,21 @@ test("consumer cancellation revalidates cutoff in transaction and audits a verif
   const f = consultationPaymentFixture(); const id = await booked(f);
   const route = f.load("app/api/consultations/[bookingId]/route.ts");
   f.actor.uid = "another-consumer";
-  assert.equal((await route.PATCH(paymentRequest({ action: "cancelled" }, "PATCH"), context(id))).status, 403);
+  assert.equal((await route.PATCH(paymentRequest({ action: "cancelled", cancellationReason: "Plans have changed" }, "PATCH"), context(id))).status, 403);
   f.actor.uid = "patient";
   const booking = f.records.get(`consultationBookings/${id}`);
   booking.cancellationPolicy = snapshot({ ...policy, allowAfterCutoff: false }, "2000-01-01", "09:00");
-  assert.equal((await route.PATCH(paymentRequest({ action: "cancelled", eligibleRefundPaise: 999999 }, "PATCH"), context(id))).status, 409);
+  assert.equal((await route.PATCH(paymentRequest({ action: "cancelled", cancellationReason: "Plans have changed", eligibleRefundPaise: 999999 }, "PATCH"), context(id))).status, 409);
   assert.equal(booking.status, "confirmed");
   booking.cancellationPolicy = snapshot(policy, "2099-10-25", "09:30");
   const financial = f.records.get(`consultationFinancials/${id}`); financial.refundedPaise = 10000;
-  assert.equal((await route.PATCH(paymentRequest({ action: "cancelled" }, "PATCH"), context(id))).status, 200);
+  assert.equal((await route.PATCH(paymentRequest({ action: "cancelled", cancellationReason: "Plans have changed" }, "PATCH"), context(id))).status, 200);
   const saved = f.records.get(`consultationBookings/${id}`);
   assert.equal(saved.cancellationOutcome.eligibleRefundPaise, 99055); assert.equal(saved.cancellationOutcome.remainingRefundPaise, 89055);
   assert.equal(saved.cancellationOutcome.policyVersion, policy.version); assert.equal(financial.settlementStatus, "pending");
   assert.equal(f.records.get(`consultationFinancials/${id}`).settlementHold, true);
   const count = f.values("auditLogs").length;
-  assert.equal((await route.PATCH(paymentRequest({ action: "cancelled" }, "PATCH"), context(id))).status, 200);
+  assert.equal((await route.PATCH(paymentRequest({ action: "cancelled", cancellationReason: "Plans have changed" }, "PATCH"), context(id))).status, 200);
   assert.equal(f.values("auditLogs").length, count);
 });
 
@@ -153,7 +153,7 @@ test("reschedule retains agreed policy version, recomputes exact IST deadline, a
   const f = consultationPaymentFixture(); const id = await booked(f);
   f.actor.role = "admin"; f.actor.uid = "admin";
   const route = f.load("app/api/consultations/[bookingId]/route.ts");
-  const response = await route.PATCH(paymentRequest({ action: "reschedule", requestId: "reschedule-policy-0001", confirmedDate: "2099-10-26", confirmedTime: "10:00" }, "PATCH"), context(id));
+  const response = await route.PATCH(paymentRequest({ action: "reschedule", rescheduleReason: "Appointment plans have changed", requestId: "reschedule-policy-0001", confirmedDate: "2099-10-26", confirmedTime: "10:00" }, "PATCH"), context(id));
   assert.equal(response.status, 200);
   const updated = f.records.get(`consultationBookings/${id}`);
   assert.equal(updated.cancellationPolicy.policy.version, policy.version);
@@ -161,7 +161,7 @@ test("reschedule retains agreed policy version, recomputes exact IST deadline, a
   assert.equal(updated.cancellationPolicy.refundDeadlineAt, "2099-10-25T04:30:00.000Z");
   delete updated.cancellationPolicy; delete updated.paymentIntentId;
   f.actor.role = "consumer"; f.actor.uid = "patient";
-  assert.equal((await route.PATCH(paymentRequest({ action: "cancelled" }, "PATCH"), context(id))).status, 200);
+  assert.equal((await route.PATCH(paymentRequest({ action: "cancelled", cancellationReason: "Plans have changed" }, "PATCH"), context(id))).status, 200);
   const legacy = f.records.get(`consultationBookings/${id}`);
   assert.equal(legacy.cancellationPolicy, undefined); assert.equal(legacy.cancellationOutcome.remainingRefundPaise, null);
   assert.equal(legacy.cancellationOutcome.policyVersion, null);

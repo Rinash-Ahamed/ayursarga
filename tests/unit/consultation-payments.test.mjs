@@ -165,7 +165,7 @@ test("manual settlements are Admin-only, audited, reference/date-required and re
   const f2 = consultationPaymentFixture(); const second = (await (await prepare(f2)).json()).checkout;
   f2.capture(second); await verify(f2, second.intentId);
   const cancel = f2.load("app/api/consultations/[bookingId]/route.ts");
-  assert.equal((await cancel.PATCH(paymentRequest({ action: "cancelled" }, "PATCH"), { params: Promise.resolve({ bookingId: second.intentId }) })).status, 200);
+  assert.equal((await cancel.PATCH(paymentRequest({ action: "cancelled", cancellationReason: "Plans have changed" }, "PATCH"), { params: Promise.resolve({ bookingId: second.intentId }) })).status, 200);
   assert.equal(f2.records.get(`consultationFinancials/${second.intentId}`).settlementHold, true);
   assert.equal(f2.records.get(`consultationFinancials/${second.intentId}`).netRevenuePaise, null);
 });

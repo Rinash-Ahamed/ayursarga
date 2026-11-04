@@ -6,6 +6,31 @@ import { getCalendarMonthRange } from "../../utils/date";
 const styles = ["node_modules/tailwindcss/lib/css/preflight.css", "app/globals.css", "app/portal.css"].map((file) => readFileSync(file, "utf8")).join("\n");
 const screens = ["admin-dashboard", "admin-hospitals", "admin-details", "admin-consultants", "admin-users", "admin-bookings", "admin-availability", "admin-audits", "hospital-dashboard", "hospital-profile", "hospital-services", "hospital-bookings", "hospital-availability", "hospital-password", "admin-login", "hospital-login", "admin-forgot", "hospital-forgot"];
 
+test("cancellation reasons are required, reset on dismiss, and show the cancelling role in Admin and Consumer", async ({ page }) => {
+  await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
+  for (const screen of ["admin-bookings-cancellable", "admin-consultations", "consumer-consultations"]) {
+    await mount(page, screen);
+    const centre = screen === "admin-bookings-cancellable";
+    await page.getByRole("button", { name: centre ? "Cancel booking" : "Cancel appointment", exact: true }).first().click();
+    let dialog = page.getByRole("dialog");
+    const confirmName = centre ? "Cancel booking" : "Confirm";
+    await expect(dialog.getByRole("button", { name: confirmName, exact: true })).toBeDisabled();
+    await dialog.getByLabel("Cancellation reason").fill("Changed care plans");
+    await dialog.getByRole("button", { name: centre ? "Keep booking" : "Cancel", exact: true }).click();
+    await page.getByRole("button", { name: centre ? "Cancel booking" : "Cancel appointment", exact: true }).first().click();
+    dialog = page.getByRole("dialog");
+    await expect(dialog.getByLabel("Cancellation reason")).toHaveValue("");
+    await dialog.getByLabel("Cancellation reason").fill("Changed care plans");
+    await expect(dialog.getByRole("button", { name: confirmName, exact: true })).toBeEnabled();
+    await dialog.getByRole("button", { name: confirmName, exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.locator(".consumer-booking-facts").filter({ hasText: "Cancelled by" })).toContainText(screen.startsWith("admin") ? "Ayursarga team" : "Customer");
+    await expect(page.locator(".consumer-booking-facts").filter({ hasText: "Cancellation reason" })).toContainText("Changed care plans");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(await page.evaluate(() => document.body.style.position)).not.toBe("fixed");
+  }
+});
+
 test("confirmed create results update Admin and Hospital lists without a redundant read", async ({ page }) => {
   await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
   await mount(page, "admin-consultants");
@@ -1140,9 +1165,13 @@ test("online consultation history reschedules with a locked shared dialog and Co
   expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { consultantWrites: object[] } }).consumerBookingFixture.consultantWrites.length)).toBe(0);
   await page.getByRole("button", { name: "Reschedule", exact: true }).click();
   await dialog.getByRole("combobox", {name:"New appointment time (IST) *",exact:true}).selectOption("10:30");
+  await expect(dialog.getByRole("button", { name: "Confirm", exact: true })).toBeDisabled();
+  await dialog.getByLabel("Rescheduling reason").fill("The consultant requested a new time");
   await dialog.getByRole("button", { name: "Confirm", exact: true }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByText("25/10/2099 · 10:30 AM – 11:00 AM IST", { exact: true })).toBeVisible();
+  await expect(page.getByText("The consultant requested a new time", { exact: true })).toBeVisible();
+  await expect(page.getByText("Rescheduled by", { exact: true }).locator("..")).toContainText("Ayursarga team");
   expect(await page.evaluate(() => document.body.style.position)).not.toBe("fixed");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath("online-consultation-history.png"), fullPage: true });
@@ -1163,6 +1192,7 @@ test("consumer can reschedule once through the shared dialog with aligned mobile
   await page.getByRole("button", { name: "Reschedule", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("one-time reschedule");
+  await dialog.getByLabel("Rescheduling reason").fill("Draft reason to discard");
   await expect(dialog.getByRole("textbox", { name: "Appointment notes", exact: false })).toHaveCount(0);
   await expect(dialog.getByText("Our Consultants", { exact: false })).toHaveCount(0);
   expect(await page.evaluate(() => document.body.style.position)).toBe("fixed");
@@ -1171,9 +1201,14 @@ test("consumer can reschedule once through the shared dialog with aligned mobile
   await page.getByRole("button", { name: "Reschedule", exact: true }).click();
   await dialog.getByRole("textbox", { name: "New appointment date *", exact: true }).fill("26/10/2099");
   await dialog.getByRole("combobox", { name: "New appointment time (IST) *", exact: true }).selectOption("10:30");
+  await expect(dialog.getByLabel("Rescheduling reason")).toHaveValue("");
+  await expect(dialog.getByRole("button", { name: "Confirm", exact: true })).toBeDisabled();
+  await dialog.getByLabel("Rescheduling reason").fill("I need a different appointment time");
   await dialog.getByRole("button", { name: "Confirm", exact: true }).evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
   await expect(dialog).toBeHidden();
   await expect(page.getByRole("region", { name: "Rescheduling policy" })).toContainText("one-time reschedule has been used");
+  await expect(page.getByText("Rescheduled by", { exact: true }).locator("..")).toContainText("Customer");
+  await expect(page.getByText("I need a different appointment time", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Reschedule", exact: true })).toHaveCount(0);
   await expect(page.getByText("26/10/2099 · 10:30 AM – 11:00 AM IST", { exact: true })).toBeVisible();
   expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { consultantWrites: unknown[] } }).consumerBookingFixture.consultantWrites.length)).toBe(1);
@@ -1189,6 +1224,7 @@ test("consultation rescheduling validates before saving, submits once and report
   await mount(page, "admin-consultations-email-failure");
   await page.getByRole("button", { name: "Reschedule", exact: true }).click();
   const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Rescheduling reason").fill("The consultant is unavailable at the original time");
   await dialog.getByRole("combobox", {name:"New appointment time (IST) *",exact:true}).selectOption("");
   await expect(dialog.getByRole("button", {name:"Confirm",exact:true})).toBeDisabled();
   expect(await page.evaluate(() => (window as unknown as { consumerBookingFixture: { consultantWrites: unknown[] } }).consumerBookingFixture.consultantWrites.length)).toBe(0);
@@ -1207,6 +1243,8 @@ test("Admin sees consultant email failure independently of successful consumer d
   await mount(page, "admin-consultations-consultant-email-failure");
   await page.getByRole("button", { name: "Cancel appointment", exact: true }).click();
   const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("button", { name: "Confirm", exact: true })).toBeDisabled();
+  await dialog.getByLabel("Cancellation reason").fill("The consultant is unavailable");
   await dialog.getByRole("button", { name: "Confirm", exact: true }).click();
   await expect(dialog).toBeHidden();
   await expect(page.locator(".portal-status")).toHaveText("cancelled");

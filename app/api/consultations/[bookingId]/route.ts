@@ -17,6 +17,7 @@ import { auditPayment } from "@/services/payments/consultationPaymentsAdmin";
 import { consultationCancellationEligibility, validCancellationSnapshot, snapshotConsultationCancellation } from "@/features/consultations/cancellationPolicy";
 import { generateConsultationSlots } from "@/features/consultations/slots";
 import { consumerRescheduleEligibility } from "@/features/consultations/rescheduling";
+import { bookingChangeReason } from "@/features/bookings/changeReason";
 import { readScheduleDay, requireFreeSlot, releaseSlot, saveSlotEntry, SlotReservationError } from "@/services/consultations/slotReservationsAdmin";
 
 export const runtime = "nodejs";
@@ -35,13 +36,15 @@ async function handlePATCH(request: Request, context: { params: Promise<{ bookin
     if (!["reschedule", "completed", "cancelled"].includes(String(action))) return apiJson({ error: "Invalid appointment action." }, 400);
     if (role === "consumer" && action !== "cancelled" && action !== "reschedule") return apiJson({ error: "You can only cancel or reschedule your own appointment." }, 403);
     if (input.adminNotes !== undefined && (typeof input.adminNotes !== "string" || input.adminNotes.length > 1000)) return apiJson({ error: "Keep notes within 1,000 characters." }, 400);
+    const reason = action === "cancelled" ? bookingChangeReason(input.cancellationReason) : action === "reschedule" ? bookingChangeReason(input.rescheduleReason) : null;
     const requestId = typeof input.requestId === "string" && /^[a-zA-Z0-9-]{16,100}$/.test(input.requestId) ? input.requestId : null;
     if (role === "admin" && action !== "completed" && !requestId) return apiJson({ error: "A valid action reference is required. Refresh and try again." }, 400);
     if (role === "consumer" && action === "reschedule" && (!requestId || typeof input.expectedAuditId !== "string" || !input.expectedAuditId || input.expectedAuditId.length > 160)) return apiJson({ error: "Refresh the appointment before rescheduling." }, 400);
     const actionReference = requestId ?? (role === "consumer" && action === "cancelled" ? "consumer-cancellation" : null);
     const eventId = actionReference ? `action-${createHash("sha256").update(`${uid}:${bookingId}:${actionReference}`).digest("hex")}` : null;
     const payloadHash = createHash("sha256").update(JSON.stringify([action, input.confirmedDate ?? null, input.confirmedTime ?? null,
-      role === "admin" ? String(input.adminNotes ?? "").trim() : null, input.expectedAuditId ?? null])).digest("hex");
+      role === "admin" ? String(input.adminNotes ?? "").trim() : null, input.expectedAuditId ?? null,
+      ...((action === "cancelled" || action === "reschedule") && reason ? [reason] : [])])).digest("hex");
     const result = await timeApiStep("database", () => firestore.runTransaction(async (transaction) => {
       const reference = firestore.collection("consultationBookings").doc(bookingId);
       const snapshot = await transaction.get(reference);
@@ -57,6 +60,8 @@ async function handlePATCH(request: Request, context: { params: Promise<{ bookin
       }
       // Repeated status requests never create a second audit, notification or email.
       if (action !== "reschedule" && booking.status === action) return { changes: booking, emailEventId: null };
+      if (action === "cancelled" && !reason) throw new ConsultationError("Enter a cancellation reason using 3 to 500 characters.", 400);
+      if (action === "reschedule" && !reason) throw new ConsultationError("Enter a rescheduling reason using 3 to 500 characters.", 400);
       if (input.expectedAuditId !== undefined && input.expectedAuditId !== booking.lastAuditId) throw new ConsultationError("This appointment has changed. Refresh before trying again.", 409);
       const allowed = action === "reschedule" || action === "cancelled"
         ? ["requested", "confirmed"].includes(booking.status) : booking.status === "confirmed";
@@ -68,6 +73,7 @@ async function handlePATCH(request: Request, context: { params: Promise<{ bookin
       let nextDay: Awaited<ReturnType<typeof readScheduleDay>> | undefined;
       if (role === "admin" && typeof input.adminNotes === "string") update.adminNotes = input.adminNotes.trim() || null;
       if (action === "reschedule") {
+        Object.assign(update, { rescheduleReason: reason, rescheduledByRole: role, rescheduledBy: uid, rescheduledAt: now });
         if (role === "consumer") {
           const eligibility = consumerRescheduleEligibility(booking, now.toMillis());
           if (!eligibility.allowed) throw new ConsultationError(eligibility.used
@@ -98,6 +104,7 @@ async function handlePATCH(request: Request, context: { params: Promise<{ bookin
         if (validCancellationSnapshot(booking.cancellationPolicy)) update.cancellationPolicy = snapshotConsultationCancellation(booking.cancellationPolicy.policy, date, time, true);
       }
       if (action === "cancelled") {
+        Object.assign(update, { cancellationReason: reason, cancelledByRole: role, cancelledBy: uid, cancelledAt: now });
         const consultant = await transaction.get(firestore.collection("consultants").doc(booking.consultantId));
         consultantContact = consultant.data() ?? {};
       }
@@ -131,6 +138,8 @@ async function handlePATCH(request: Request, context: { params: Promise<{ bookin
       transaction.create(audit, { action: action === "reschedule" ? "update" : "status_change", module: "consultationBookings", recordId: bookingId,
         actorId: uid, actorRole: role,
         previousValues: { status: booking.status, confirmedDate: booking.confirmedDate ?? null, confirmedTime: booking.confirmedTime ?? null,
+          ...(action === "reschedule" ? { rescheduleReason: booking.rescheduleReason ?? null, rescheduledByRole: booking.rescheduledByRole ?? null,
+            rescheduledBy: booking.rescheduledBy ?? null, rescheduledAt: booking.rescheduledAt ?? null } : {}),
           ...(role === "consumer" && action === "reschedule" ? { consumerRescheduleCount: booking.consumerRescheduleCount ?? 0 } : {}) },
         updatedValues: update, timestamp: now, source: "server", device: requestAuditDevice(request) });
       const recipients = role === "admin" ? [{ id: booking.consumerId as string, role: "consumer" as const }]

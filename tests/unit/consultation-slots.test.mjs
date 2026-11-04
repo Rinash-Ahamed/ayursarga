@@ -8,7 +8,7 @@ const date=paidInput.preferredDate;
 async function checkout(f, changes={}) { const r=await prepare(f,{...paidInput,...changes}); assert.equal(r.status,200,await r.clone().text()); return (await r.json()).checkout; }
 async function book(f, changes={}) {const c=await checkout(f,changes);f.capture(c,{id:`pay_${f.paymentState.orderCalls}`});const r=await verify(f,c.intentId,`pay_${f.paymentState.orderCalls}`);assert.equal(r.status,200);assert.equal((await r.json()).checkout.state,"confirmed");return c.intentId;}
 const dayOf=f=>f.records.get(`consultationSlotDays/AS001_${date}`);
-async function change(f,id,body) { return f.load("app/api/consultations/[bookingId]/route.ts").PATCH(paymentRequest(body,"PATCH"),{params:Promise.resolve({bookingId:id})}); }
+async function change(f,id,body) { return f.load("app/api/consultations/[bookingId]/route.ts").PATCH(paymentRequest({ ...(body.action === "reschedule" ? { rescheduleReason: "Appointment plans have changed" } : {}), ...body },"PATCH"),{params:Promise.resolve({bookingId:id})}); }
 
 test("30/60-minute generation includes the exact final slot and never extends configured hours",()=>{
   const provider={...paidConsultant,preferredSlotTimings:{morning:{startTime:"09:00",endTime:"12:00"}}};
@@ -110,14 +110,14 @@ test("successful cancellation reopens time; failed cancellation/reschedule commi
   const f=consultationPaymentFixture();const id=await book(f);
   const original=f.firestore.runTransaction;
   f.firestore.runTransaction=callback=>original(async tx=>{await callback(tx);throw Error("Synthetic commit rejection");});
-  assert.equal((await change(f,id,{action:"cancelled"})).status,503);
+  assert.equal((await change(f,id,{action: "cancelled", cancellationReason: "Plans have changed"})).status,503);
   assert.equal(dayOf(f).entries["09:30"].state,"booked");
   f.actor.role="admin";
   assert.equal((await change(f,id,{action:"reschedule",requestId:"failed-reschedule-001",confirmedDate:date,confirmedTime:"10:30"})).status,503);
   assert.equal(dayOf(f).entries["09:30"].state,"booked");assert.equal(dayOf(f).entries["10:30"],undefined);
   f.actor.role="consumer";
   f.firestore.runTransaction=original;
-  assert.equal((await change(f,id,{action:"cancelled"})).status,200);
+  assert.equal((await change(f,id,{action: "cancelled", cancellationReason: "Plans have changed"})).status,200);
   assert.equal(dayOf(f).entries["09:30"].state,"released");
   assert.equal((await prepare(f,{...paidInput,requestId:"reopened-slot-attempt-001"})).status,200);
 });

@@ -433,6 +433,9 @@ service cloud.firestore {
       // Private, immutable-payload delivery records; verified server endpoints only.
       allow read, write: if false;
     }
+    match /hospitalBookingEmailEvents/{eventId} {
+      allow read, write: if false;
+    }
 
     // Payment snapshots, webhook journal and ledger are server-only. Consumer
     // APIs explicitly project only the caller's total fee/payment/booking state.
@@ -501,6 +504,12 @@ service cloud.firestore {
       allow create: if false;
 
       allow update: if hasLinkedAudit('bookings', bookingId)
+        // Cancellation and its metadata must commit with a private email event
+        // through the verified server endpoint, never a direct SDK write.
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'cancellationReason', 'cancelledByRole', 'cancelledBy', 'cancelledAt'
+        ])
+        && (request.resource.data.status != 'cancelled' || resource.data.status == 'cancelled')
         && linkedAuditAction() == 'status_change'
         && request.resource.data.updatedAt == request.time
         && request.resource.data.updatedBy == request.auth.uid
@@ -511,15 +520,6 @@ service cloud.firestore {
         && request.resource.data.get('bookingReference', null)
           == resource.data.get('bookingReference', null)
         && (isAdmin()
-        || (isConsumer()
-          && resource.data.consumerId == request.auth.uid
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'status', 'updatedAt', 'updatedBy', 'lastAuditId'
-          ])
-          && resource.data.status in ['requested', 'confirmed', 'reschedule_requested']
-          && resource.data.get('treatmentStatus', 'not_started') == 'not_started'
-          && request.resource.data.status == 'cancelled'
-        )
         || (hasOperationalHospitalAccess(resource.data.hospitalId)
           && ((request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'status', 'confirmedDate', 'confirmedTime', 'hospitalNotes',

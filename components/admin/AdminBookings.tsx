@@ -16,6 +16,10 @@ import { PortalLoadGuard } from "@/components/portal/PortalLoadGuard";
 import { withPortalBookingDetails } from "@/services/bookings/portalBookingDetails";
 import { PortalBookingSummary } from "@/components/portal/PortalBookingSummary";
 import { PortalResultCount } from "@/components/portal/PortalResultCount";
+import { HospitalCancellationDialog } from "@/components/bookings/HospitalCancellationDialog";
+import { getTreatmentStatus } from "@/features/bookings/treatmentStatus";
+import { PortalToast } from "@/components/portal/PortalToast";
+import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 
 const BOOKING_STATUSES: readonly BookingStatus[] = [
   "requested", "confirmed", "reschedule_requested", "completed", "cancelled", "rejected",
@@ -29,6 +33,8 @@ export function AdminBookings({ bookingId }: { bookingId?: string } = {}) {
   const [status, setStatus] = useState<BookingStatus | "">("");
   const [month, setMonth] = useState("");
   const [detailsError, setDetailsError] = useState(false);
+  const [pendingCancellation, setPendingCancellation] = useState<DocumentRecord<BookingDocument> | null>(null);
+  const [message, setMessage, messageNotification] = useRepeatableMessage();
 
   useEffect(() => {
     const term = hospitalSearch.trim();
@@ -77,7 +83,7 @@ export function AdminBookings({ bookingId }: { bookingId?: string } = {}) {
       return page;
     }
   }, [bookingId, monthRange, selectedHospital, status]);
-  const { errorNotification: loadErrorNotification, items, error, isLoading, hasMore, loadMore } = usePaginatedList<BookingDocument>(
+  const { errorNotification: loadErrorNotification, items, error, isLoading, hasMore, loadMore, patchItem } = usePaginatedList<BookingDocument>(
     loader,
     "We could not load the bookings. Refresh the page and try again.",
   );
@@ -136,7 +142,13 @@ export function AdminBookings({ bookingId }: { bookingId?: string } = {}) {
       ? (hasFilters ? "No bookings match these filters. Adjust or clear the filters and try again." : "No bookings yet. New appointments will appear here.")
       : undefined} />
     {detailsError && <p className="portal-form-error" role="status">Some centre or package names could not be loaded. Booking details are still available. Refresh to retry.</p>}
-    <div className="portal-list consumer-booking-list admin-record-grid admin-booking-grid portal-record-grid portal-booking-grid">{items.map((item) => <PortalBookingSummary key={item.id} booking={item} showCommission />)}</div>
+    <PortalToast message={message} notification={messageNotification} />
+    <div className="portal-list consumer-booking-list admin-record-grid admin-booking-grid portal-record-grid portal-booking-grid">{items.map((item) => <PortalBookingSummary key={item.id} booking={item} showCommission>
+      {["requested", "confirmed", "reschedule_requested"].includes(item.status) && getTreatmentStatus(item) === "not_started" && <button className="portal-button danger" disabled={pendingCancellation !== null} onClick={() => setPendingCancellation(item)}>Cancel booking</button>}
+    </PortalBookingSummary>)}</div>
     <PortalPagination hasMore={hasMore} isLoading={isLoading} onLoadMore={() => void loadMore()} />
+    {pendingCancellation && <HospitalCancellationDialog key={pendingCancellation.id} booking={pendingCancellation} onClose={() => setPendingCancellation(null)} onSaved={changes => {
+      patchItem(pendingCancellation.id, changes); setPendingCancellation(null); setMessage("The booking has been cancelled.");
+    }} />}
   </PortalShell>;
 }
