@@ -13,26 +13,33 @@ export class AuthorizedApiError extends Error {
   constructor(message: string, public readonly status: number) { super(message); }
 }
 
+// A read started before a write must never be reused by its post-save refresh.
+// This is a request-generation marker, not a response cache or auth bypass.
+let readRevision = 0;
+
 export async function authorizedApiRequest<T>(url: string, options: AuthorizedRequestOptions): Promise<T> {
   const { signedOutMessage, failureMessage, ...requestOptions } = options;
   const user = getClientAuth().currentUser;
   if (!user) throw new Error(signedOutMessage);
 
   const method = (requestOptions.method ?? "GET").toUpperCase();
+  const mutation = ["POST", "PATCH", "PUT", "DELETE"].includes(method);
+  if (mutation) readRevision++;
   const headers = new Headers(requestOptions.headers);
   // Binary uploads and caller-controlled abort signals must remain independent.
-  const key = !requestOptions.signal && ["POST", "PATCH", "PUT", "DELETE"].includes(method)
+  const key = !requestOptions.signal && ["GET", "POST", "PATCH", "PUT", "DELETE"].includes(method)
     && (requestOptions.body == null || typeof requestOptions.body === "string")
-    ? JSON.stringify([user.uid, url, method, [...headers.entries()], requestOptions.body ?? null]) : null;
-  return shareInFlightRequest(key, async () => {
+    ? JSON.stringify([user.uid, url, method, method === "GET" ? readRevision : null, [...headers.entries()], requestOptions.body ?? null,
+      requestOptions.credentials, requestOptions.mode, requestOptions.redirect, requestOptions.referrer,
+      requestOptions.referrerPolicy, requestOptions.integrity, requestOptions.keepalive]) : null;
+  const result = await shareInFlightRequest(key, async () => {
     headers.set("Authorization", `Bearer ${await user.getIdToken()}`);
     const response = await fetch(url, { ...requestOptions, headers, cache: "no-store" });
     const body = await response.json().catch(() => ({})) as { error?: unknown } & T;
-    if (!response.ok) {
-      throw new AuthorizedApiError(typeof body.error === "string" && body.error ? body.error : failureMessage, response.status);
-    }
-    return body;
-  });
+    return { body, ok: response.ok, status: response.status };
+  }).finally(() => { if (mutation) readRevision++; });
+  if (!result.ok) throw new AuthorizedApiError(typeof result.body.error === "string" && result.body.error ? result.body.error : failureMessage, result.status);
+  return result.body;
 }
 
 export function decodeMutation(value: unknown): unknown {
@@ -46,10 +53,14 @@ export function decodeMutation(value: unknown): unknown {
   return value;
 }
 
+export function readMutationChanges<T>(changes: unknown, incompleteMessage = "The update response was incomplete. Refresh the page to check the saved record."): Partial<T> {
+  if (!changes || typeof changes !== "object" || Array.isArray(changes)) {
+    throw new Error(incompleteMessage);
+  }
+  return decodeMutation(changes) as Partial<T>;
+}
+
 export async function authorizedMutationRequest<T>(url: string, options: AuthorizedRequestOptions): Promise<Partial<T>> {
   const result = await authorizedApiRequest<{ changes: Record<string, unknown> }>(url, options);
-  if (!result.changes || typeof result.changes !== "object" || Array.isArray(result.changes)) {
-    throw new Error("The update response was incomplete. Refresh the page to check the saved record.");
-  }
-  return decodeMutation(result.changes) as Partial<T>;
+  return readMutationChanges<T>(result.changes);
 }

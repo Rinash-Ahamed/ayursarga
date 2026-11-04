@@ -6,6 +6,16 @@ const CONTRACT_FIELDS = [
   "emergencyContact", "emergencyReferralHospital", "commissionPercentage",
 ] as const;
 
+/** Signing and activation must accept exactly the same stored contract URLs. */
+export function validContractUrl(value: unknown) {
+  if (typeof value !== "string" || value.length > 500) return false;
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export function hospitalContractContent(hospital: Record<string, unknown>) {
   return JSON.stringify({ version: 1, ...Object.fromEntries(CONTRACT_FIELDS.map(field => {
     const value = field === "legalName" ? hospital.legalName || hospital.name

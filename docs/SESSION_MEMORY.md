@@ -2,6 +2,50 @@
 
 Updated: 4 November 2026 (Asia/Calcutta).
 
+## Conservative codebase cleanup (4 November 2026, v4.40.1)
+
+- Owner requested repository-wide dead-code/duplication/request/query/state
+  review without business changes, followed by build/lint/typecheck. Scanned
+  JavaScript/TypeScript references and function bodies across the source tree,
+  with a production import-graph pass including contexts/constants and implicit
+  Next entry points. No unimported production modules were confirmed. Preserved
+  framework routes, explicit maintenance/test entry points, tested provider
+  utilities, independent role state and safety-critical transactional rechecks.
+- Removed the uncalled public consultant list adapter, its unused page type,
+  four unreferenced type-only legacy document interfaces and their unused
+  RecordStatus alias. This does not remove collections, records, rules or APIs.
+  The first validation caught the leftover RecordStatus; it was removed and all
+  required checks rerun without suppressing lint/type rules.
+- Reused one FieldError renderer across Hospital/Consultant forms and contract
+  particulars with identical alert markup. Contract signing/activation share the
+  exact same HTTPS/500-character URL validator. Availability audits reuse the
+  existing requestAuditDevice helper. Shared booking filter construction retains
+  role scope, field ordering, timestamps, cursor and query count. No UI redesign.
+- Shared readMutationChanges validates/decodes saved deltas for generic updates,
+  consultation updates and refunds, retaining each original incomplete-response
+  message and email metadata. Initial refund submission and explicit recovery
+  reuse submitClaimedRefund; authorization, claims, provider idempotency keys,
+  fee/commission capture, outcome handling and audit boundaries are unchanged.
+- Authenticated identical overlapping GETs now share transport/token acquisition
+  (measured local test: two concurrent calls -> one fetch). Results/failures are
+  not cached or automatically retried. Keys retain user/URL/method/headers/body/
+  request-option boundaries; aborted/binary requests remain independent. Shared
+  API writes advance a read generation before/after completion, so post-save
+  refreshes cannot join pre-save reads. Per-caller error fallback processing is
+  outside shared transport. Server auth and Firestore revalidation remain intact.
+- Validation: 57 focused cleanup/contract/refund/auth/availability/mutation/API
+  regressions plus 13 public discovery/comparison/request checks passed (70
+  distinct cases). Nine mocked browser checks passed across desktop, 320px phone
+  and mobile WebKit, covering consultant edits, contract revisions and form error
+  layout. Final production build, lint (no warnings), standalone typecheck and
+  git diff --check passed. Same-build local /api/health?deep=true JSON and themed
+  /health?deep=true returned 200; deep-configuration report had all six services
+  ready. Health is configuration-only, not live delivery/provider proof.
+- Temporary production server stopped; generated next-env route import restored
+  and tsconfig.tsbuildinfo removed. No live records, emails, payments, refunds,
+  rules/indexes, dependencies or environment settings changed; no deployment.
+  Prior native emulator/real Razorpay Test-mode validation limits still apply.
+
 ## Admin consultation Cancel & Refund (4 November 2026, v4.40.0)
 
 - Owner approved consultation-only refund execution, a simple Admin dialog and

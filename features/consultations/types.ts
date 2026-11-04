@@ -9,7 +9,6 @@ export type PublicConsultant = {
   preferredDays?: import("@/features/consultants/validation").ConsultantWeekDay[];
   availableDates?: string[];
 };
-export type ConsultantPage = { documents: PublicConsultant[]; cursor: number | null; hasMore: boolean };
 export type AvailableConsultant = PublicConsultant & {
   availabilityDate: string;
   availabilityService: string;

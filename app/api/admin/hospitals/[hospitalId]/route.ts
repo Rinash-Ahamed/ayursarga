@@ -9,7 +9,7 @@ import { isFirebaseAdminReady } from "@/services/firebase/admin";
 import { apiHealth, apiJson, logApiError } from "@/services/api/server";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { validateHospitalContractDetails } from "@/features/hospitals/contractDetails";
-import { hospitalContractContent, hospitalContractRevision } from "@/features/hospitals/contractApproval";
+import { hospitalContractContent, hospitalContractRevision, validContractUrl } from "@/features/hospitals/contractApproval";
 
 export const runtime = "nodejs";
 
@@ -26,16 +26,6 @@ const HOSPITAL_ADMIN_ACTIONS: readonly HospitalAdminAction[] = ["update", "contr
 
 function handleGET() {
   return apiHealth("/api/admin/hospitals/[hospitalId]", [{ name: "firebaseAdmin", ready: isFirebaseAdminReady() }]);
-}
-
-function validContractUrl(value: unknown) {
-  if (typeof value !== "string" || value.length > 500) return false;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:";
-  } catch {
-    return false;
-  }
 }
 
 async function handlePATCH(request: Request, context: { params: Promise<{ hospitalId: string }> }) {

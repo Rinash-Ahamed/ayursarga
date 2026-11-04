@@ -3,16 +3,13 @@
 import { useState } from "react";
 import { IndiaStateDistrictFields } from "@/components/forms/IndiaStateDistrictFields";
 import type { HospitalDocument } from "@/features/firestore/models";
-import type { HospitalField, HospitalValidationErrors } from "@/features/hospitals/validation";
+import type { HospitalValidationErrors } from "@/features/hospitals/validation";
+import { FieldError } from "@/components/forms/FieldError";
 import { PhoneInput } from "@/components/forms/PhoneInput";
 
 type HospitalFormDefaults = Partial<Pick<HospitalDocument,
   "legalName" | "name" | "email" | "phone" | "hospitalPhone1" | "hospitalPhone2" | "city" | "district" | "state" | "registeredAddress" | "address" | "commissionPercentage"
 >>;
-
-function FieldError({ field, errors }: { field: HospitalField; errors: HospitalValidationErrors }) {
-  return errors[field] ? <span className="portal-field-error" role="alert">{errors[field]}</span> : null;
-}
 
 export function HospitalFormFields({
   defaultValues = {},

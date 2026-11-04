@@ -5,22 +5,12 @@ import { hasMinimumHospitalImages, MIN_PUBLIC_HOSPITAL_IMAGES } from "@/features
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
 import { apiHealth, apiJson, logApiError } from "@/services/api/server";
-import { hasCurrentHospitalContract } from "@/features/hospitals/contractApproval";
+import { hasCurrentHospitalContract, validContractUrl } from "@/features/hospitals/contractApproval";
 
 export const runtime = "nodejs";
 
 function handleGET() {
   return apiHealth("/api/admin/hospitals/[hospitalId]/activate", [{ name: "firebaseAdmin", ready: isFirebaseAdminReady() }]);
-}
-
-function validContractUrl(value: unknown) {
-  if (typeof value !== "string" || value.length > 500) return false;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:";
-  } catch {
-    return false;
-  }
 }
 
 async function handlePOST(request: Request, context: { params: Promise<{ hospitalId: string }> }) {

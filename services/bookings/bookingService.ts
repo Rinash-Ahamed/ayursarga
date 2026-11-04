@@ -98,6 +98,14 @@ type HospitalBookingFilters = {
   createdBefore?: Date;
 };
 
+function bookingPeriodFilters(input: HospitalBookingFilters): NonNullable<QueryPageOptions["filters"]> {
+  const filters: NonNullable<QueryPageOptions["filters"]> = [];
+  if (input.status) filters.push({ field: "status", operator: "==", value: input.status });
+  if (input.createdFrom) filters.push({ field: "createdAt", operator: ">=", value: Timestamp.fromDate(input.createdFrom) });
+  if (input.createdBefore) filters.push({ field: "createdAt", operator: "<", value: Timestamp.fromDate(input.createdBefore) });
+  return filters;
+}
+
 export function listHospitalBookings(
   hospitalId: string,
   input: HospitalBookingFilters = {},
@@ -106,18 +114,10 @@ export function listHospitalBookings(
   const filters: NonNullable<QueryPageOptions["filters"]> = [
     { field: "hospitalId", operator: "==", value: hospitalId },
   ];
-  if (input.status) filters.push({ field: "status", operator: "==", value: input.status });
-  if (input.createdFrom) filters.push({ field: "createdAt", operator: ">=", value: Timestamp.fromDate(input.createdFrom) });
-  if (input.createdBefore) filters.push({ field: "createdAt", operator: "<", value: Timestamp.fromDate(input.createdBefore) });
-  return listBookings(filters, options);
+  return listBookings([...filters, ...bookingPeriodFilters(input)], options);
 }
 
-type AdminBookingFilters = {
-  hospitalId?: string;
-  status?: BookingStatus;
-  createdFrom?: Date;
-  createdBefore?: Date;
-};
+type AdminBookingFilters = HospitalBookingFilters & { hospitalId?: string };
 
 export function listAdminBookings(
   input: AdminBookingFilters,
@@ -125,10 +125,7 @@ export function listAdminBookings(
 ) {
   const filters: NonNullable<QueryPageOptions["filters"]> = [];
   if (input.hospitalId) filters.push({ field: "hospitalId", operator: "==", value: input.hospitalId });
-  if (input.status) filters.push({ field: "status", operator: "==", value: input.status });
-  if (input.createdFrom) filters.push({ field: "createdAt", operator: ">=", value: Timestamp.fromDate(input.createdFrom) });
-  if (input.createdBefore) filters.push({ field: "createdAt", operator: "<", value: Timestamp.fromDate(input.createdBefore) });
-  return listBookings(filters, options);
+  return listBookings([...filters, ...bookingPeriodFilters(input)], options);
 }
 
 export function cancelHospitalBooking(id: string, cancellationReason: string, expectedAuditId: string) {

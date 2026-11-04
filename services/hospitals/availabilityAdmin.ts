@@ -1,6 +1,7 @@
 import "server-only";
 
 import { FieldValue, Timestamp, type DocumentReference, type Firestore, type Transaction } from "firebase-admin/firestore";
+import { requestAuditDevice as device } from "@/services/api/audit";
 
 type StoredRange = { availabilityId: string; startDate: Timestamp; endDate: Timestamp };
 
@@ -9,14 +10,6 @@ export class AvailabilityOperationError extends Error {
     super(message);
     this.name = "AvailabilityOperationError";
   }
-}
-
-function device(request: Request) {
-  return {
-    userAgent: request.headers.get("user-agent")?.slice(0, 500) || null,
-    platform: null,
-    ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
-  };
 }
 
 function indiaDateKey(date: Date) {

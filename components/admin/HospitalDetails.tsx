@@ -35,7 +35,8 @@ import { validateHospitalLocationUrl } from "@/features/hospitals/location";
 import { CentreGuidelines } from "@/components/hospital/CentreGuidelines";
 import { AdminHospitalCapacity } from "@/components/admin/HospitalCapacity";
 import { ContractPreviewDialog } from "@/components/admin/ContractPreviewDialog";
-import { validateHospitalContractDetails, type HospitalContractDetailErrors, type HospitalContractDetailField } from "@/features/hospitals/contractDetails";
+import { validateHospitalContractDetails, type HospitalContractDetailErrors } from "@/features/hospitals/contractDetails";
+import { FieldError as ContractFieldError } from "@/components/forms/FieldError";
 import { focusFirstInvalidField } from "@/utils/formFocus";
 import { hospitalContractContent, hasCurrentHospitalContract } from "@/features/hospitals/contractApproval";
 
@@ -73,10 +74,6 @@ function updateContractExpiry(event: ChangeEvent<HTMLInputElement>) {
   expiryInput.value = addYearsToDateInput(event.currentTarget.value, 3);
   expiryInput.min = event.currentTarget.value;
   expiryInput.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
-function ContractFieldError({ field, errors }: { field: HospitalContractDetailField; errors: HospitalContractDetailErrors }) {
-  return errors[field] ? <span className="portal-field-error" role="alert">{errors[field]}</span> : null;
 }
 
 function ContractStepMarker({ step, done, active = false }: { step: number; done: boolean; active?: boolean }) {

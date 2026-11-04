@@ -1,8 +1,6 @@
 import type { Timestamp } from "firebase/firestore";
 import type { PortalRole, UserStatus } from "@/features/auth/contracts";
 
-type RecordStatus = "active" | "inactive" | "pending" | "archived";
-
 type AuditedDocument = {
   createdAt: Timestamp;
   createdBy: string;
@@ -232,21 +230,6 @@ export type ConsultationBookingDocument = AuditedDocument & import("@/features/b
   bookingTermsAcceptedAt: Timestamp; bookingTermsVersion: string;
 };
 
-export type HospitalStaffDocument = AuditedDocument & {
-  uid: string;
-  hospitalId: string;
-  name: string;
-  email: string;
-  status: RecordStatus;
-};
-
-export type DoctorDocument = AuditedDocument & {
-  hospitalId: string;
-  name: string;
-  speciality: string;
-  status: RecordStatus;
-};
-
 export type AvailabilityDocument = AuditedDocument & {
   hospitalId: string;
   hospitalName: string;
@@ -257,16 +240,6 @@ export type AvailabilityDocument = AuditedDocument & {
   status: "pending" | "blocked" | "rejected" | "cancelled";
   reviewedAt: Timestamp | null;
   reviewedBy: string | null;
-};
-
-export type PaymentDocument = AuditedDocument & {
-  bookingId: string;
-  consumerId: string;
-  hospitalId: string;
-  providerReference: string;
-  amount: number;
-  currency: string;
-  status: "pending" | "completed" | "failed" | "refunded" | "archived";
 };
 
 export type NotificationDocument = AuditedDocument & {
@@ -307,10 +280,4 @@ export type AuditLogDocument = {
     platform: string | null;
     ipAddress: string | null;
   };
-};
-
-export type SystemSettingDocument = AuditedDocument & {
-  key: string;
-  value: unknown;
-  status: "active" | "archived";
 };

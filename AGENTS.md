@@ -554,6 +554,11 @@ to deploy, rerun maintenance scripts, or modify live data.
   it does not authorize commits, tags, publishing or deployment.
 - Reuse existing services, validation, helpers, and components. Avoid duplicate
   folders, parallel abstractions, and speculative dependencies.
+- Shared API reads may coalesce identical overlapping requests only, never cache
+  completed responses. Keep user/options/abort scopes isolated, retain each
+  caller's error message and invalidate the read generation around shared API writes so
+  post-save refreshes cannot reuse a pre-save request. Keep server authorization,
+  transactional rereads and synchronous duplicate-submission guards intact.
 - For each implementation update affecting persisted fields or workflows, trace
   the caller through the actual API or direct SDK write, shared validation,
   Firestore field allowlists AND changed-field allowlists, role authorization,

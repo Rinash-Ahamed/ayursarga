@@ -104,8 +104,13 @@ export async function initiateConsultationRefund(firestore: Firestore, bookingId
     return true;
   });
   if (!claimed) return checkConsultationRefund(firestore, bookingId, actorId);
-  let refund: RazorpayRefund | undefined;
-  try { refund = await createRazorpayRefund(payment.id, input.amountPaise, id); }
+  return submitClaimedRefund(firestore, id, actorId, payment.id, input.amountPaise);
+}
+
+/** Initial submission and explicit recovery share the exact same provider contract. */
+async function submitClaimedRefund(firestore: Firestore, id: string, actorId: string, paymentId: string, amountPaise: number) {
+  let refund: RazorpayRefund;
+  try { refund = await createRazorpayRefund(paymentId, amountPaise, id); }
   catch (error) {
     const rejected = error instanceof RazorpayError && error.code === "API" && !error.outcomeUnknown && error.httpStatus !== 409;
     return recordRefundOutcome(firestore, id, actorId, undefined, rejected ? "provider_rejected" : "provider_outcome_unconfirmed");
@@ -121,18 +126,14 @@ export async function checkConsultationRefund(firestore: Firestore, bookingId: s
   if (typeof id !== "string" || !/^ar_[a-f0-9]{32}$/.test(id)) throw new ConsultationPaymentError("No refund request is recorded for this booking.", 404);
   const saved = (await firestore.collection(COLLECTION).doc(id).get()).data();
   if (!saved || saved.bookingId !== bookingId || saved.mode !== getRazorpayReadiness().mode) throw new ConsultationPaymentError("Refund details need manual verification.");
-  let refund = saved.providerId ? await fetchRazorpayRefund(saved.paymentId, saved.providerId)
+  const refund = saved.providerId ? await fetchRazorpayRefund(saved.paymentId, saved.providerId)
     : (await listRazorpayRefunds(saved.paymentId)).find(r => r.receipt === id);
   if (!refund && ["checking", "unknown"].includes(saved.status)) {
     const booking = (await firestore.collection("consultationBookings").doc(bookingId).get()).data();
     checkFinancial(bookingId, booking, financial);
     if (booking!.status !== "cancelled" || financial!.refundPendingId !== id || !financial!.settlementHold
       || financial!.settlementStatus !== "pending" || financial!.settlementReference) throw new ConsultationPaymentError("This refund needs Finance reconciliation.");
-    try { refund = await createRazorpayRefund(saved.paymentId, saved.amountPaise, id); }
-    catch (error) {
-      const rejected = error instanceof RazorpayError && error.code === "API" && !error.outcomeUnknown && error.httpStatus !== 409;
-      return recordRefundOutcome(firestore, id, actorId, undefined, rejected ? "provider_rejected" : "provider_outcome_unconfirmed");
-    }
+    return submitClaimedRefund(firestore, id, actorId, saved.paymentId, saved.amountPaise);
   }
   return recordRefundOutcome(firestore, id, actorId, refund, refund ? undefined : "provider_outcome_unconfirmed");
 }

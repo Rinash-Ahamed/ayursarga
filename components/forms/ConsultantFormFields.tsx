@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import type { ConsultantDocument } from "@/features/firestore/models";
-import type { ConsultantField, ConsultantValidationErrors } from "@/features/consultants/validation";
+import type { ConsultantValidationErrors } from "@/features/consultants/validation";
+import { FieldError } from "@/components/forms/FieldError";
 import { CONSULTANT_WEEK_DAYS, CONSULTANT_DAY_LABELS, CONSULTANT_TIME_SLOTS, CONSULTANT_TIME_SLOT_CONFIG, type ConsultantTimeSlot } from "@/features/consultants/validation";
 import { PhoneInput } from "@/components/forms/PhoneInput";
 import { DateInput } from "@/components/forms/DateInput";
@@ -13,10 +14,6 @@ import { formatCurrency } from "@/utils/currency";
 import { CONSULTANT_TITLES } from "@/features/consultants/name";
 
 type ConsultantDefaults = Partial<ConsultantDocument>;
-
-function FieldError({ field, errors }: { field: ConsultantField; errors: ConsultantValidationErrors }) {
-  return errors[field] ? <span className="portal-field-error" role="alert">{errors[field]}</span> : null;
-}
 
 export function ConsultantFormFields({ defaultValues = {}, errors }: {
   defaultValues?: ConsultantDefaults;
