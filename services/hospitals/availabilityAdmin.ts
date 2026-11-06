@@ -52,7 +52,8 @@ function validateRange(startDate: Date, endDate: Date) {
 }
 
 async function activeHospitalRecipientIds(firestore: Firestore, hospitalId: string) {
-  const snapshot = await firestore.collection("users").where("hospitalId", "==", hospitalId).get();
+  const snapshot = await firestore.collection("users").where("hospitalId", "==", hospitalId).limit(21).get();
+  if (snapshot.size > 20) throw new AvailabilityOperationError("This centre's notification list needs review. Contact Ayursarga before trying again.", 409);
   return snapshot.docs
     .filter((item) => item.data().role === "hospital" && item.data().status === "active")
     .map((item) => item.id);

@@ -83,8 +83,9 @@ test("invitation failure preserves provisioned records and reports retry instead
     assert.equal(body.emailSent, undefined);
     assert.equal(f.calls.commits, 1);
     assert.ok(f.records.has("users/partner"));
-    assert.equal(logs.length, 1);
-    assert.ok(!logs[0].includes("Sensitive"));
+    assert.equal(logs.filter(line => line === "Hospital login setup or invitation delivery failed.").length, 1);
+    assert.equal(logs.filter(line => line.includes('"event":"api_failed_response"')).length, 1);
+    assert.ok(logs.every(line => !line.includes("Sensitive")));
   } finally { console.error = oldError; }
 });
 

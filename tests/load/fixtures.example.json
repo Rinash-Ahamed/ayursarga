@@ -1,0 +1,11 @@
+{
+  "baseUrl": "https://staging.example.test",
+  "projectId": "ayursarga-staging-example",
+  "isolated": false,
+  "emailDeliverySandboxed": false,
+  "razorpayMode": "test",
+  "hospitalId": "synthetic-centre",
+  "search": "Synthetic",
+  "serviceName": "7-day package",
+  "users": []
+}

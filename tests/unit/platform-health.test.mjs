@@ -41,12 +41,12 @@ test("JSON health status matches shared checks, disables caching and preserves d
   for (const options of [{}, { authEmailMissing: true }]) {
     const f = fixture(options);
     const route = loadTypeScript("app/api/health/route.ts", { "@/services/api/platformHealth": f });
-    const response = route.GET(new Request("https://test.local/api/health?deep=true", { headers: { accept: "application/json" } }));
+    const response = await route.GET(new Request("https://test.local/api/health?deep=true", { headers: { accept: "application/json" } }));
     assert.equal(response.status, options.authEmailMissing ? 503 : 200);
     assert.equal(response.headers.get("cache-control"), "no-store");
     const body = await response.json();
     assert.equal(body.mode, "deep-configuration");
-    const redirect = route.GET(new Request("https://test.local/api/health?deep=true", { headers: { accept: "text/html" } }));
+    const redirect = await route.GET(new Request("https://test.local/api/health?deep=true", { headers: { accept: "text/html" } }));
     assert.equal(redirect.status, 307);
     assert.equal(redirect.headers.get("location"), "https://test.local/health?deep=true");
   }

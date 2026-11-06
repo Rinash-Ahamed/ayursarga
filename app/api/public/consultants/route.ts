@@ -4,6 +4,7 @@ import { apiJson, logApiError } from "@/services/api/server";
 import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
 import { consultationService } from "@/features/consultations/catalog";
 import { publicConsultantProjection } from "@/features/consultations/publicProjection";
+import { getConsultantPricing } from "@/features/consultants/pricing";
 
 export const runtime = "nodejs";
 
@@ -28,7 +29,14 @@ async function handleGET(request: Request) {
     if (rawCursor) query = query.startAfter(Number(rawCursor));
     const snapshot = await timeApiStep("database", () => query.limit(13).get());
     const page = snapshot.docs.slice(0, 12);
-    return apiJson({ documents: page.map((doc) => publicConsultantProjection(doc.id, doc.data(), service.id)).filter(Boolean),
+    return apiJson({ documents: page.flatMap((doc) => {
+      const data = doc.data();
+      const pricing = getConsultantPricing(data.consultantCharge, data.ayursargaCommissionPercentage);
+      // This list starts a paid booking. Keep exact legacy lookups unchanged.
+      if (!pricing || pricing.totalCharge < 1) return [];
+      const consultant = publicConsultantProjection(doc.id, data, service.id);
+      return consultant ? [consultant] : [];
+    }),
       cursor: page.length ? Number(page[page.length - 1].data().employeeSequence) : null, hasMore: snapshot.docs.length > 12 });
   } catch (error) {
     logApiError("GET /api/public/consultants", error);

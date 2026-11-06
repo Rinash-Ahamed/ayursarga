@@ -231,5 +231,10 @@
       ]
     }
   ],
-  "fieldOverrides": [{ "collectionGroup": "consultationSlotDays", "fieldPath": "entries", "indexes": [] }]
+  "fieldOverrides": [
+    { "collectionGroup": "consultationSlotDays", "fieldPath": "entries", "indexes": [] },
+    { "collectionGroup": "auditLogs", "fieldPath": "previousValues", "indexes": [] },
+    { "collectionGroup": "auditLogs", "fieldPath": "updatedValues", "indexes": [] },
+    { "collectionGroup": "auditLogs", "fieldPath": "device", "indexes": [] }
+  ]
 }

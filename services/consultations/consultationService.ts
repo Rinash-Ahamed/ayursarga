@@ -8,6 +8,15 @@ import type { ConsultationEmailResult } from "@/features/consultations/email";
 import { readDocument, runFilteredQuery, type QueryPageOptions } from "@/services/firestore/firestoreService";
 import type { AppointmentSlot } from "@/features/consultations/slots";
 
+export async function listPublicConsultants(service: string, cursor: number | null = null): Promise<{ documents: PublicConsultant[]; cursor: number | null; hasMore: boolean }> {
+  const params = new URLSearchParams({ service });
+  if (cursor !== null) params.set("cursor", String(cursor));
+  const response = await fetch(`/api/public/consultants?${params}`, { cache: "no-store" });
+  const result = await response.json();
+  if (!response.ok) throw new Error(typeof result.error === "string" ? result.error : "Consultants could not be loaded. Please try again.");
+  return result;
+}
+
 export function listConsultationAvailability(service: string, date: string, cursor: number | null = null) {
   const params = new URLSearchParams({service, date});
   if (cursor !== null) params.set("cursor", String(cursor));

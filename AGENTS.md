@@ -153,6 +153,12 @@ to deploy, rerun maintenance scripts, or modify live data.
   browser Storage access is denied by `storage.rules`; only individual gallery
   download-token URLs are public. Configure the server-only
   `FIREBASE_STORAGE_BUCKET` in local and hosting environments.
+  Gallery and consultant photo uploads share browser preparation before their
+  existing authenticated endpoints: preserve source limits, aspect ratio and
+  actual encoded MIME type, cap the longest edge at 1600 px without upscaling,
+  and reject output above 3 MB before making a request. Keep server format/pixel/
+  ownership/revision validation and re-encoding; browser preparation is not a
+  security boundary or permission to use direct Storage writes.
   The first gallery photo is the Search-card cover; label it in image management.
   Allow gradual uploads but require at least five distinct valid image URLs
   before activation/publication. Live public centres cannot remove/replace
@@ -287,15 +293,17 @@ to deploy, rerun maintenance scripts, or modify live data.
   records and their supported handling without silently migrating data.
 - Online Wellness Path appointments use the separate `consultationBookings`
   collection and authenticated server endpoints, not hospital `bookings` or
-  invented hospital/service IDs. Consumer booking selection follows date ->
-  available generated time -> matching consultants with visible total fees ->
-  payment. Authenticated date-first availability uses bounded cursor pages of
-  eligible consultants and safe projections; do not fetch the whole collection
-  or issue one browser request per consultant. Keep pagination visible even when
-  a scanned page has no matching times. Recheck the selected consultant quietly
-  and retain the authoritative transactional payment/slot checks. Date/time
-  changes clear the previous consultant/consent and stale-date responses must
-  not replace the current choices. Creation snapshots consultant/service, charge,
+  invented hospital/service IDs. Consumer booking selection follows consultant
+  with visible total fee -> allowed date -> available generated time -> payment
+  (owner restored consultant-first selection on 6 November 2026). Use bounded
+  cursor pages from the safe public projection; list only payment-eligible
+  consultants, without changing exact legacy lookups. Keep pagination visible
+  even when a scanned page contains no eligible cards. Fetch slots only for the
+  selected consultant/date; never fetch the whole collection or one request per
+  card. Consultant changes clear date/time/consent; date changes clear time/consent;
+  time changes clear consent. Ignore stale service/date/consultant responses.
+  Retain quiet slot refresh and authoritative transactional payment/slot checks.
+  Creation snapshots consultant/service, charge,
   preferred India care date/window, Consumer contacts and mandatory versioned
   booking consent; requests, audits and addressed bell notifications commit
   atomically. Stable request IDs prevent retries from duplicating appointments.
@@ -516,6 +524,16 @@ to deploy, rerun maintenance scripts, or modify live data.
   database data. All API methods use shared request-local withApiTiming; retain
   revocation/profile/MFA checks. Timing headers and slow logs contain only fixed
   route templates, numeric stages and status, never request data or identifiers.
+- `API_METRICS_ENABLED` is opt-in server-only diagnostic logging, off by default.
+  Process CPU deltas/RSS/heap snapshots are not per-request attribution under
+  concurrency or Firestore billed-operation counts. Keep error/metric logs free
+  of caller data, and do not claim configuration health proves capacity.
+- Load tests belong only on explicitly verified isolated staging with separate
+  Firebase/Auth/Storage, Test-mode payments and sandboxed email. Keep the k6
+  production-host/project guards and separate mutation acknowledgement. A local
+  fixture's isolation flags are operator assertions, not server attestation.
+  Never run heavy production load or create test records there without fresh
+  explicit owner authorization. Do not deploy as an implied audit step.
 - Consultation changes return committed data and truthful email queue statuses;
   Next after processes the existing durable per-recipient email events after the
   response. Preserve current-revision checks, single claims, failure/uncertainty

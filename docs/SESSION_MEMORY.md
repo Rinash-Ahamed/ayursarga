@@ -1,6 +1,75 @@
 # Session handoff
 
-Updated: 4 November 2026 (Asia/Calcutta).
+Updated: 6 November 2026 (Asia/Calcutta).
+
+## Production-readiness audit (6 November 2026, v4.41.1)
+
+- Full findings, evidence, launch gates and measured/untested distinctions are
+  in `docs/PRODUCTION_READINESS_2026-11-06.md`. No deployment, live authenticated
+  mutation, email, payment/refund, destructive operation or load test was run.
+  Owner confirmed everything currently uses production; isolated staging is
+  required before running prepared k6 workloads (10/50/100/500/1,000 VUs).
+- Safe fixes: strict Hospital availability calendar dates; bounded Admin/Hospital
+  notification recipients with overflow rejection; public directory database
+  field masks; removed unused owner WhatsApp from public centre detail; sanitized
+  shared 5xx logs and opt-in numeric process/timing metrics; disabled framework
+  branding. Metrics are not billed Firestore counts or per-request CPU proof.
+- Owner approved automatic photo resizing. Hospital galleries already resized;
+  consultant uploads previously sent originals up to 8 MB. Both now share browser
+  preparation with a 1600 px longest-edge/no-upscale limit and <=3 MB output,
+  actual encoded MIME (including PNG fallback), source/pixel checks and cleanup.
+  Existing source limits, server validation, authorization, re-encoding and photo
+  revision protection remain. Browser preparation is not a security boundary.
+- Prepared three audit-map index exemptions, not deployed. Firestore rules did
+  not change. Firebase CLI credentials expired, but read-only REST metadata via
+  the existing application service account verified local/deployed rules source
+  parity, all 33 composite indexes READY/matching, and Native asia-south1.
+- Important verified operational gap: no scheduled Firestore backups; PITR and
+  database deletion protection disabled. No setting was changed. Owner must
+  approve/configure recovery and rehearse restore separately. Previously exposed
+  Admin/Gmail credentials still need confirmed rotation/revocation.
+- Baseline/full audit checks and responsive browser results are in the report.
+  Latest build/lint/typecheck and same-build API/health smoke passed after the
+  photo fix (5/5 HTTP smoke; 16 protected-request denials). Final full unit suite
+  was 432/433; one stale raw-photo fixture was corrected and its 3/3 file passed
+  on rerun (433 distinct cases passed across runs). Earlier browser suites covered
+  198 distinct passing cases and one conditional skip; real Chromium/WebKit
+  encoding is additionally covered by the three new photo tests.
+  Native rules/concurrency tests require a supported JDK (PATH has
+  Java 8); physical devices, real provider delivery/capture/refunds, actual Vercel
+  peak resource/cost metrics and staging capacity remain unverified.
+- Do not infer a separate backend/CPU upgrade is needed. Fix recovery gates,
+  establish isolated staging and measure contention/read amplification/SMTP
+  recovery before architectural changes. No measured capacity guarantee exists.
+
+## Restored consultant-first consumer booking (6 November 2026, v4.41.0)
+
+- Owner requested reversing the date-first experiment. The online booking form
+  now shows paginated consultant cards and their total fees first, then the
+  selected consultant's allowed appointment dates and available generated slots.
+  Consultant changes reset date/time/consent; date changes reset time/consent;
+  time changes reset consent. Search Center booking is unchanged.
+- Reused the existing bounded public consultants projection/list route and
+  authenticated slot endpoint/hook. Only the selected consultant/date loads slot
+  data, with existing quiet refresh, abort/stale-response protection and explicit
+  retry controls. Empty filtered pages retain Load more consultants. The public
+  list excludes missing commission configuration and totals below INR 1, matching
+  checkout eligibility; exact legacy consultant lookups remain unchanged.
+- Reviewed the existing server payment transaction and rules: current provider,
+  fee/window, date, generated slot, consent, cancellation policy and overlap/hold
+  checks remain authoritative. No payment, refund, email, booking-write, audit,
+  permission, index or Firestore rule changes. No live mutations or deployment.
+- Updated AGENTS.md to preserve the restored order and regression fixtures/tests.
+  Backend checks: 57 booking/slot regressions passed, then 3 focused public API
+  cases passed after the list filter update (58 distinct cases including the new
+  eligibility/pagination/privacy regression). Initial browser run exposed an
+  async fixture page-spread error, fixed in the test fixture, not hidden with
+  forced clicks. The subsequent 36 mocked browser checks passed across desktop,
+  320px mobile Chromium and mobile WebKit. All 18 final consultant-first checks
+  passed, including control order and discovery-error retry (39 distinct browser
+  cases across the runs). git diff --check passed. No physical-device or
+  live Razorpay testing. Build/lint/typecheck were not requested for this task
+  and have not been rerun; prior v4.40.1 results do not validate this version.
 
 ## Conservative codebase cleanup (4 November 2026, v4.40.1)
 

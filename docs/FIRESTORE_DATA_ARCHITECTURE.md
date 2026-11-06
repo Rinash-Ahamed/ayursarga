@@ -1,5 +1,11 @@
 # Firestore data protection and audit architecture
 
+> Historical foundation model: consult `AGENTS.md`, `docs/SESSION_MEMORY.md` and
+> [the current readiness audit](PRODUCTION_READINESS_2026-11-06.md) for shipped
+> consultation/payment collections, native Admin MFA, Storage uploads and current
+> package/contract workflows. Preserve older records; do not infer a migration or
+> permission change from the original phase descriptions below.
+
 ## Collection boundaries
 
 The application keeps the existing top-level `services` collection to preserve

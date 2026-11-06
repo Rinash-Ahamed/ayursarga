@@ -1,5 +1,10 @@
 # Firebase foundation
 
+> Historical setup notes: Ayursarga now uses Blaze, Admin Storage and Next.js
+> APIs hosted on Vercel. Do not follow the old Spark/static-Hosting scope below
+> as current deployment guidance. Use `AGENTS.md`, `.env.example` and
+> [the current readiness audit](PRODUCTION_READINESS_2026-11-06.md).
+
 The current scope uses Spark-compatible Firebase Authentication, Cloud
 Firestore, static Firebase Hosting, Security Rules, and the Local Emulator
 Suite. Cloud Functions and Firebase Storage are intentionally not configured.

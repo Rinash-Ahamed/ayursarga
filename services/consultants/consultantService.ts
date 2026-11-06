@@ -8,12 +8,14 @@ import { COLLECTIONS } from "@/constants/firestore";
 import { runStatusOrderedQuery, type StatusOrderedOptions } from "@/services/firestore/statusOrderedQuery";
 import { authorizedApiRequest, decodeMutation } from "@/services/api/client";
 import { consultantPhotoFileError } from "@/features/consultants/photo";
+import { prepareImageUpload } from "@/utils/prepareImageUpload";
 
 export async function uploadConsultantPhoto(consultantId: string, file: File, expectedImageUrl?: string | null) {
   const error = consultantPhotoFileError(file);
   if (error) throw new Error(error);
+  const image = await prepareImageUpload(file, 8 * 1024 * 1024);
   const result = await authorizedApiRequest<{ imageUrl: string }>(`/api/admin/consultants/${encodeURIComponent(consultantId)}/image`, {
-    method: "POST", headers: { "Content-Type": file.type, "X-Expected-Image-Url": expectedImageUrl ?? "" }, body: file,
+    method: "POST", headers: { "Content-Type": image.type, "X-Expected-Image-Url": expectedImageUrl ?? "" }, body: image,
     signedOutMessage: "Sign in as Admin to upload a consultant photo.", failureMessage: "We could not save the consultant photo. Refresh to check the current photo before trying again.",
   });
   if (typeof result.imageUrl !== "string" || !result.imageUrl) throw new Error("Refresh to check whether the photo was saved before trying again.");

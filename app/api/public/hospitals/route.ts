@@ -3,7 +3,7 @@ import { FieldPath } from "firebase-admin/firestore";
 import { hasPublishedPackage } from "@/features/hospitals/packageReview";
 import { apiJson, logApiError } from "@/services/api/server";
 import { getFirebaseAdminFirestore } from "@/services/firebase/admin";
-import { publicHospitalListProjection, publicPageSize, validPublicDocumentId } from "@/services/hospitals/publicProjection";
+import { PUBLIC_HOSPITAL_LIST_READ_FIELDS, publicHospitalListProjection, publicPageSize, validPublicDocumentId } from "@/services/hospitals/publicProjection";
 import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
 
 export const runtime = "nodejs";
@@ -33,11 +33,11 @@ async function handleGET(request: Request) {
           serviceQuery = serviceQuery.startAfter(cursorSnapshot);
         }
       }
-      const serviceSnapshot = await timeApiStep("database", () => serviceQuery.get());
+      const serviceSnapshot = await timeApiStep("database", () => serviceQuery.select("hospitalId", "reviewStatus", "publishedAt").get());
       const page = serviceSnapshot.docs.slice(0, pageSize);
       const hospitalIds = [...new Set(page.filter((document) => hasPublishedPackage(document.data())).map((document) => String(document.data().hospitalId ?? "")).filter(Boolean))];
       const hospitalSnapshots = hospitalIds.length
-        ? await timeApiStep("database", () => firestore.getAll(...hospitalIds.map((id) => firestore.collection("hospitals").doc(id))))
+        ? await timeApiStep("database", () => firestore.getAll(...hospitalIds.map((id) => firestore.collection("hospitals").doc(id)), { fieldMask: PUBLIC_HOSPITAL_LIST_READ_FIELDS }))
         : [];
       const documents = hospitalSnapshots
         .filter((document) => document.exists && document.data()?.status === "active" && document.data()?.isPublic === true)
@@ -53,14 +53,15 @@ async function handleGET(request: Request) {
     if (searchText) {
       const titleCase = searchText.replace(/(^|\s)\S/g, (character) => character.toUpperCase());
       const searchPrefixes = [...new Set([searchText, titleCase, searchText.toUpperCase()])];
-      const snapshots = await Promise.all(searchPrefixes.map((prefix) => firestore.collection("hospitals")
+      const snapshots = await timeApiStep("database", () => Promise.all(searchPrefixes.map((prefix) => firestore.collection("hospitals")
         .where("isPublic", "==", true)
         .where("status", "==", "active")
         .orderBy("name", "asc")
         .startAt(prefix)
         .endAt(`${prefix}\uf8ff`)
         .limit(pageSize)
-        .get()));
+        .select(...PUBLIC_HOSPITAL_LIST_READ_FIELDS)
+        .get())));
       const matches = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>();
       snapshots.forEach((snapshot) => snapshot.docs.forEach((document) => matches.set(document.id, document)));
       const documents = [...matches.values()]
@@ -81,7 +82,7 @@ async function handleGET(request: Request) {
         hospitalQuery = hospitalQuery.startAfter(cursorSnapshot);
       }
     }
-    const snapshot = await timeApiStep("database", () => hospitalQuery.get());
+    const snapshot = await timeApiStep("database", () => hospitalQuery.select(...PUBLIC_HOSPITAL_LIST_READ_FIELDS).get());
     const page = snapshot.docs.slice(0, pageSize);
     return apiJson({
       documents: page.map((document) => publicHospitalListProjection(document.id, document.data())),

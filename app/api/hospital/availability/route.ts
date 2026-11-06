@@ -6,7 +6,7 @@ import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
 import { requestAuditDevice } from "@/services/api/audit";
-import { formatDisplayDate } from "@/utils/date";
+import { formatDisplayDate, isIsoDate, parseDateInputValue } from "@/utils/date";
 
 export const runtime = "nodejs";
 
@@ -16,8 +16,8 @@ function handleGET() {
 
 function parseDate(value: unknown) {
   const dateValue = String(value ?? "").trim();
-  return /^\d{4}-\d{2}-\d{2}$/.test(dateValue)
-    ? new Date(`${dateValue}T00:00:00+05:30`)
+  return isIsoDate(dateValue)
+    ? parseDateInputValue(dateValue)!
     : new Date(Number.NaN);
 }
 
@@ -57,12 +57,13 @@ async function handlePOST(request: Request) {
 
     const [hospitalSnapshot, adminSnapshot] = await Promise.all([
       firestore.collection("hospitals").doc(hospitalId).get(),
-      firestore.collection("users").where("role", "==", "admin").get(),
+      firestore.collection("users").where("role", "==", "admin").limit(101).get(),
     ]);
     const hospital = hospitalSnapshot.data();
     if (!hospitalSnapshot.exists || hospital?.status !== "active") {
       return apiJson({ error: "Your hospital is not currently available for this request." }, 409);
     }
+    if (adminSnapshot.size > 100) return apiJson({ error: "The notification list needs review. Contact Ayursarga before trying again." }, 409);
     const adminIds = adminSnapshot.docs
       .filter((item) => item.data().status === "active")
       .map((item) => item.id);

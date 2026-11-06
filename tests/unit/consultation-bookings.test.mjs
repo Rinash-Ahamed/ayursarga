@@ -662,3 +662,28 @@ test("public consultant API validates service/cursor, bounds reads and returns o
   for (const item of page.documents) for (const key of ["email", "address", "contactNo", "emergencyContactNo", "lastAuditId"]) assert.equal(key in item, false);
   assert.deepEqual(calls, [["where", "status", "==", "active"], ["where", "consultationServices", "array-contains", "prenatal-doctor"], ["orderBy", "employeeSequence", "asc"], ["startAfter", 4], ["limit", 13]]);
 });
+
+test("consultant-first discovery skips unpayable cards without losing pagination or exposing financial fields", async () => {
+  const records = Array.from({ length: 13 }, (_, i) => ({ ...consultant, employeeSequence: i + 1 }));
+  for (const record of records.slice(0, 12)) delete record.ayursargaCommissionPercentage;
+  const calls = [];
+  const query = {
+    where: () => query, orderBy: () => query, startAfter: value => { calls.push(value); return query; },
+    limit: value => { assert.equal(value, 13); return query; },
+    get: async () => ({ docs: records.slice(calls.at(-1) ?? 0).map(data => ({ id: `AS${String(data.employeeSequence).padStart(3, "0")}`, data: () => data })) }),
+  };
+  const { GET } = loadTypeScript("app/api/public/consultants/route.ts", {
+    "@/services/firebase/admin": { getFirebaseAdminFirestore: () => ({ collection: () => query }) },
+    "@/services/api/rateLimit": { allowRequest: () => true, requestFingerprint: () => "fixture" },
+    "@/services/api/server": { apiJson: (body, status = 200) => Response.json(body, { status }), logApiError: () => {} },
+  });
+  const first = await (await GET(new Request("https://test.local/api/public/consultants?service=prenatal-doctor"))).json();
+  assert.deepEqual(first, { documents: [], cursor: 12, hasMore: true });
+  const second = await (await GET(new Request("https://test.local/api/public/consultants?service=prenatal-doctor&cursor=12"))).json();
+  assert.deepEqual(second.documents.map(item => item.id), ["AS013"]);
+  assert.equal(second.hasMore, false);
+  assert.equal(second.documents[0].consultantCharge, 900.5);
+  for (const field of ["email", "contactNo", "ayursargaCommissionPercentage", "pricing", "lastAuditId"]) assert.equal(field in second.documents[0], false);
+  records[12].consultantCharge = 0.50;
+  assert.deepEqual((await (await GET(new Request("https://test.local/api/public/consultants?service=prenatal-doctor&cursor=12"))).json()).documents, []);
+});

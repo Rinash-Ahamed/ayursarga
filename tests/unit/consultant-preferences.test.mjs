@@ -94,7 +94,7 @@ test("consultant service sends validated charges and preserves atomic audited ed
     "@/services/firestore/auditService": { getAuditActorId: () => "admin", updateAuditedDocument: async (...args) => calls.push({ kind: "update", args }) },
     "@/services/api/client": { authorizedApiRequest: async (url, options) => { calls.push({ kind: options.method === "POST" ? "create" : "update", url, body: JSON.parse(options.body) }); return { employeeId: "AS001", ok: true }; } },
   });
-  assert.equal(await service.createConsultant({ ...legacy, consultantCharge: "900.50", preferredDays: ["fri", "mon"], availableDates: ["2099-10-26"] }), "AS001");
+  assert.deepEqual(await service.createConsultant({ ...legacy, consultantCharge: "900.50", preferredDays: ["fri", "mon"], availableDates: ["2099-10-26"] }), { employeeId: "AS001", consultant: undefined });
   assert.deepEqual(calls[0].body.availableDates, ["2099-10-26"]);
   assert.equal(calls[0].body.consultantCharge, 900.5);
   assert.equal(calls[0].body.ayursargaCommissionPercentage, 0);

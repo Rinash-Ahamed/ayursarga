@@ -30,7 +30,9 @@ test("public discovery returns titled identity for booking snapshots without exp
 
 test("shared photo helper validates before sending and preserves the revision header", async () => {
   const calls = [];
+  const prepared = new Blob(["prepared photo"], { type: "image/webp" });
   const service = loadTypeScript("services/consultants/consultantService.ts", {
+    "@/utils/prepareImageUpload": { prepareImageUpload: async () => prepared },
     "@/services/api/client": { authorizedApiRequest: async (...args) => { calls.push(args); return { imageUrl: "https://test.local/photo.webp" }; } },
     "@/services/firestore/statusOrderedQuery": {},
   });
@@ -38,7 +40,8 @@ test("shared photo helper validates before sending and preserves the revision he
   assert.equal(await service.uploadConsultantPhoto("AS001", file, "old-photo"), "https://test.local/photo.webp");
   assert.equal(calls[0][0], "/api/admin/consultants/AS001/image");
   assert.equal(calls[0][1].headers["X-Expected-Image-Url"], "old-photo");
-  assert.equal(calls[0][1].body, file);
+  assert.equal(calls[0][1].body, prepared);
+  assert.equal(calls[0][1].headers["Content-Type"], "image/webp");
   for (const invalid of [new File(["svg"], "x.svg", { type: "image/svg+xml" }), new File([], "empty.png", { type: "image/png" }), { type: "image/jpeg", size: 9 * 1024 * 1024 }]) await assert.rejects(service.uploadConsultantPhoto("AS001", invalid), /JPG, PNG or WebP/);
   assert.equal(calls.length, 1);
 });

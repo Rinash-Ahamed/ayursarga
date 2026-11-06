@@ -1,5 +1,11 @@
 # Ayursarga application foundation
 
+> Historical foundation document: several scopes below have since shipped.
+> For current behavior use `AGENTS.md`, `docs/SESSION_MEMORY.md` and
+> [the 6 November 2026 readiness audit](PRODUCTION_READINESS_2026-11-06.md).
+> In particular, Consumer sessions, consultation payments, Storage, approval
+> workflows and notifications no longer match this original phase description.
+
 ## Route boundaries
 
 The public site remains at `/`. The consumer, hospital, and admin modules use

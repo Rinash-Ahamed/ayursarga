@@ -248,13 +248,19 @@ const consultation = { ...metadata, id: "consultation-fixture", bookingReference
   consumerId: "patient", consumerName: "Patient With a Longer Display Name", consumerEmail: "patient@example.com", consumerPhone: "9876543210",
   preferredDate: "2099-10-25", preferredTimeSlot: "morning", slotStartTime: "09:30", slotEndTime: "11:45", status: "confirmed", confirmedDate: "2099-10-25", confirmedTime: null, confirmedAt: now,
   consumerNotes: "Guidance about pregnancy lifestyle", adminNotes: null, paymentStatus: "paid", paymentReference: "pay_fixture_private_reference" };
-export const listPublicConsultants = () => {
+export const listPublicConsultants = async (_service?: string, cursor: number | null = null) => {
+  if (consultantDiscovery.fail) throw new Error("Consultants unavailable");
+  if (consultantDiscovery.paginated && cursor) return { documents: [secondConsultationProfessional], cursor: 2, hasMore: false };
   if (portalUiState.screen === "consumer-consultation-no-designation") return page([{ ...consultationProfessional, designation: "   ", qualification: "BAMS" }]);
   if (portalUiState.screen === "consumer-consultation-photo") return page([{ ...consultationProfessional, name: "Shafna", designation: "BAMS", qualification: "BAMS", yearsExperience: 3, consultantCharge: 300, imageUrl: "https://images.test/consultant.webp" }]);
   const staleFirstRead = portalUiState.screen === "consumer-consultation-refresh" && portalUiState.publicConsultantReads++ === 0;
-  return page(portalUiState.screen === "consumer-consultation-empty" || staleFirstRead ? [] : [portalUiState.screen.endsWith("-restricted")
+  const result = await page(portalUiState.screen === "consumer-consultation-empty" || staleFirstRead ? [] : [portalUiState.screen.endsWith("-restricted")
     ? { ...consultationProfessional, preferredDays: ["sun"], availableDates: ["2099-10-25"] } : consultationProfessional]);
+  return { ...result, cursor: consultantDiscovery.paginated ? 1 : null, hasMore: consultantDiscovery.paginated };
 };
+export const consultantDiscovery = { paginated: false, fail: false };
+Object.assign(globalThis, { consultantDiscovery });
+const secondConsultationProfessional = { ...consultationProfessional, id: "AS002", name: "Second Available Professional", consultantCharge: 1200, preferredSlotTimings: { morning: { startTime: "10:30", endTime: "12:00" } } };
 export const getPublicConsultant = async (): Promise<PublicConsultant> => portalUiState.screen.endsWith("-restricted")
   ? { ...consultationProfessional, preferredDays: ["sun"], availableDates: ["2099-10-25"] } : consultationProfessional;
 export const availabilityReads: string[] = [];
@@ -270,13 +276,13 @@ export const listConsultationAvailability = async (service:string, date:string, 
     : source.documents) as PublicConsultant[];
   return {documents:providers.map(provider => ({...provider,availabilityDate:date,availabilityService:service,availableSlots:generateConsultationSlots(date,service,provider)})).filter(provider => provider.availableSlots.length), cursor:availabilityScenario.paginated ? 1 : null,hasMore:availabilityScenario.paginated && !cursor};
 };
-export const slotReads = { calls: 0, hold: false, fail: false, unavailableStart: "", finish: null as (() => void) | null };
+export const slotReads = { calls: 0, hold: false, holdDate: "", fail: false, unavailableStart: "", finish: null as (() => void) | null };
 Object.assign(globalThis, { slotReads });
-export const listConsultationSlots = async (_consultantId:string, service:string, date:string) => {
+export const listConsultationSlots = async (consultantId:string, service:string, date:string) => {
   slotReads.calls++;
-  if (slotReads.hold) await new Promise<void>(resolve => { slotReads.finish = resolve; });
+  if (slotReads.hold || slotReads.holdDate === date) await new Promise<void>(resolve => { slotReads.finish = resolve; });
   if (slotReads.fail) throw new Error("Appointment times could not be checked. Please try again.");
-  return {slots:generateConsultationSlots(date, service, await getPublicConsultant()).filter(slot => slot.startTime !== slotReads.unavailableStart).map((slot,index)=>({...slot,status:portalUiState.screen === "admin-consultants-schedule" ? index === 0 ? "booked" as const : index === 1 ? "reserved" as const : "available" as const : "available" as const})),checkedAt:new Date().toISOString(),holdMinutes:10};
+  return {slots:generateConsultationSlots(date, service, consultantId === "AS002" ? secondConsultationProfessional : await getPublicConsultant()).filter(slot => slot.startTime !== slotReads.unavailableStart).map((slot,index)=>({...slot,status:portalUiState.screen === "admin-consultants-schedule" ? index === 0 ? "booked" as const : index === 1 ? "reserved" as const : "available" as const : "available" as const})),checkedAt:new Date().toISOString(),holdMinutes:10};
 };
 export const paymentRecovery = { closeNext: false, failNext: false };
 Object.assign(globalThis, { paymentRecovery });

@@ -31,6 +31,15 @@ function service() {
   return loadTypeScript("services/hospitals/publicHospitalService.ts");
 }
 
+test("public centre details omit the owner's private WhatsApp while retaining official hospital contacts", () => {
+  const { publicHospitalProjection } = loadTypeScript("services/hospitals/publicProjection.ts");
+  const result = publicHospitalProjection("centre", { name: "Centre", phone: "owner-private", email: "official@example.test", hospitalPhone1: "hospital-primary", hospitalPhone2: "hospital-secondary" });
+  assert.equal(Object.hasOwn(result, "phone"), false);
+  assert.equal(result.email, "official@example.test");
+  assert.equal(result.hospitalPhone1, "hospital-primary");
+  assert.equal(result.hospitalPhone2, "hospital-secondary");
+});
+
 test("public blocked dates use plain dates with unchanged ISO instants and inclusive India-day checks", async (t) => {
   const hospital = { id: "centre", blockedDateRanges: [{ startDate: "2099-10-24T18:30:00.000Z", endDate: "2099-10-26T18:30:00.000Z" }] };
   t.mock.method(globalThis, "fetch", async (url) => Response.json(String(url).includes("pageSize") ? { documents: [hospital] } : { hospital }));

@@ -68,7 +68,7 @@ test("Search Center public list/details/packages remain reachable and exclude ma
   const response = await read("/api/public/hospitals?pageSize=2"); assert.equal(response.status, 200);
   assert.match(response.headers.get("cache-control"), /no-store/);
   const page = await response.json(); assert.ok(Array.isArray(page.documents)); assert.ok(page.documents.length <= 2);
-  const verify = (item) => { for (const key of ["commissionPercentage", "contractUrl", "contractUrl2", "createdBy", "updatedBy", "lastAuditId"]) assert.equal(key in item, false, `Private hospital field: ${key}`); };
+  const verify = (item) => { for (const key of ["phone", "commissionPercentage", "contractUrl", "contractUrl2", "createdBy", "updatedBy", "lastAuditId"]) assert.equal(key in item, false, `Private hospital field: ${key}`); };
   page.documents.forEach(verify);
   if (page.documents[0]) {
     const id = encodeURIComponent(page.documents[0].id);

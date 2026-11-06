@@ -2,7 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 
 const PUBLIC_HOSPITAL_FIELDS = [
-  "name", "email", "phone", "hospitalPhone1", "hospitalPhone2",
+  "name", "email", "hospitalPhone1", "hospitalPhone2",
   "address", "city", "district", "state", "imageUrl", "imageUrls",
   "ayursargaRating", "ayursargaReviewNote", "centreGuidelines", "additionalCentreRules",
   "facilities", "legalPolicies", "locationUrl", "additionalBystandersAllowed",
@@ -13,6 +13,10 @@ const PUBLIC_HOSPITAL_LIST_FIELDS = [
   "name", "address", "city", "district", "state",
   "imageUrl", "imageUrls", "ayursargaRating", "ayursargaReviewNote",
 ] as const;
+
+// Read only card data and eligibility flags; never transfer contract/audit maps
+// from Firestore just to discard them in the public response projection.
+export const PUBLIC_HOSPITAL_LIST_READ_FIELDS = [...PUBLIC_HOSPITAL_LIST_FIELDS, "blockedDateRanges", "status", "isPublic"];
 
 export const PUBLIC_SERVICE_FIELDS = [
   "hospitalId", "name", "description", "price", "durationMinutes", "durationUnit",
