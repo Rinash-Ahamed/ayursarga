@@ -5,7 +5,7 @@ import type { AddressInfo } from "node:net";
 import { bundleDialogHarness } from "../helpers/bundleDialogHarness";
 
 // Animation and Next's image adapter are mocked; real video DOM, observers,
-// playback lifecycle, photo loader and local encoded media are exercised.
+// playback lifecycle, responsive picture selection and local media are exercised.
 const bundle = bundleDialogHarness("tests/fixtures/publicMediaHarness.tsx", {
   "framer-motion":"tests/fixtures/publicMediaMocks.tsx", "next/image":"tests/fixtures/publicMediaImageMock.tsx", "./MagneticButton":"tests/fixtures/publicMediaMocks.tsx",
 });
@@ -65,6 +65,8 @@ test('public media loads one lead video near view, stages following clips after 
   await page.locator('.partner-image').scrollIntoViewIfNeeded();
   await expect.poll(()=>page.locator('.partner-image img').evaluate((image:HTMLImageElement)=>image.complete&&image.naturalWidth>0)).toBe(true);
   expect(await page.locator('.partner-image img').evaluate((image:HTMLImageElement)=>image.currentSrc)).toMatch(/ayurvedic-hospital-partner-web(?:-640)?\.webp$/);
+  await expect(page.locator('.partner-image img')).toHaveAttribute('loading','eager');
+  await expect(page.locator('.partner-image source')).toHaveAttribute('srcset', '/ayurvedic-hospital-partner-web-640.webp 640w, /ayurvedic-hospital-partner-web.webp 1280w');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
 

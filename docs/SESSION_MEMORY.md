@@ -2,6 +2,26 @@
 
 Updated: 9 November 2026 (Asia/Calcutta).
 
+## Partner image Next warnings (9 November 2026, v4.41.6)
+
+- Owner reported LCP/lazy and custom-loader-width warnings for the optimized
+  partner photo. The previous loader selected fixed variants but returned the
+  original src at 1280px, triggering Next's development loader check. Replaced
+  it with a native picture/source using the actual 640w and 1280w WebP assets
+  and shared sizes; fallback Next Image is unoptimized and loading=eager. No
+  fake width query, duplicate candidate URLs, on-demand encoding or preload
+  of every image. Preserved the existing partner-image class/frame, dimensions,
+  aspect ratio, sources, content and responsive CSS.
+- Four asset/component checks passed, including the installed Next getImageProps
+  with actual image props; six local browser executions passed (partner picture /
+  film lifecycle and reduced motion, each desktop, narrow Chromium and mobile
+  WebKit). Browser fixtures mock Next's adapter/motion, not native picture
+  selection or local media. No fresh full build, lint, typecheck, live Next dev
+  console, physical-device check or deployment. No measured LCP gain claimed.
+- Updated local QA workbook UXP-008 steps/expectations only; preserved methods,
+  execution history, other cases and emerald/cream styling. This supersedes the
+  earlier v4.41.4 custom-loader note; those compressed assets remain in use.
+
 ## Consumer centre-booking commission exposure (9 November 2026, v4.41.5)
 
 - Confirmed that Consumer centre-booking list/details downloaded full Firestore

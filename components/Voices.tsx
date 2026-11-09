@@ -1,14 +1,13 @@
 "use client";
 
-import Image, { type ImageLoaderProps } from "next/image";
+import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
 import MagneticButton from "./MagneticButton";
 import { ROUTES } from "@/config/routes";
 
-// Prepared variants avoid an on-demand encoder cold start for this fixed photo.
-function partnerImageLoader({ width }: ImageLoaderProps) {
-  return width <= 640 ? "/ayurvedic-hospital-partner-web-640.webp" : "/ayurvedic-hospital-partner-web.webp";
-}
+// Native picture candidates use the actual prepared widths, with no encoder or
+// custom loader. Keep this sizing shared by the source and fallback image.
+const PARTNER_IMAGE_SIZES = "(max-width: 600px) calc(100vw - 108px), (max-width: 900px) calc(100vw - 160px), (max-width: 1320px) calc(50vw - 100px), 560px";
 
 const POINTS = [
   ["reach", "Reach active consumers"],
@@ -67,7 +66,10 @@ export default function Voices() {
         transition={{ duration: .58, delay: .12 + index * .1, ease: [0.22, 1, 0.36, 1] }}
       ><PartnerPointIcon name={icon} /></motion.span><span>{point}</span></li>)}</ul>
     </div>
-    <div className="partner-image"><Image loader={partnerImageLoader} src="/ayurvedic-hospital-partner-web.webp" alt="Ayurvedic hospital with a medicinal garden in Kerala" width={1280} height={853} sizes="(max-width: 600px) calc(100vw - 108px), (max-width: 900px) calc(100vw - 160px), (max-width: 1320px) calc(50vw - 100px), 560px" loading="lazy" /></div>
+    <picture className="partner-image">
+      <source type="image/webp" srcSet="/ayurvedic-hospital-partner-web-640.webp 640w, /ayurvedic-hospital-partner-web.webp 1280w" sizes={PARTNER_IMAGE_SIZES} />
+      <Image unoptimized src="/ayurvedic-hospital-partner-web.webp" alt="Ayurvedic hospital with a medicinal garden in Kerala" width={1280} height={853} sizes={PARTNER_IMAGE_SIZES} loading="eager" />
+    </picture>
     <ul className="partner-steps">{PARTNER_STEPS.map(([icon, title, body]) => <li key={icon}><PartnerStepIcon name={icon} /><div><strong>{title}</strong><p>{body}</p></div></li>)}</ul>
   </div></section>;
 }
