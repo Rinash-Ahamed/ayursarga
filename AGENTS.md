@@ -225,6 +225,12 @@ to deploy, rerun maintenance scripts, or modify live data.
   ranges and the shared India care-date helpers. Do not pull the Firestore SDK
   into public discovery merely to reconstruct Timestamp values. Keep operational
   Timestamp storage and API ISO formats unchanged.
+- Consumer Search Center booking history/details use the authenticated,
+  owner-scoped `/api/consumer/booking-history` allowlist, not direct Firestore
+  reads of `bookings`. Full booking documents contain commission snapshots.
+  Keep Consumer SDK reads denied and preserve Admin/assigned Hospital access.
+  Adding operational fields must not add them to Consumer responses implicitly;
+  preserve private financial snapshots in storage and existing booking actions.
 
 ## Hospital and booking workflow
 
@@ -510,6 +516,30 @@ to deploy, rerun maintenance scripts, or modify live data.
   only a per-page sort or change booking lifecycle statuses to achieve ordering.
 
 ## Change discipline and validation
+
+- Maintain the local QA workbook at
+  `outputs/ayursarga-qa-2026-11-09/Ayursarga_Test_Cases.xlsx` when changing
+  application behaviour, validation, permissions, UI workflows, integrations or
+  operational requirements. Update/add the affected module's prerequisites,
+  steps, expected results, priority and automation references; preserve stable
+  Case IDs. Keep daily execution dates/results, evidence, defects and retest
+  history intact. Do not regenerate over a tester's completed workbook. Mark a
+  case Automated only when a matching implemented check is verified; possible
+  future automation stays Automation candidate. Critical money, booking, role
+  isolation and real provider/device cases retain Manual required even with
+  supporting automation. Record passes only from actual current-build execution.
+  Preserve the workbook's Git ignore entry and never store credentials or real
+  patient data in it. If the ignored local workbook is missing, report that in
+  the handoff and describe the required case updates; do not claim it was
+  updated or recreate execution history. Documentation-only changes need updates
+  only when they change test expectations. This rule does not authorize running
+  tests, production mutations, emails, payments, refunds, load or deployments.
+  Keep this workbook suitable for business review: plain-language headings,
+  aligned emerald/cream styling and simple daily dates/results. Do not reintroduce
+  cycle/run IDs, build-ID inputs or technical test-file columns into business
+  sheets. Maintain technical automation mappings in `tests/qa/` instead, with
+  reproducible local evidence; fixture automation is not proof of live delivery
+  or grounds to remove critical manual sign-off.
 
 - API bodies use the shared bounded streaming readers, including privileged MFA
   actions. Keep default abuse fingerprints stable across caller-controlled

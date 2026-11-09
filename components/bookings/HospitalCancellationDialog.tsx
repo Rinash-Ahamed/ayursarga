@@ -8,7 +8,7 @@ import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import { cancelHospitalBooking } from "@/services/bookings/bookingService";
 
 export function HospitalCancellationDialog({ booking, onClose, onSaved }: {
-  booking: DocumentRecord<BookingDocument>; onClose: () => void; onSaved: (changes: Partial<BookingDocument>) => void;
+  booking: DocumentRecord<Pick<BookingDocument, "lastAuditId">>; onClose: () => void; onSaved: (changes: Partial<BookingDocument>) => void;
 }) {
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);

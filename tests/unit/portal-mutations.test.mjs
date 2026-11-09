@@ -53,6 +53,17 @@ function fixture(records = {}, options = {}) {
 const request = (body) => new Request("https://test.local/api/test", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
 const context = (key, value) => ({ params: Promise.resolve({ [key]: value }) });
 
+test("USR-010: Hospital cannot submit Admin editorial fields and denied callers cannot write them",async()=>{
+  for(const data of [{ayursargaRating:5},{ayursargaReviewNote:"Untrusted editorial"}]) {
+    const f=fixture({"hospitals/centre":{status:"active"}});
+    const response=await f.load("app/api/hospital/profile/route.ts").PATCH(request(data));
+    assert.equal(response.status,400);assert.equal(f.calls.commits,0);
+  }
+  const denied=fixture({"hospitals/centre":{status:"active"}},{denied:true});
+  assert.equal((await denied.load("app/api/hospital/profile/route.ts").PATCH(request({ayursargaRating:5}))).status,403);
+  assert.equal(denied.calls.commits,0);
+});
+
 test("Hospital profile saves without a description preserve legacy text and remain atomically audited", async () => {
   const profile = { name: "Centre", email: "hospital@example.test", phone: "9876543210", hospitalPhone1: "9876543210", hospitalPhone2: null,
     address: "A complete centre address", registeredAddress: "A complete registered address", city: "Palakkad", district: "Palakkad", state: "Kerala",
@@ -65,6 +76,16 @@ test("Hospital profile saves without a description preserve legacy text and rema
   assert.equal(f.calls.writes.length, 2);
   const audit = f.calls.writes.find(([kind, ref]) => kind === "set" && ref.path.startsWith("auditLogs/"))[2];
   assert.equal(audit.updatedValues.description, "Legacy description retained");
+});
+
+test("HOS-006: Admin edits preserve stored descriptions without returning them as a changed field",async()=>{
+  const profile={name:"Centre",legalName:"Centre LLP",email:"hospital@example.test",phone:"9876543210",hospitalPhone1:"9876543210",hospitalPhone2:null,address:"A complete service address",registeredAddress:"A complete registered address",city:"Palakkad",district:"Palakkad",state:"Kerala",commissionPercentage:10,status:"active",description:"Retained legacy content"};
+  const f=fixture({"hospitals/centre":profile});
+  const response=await f.load("app/api/admin/hospitals/[hospitalId]/route.ts").PATCH(request({action:"update",data:{hospitalPhone1:"9876543211"}}),context("hospitalId","centre"));
+  assert.equal(response.status,200);
+  const audit=f.calls.writes.find(([,ref])=>ref.path.startsWith("auditLogs/"))[2];
+  assert.equal(audit.updatedValues.description,"Retained legacy content");
+  assert.equal(Object.hasOwn((await response.json()).changes,"description"),false);
 });
 
 test("capacity batches independent reads and returns committed fields with atomic audit", async () => {

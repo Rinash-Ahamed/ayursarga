@@ -154,10 +154,13 @@ test("package reviews: scoped reads remain allowed but direct publication, draft
   }
 });
 
-test("existing hospital bookings: scoped Consumer/Hospital/Admin reads and no anonymous/other-account access", async () => {
+test("hospital bookings: only operational roles can read full documents; Consumers use the safe API", async () => {
   const { path } = await booking("reads");
-  for (const role of ["admin", "consumer", "hospital"]) assert.equal((await call(`/${path}`, { role })).status, 200, role);
-  for (const role of [undefined, "other", "otherHospital", "inactive"]) assert.equal((await call(`/${path}`, { role })).status, 403, String(role));
+  for (const role of ["admin", "hospital"]) assert.equal((await call(`/${path}`, { role })).status, 200, role);
+  for (const role of [undefined, "consumer", "other", "otherHospital", "inactive"]) assert.equal((await call(`/${path}`, { role })).status, 403, String(role));
+  assert.equal((await call(":runQuery", { role: "consumer", method: "POST", body: { structuredQuery: {
+    from: [{ collectionId: "bookings" }], where: { fieldFilter: { field: { fieldPath: "consumerId" }, op: "EQUAL", value: { stringValue: ids.consumer } } }, limit: 20,
+  } } })).status, 403);
 });
 
 test("Admin operational reads/writes require native verified TOTP; own-profile setup and Hospital/Consumer scopes remain intact", async () => {
@@ -174,7 +177,8 @@ test("Admin operational reads/writes require native verified TOTP; own-profile s
     assert.equal((await call(`/users/${ids.consumer}`, { role: "admin", claims })).status, 403);
     assert.equal((await call(`/users/${ids.admin}`, { role: "admin", claims })).status, 200);
   }
-  for (const role of ["admin", "hospital", "consumer"]) assert.equal((await call(`/${path}`, { role })).status, 200);
+  for (const role of ["admin", "hospital"]) assert.equal((await call(`/${path}`, { role })).status, 200);
+  assert.equal((await call(`/${path}`, { role: "consumer" })).status, 403);
   const hospitalPath = `hospitals/admin-mfa-${suffix}`;
   const hospital = { ...metadata, ...fields({ name: "Centre", description: "Existing description", email: "partner@example.test", phone: "9876543210", hospitalPhone1: "9876543210", address: "A complete centre address", city: "Palakkad", district: "Palakkad", state: "Kerala", commissionPercentage: 10, status: "pending", isPublic: false, imageUrls: [] }) };
   await seed(hospitalPath, hospital);

@@ -34,6 +34,10 @@ import { PortalShell } from "@/components/portal/PortalShell";
 
 declare global { interface Window { mountPortalUi: (screen: string) => void; unmountPortalUi?: () => void; } }
 const screens = {
+  "admin-audits-custom": <AdminAuditLogs />,
+  "admin-consultant-finance-pagination": <AdminConsultantFinance />,
+  "admin-bookings-pagination": <AdminBookings />,
+  "admin-consultations-pagination": <ConsultationBookings role="admin" />,
   "admin-settings": <AdminSecurity enabled />,
   "admin-settings-disabled": <AdminSecurity enabled={false} />,
   "admin-cancellation-settings": <PortalShell role="admin" title="Settings"><ConsultationCancellationSettings /></PortalShell>,

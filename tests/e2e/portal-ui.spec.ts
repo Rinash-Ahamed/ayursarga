@@ -6,6 +6,125 @@ import { getCalendarMonthRange } from "../../utils/date";
 const styles = ["node_modules/tailwindcss/lib/css/preflight.css", "app/globals.css", "app/portal.css"].map((file) => readFileSync(file, "utf8")).join("\n");
 const screens = ["admin-dashboard", "admin-hospitals", "admin-details", "admin-consultants", "admin-users", "admin-bookings", "admin-availability", "admin-audits", "hospital-dashboard", "hospital-profile", "hospital-services", "hospital-bookings", "hospital-availability", "hospital-password", "admin-login", "hospital-login", "admin-forgot", "hospital-forgot"];
 
+test('HOS-004: registered/service addresses mirror only while checkbox is selected', async ({page}) => {
+  await page.route('**/*',route=>route.fulfill({status:204,body:''}));
+  await mount(page,'admin-hospitals');
+  await page.getByRole('button',{name:'Add Hospital',exact:true}).click();
+  const form=page.locator('#add-hospital-form');
+  const registered=form.locator('input[name="registeredAddress"]');
+  const service=form.locator('label').filter({hasText:/^Service address \*/}).locator('input:not([type="hidden"])');
+  await registered.fill('Registered building in Palakkad');
+  await service.fill('Separate service building in Coimbatore');
+  await form.getByRole('checkbox',{name:'Service address is the same as registered address'}).check();
+  await expect(service).toBeDisabled();
+  await expect(form.locator('input[type="hidden"][name="address"]')).toHaveValue('Registered building in Palakkad');
+  await registered.fill('Updated registered building in Palakkad');
+  await expect(form.locator('input[type="hidden"][name="address"]')).toHaveValue('Updated registered building in Palakkad');
+  await form.getByRole('checkbox',{name:'Service address is the same as registered address'}).uncheck();
+  await service.fill('Independent service address');
+  await expect(registered).toHaveValue('Updated registered building in Palakkad');
+  expect(await page.evaluate(()=>(window as unknown as {consumerBookingFixture:{calls:number}}).consumerBookingFixture.calls)).toBe(0);
+});
+
+test('CON-003 CON-005: contract particulars lock after save and effective date defaults expiry three years ahead',async({page})=>{
+  await page.route('**/*',route=>route.fulfill({status:204,body:''}));
+  await mount(page,'admin-contract-outdated');
+  await expect(page.locator('input[name="registrationNumber"]')).toBeDisabled();
+  await page.getByRole('button',{name:'Edit particulars',exact:true}).click();
+  const effective=page.getByRole('textbox',{name:'Effective date *',exact:true});
+  await expect(effective).toBeEnabled();
+  await effective.fill('09/11/2026');
+  await expect(page.getByRole('textbox',{name:'Expiry date *',exact:true})).toHaveValue('09/11/2029');
+  await page.getByRole('button',{name:'Save contract particulars',exact:true}).click();
+  await expect(page.locator('input[name="registrationNumber"]')).toBeDisabled();
+  await expect(page.getByRole('button',{name:'Edit particulars',exact:true})).toBeVisible();
+});
+
+test('IMG-010: cancelling Add consultant with a staged portrait makes no profile or photo write',async({page})=>{
+  await page.route('**/*',route=>route.fulfill({status:204,body:''}));
+  await mount(page,'admin-consultants');
+  await page.getByRole('button',{name:'Add New',exact:true}).click();
+  await page.getByLabel('Consultant photo',{exact:true}).setInputFiles({name:'photo.png',mimeType:'image/png',buffer:Buffer.from('local staged fixture')});
+  await page.getByRole('button',{name:'Cancel',exact:true}).click();
+  const result=await page.evaluate(()=>({uploads:(window as unknown as {consultantPhotoUploads:unknown[]}).consultantPhotoUploads,writes:(window as unknown as {consumerBookingFixture:{consultantWrites:unknown[]}}).consumerBookingFixture.consultantWrites}));
+  expect(result.uploads).toHaveLength(0);expect(result.writes).toHaveLength(0);
+  await page.getByRole('button',{name:'Add New',exact:true}).click();
+  await expect(page.getByText(/saved when you save the consultant/)).toHaveCount(0);
+});
+
+test('BKG-017: centre booking pagination keeps records distinct and sends status/month filters',async({page})=>{
+  await page.route('**/*',route=>route.fulfill({status:204,body:''}));
+  await mount(page,'admin-bookings-pagination');
+  const cards=page.locator('.operational-booking-card');
+  await expect(cards).toHaveCount(1);
+  await page.getByRole('button',{name:/Load more/}).click();
+  await expect(cards).toHaveCount(3);
+  await page.getByLabel('Status',{exact:true}).selectOption('confirmed');
+  await expect(cards).toHaveCount(1);
+  await page.locator('input[type="month"]').fill('2026-11');
+  const requests=await page.evaluate(()=>(window as unknown as {qaRequestTrace:{kind:string;args:unknown[]}[]}).qaRequestTrace.filter(r=>r.kind==='bookings').map(r=>r.args));
+  expect(JSON.stringify(requests)).toContain('confirmed');
+  expect(JSON.stringify(requests)).toContain('createdFrom');
+  expect(JSON.stringify(requests)).toContain('qa-next');
+  await expect(page.getByRole('link',{name:'Online consultations',exact:true})).toHaveAttribute('href','/admin/bookings/consultations');
+});
+
+test('CBK-017: online consultation filters apply across loaded pages without merging centre bookings',async({page})=>{
+  await page.route('**/*',route=>route.fulfill({status:204,body:''}));
+  await mount(page,'admin-consultations-pagination');
+  const cards=page.locator('.consultation-history-card');
+  await expect(cards).toHaveCount(1);
+  await page.getByRole('button',{name:/Load more/}).click();
+  await expect(cards).toHaveCount(2);
+  await page.getByLabel('Search consultations',{exact:true}).fill('AYURNEXT03');
+  await expect(cards).toHaveCount(1);await expect(cards.first()).toContainText('AYURNEXT03');
+  await page.getByLabel('Status',{exact:true}).selectOption('cancelled');
+  await expect(cards).toHaveCount(0);
+  await page.getByRole('button',{name:'Clear filters',exact:true}).click();
+  await expect(cards).toHaveCount(2);
+});
+
+test('FIN-013: Finance search and settlement filters retain paginated transactions and mode-specific requests',async({page})=>{
+  await page.route('**/*',route=>route.fulfill({status:204,body:''}));
+  await mount(page,'admin-consultant-finance-pagination');
+  const cards=page.locator('.portal-list>article');
+  await expect(cards).toHaveCount(1);
+  await page.getByRole('button',{name:'Load more transactions',exact:true}).click();
+  await expect(cards).toHaveCount(2);
+  await page.locator('.portal-finance-filters select').selectOption('paid');
+  await expect(cards).toHaveCount(1);await expect(cards.first()).toContainText('AYURNEXT02');
+  await page.getByLabel('Search loaded transactions',{exact:true}).fill('absent-query');
+  await expect(cards).toHaveCount(0);
+  await expect(page.getByRole('heading',{name:'No matching financial records'})).toBeVisible();
+  await page.getByLabel('Search loaded transactions',{exact:true}).fill('');
+  await page.locator('.portal-finance-filters select').selectOption('');
+  await expect(cards).toHaveCount(2);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  const requests=await page.evaluate(()=>(window as unknown as {qaRequestTrace:{kind:string;args:unknown[]}[]}).qaRequestTrace.filter(r=>r.kind==='finance'));
+  expect(requests.some(r=>r.args[1]==='qa-next')).toBe(true);
+  await page.locator('.portal-finance-toolbar select').selectOption('test');
+  await expect(cards).toHaveCount(1);
+  expect(await page.evaluate(()=>(window as unknown as {qaRequestTrace:{kind:string;args:unknown[]}[]}).qaRequestTrace.filter(r=>r.kind==='finance').at(-1)?.args[0])).toBe('test');
+});
+
+test('USR-007: audit custom dates send inclusive India start and exclusive day-after end bounds',async({page})=>{
+  await page.route('**/*',route=>route.fulfill({status:204,body:''}));
+  await mount(page,'admin-audits-custom');
+  await page.getByRole('combobox',{name:/When/}).selectOption('custom');
+  const textboxes=page.locator('.portal-audit-filters input[type="text"]');
+  await textboxes.nth(0).fill('05/11/2026');
+  await textboxes.nth(1).fill('09/11/2026');
+  await expect.poll(async()=>JSON.stringify(await page.evaluate(()=>(window as unknown as {qaRequestTrace:{kind:string;args:unknown[]}[]}).qaRequestTrace.filter(r=>r.kind==='audits').at(-1)?.args))).toContain('2026-11-04T18:30:00.000Z');
+  await expect.poll(async()=>JSON.stringify(await page.evaluate(()=>(window as unknown as {qaRequestTrace:{kind:string;args:unknown[]}[]}).qaRequestTrace.filter(r=>r.kind==='audits').at(-1)?.args))).toContain('2026-11-09T18:30:00.000Z');
+  const bounds=JSON.stringify(await page.evaluate(()=>(window as unknown as {qaRequestTrace:{kind:string;args:unknown[]}[]}).qaRequestTrace.filter(r=>r.kind==='audits').at(-1)?.args));
+  expect(bounds).toContain('2026-11-09T18:30:00.000Z');
+  await expect(page.locator('.portal-audit-table tbody tr')).toHaveCount(2);
+  await page.getByRole('combobox',{name:/Area/}).selectOption('consultants');
+  await expect(page.locator('.portal-audit-table tbody tr')).toHaveCount(0);
+  await page.getByRole('combobox',{name:/Area/}).selectOption('hospitals');
+  await expect(page.locator('.portal-audit-table tbody tr')).toHaveCount(2);
+});
+
 test("Admin Cancel & Refund stays in one responsive dialog and saves cancellation before a single refund", async ({ page }) => {
   await page.route("**/*", route => route.fulfill({ status: 204, body: "" }));
   await mount(page, "admin-consultations-refund");

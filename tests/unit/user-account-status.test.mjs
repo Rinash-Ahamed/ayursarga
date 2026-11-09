@@ -34,6 +34,7 @@ test("both account roles support audited reversible status changes and retries w
     assert.equal((await f.send()).status, 200);
     assert.equal((await f.send()).status, 200);
     assert.equal(f.writes.length, 2);
+    assert.ok(f.writes.every(([path]) => path.startsWith("users/") || path.startsWith("auditLogs/")), "HOS-012: account status must never write hospital activation/publication");
     const audit = f.writes[1][1];
     assert.equal(audit.action, "status_change");
     assert.equal(audit.updatedValues.createdAt, "original");

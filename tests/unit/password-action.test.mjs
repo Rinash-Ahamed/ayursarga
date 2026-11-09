@@ -2,6 +2,23 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { loadTypeScript } from "../helpers/loadTypeScript.mjs";
 
+test("AUT-013: a consumed/expired native action code cannot be reused and a fresh action remains usable",async()=>{
+  const used=new Set();
+  const service=loadTypeScript("services/auth/passwordActionService.ts",{
+    "@/services/auth/client":{getClientAuth:()=>({})},
+    "firebase/auth":{
+      verifyPasswordResetCode:async(_auth,code)=>{if(used.has(code)||code==="expired"||code==="wrong-mode")throw{code:"auth/expired-action-code"};return"synthetic@example.test";},
+      confirmPasswordReset:async(_auth,code)=>{if(used.has(code))throw{code:"auth/invalid-action-code"};used.add(code);},
+    },
+  });
+  await service.verifyPasswordAction("original");await service.completePasswordAction("original","Test-password1");
+  await assert.rejects(service.verifyPasswordAction("original"));
+  await assert.rejects(service.completePasswordAction("original","Test-password2"));
+  await assert.rejects(service.verifyPasswordAction("expired"));await assert.rejects(service.verifyPasswordAction("wrong-mode"));
+  await service.verifyPasswordAction("fresh");await service.completePasswordAction("fresh","Test-password2");
+  assert.deepEqual([...used],["original","fresh"]);
+});
+
 test("password setup verifies and consumes the code through the shared Firebase Auth", async () => {
   const auth = {};
   const calls = [];

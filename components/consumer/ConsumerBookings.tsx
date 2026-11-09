@@ -3,10 +3,10 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { ROUTES } from "@/config/routes";
-import type { BookingDocument } from "@/features/firestore/models";
+import type { ConsumerBooking } from "@/features/bookings/consumerBooking";
 import { getTreatmentProgress, getTreatmentStatus } from "@/features/bookings/treatmentStatus";
-import { emptyQueryPage, type DocumentRecord, type QueryPageOptions } from "@/services/firestore/firestoreService";
-import { getConsumerBookingDetails, getPortalBooking, listConsumerBookings } from "@/services/bookings/bookingService";
+import { type DocumentRecord, type QueryPage } from "@/services/firestore/firestoreService";
+import { getConsumerBookingDetails, getConsumerBooking, listConsumerBookings } from "@/services/bookings/bookingService";
 import { HospitalCancellationDialog } from "@/components/bookings/HospitalCancellationDialog";
 import { CancellationDetails } from "@/components/bookings/CancellationDetails";
 import { bookingDateFacts, bookingReferenceLabel, bookingStatusLabel } from "@/features/bookings/display";
@@ -24,14 +24,14 @@ import { useRepeatableMessage } from "@/hooks/useRepeatableMessage";
 
 export function ConsumerBookings({ bookingId }: { bookingId?: string } = {}) {
   const { firebaseUser } = useAuth();
-  const [pendingCancellation, setPendingCancellation] = useState<DocumentRecord<BookingDocument> | null>(null);
+  const [pendingCancellation, setPendingCancellation] = useState<DocumentRecord<ConsumerBooking> | null>(null);
   const [actionMessage, setActionMessage, actionMessageNotification] = useRepeatableMessage();
   const [detailsError, setDetailsError] = useState(false);
-  const loader = useCallback(async (cursor: QueryPageOptions["cursor"]) => {
-    if (!firebaseUser) return emptyQueryPage<BookingDocument>();
-    const selected = bookingId ? await getPortalBooking(bookingId) : null;
-    const page = bookingId ? { documents: selected?.consumerId === firebaseUser.uid ? [selected] : [], cursor: null, hasMore: false }
-      : await listConsumerBookings(firebaseUser.uid, { pageSize: 20, cursor });
+  const loader = useCallback(async (cursor: string | null): Promise<QueryPage<ConsumerBooking, string>> => {
+    if (!firebaseUser) return { documents: [], cursor: null, hasMore: false };
+    const selected = bookingId ? await getConsumerBooking(bookingId) : null;
+    const page = bookingId ? { documents: selected ? [selected] : [], cursor: null, hasMore: false }
+      : await listConsumerBookings({ pageSize: 20, cursor });
     const legacy = page.documents.filter((booking) => !booking.hospitalName || !booking.serviceName);
     if (legacy.length) {
       try {
@@ -42,7 +42,7 @@ export function ConsumerBookings({ bookingId }: { bookingId?: string } = {}) {
     }
     return page;
   }, [firebaseUser, bookingId]);
-  const { errorNotification: loadErrorNotification, items, error: loadError, isLoading, hasMore, loadMore, patchItem } = usePaginatedList<BookingDocument>(
+  const { errorNotification: loadErrorNotification, items, error: loadError, isLoading, hasMore, loadMore, patchItem } = usePaginatedList<ConsumerBooking, string>(
     loader,
     "We could not load your bookings. Refresh the page and try again.",
   );

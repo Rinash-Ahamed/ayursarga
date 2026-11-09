@@ -69,7 +69,11 @@ test("right-side support alternates every three seconds and pauses for keyboard 
   await expect(ayu).toHaveCount(0);
   await expect(whatsapp).toHaveAttribute("href", /^https:\/\/wa.me\//);
   await expect(page.locator(".whatsapp-bubble")).toHaveCount(1);
-  await whatsapp.focus();
+  // Finish the CSS crossfade before testing focus with the synthetic clock.
+  await page.clock.runFor(300);
+  await page.getByRole("button", {name:"Background control",exact:true}).focus();
+  await page.keyboard.press("Tab");
+  await expect(whatsapp).toBeFocused();
   await page.clock.runFor(6_000);
   await expect(whatsapp).toBeFocused();
   await page.getByRole("button", {name:"Background control",exact:true}).focus();
@@ -93,6 +97,68 @@ test("reduced motion keeps both support controls stable on the right without eag
   await expect(page.getByRole("button", {name:"Ask Ayu, your Ayursarga guide"})).toBeVisible();
   await expect(page.getByRole("link", {name:/Chat with Ayursarga on WhatsApp/})).toBeVisible();
   expect(await page.evaluate(() => (globalThis as typeof globalThis & {fixtureLazyLoads?:number}).fixtureLazyLoads ?? 0)).toBe(0);
+  await expect(page.locator(".ayu-buddy-portrait>img")).toHaveCSS("animation-name", "none");
+});
+
+test("Ayu has a transparent softly shaded portrait and a brief welcome without continuous motion", async ({ page }, info) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await mount(page);
+  const launcher = page.getByRole("button", { name: "Ask Ayu, your Ayursarga guide" });
+  // Focus pauses the existing three-second switch while the welcome is checked.
+  await page.getByRole("button", { name: "Background control", exact: true }).focus();
+  await page.keyboard.press("Tab");
+  await expect(launcher).toBeFocused();
+  const portrait = launcher.locator(".ayu-buddy-portrait");
+  const image = portrait.locator("img");
+  await expect(image).toHaveCSS("animation-name", "ayuBuddyWelcome");
+  await expect(image).toHaveCSS("animation-iteration-count", "1");
+  await expect(portrait).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(portrait).toHaveCSS("background-image", "none");
+  await expect(portrait).toHaveCSS("border-top-width", "0px");
+  await expect(portrait).toHaveCSS("box-shadow", "none");
+  await expect.poll(() => image.evaluate(element => element.getAnimations().length)).toBe(0);
+  await expect(image).toHaveCSS("transform", "none");
+  const before = await launcher.boundingBox();
+  await launcher.hover();
+  expect(await launcher.boundingBox()).toEqual(before);
+  await launcher.screenshot({ path: info.outputPath("ayu-dimensional-launcher.png") });
+  expect(await page.evaluate(() => (globalThis as typeof globalThis & { fixtureLazyLoads?: number }).fixtureLazyLoads ?? 0)).toBe(0);
+  await launcher.click();
+  const header = page.locator(".ayu-buddy-header");
+  await expect(header.locator(".ayu-buddy-portrait>img")).toHaveCSS("animation-iteration-count", "1");
+  await expect.poll(() => header.locator("img").evaluate(element => element.getAnimations().length)).toBe(0);
+  await header.screenshot({ path: info.outputPath("ayu-dimensional-header.png") });
+  const bounds = (await header.boundingBox())!;
+  expect(bounds.x).toBeGreaterThanOrEqual(0);
+  expect(bounds.x + bounds.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(header.locator(".ayu-buddy-portrait>img")).toHaveCSS("animation-name", "none");
+  await page.keyboard.press("Escape");
+  await expect(launcher).toBeFocused();
+  await expect(image).toHaveCSS("animation-name", "none");
+});
+
+test("touch entry and closing Ayu do not leave the three-second support switch paused", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.clock.install();
+  await mount(page);
+  const launcher = page.getByRole("button", { name: "Ask Ayu, your Ayursarga guide" });
+  await expect(launcher).toBeVisible();
+  // Touch entry has no corresponding hover-leave on several mobile browsers.
+  await launcher.dispatchEvent("pointerover", { pointerType: "touch", bubbles: true });
+  await launcher.dispatchEvent("pointerdown", { pointerType: "touch", bubbles: true });
+  await launcher.evaluate((element: HTMLButtonElement) => element.click());
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.clock.runFor(6_000);
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("button", { name: "Close Ayu" }).evaluate((element: HTMLButtonElement) => element.click());
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(launcher).toBeFocused();
+  await page.clock.runFor(3_000);
+  await expect(page.getByRole("link", { name: /Chat with Ayursarga on WhatsApp/ })).toBeVisible();
+  await page.clock.runFor(3_000);
+  await expect(launcher).toBeVisible();
 });
 
 test("Ayu offers curated guidance with a viewport-safe, scroll-locked keyboard-accessible dialog", async ({ page }, info) => {

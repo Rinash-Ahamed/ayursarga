@@ -9,7 +9,8 @@ import {
   type QueryPage, type DocumentRecord,
   type QueryPageOptions,
 } from "@/services/firestore/firestoreService";
-import { authorizedApiRequest, authorizedMutationRequest } from "@/services/api/client";
+import { authorizedApiRequest, authorizedMutationRequest, decodeMutation } from "@/services/api/client";
+import type { ConsumerBooking } from "@/features/bookings/consumerBooking";
 import { toDateInputValue } from "@/utils/date";
 
 type BookingRequestInput = {
@@ -47,7 +48,7 @@ export async function createBookingRequest(input: BookingRequestInput) {
   });
 }
 
-async function withBookingReferences<T extends QueryPage<BookingDocument>>(page: T): Promise<T> {
+async function withBookingReferences<T extends { documents: Array<{ id: string; bookingReference?: string }> }>(page: T): Promise<T> {
   const missing = page.documents.filter((booking) => !booking.bookingReference);
   if (!missing.length) return page;
   try {
@@ -81,8 +82,24 @@ export async function getPortalBooking(id: string) {
   return page.documents[0] as DocumentRecord<BookingDocument>;
 }
 
-export const listConsumerBookings = (consumerId: string, options?: Pick<QueryPageOptions, "pageSize" | "cursor">) =>
-  listBookings([{ field: "consumerId", operator: "==", value: consumerId }], options);
+async function consumerBookingPage(params: URLSearchParams): Promise<QueryPage<ConsumerBooking, string>> {
+  const page = await authorizedApiRequest<QueryPage<ConsumerBooking, string>>(`/api/consumer/booking-history?${params}`, {
+    signedOutMessage: "Sign in to view your bookings.", failureMessage: "We could not load your bookings. Please try again.",
+  });
+  return withBookingReferences(decodeMutation(page) as QueryPage<ConsumerBooking, string>);
+}
+
+export function listConsumerBookings(options: { pageSize?: number; cursor?: string | null } = {}) {
+  const params = new URLSearchParams({ pageSize: String(options.pageSize ?? 20) });
+  if (options.cursor) params.set("cursor", options.cursor);
+  return consumerBookingPage(params);
+}
+
+export async function getConsumerBooking(id: string) {
+  if (!id || id.length > 160 || id.includes("/")) return null;
+  const page = await consumerBookingPage(new URLSearchParams({ id }));
+  return page.documents[0] ?? null;
+}
 
 export async function getConsumerBookingDetails(ids: string[]) {
   const params = new URLSearchParams();

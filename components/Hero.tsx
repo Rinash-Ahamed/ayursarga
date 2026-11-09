@@ -24,9 +24,10 @@ export default function Hero() {
   const [activeValue, setActiveValue] = useState(0);
   const [isHeroVisible, setIsHeroVisible] = useState(true);
   const [videoReady, setVideoReady] = useState(false);
+  const [posterReady, setPosterReady] = useState(false);
   const [videoEligible, setVideoEligible] = useState(false);
   const shouldReduceMotion = useReducedMotion();
-  const canLoadVideo = videoEligible && !shouldReduceMotion;
+  const canLoadVideo = posterReady && videoEligible && !shouldReduceMotion;
 
   useEffect(() => {
     const desktopQuery = window.matchMedia("(min-width: 1100px) and (hover: hover) and (pointer: fine)");
@@ -87,13 +88,14 @@ export default function Hero() {
     <section id="hero" ref={heroRef}>
       <Image
         className="hero-background-poster"
-        src="/hero-video-poster.webp"
+        src="/hero-video-poster-web.webp"
         loader={heroPosterLoader}
         alt=""
         fill
         priority
         quality={82}
         sizes="100vw"
+        onLoad={() => setPosterReady(true)}
       />
       <video
         ref={videoRef}
@@ -101,7 +103,7 @@ export default function Hero() {
         muted loop playsInline preload="metadata" aria-hidden="true" tabIndex={-1}
         onPlaying={() => setVideoReady(true)}
       >
-        {canLoadVideo && <source src="/hero-video.mp4" type="video/mp4" />}
+        {canLoadVideo && <source src="/hero-video-web.mp4" type="video/mp4" />}
       </video>
       <div className="hero-content">
         <p className="eyebrow hero-enter-eyebrow">Ayurvedic care, guided with trust</p>

@@ -353,10 +353,10 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
               key={path.id}
               aria-pressed={isSelected}
               onClick={() => selectPath(path)}
-              initial={reduceMotion ? false : { opacity: 0, y: 28 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: .35 }}
-              transition={reduceMotion ? { duration: 0 } : { delay: (index % 3) * .06, duration: .65, ease: [0.22, 1, 0.36, 1] }}
+              initial={reduceMotion ? false : { opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true, amount: .12 }}
+              transition={reduceMotion ? { duration: 0 } : { delay: (index % 3) * .04, duration: .45, ease: [0.22, 1, 0.36, 1] }}
             >
               <span className="path-card-media">
                 <Image

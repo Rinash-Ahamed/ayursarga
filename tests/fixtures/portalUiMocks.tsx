@@ -9,6 +9,8 @@ import { validateInvoiceInput, INVOICE_ISSUER, invoiceParty, type InvoiceInput, 
 export { buildBrandedDocumentPdf } from "../../features/hospitals/contractPdf";
 
 export const portalUiState = { screen: "admin-dashboard", calls: 0, bookingRequests: 0, bookingInputs: [] as unknown[], cancelledBookings: 0, navigatedTo: "", unavailablePackage: false, availabilityReviews: [] as string[], holdAvailability: false, failAvailability: false, consultantWrites: [] as unknown[], publicConsultantReads: 0, autoConfirmedTreatment: "not_started" as TreatmentStatus };
+export const qaRequestTrace: { kind: string; args: unknown[] }[] = [];
+Object.assign(globalThis, { qaRequestTrace });
 export const auditMfaCalls = { reauth: [] as string[][], clears: 0 };
 Object.assign(globalThis, { auditMfaCalls });
 export let finishAvailabilityReview: (() => void) | undefined;
@@ -121,9 +123,17 @@ export const createBookingRequest = async (input: unknown) => { portalUiState.bo
 export const getPortalBooking = async (id: string) => portalUiState.screen.endsWith("auto-confirmed") && id === autoConfirmedBooking.id
   ? { ...autoConfirmedBooking, treatmentStatus: portalUiState.autoConfirmedTreatment, status: portalUiState.autoConfirmedTreatment === "completed" ? "completed" : "confirmed" }
   : bookings.find((booking) => booking.id === id) ?? null;
+export const getConsumerBooking = getPortalBooking;
 export const getPublicHospital = async () => ({ ...hospital, blockedDateRanges: (globalThis as unknown as { bookingSoldOut?: boolean }).bookingSoldOut ? [{ startDate: Timestamp.fromDate(new Date("2099-10-25T00:00:00+05:30")), endDate: Timestamp.fromDate(new Date("2099-10-25T00:00:00+05:30")) }] : [] });
 export const getPublicHospitalService = async () => portalUiState.unavailablePackage ? null : { ...services[1], packageVersion: "a".repeat(64) };
-export const listAdminBookings = () => page(portalUiState.screen === "admin-bookings-empty" ? [] : portalUiState.screen === "admin-bookings-cancellable" ? [{ ...bookings[0], treatmentStatus: "not_started" }] : operationalBookings());
+export const listAdminBookings = (filters: { status?: string } = {}, options: { cursor?: unknown } = {}) => {
+  qaRequestTrace.push({kind:"bookings",args:[filters,options]});
+  if(portalUiState.screen === "admin-bookings-pagination") {
+    const records=operationalBookings().filter(b=>!filters.status||b.status===filters.status);
+    return Promise.resolve({documents:options.cursor?records.slice(1):records.slice(0,1),cursor:options.cursor?null:"qa-next",hasMore:!options.cursor&&records.length>1});
+  }
+  return page(portalUiState.screen === "admin-bookings-empty" ? [] : portalUiState.screen === "admin-bookings-cancellable" ? [{ ...bookings[0], treatmentStatus: "not_started" }] : operationalBookings());
+};
 export const readDocumentsByIds = async (collectionPath: string, ids: string[]) => collectionPath === "hospitals" ? [hospital].filter((item) => ids.includes(item.id)) : collectionPath === "services" ? services.filter((item) => ids.includes(item.id)) : [];
 export const userListControl = { failRole: "", holdRole: "", distinctNames: false, pending: [] as (() => void)[] };
 Object.assign(globalThis, { userListControl });
@@ -147,10 +157,13 @@ export const listConsultants = (options?: { cursor?: unknown }) => {
 };
 export const listHospitalAvailabilityRequests = () => page(portalUiState.screen === "hospital-availability-empty" ? [] : availability);
 export const listAdminAvailabilityRequests = () => page(portalUiState.screen === "admin-availability-empty" ? [] : availability);
-export const listAuditLogs = () => page(portalUiState.screen === "admin-audits-empty" ? [] : portalUiState.screen === "admin-security-audits" ? ["started", "completed", "unknown"].map(outcome => ({
+export const listAuditLogs = (options?: unknown) => {
+  qaRequestTrace.push({kind:"audits",args:[options]});
+  if(portalUiState.screen === "admin-audits-custom") return page(["2026-11-04T23:59:59+05:30","2026-11-05T00:00:00+05:30","2026-11-09T23:59:59+05:30","2026-11-10T00:00:00+05:30"].map((date,index)=>({...metadata,id:`date-audit-${index}`,timestamp:Timestamp.fromDate(new Date(date)),action:"update",module:"hospitals",recordId:"centre",actorId:"actor",actorRole:"admin",previousValues:null,updatedValues:{name:hospital.name},source:"server"})));
+  return page(portalUiState.screen === "admin-audits-empty" ? [] : portalUiState.screen === "admin-security-audits" ? ["started", "completed", "unknown"].map(outcome => ({
   ...metadata, id: `security-${outcome}`, timestamp: now, action: "update", module: "adminSecurity", recordId: "actor", actorId: "actor", actorRole: "admin", previousValues: null,
   updatedValues: { event: "authenticator_replacement", outcome }, source: "web",
-})) : [{ ...metadata, id: "audit", timestamp: now, action: "update", module: "hospitals", recordId: "centre", actorId: "actor", actorRole: "admin", previousValues: { name: "Centre" }, updatedValues: { name: hospital.name }, source: "server" }]);
+})) : [{ ...metadata, id: "audit", timestamp: now, action: "update", module: "hospitals", recordId: "centre", actorId: "actor", actorRole: "admin", previousValues: { name: "Centre" }, updatedValues: { name: hospital.name }, source: "server" }]); };
 export const getUserDisplayNames = async () => new Map([["actor", "Admin"]]);
 export const dashboardCountCalls: { path: string; filters: { field: string; operator: string; value: unknown }[] }[] = [];
 Object.assign(globalThis, { dashboardCountCalls });
@@ -294,7 +307,9 @@ const financeRecord = { id: "consultation-fixture", bookingId: "consultation-fix
   commissionPercentage: 10, gatewayFeePaise: 234, gatewayTaxPaise: 36, refundedPaise: 0, netSettlementPaise: 98821, netRevenuePaise: 8771,
   paymentStatus: "paid", settlementStatus: "pending", settlementHold: false, reviewReason: null, settlementReference: null,
   createdAt: "2026-10-31T10:00:00Z", updatedAt: "2026-10-31T10:00:00Z", lastAuditId: "finance-audit" };
-export const listConsultantFinance = async () => {
+export const listConsultantFinance = async (mode?: string, cursor?: string | null) => {
+  qaRequestTrace.push({kind:"finance",args:[mode,cursor]});
+  if(portalUiState.screen === "admin-consultant-finance-pagination") return {documents:cursor?[{...financeRecord,id:"finance-next",bookingReference:"AYURNEXT02",settlementStatus:"paid",mode}]:[{...financeRecord,mode}],mode,cursor:cursor?null:"qa-next",hasMore:!cursor,summary:{count:2,grossPaise:198110,commissionPaise:18010,gatewayFeePaise:468,refundedPaise:0,pendingPayablePaise:90050,paidPayablePaise:90050,reviewCount:0,unknownFeeCount:0}};
   if (portalUiState.screen === "admin-consultant-finance-refund" && financeRecord.settlementStatus !== "closed") Object.assign(financeRecord, { settlementHold: true, reviewReason: "refund_review", refundedPaise: financeRecord.grossPaise, paymentStatus: "refunded" });
   return { documents: [financeRecord], mode: "test", cursor: null, hasMore: false,
       summary: { count: 1, grossPaise: 99055, commissionPaise: 9005, gatewayFeePaise: 234, refundedPaise: financeRecord.refundedPaise, pendingPayablePaise: financeRecord.settlementStatus === "paid" || financeRecord.settlementStatus === "closed" || financeRecord.settlementHold ? 0 : 90050, paidPayablePaise: financeRecord.settlementStatus === "paid" ? 90050 : 0, reviewCount: financeRecord.settlementHold ? 1 : 0, unknownFeeCount: 0 } };
@@ -307,13 +322,16 @@ export const closeConsultantRefundReview = async (input: { notes: string }) => {
   return { record: { ...financeRecord } };
 };
 export const createConsultationBooking = async (input: unknown) => { portalUiState.consultantWrites.push(input); if (paymentRecovery.closeNext) { paymentRecovery.closeNext = false; throw new ConsultationCheckoutClosedError(); } if (paymentRecovery.failNext) { paymentRecovery.failNext = false; throw new Error("Payment could not be confirmed. Check My Bookings before paying again."); } return { ok: true, bookingId: "consultation-fixture", bookingReference: "AYURCONS01" }; };
-export const listConsultationBookings = () => page(portalUiState.screen === "admin-consultations-grid" ? Array.from({ length: 3 }, (_, index) => ({ ...consultation, id: `consultation-${index}`, bookingReference: `AYURGRID${index}`, consumerName: index === 0 ? "A consumer with a longer full name for wrapping" : consultation.consumerName })) : portalUiState.screen === "consumer-consultations-empty" ? [] : [{ ...consultation,
+export const listConsultationBookings = (_consumerId?: string|null, cursor?: unknown) => {
+  qaRequestTrace.push({kind:"consultations",args:[_consumerId,cursor]});
+  if(portalUiState.screen === "admin-consultations-pagination") return Promise.resolve({documents:[{...consultation,id:cursor?"consultation-next":consultation.id,bookingReference:cursor?"AYURNEXT03":consultation.bookingReference}],cursor:cursor?null:"qa-next",hasMore:!cursor});
+  return page(portalUiState.screen === "admin-consultations-grid" ? Array.from({ length: 3 }, (_, index) => ({ ...consultation, id: `consultation-${index}`, bookingReference: `AYURGRID${index}`, consumerName: index === 0 ? "A consumer with a longer full name for wrapping" : consultation.consumerName })) : portalUiState.screen === "consumer-consultations-empty" ? [] : [{ ...consultation,
   ...(portalUiState.screen.startsWith("admin-consultations-refund") ? { paymentIntentId: consultation.id, paymentTotals: { paidPaise: 99055, refundedPaise: 0 } } : {}),
   ...(portalUiState.screen === "consumer-consultations-rescheduled" ? { consumerRescheduleCount: 1 } : {}),
   ...(portalUiState.screen === "consumer-consultations-policy" || portalUiState.screen === "consumer-consultations-expired" ? {
     cancellationPolicy: snapshotConsultationCancellation(DEFAULT_CONSULTATION_CANCELLATION_POLICY, portalUiState.screen.endsWith("expired") ? "2000-01-01" : "2099-10-25", "09:30"),
     paymentTotals: { paidPaise: 99055, refundedPaise: 0 },
-  } : {}) }]);
+  } : {}) }]); };
 export const getConsultationBooking = async () => consultation;
 export const getConsultationRefundQuote = async (bookingId: string) => ({ bookingId, lastAuditId: "consultation-audit", maximumPaise: 99055,
   suggestedPaise: portalUiState.screen.endsWith("exception") ? 0 : 99055, exceptionRequired: portalUiState.screen.endsWith("exception"), blocked: null });

@@ -1,6 +1,204 @@
 # Session handoff
 
-Updated: 6 November 2026 (Asia/Calcutta).
+Updated: 9 November 2026 (Asia/Calcutta).
+
+## Consumer centre-booking commission exposure (9 November 2026, v4.41.5)
+
+- Confirmed that Consumer centre-booking list/details downloaded full Firestore
+  booking documents, including commissionPercentage/estimatedCommission. Hiding
+  those fields in cards was insufficient. Added an active-Consumer-only,
+  owner-scoped `/api/consumer/booking-history` with explicit safe field projection
+  and read masks, bounded 20-record cursor pages, owned cursor validation,
+  no-store responses and generic missing/foreign detail responses. Timestamps
+  retain the shared lossless encoding/decoding. Existing index on consumerId /
+  createdAt supports this query; no new index or mirrored collection.
+- Consumer list and selected-booking view now use that API, a safe Pick type and
+  string cursors. Legacy label/reference fallbacks remain. Cancellation retains
+  its existing server transaction/revision/ownership checks and safe changes-only
+  response. Creation/price/commission snapshots, historical records, Admin and
+  assigned-Hospital full reads and actions are preserved. No data migration,
+  deletion, payment or email behavior change.
+- Local firestore.rules now deny Consumer direct reads of full `bookings`, even
+  owned records, retaining Admin and assigned operational Hospital access. Rules
+  cannot field-filter documents. Rules and application are NOT deployed: release
+  the new API/client first, then deploy these rules, otherwise the old Consumer
+  client would lose access. Exposure remains on the current live rules until
+  that deployment. Old cached clients need a refresh after the rules change.
+- Validation: 24/24 focused local unit/API-fixture regressions and 22/22 desktop
+  Chromium/mobile WebKit browser checks passed. Covers projection under a fake
+  database returning full documents, own/foreign/archived detail, bounded cursor
+  pages, role denial, safe cancellation responses, immutable commission snapshots,
+  legacy labels, retry/notification behavior and existing portal booking actions.
+  Initial sandbox child-process EPERM was worked around with Node isolation=none
+  and approved local browser execution; passing reruns completed.
+- Native rule get/query denial tests updated, but NOT executed: only Java 8 is
+  available here, not the supported emulator JDK. Added loopback production-build
+  smoke coverage for the new endpoint; NOT run without a fresh approved build.
+  No fresh build, lint, typecheck, live workflow/security test or deployment.
+  Local fixture/source checks are not proof of deployed permissions.
+- QA workbook BKG-008 and SEC-002 expectations updated, preserving Manual
+  required sign-off and tester history. Supporting checks documented in tests/qa.
+
+## Public video and hospital-partner media (9 November 2026, v4.41.4)
+
+- Owner requested faster public videos and hospital-partner image, not a Storage
+  migration. Preserved source files and created versioned local web encodings.
+  Source-byte measurements (decimal bytes, not measured transfer times): hero
+  MP4 7,647,581 -> 5,132,461; treatment clips 3,601,356 -> 1,833,059,
+  3,593,239 -> 1,801,907, 3,457,101 -> 1,503,643. All new videos retain
+  1280x720 H.264, compatible yuv420p, full visual clip duration and fast-start;
+  muted treatment clips no longer carry unused AAC. Originals already had
+  fast-start: do not claim that was their bottleneck. A first hero CRF24 encode
+  grew larger, so it was rejected and replaced with a visually reviewed CRF28
+  copy; treatment encodings use CRF24. No original media removed.
+- Partner image 351,844 -> 171,262 bytes at 1280px, with a 56,846-byte 640px
+  variant. Voices uses a bounded local custom Next image loader and corrected
+  sizes rather than on-demand image encoding; original composition/aspect and
+  reserved CSS frame remain. Hero poster 492,570 -> 324,668 bytes; desktop
+  hero video waits for poster onLoad and retains existing device eligibility.
+- TreatmentFilm assigns no video src until near view (600px preparation margin),
+  starts only the lead, then queues the next film after first playback. Added a
+  small WebP poster shared by native videos and the lazy image fallback, avoiding
+  a separate image-optimizer URL. Pauses offscreen/hidden, cleans observers and
+  timers, and leaves a static poster/no video requests for reduced motion.
+  Safari preload may wait for visibility; do not promise forced prefetch there.
+- Testing exposed a first-frame visibility deadlock with opacity-zero-until-
+  playing on WebKit. Fixed by keeping the active video eligible/visible and
+  using its native poster during load; failure still exposes the fallback.
+  Mocked network routing cannot reliably serve Windows WebKit's native media
+  pipeline, so tests use a real temporary loopback server with Range responses
+  and 250ms delayed video responses. Sources and actual codecs are local; motion
+  and Next image adapter are mocked. No production services or mutations.
+- Final checks: 28/28 responsive Chromium/WebKit browser executions passed,
+  covering actual playback/progression/rotation, offscreen pause, hero gate,
+  images, reduced motion and failures; 4/4 asset/loader unit checks passed.
+  Six before/after image/frame previews reviewed; new MP4 metadata verified.
+  No fresh production build/lint/typecheck, LCP/throughput benchmark, sustained
+  slow-bandwidth or physical iOS/Android test, hosting measurement or deployment.
+  Source-size reductions must not be reported as measured page-speed gains.
+- Workbook unlocked: applied current expectations to ENQ-007, UXP-008,
+  UXP-011 and UXP-012, including previously blocked Ayu/transition edits. All
+  25 sheets, IDs, test methods, tester-entered results/evidence/history,
+  dropdowns/filters/frozen panes preserved; only eight step/expected-result
+  cells changed. Checked rendered rows, formula errors and saved XML. Native
+  Excel selection/last scroll-position hints are not retained by artifact export.
+  Critical manual sign-off was not replaced with local test results. Technical
+  check commands/limits are in tests/qa/README.md. Workbook stays Git-ignored.
+
+## Ayu transparent portrait and touch rotation correction (9 November 2026, v4.41.3)
+
+- Owner rejected the added circular portrait background. Removed circle fill,
+  border, inset/outer shadows and ground disc in launcher and dialog. Retained
+  original transparent mascot, light image-only drop shadow and finite welcome.
+- Shared paused state previously combined pointer entry and all focus returns.
+  Touch pointer entry without a leave plus modal focus restoration could retain
+  a pause indefinitely. Separated mouse hover and keyboard focus; touch no
+  longer acts as hover, pointer input clears keyboard modality, Tab navigation
+  pauses rotation and leaving the control releases that pause. Timer still
+  stops for open dialogs, hidden tabs and reduced motion. Reduced motion still
+  shows both controls statically, without forced alternating animation.
+- Added touch-entry/open/close/rotation regression; keyboard pause uses actual
+  Tab traversal, not programmatic focus masquerading as keyboard interaction.
+  Updated portrait assertions for transparent/background-free rendering.
+- Final focused run passed 28 browser executions across 7 Chromium/WebKit
+  phone/tablet/desktop layouts. An initial assertion expected border-style none,
+  but Tailwind uses solid with zero width; corrected to assert zero border width
+  and reran successfully. Transparent launcher screenshot visually reviewed.
+- QA ENQ-007 expectation pending from the locked workbook must say transparent
+  mascot with soft image shadow (not shaded circular frame), and cover switching
+  resuming after touch close while keyboard focus pauses safely. Preserve its
+  manual status and tester history. Previous EBUSY save must not be reported as
+  successful. No build/lint/deployment or production API changes.
+
+## Ayu portrait and public section continuity (9 November 2026, v4.41.2)
+
+- Reused the existing small local Ayu WebP through AyuPortrait in the launcher
+  and deferred dialog. Added cream/sage dimensional shading and a single brief
+  welcome sway, CSS-only with no new asset, library, polling or continuous loop.
+  Reduced motion keeps portraits static. Existing flag, 3-second WhatsApp
+  switch, focus pause, modal and enquiry API are unchanged.
+- Public section reveals now fade without vertical displacement, trigger at
+  12% visibility rather than 70%, and finish in 450 ms with bounded staggering.
+  Applies to shared FadeUp, Wellness Path cards, film container and footer
+  invitation. Removed process-card hover lifting; content/layout/media unchanged.
+  SmoothScroll retains explicit anchor/custom-event navigation offsets but
+  no longer instantiates Lenis or intercepts native wheel/touch scrolling.
+  Shared modal scroll locks remain authoritative. No portal/business logic edits.
+- Focused reveal-prop tests passed (2); native-scroll/offset/stationary-card
+  fixtures passed on all 7 responsive Chromium/WebKit projects. An initial
+  landscape assertion measured before Playwright scrolled the card into view;
+  corrected that test setup and reran all 7 successfully. Ayu Safari clock test
+  now finishes its existing CSS crossfade before asserting focus; both WebKit
+  projects passed the targeted rerun. Final focused Ayu rerun passed all 35
+  browser executions across the same 7 desktop/phone/tablet projects, no skips.
+  Launcher/header screenshots reviewed at mobile and desktop sizes. Combined
+  focused result: 42 browser executions plus 2 reveal-prop unit tests passed.
+  Browser fixtures are not a live production/physical-device performance audit.
+- QA workbook edits for ENQ-007 (Ayu portrait/welcome/static reduced motion) and
+  UXP-012 (native public scrolling, brief stationary reveals and offsets) were
+  prepared with original manual methods/results/history intact, but export
+  failed with EBUSY because the original workbook was open/locked. Do not claim
+  the workbook was updated. Close it before applying these two expectation
+  updates; do not overwrite newer tester entries from a backup. Prepared script
+  and previews are local ignored tmp files only.
+- Version synchronized to 4.41.2. No build, lint, standalone typecheck, API/live
+  calls or deployment requested or run for these presentation changes.
+
+## Candidate automation and business workbook layout (9 November 2026)
+
+- Owner requested implementing the 38 automation candidates, then simplifying
+  the workbook for business sharing without cycle/run IDs or excessive technical
+  columns. Added/extended local regression checks and reused matching existing
+  suites. Stable coverage is in `tests/qa/candidate-coverage.json`; the repeatable
+  command is `node scripts/test-qa-candidates.mjs`. It runs fixtures only, never
+  a live Firebase/provider workflow. See `tests/qa/README.md`.
+- Final focused runner passed 134 unit cases and 42 browser executions across
+  desktop Chromium/mobile WebKit, no skips or flaky retries. Early failures were
+  incorrect test selectors, date fixtures outside the requested range, and an
+  assertion reading before the final WebKit date-filter response; corrected
+  fixtures/assertions and reran. No production application logic changed.
+- New checks cover phone/role/map/package/capacity validation, current explicit
+  service assignment refresh, hospital CP01/CP02 retention, account/centre status
+  separation, ten-image cap, used reset codes, forced Safari PNG/oversize fallback,
+  separate-address behaviour, locked contract edits/three-year expiry, IST PDF
+  filename, staged-photo cancellation, pagination/filters and editorial attribution.
+- Workbook remains at its existing ignored project path, with 289 cases on the
+  same 25 tabs. Former candidates become Automated only after the successful
+  linked run: 87 Automated and 202 Manual required. All critical manual cases
+  remain manual. The business layout removes cycle/build-ID inputs and technical
+  test-file columns, simplifies daily plans/logs/issues, and retains emerald/cream
+  styling. Existing tester dates/results/evidence/history are preserved; local
+  automation passes do not manufacture live business test results.
+- Two plan details were corrected to the actual UI: district filtering is text
+  in Centre or location (not a separate district dropdown), and contract
+  particulars use Edit/Save rather than an unimplemented Cancel control.
+- This is test/document work only: no app version bump, production mutation,
+  rules/index deployment, payments, refunds or real email send. Build/lint/
+  standalone typecheck were not requested for this task and were not rerun.
+
+## Local QA test workbook (9 November 2026)
+
+- Owner requested a detailed module-separated Excel test plan with daily dates,
+  automation labels and manual critical checks. Created the local ignored file
+  `outputs/ayursarga-qa-2026-11-09/Ayursarga_Test_Cases.xlsx`: 289 cases across
+  20 module sheets, plus Test Summary, Daily Plan, Execution Log, Defects and
+  Guide and Test Data (25 sheets total). Suggested 14-day schedule starts
+  09/11/2026; 500 blank execution rows and 200 blank defect rows preserve retests.
+- 49 cases marked Automated with existing test references; 38 Automation
+  candidates are not implemented coverage; 202 Manual required cases include
+  every P0/P1 and real provider/device verification. Supporting automation is
+  separate from required manual sign-off. No case is marked passed and no
+  application tests, live messages, payments, refunds or deployments were run.
+- Workbook checks covered unique IDs, existing automation-reference paths,
+  editable dates/results, dropdowns, filters/frozen panes, summary recalculation,
+  daily run-count changes, blank restored results and all 25 rendered sheet
+  previews. Exported XLSX structure was inspected; no native Excel session used.
+- Added precise workbook .gitignore entry and an AGENTS.md maintenance rule:
+  update affected expectations/references when behaviour changes; preserve IDs,
+  tester-entered dates/results, evidence and history; do not regenerate over
+  completed testing or label possible automation as existing. Missing ignored
+  workbook must be reported, not silently reconstructed. No app version bump
+  for this documentation-only task.
 
 ## Production-readiness audit (6 November 2026, v4.41.1)
 

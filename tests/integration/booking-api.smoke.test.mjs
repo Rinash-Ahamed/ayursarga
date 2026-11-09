@@ -46,6 +46,10 @@ test("protected booking/consultant mutations reject missing and invalid tokens w
     assert.match(response.headers.get("cache-control"), /no-store/);
   }
   const details = await read("/api/consumer/bookings?id=local-smoke-not-a-real-record"); assert.equal(details.status, 401);
+  for (const path of ["/api/consumer/booking-history", "/api/consumer/booking-history?id=local-smoke-not-a-real-record"]) {
+    const response = await read(path); assert.equal(response.status, 401);
+    assert.match(response.headers.get("cache-control"), /no-store/);
+  }
   for (const path of ["/api/admin/consultant-finance?mode=test", "/api/consumer/consultation-cancellation-policy", "/api/admin/consultation-cancellation-policy"]) {
     const response = await read(path); assert.equal(response.status, 401);
     assert.match(response.headers.get("cache-control"), /no-store/);

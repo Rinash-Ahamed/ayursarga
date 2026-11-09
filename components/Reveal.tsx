@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { FormEventHandler, ReactNode } from "react";
 
 const motionTags = {
@@ -30,13 +30,14 @@ export function FadeUp({
   as?: MotionTagName;
   onSubmit?: FormEventHandler<HTMLFormElement>;
 }) {
+  const reducedMotion = useReducedMotion();
   const animationProps = {
     id,
     className,
-    initial: { opacity: 0, y: 36 },
-    whileInView: { opacity: 1, y: 0 },
-    viewport: { once: true, amount: 0.7 },
-    transition: { duration: 1, delay, ease: [0.22, 1, 0.36, 1] as const },
+    initial: reducedMotion ? false as const : { opacity: 0 },
+    whileInView: { opacity: 1 },
+    viewport: { once: true, amount: 0.12 },
+    transition: { duration: reducedMotion ? 0 : 0.45, delay: reducedMotion ? 0 : Math.min(delay, 0.18), ease: [0.22, 1, 0.36, 1] as const },
   };
 
   if (as === "form") {

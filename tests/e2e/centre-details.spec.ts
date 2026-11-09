@@ -2,10 +2,10 @@ import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { bundleDialogHarness } from "../helpers/bundleDialogHarness";
 const bundle = bundleDialogHarness("tests/fixtures/centreDetailsHarness.tsx", Object.fromEntries(["next/link", "firebase/firestore", "@/services/hospitals/publicHospitalService"].map((name) => [name, "tests/fixtures/centreDetailsMocks.tsx"])));
-async function mount(page: Page, blocked = false, hold = false, fail = false) {
+async function mount(page: Page, blocked = false, hold = false, fail = false, location?: string, rating = false) {
   await page.setContent('<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="fixture-root"></div></body></html>');
   for (const file of ["node_modules/tailwindcss/lib/css/preflight.css", "app/globals.css"]) await page.addStyleTag({ content: readFileSync(file, "utf8") });
-  await page.evaluate(({ blocked, hold, fail }) => { window.centreDetailsBlocked = blocked; window.centreDetailsHold = hold; window.centreDetailsFail = fail; }, { blocked, hold, fail });
+  await page.evaluate(({ blocked, hold, fail, location, rating }) => { window.centreDetailsBlocked = blocked; window.centreDetailsHold = hold; window.centreDetailsFail = fail; window.centreDetailsLocation=location; window.centreDetailsRating=rating; }, { blocked, hold, fail, location, rating });
   await page.addScriptTag({ content: bundle });
   if (hold) {
     await expect(page.locator(".public-centre-loading-layout")).toBeVisible();
@@ -14,6 +14,25 @@ async function mount(page: Page, blocked = false, hold = false, fail = false) {
   }
   else await expect(page.locator(".public-centre-package")).toHaveCount(4);
 }
+
+test('SRC-014: centre map and external link keep the validated centre location and responsive frame',async({page})=>{
+  await page.route('**/*',route=>route.fulfill({status:204,body:''}));
+  const url='https://www.google.com/maps/embed?pb=synthetic';
+  await mount(page,false,false,false,url);
+  const frame=page.locator('.public-centre-map-frame iframe');
+  await expect(frame).toHaveAttribute('src',url);
+  await expect(frame).toHaveAttribute('loading','lazy');
+  await expect(page.getByRole('link',{name:/Open location in maps/})).toHaveAttribute('href',url);
+  await frame.scrollIntoViewIfNeeded();
+  expect(await frame.evaluate(el=>el.getBoundingClientRect().width<=document.documentElement.clientWidth)).toBe(true);
+});
+
+test('USR-010: centre editorial rating is attributed to Ayursarga rather than patient reviews',async({page})=>{
+  await mount(page,false,false,false,undefined,true);
+  await expect(page.getByLabel('Ayursarga assessment 4.5 out of 5')).toBeVisible();
+  await expect(page.getByText('Ayursarga editorial assessment',{exact:true})).toBeVisible();
+  await expect(page.getByText(/verified patient|patient rating|customer rating/i)).toHaveCount(0);
+});
 
 test("centre loading reserves responsive content space without shifting a visible footer", async ({ page }, info) => {
   await mount(page, false, true);

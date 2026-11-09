@@ -10,6 +10,16 @@ const bundle = bundleDialogHarness("tests/fixtures/centreSearchHarness.tsx", {
 
 const uploadedPhoto = (index: number) => `https://firebasestorage.googleapis.com/v0/b/gallery.test/o/${encodeURIComponent(`hospitals/centre/images/00000000-0000-4000-8000-${String(index).padStart(12, "0")}-1200.webp`)}?alt=media&token=synthetic`;
 
+test('SRC-004: location search accepts a district, changes district and clears without stale cards',async({page})=>{
+  await page.route('**/*',route=>route.fulfill({status:204,body:''}));
+  await mountImageFixture(page,[]);
+  const search=page.getByPlaceholder('Search as you type');
+  const cards=page.locator('.public-center-card');
+  await search.fill('Kozhikode');await expect(cards).toHaveCount(1);await expect(cards.first()).toContainText('Kozhikode');
+  await search.fill('Palakkad');await expect(cards).toHaveCount(1);await expect(cards.first()).toContainText('Sanjeevani');
+  await search.clear();await expect(cards).toHaveCount(2);
+});
+
 async function mountImageFixture(page: import("@playwright/test").Page, urls: string[]) {
   await page.setContent('<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="fixture-root"></div></body></html>');
   await page.evaluate((images) => { window.centreSearchImageUrls = images; }, urls);

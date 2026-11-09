@@ -42,6 +42,9 @@ ui-debug.log*
 /lighthouse-report*.html
 /lighthouse-report*.json
 
+# Local QA workbook
+/outputs/ayursarga-qa-2026-11-09/Ayursarga_Test_Cases.xlsx
+
 # Local editor/agent state; shared .agents/skills remain version-controlled
 /.agent/
 /.codex/

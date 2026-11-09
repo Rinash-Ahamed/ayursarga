@@ -11,6 +11,13 @@ const textHash = (pdf: string) => createHash("sha256").update(
     .join("").replace(/\s/g, ""),
 ).digest("hex");
 
+test('CON-010: PDF filename uses current India date even while browser is on previous UTC day',async({page})=>{
+  await page.clock.install({time:new Date('2026-11-08T20:00:00Z')});
+  await page.setContent('<html></html>');await page.addScriptTag({content:bundle});
+  const result=await page.evaluate(()=>(window as unknown as ContractFixture).contractPdfFixture(false));
+  expect(result.filename).toBe('aspc-ayursarga-partner-wellness-centre-2026-11-09.pdf');
+});
+
 for (const [long, baselineHash] of [
   [false, "51410a442d90fefb1770c6e7476b7593fd692c1ce99bd42a9cf1d5fa09133275"],
   [true, "2d97dc0c025cddb2a48a51a83a753de4b13042359a9b0be03d586d590fea24fe"],

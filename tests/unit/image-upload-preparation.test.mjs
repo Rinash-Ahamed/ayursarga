@@ -24,7 +24,7 @@ test("consultant upload sends prepared bytes and actual MIME type while retainin
 });
 
 for (const [name, browserType] of [["Chromium", chromium], ["WebKit", webkit]]) {
-  test(`${name}: large photos resize before upload, small photos keep dimensions, invalid photos fail`, async () => {
+  test(`IMG-005 ${name}: resizing, forced Safari PNG fallback, oversized fallback and invalid photos`, async () => {
     const browser = await browserType.launch({ headless: true });
     try {
       const page = await browser.newPage();
@@ -45,13 +45,25 @@ for (const [name, browserType] of [["Chromium", chromium], ["WebKit", webkit]]) 
         };
         let rejected = false;
         try { await prepare(new File(["not a photo"], "bad.png", { type: "image/png" }), 8 * 1024 * 1024); } catch { rejected = true; }
-        return { large: await inspect(photo(large)), small: await inspect(photo(small)), rejected };
+        const result = { large: await inspect(photo(large)), small: await inspect(photo(small)), rejected };
+        const original = HTMLCanvasElement.prototype.toBlob;
+        let fallback, oversizedRejected = false;
+        try {
+          HTMLCanvasElement.prototype.toBlob = function(callback) { original.call(this, callback, "image/png"); };
+          fallback = await inspect(photo(small));
+          HTMLCanvasElement.prototype.toBlob = function(callback) { callback(new Blob([new Uint8Array(4 * 1024 * 1024)], { type: "image/png" })); };
+          try { await prepare(photo(small), 8 * 1024 * 1024); } catch { oversizedRejected = true; }
+        } finally { HTMLCanvasElement.prototype.toBlob = original; }
+        return { ...result, fallback, oversizedRejected };
       }, { code, large: large.toString("base64"), small: small.toString("base64") });
       assert.ok(result.large.size > 0 && result.large.size <= 3 * 1024 * 1024);
       assert.ok(["image/webp", "image/png"].includes(result.large.type));
       assert.deepEqual([result.large.width, result.large.height], [1600, 938]);
       assert.deepEqual([result.small.width, result.small.height], [320, 240]);
       assert.equal(result.rejected, true);
+      assert.equal(result.fallback.type, "image/png");
+      assert.deepEqual([result.fallback.width,result.fallback.height],[320,240]);
+      assert.equal(result.oversizedRejected,true);
     } finally { await browser.close(); }
   });
 }

@@ -6,10 +6,10 @@ import { ROUTES } from "@/config/routes";
 import { AYURSARGA_PHONE } from "@/config/contact";
 
 const reveal = {
-  initial: { opacity: 0, y: 18 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, amount: 0.35 },
-  transition: { duration: 0.75, ease: [0.22, 1, 0.36, 1] as const },
+  initial: { opacity: 0 },
+  whileInView: { opacity: 1 },
+  viewport: { once: true, amount: 0.12 },
+  transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] as const },
 };
 
 const wordmarkReveal = {
@@ -27,7 +27,7 @@ export default function Footer({ sectionPrefix = "", backToTopHref }: { sectionP
 
   return <footer id="site-footer">
     <div className="footer-inner">
-      <motion.section className="footer-invitation" {...reveal} aria-labelledby="footer-invitation-title">
+      <motion.section className="footer-invitation" {...reveal} initial={shouldReduceMotion ? false : reveal.initial} transition={shouldReduceMotion ? { duration: 0 } : reveal.transition} aria-labelledby="footer-invitation-title">
         <div>
           <span className="footer-eyebrow">A considered beginning</span>
           <h2 id="footer-invitation-title">Ayurveda, personally matched.</h2>

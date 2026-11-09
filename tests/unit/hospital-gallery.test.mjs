@@ -32,6 +32,17 @@ function fixture(data = {}, role = "admin", denied = false) {
   return { ...f, calls, load };
 }
 
+test("IMG-007: a full ten-photo gallery rejects an eleventh upload before writing Storage or audits", async () => {
+  const imageUrls = Array.from({length:10}, (_,index)=>`https://images.test/full-${index}.webp`);
+  const image = await sharp({create:{width:24,height:18,channels:3,background:"white"}}).webp().toBuffer();
+  for(const role of ["admin","hospital"]) {
+    const f=fixture({status:"active",isPublic:true,imageUrls},role);
+    const response=await f.load(imagePath).POST(new Request("https://test.local/api/hospitals/centre/images",{method:"POST",headers:{"content-type":"image/webp"},body:image}),context);
+    assert.equal(response.status,409);assert.equal(f.calls.uploads.length,0);
+    assert.equal(f.records.get("hospitals/centre").imageUrls.length,10);assert.equal(f.values("auditLogs").length,0);
+  }
+});
+
 test("publication minimum counts five unique valid photos, not duplicates or insecure URLs", () => {
   const { hasMinimumHospitalImages, getHospitalImageUrls, MIN_PUBLIC_HOSPITAL_IMAGES } = loadTypeScript("features/hospitals/images.ts");
   assert.equal(MIN_PUBLIC_HOSPITAL_IMAGES, 5);

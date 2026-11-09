@@ -498,8 +498,9 @@ service cloud.firestore {
     }
 
     match /bookings/{bookingId} {
+      // Consumer history uses the authenticated field-whitelisted API. Rules
+      // cannot hide commission fields within an otherwise readable document.
       allow read: if isAdmin()
-        || (isConsumer() && resource.data.consumerId == request.auth.uid)
         || hasOperationalHospitalAccess(resource.data.hospitalId);
 
       allow create: if false;
