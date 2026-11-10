@@ -52,11 +52,13 @@ test('HOS-014: supported iframe src is extracted, untrusted maps never become an
   assert.match(embed('https://maps.app.goo.gl/synthetic','Palakkad Centre Road'),/q=Palakkad%20Centre%20Road/);
 });
 
-test('CON-008: partner contract retains hospital CP01/CP02, never online consultation policy', () => {
+test('CON-008: partner contract retains CP01 but omits removed CP02 and online consultation policy', () => {
   const { buildHospitalContractHtml } = loadTypeScript('features/hospitals/partnerContractTemplate.ts');
   const html=buildHospitalContractHtml({...hospital,id:'centre',registrationNumber:'REG01',cinNumber:'NOT APPLICABLE',panNumber:'ABCDE1234F',gstin:'NOT APPLICABLE',contractEffectiveDate:'2026-11-09',contractExpiryDate:'2029-11-09',emergencyContact:'9876543210',emergencyReferralHospital:'Nearby hospital'});
-  assert.match(html,/CP01 postnatal - 45 days or more/);assert.match(html,/CP02 short-duration - 2 days or more/);
-  assert.match(html,/CP02 applies to rejuvenation, stress management/);
+  assert.match(html,/CP01 postnatal - 45 days or more/);
+  assert.match(html,/CP01 - 30 days or more, but fewer than 45 days/);
+  assert.match(html,/CP01 - fewer than 30 days/);
+  assert.doesNotMatch(html,/CP[O0]2|Exactly two days falls|CP02 applies/i);
   assert.doesNotMatch(html,/online consultation|consultation-published-24h|free cancellation date/i);
 });
 

@@ -50,9 +50,10 @@ export function validateHospitalFields(input: Record<string, unknown>) {
   const description = toTrimmedString(input.description, 2_000);
   const rawImageUrl = toTrimmedString(input.imageUrl, 500);
   const imageUrl = optionalWebUrl(rawImageUrl);
-  const commissionPercentage = typeof input.commissionPercentage === "number"
-    ? input.commissionPercentage
-    : Number(input.commissionPercentage);
+  const rawCommission = input.commissionPercentage;
+  const commissionPercentage = typeof rawCommission === "number"
+    ? rawCommission
+    : typeof rawCommission === "string" && rawCommission.trim() ? Number(rawCommission) : NaN;
   const normalizedCommission = Number.isFinite(commissionPercentage)
     ? Math.round(commissionPercentage * 100) / 100
     : commissionPercentage;

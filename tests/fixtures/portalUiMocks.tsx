@@ -102,6 +102,7 @@ export const getHospital = async () => ({ ...hospital, imageUrls: portalUiState.
   ...(portalUiState.screen === "admin-contract-outdated" ? { status: "pending", isPublic: false, contractNeedsRegeneration: true,
     registrationNumber: "123456", cinNumber: "NOT APPLICABLE", panNumber: "ABCDE1234F", gstin: "NOT APPLICABLE",
     contractEffectiveDate: "2026-11-02", contractExpiryDate: "2029-11-02", emergencyContact: "9876543210", emergencyReferralHospital: "Nearby hospital" } : {}),
+  ...(portalUiState.screen === "admin-email-request" ? { pendingOfficialEmail: "new.official.hospital.email.address@example.test" } : {}),
 });
 export const getHospitalCapacity = async () => ({ ...metadata, id: "centre", hospitalId: "centre", totalRooms: 10, occupiedRooms: 4, status: "active" });
 export const listAllHospitals = () => page(portalUiState.screen === "admin-hospitals-empty" ? [] : portalUiState.screen === "admin-hospital-cards" ? Array.from({ length: 6 }, (_, index) => ({ ...hospital, id: `centre-${index}`, name: `${hospital.name} ${index + 1}` })) : [hospital]);
@@ -186,6 +187,12 @@ export const authorizedApiRequest = async (url?: string, options?: RequestInit) 
   ...(url?.endsWith("/image") ? { imageUrl: "https://images.test/consultant.webp" } : {}),
   imageUrls: url?.endsWith("/images") && options?.method === "PATCH" ? coverGallery.filter((image) => image !== JSON.parse(String(options.body)).imageUrl) : [] }; };
 export const updateHospital = async () => ({});
+export const emailReviewCalls: boolean[] = [];
+Object.assign(globalThis, { emailReviewCalls });
+export const reviewHospitalEmail = async (_id: string, approve: boolean) => {
+  emailReviewCalls.push(approve);
+  return { pendingOfficialEmail: null, ...(approve ? { email: "new.official.hospital.email.address@example.test" } : {}) };
+};
 export const contractApprovalCalls: string[] = [];
 Object.assign(globalThis, { contractApprovalCalls });
 export const recordHospitalContractGeneration = async (_id: string, expectedContent: string) => {
@@ -202,7 +209,8 @@ export const createHospital = async () => {
   return {};
 };
 export const sendHospitalLoginSetup = async () => "test@example.com";
-export const updateHospitalProfile = async () => ({});
+export const updateHospitalProfile = async (_id: string, changes: Record<string, unknown>) => ({ ...changes, email: hospital.email,
+  ...(changes.email !== hospital.email ? { pendingOfficialEmail: changes.email } : {}) });
 export const saveHospitalCapacity = async () => ({});
 export const createService = async (input: object) => ({ serviceId: "new-package", service: { ...metadata, ...input, id: "new-package", name: "10-day package", status: "inactive", reviewStatus: "draft", draftPackage: input } });
 export const updateService = async () => ({});

@@ -30,6 +30,13 @@ to deploy, rerun maintenance scripts, or modify live data.
 - Display full UI dates as DD/MM/YYYY using `utils/date.ts` and the shared
   `DateInput`. Preserve ISO/API/database formats and India care-date boundaries;
   do not parse day-first display strings with the native Date constructor.
+- Partner contracts use restrained Arial/Helvetica typography, aligned numbered
+  headings, equal party/signing columns and subtle emerald branding, not display
+  serif fonts or decorative gradients. Preserve all wording and populated fields
+  when polishing layout. Keep HTML/PDF contact fields and both signing dates,
+  repeat PDF table headers on continuation pages and retain invoice PDF output.
+  Check complete standard/long sample exports and preview responsiveness; do not
+  drop clauses or shrink text excessively to force pagination.
 - Keep search placeholders visually lighter than entered values. Preserve 16px
   mobile control sizing on iOS to avoid focus zoom. The comparison package
   dropdown has an explicitly requested Android-only 13px empty-prompt exception;
@@ -66,6 +73,31 @@ to deploy, rerun maintenance scripts, or modify live data.
   link. Never introduce a shared default password or store passwords in
   Firestore. Admin may resend the setup/reset link; Hospital users may change
   their password only after re-authentication.
+- Reserve a private audited `portalAccountClaims` identity before creating a
+  privileged Auth account. Create new Auth accounts disabled and enable only
+  after the matching audited profile is saved. Preserve accounts/claims after
+  uncertain outcomes; explicit retries must reuse the reserved UID, never delete
+  an account as compensation or claim an unrelated existing Auth identity.
+  Trusted provisioning scripts reuse the branded server email service and must
+  never print password setup links, codes or provider errors containing them.
+- Hospital self-service official-email edits are approval requests only. Keep
+  the current official email/login until Admin approves the matching revision.
+  Approval and Admin email edits check normalized collection uniqueness through
+  the creation counter transaction, reject incompatible Auth identities and
+  deactivate old linked access with atomic audits. Admin then explicitly sends
+  login setup for the new email. Declining leaves current access unchanged.
+  Keep direct-client official/pending-email writes and identity-claim access
+  denied. Never automatically merge accounts or rewrite historical bookings.
+- Activation must check the official email's Auth/identity-claim compatibility
+  before publication. Login setup must transactionally re-read the active centre,
+  official email/revision, target profile, reserved identity and bounded linked
+  accounts before committing any access restoration or audit. Do not rely on an
+  earlier read made before provisioning. Finish independent Auth changes with
+  shared synchronization and report saved-but-incomplete outcomes explicitly;
+  never claim access/email success after an Auth failure. Explicit setup recovery
+  may revoke old inactive logins without rewriting their preserved profiles.
+  Required hospital commission must be explicitly supplied; blank/null/boolean
+  values must never become 0%. An explicitly entered numeric zero remains valid.
 - App-triggered Hospital invitations and Admin/Hospital reset emails use the
   shared server-only SMTP transport and Ayursarga auth-email template. Generate
   password links with Firebase Admin, not browser sendPasswordResetEmail or the

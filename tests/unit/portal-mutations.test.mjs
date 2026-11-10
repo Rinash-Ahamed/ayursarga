@@ -12,6 +12,12 @@ function fixture(records = {}, options = {}) {
     data: () => records[reference.path], updateTime: Timestamp.fromMillis(1000),
   });
   const db = {
+    runTransaction: async callback => {
+      const batch = db.batch();
+      const result = await callback({ ...batch, get: async ref => { calls.singles++; return snapshot(ref); } });
+      await batch.commit();
+      return result;
+    },
     collection: (collection) => ({ doc: (id = `audit-${++auditId}`) => {
       const ref = { id, path: `${collection}/${id}` };
       ref.get = async () => { calls.singles++; return snapshot(ref); };
@@ -187,7 +193,7 @@ test("inactive hospitals and denied roles cannot write optimized routes", async 
     assert.equal(f.calls.commits, 0);
   }
 });
-test("Admin assessment returns committed delta without a follow-up read", async () => {
+test("Admin assessment rechecks the revision transactionally and returns the committed delta without a post-save read", async () => {
   const f = fixture({ "hospitals/centre": { status: "active", name: "Centre", email: "private@example.com" } });
   const response = await f.load("app/api/admin/hospitals/[hospitalId]/route.ts").PATCH(request({ action: "update", data: { ayursargaRating: 4.5, ayursargaReviewNote: "Editorial assessment" } }), context("hospitalId", "centre"));
   assert.equal(response.status, 200);
@@ -195,7 +201,7 @@ test("Admin assessment returns committed delta without a follow-up read", async 
   assert.equal(body.changes.ayursargaRating, 4.5);
   assert.equal(body.changes.email, undefined);
   assert.ok(body.changes.lastAuditId);
-  assert.equal(f.calls.singles, 1);
+  assert.equal(f.calls.singles, 2);
   assert.equal(f.calls.commits, 1);
   assert.equal(f.calls.writes.length, 2);
 });

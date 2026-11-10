@@ -199,7 +199,7 @@ export function ConsultantsManager() {
             return pricing ? formatCurrency(pricing.totalCharge) : "Not specified";
           })()}</dd></div>
           <div className="consultant-detail-wide"><dt>Online services</dt><dd>{consultant.consultationServices?.length ? consultant.consultationServices.map((id) => consultationService(id)?.label).filter(Boolean).join(" · ") : "Not assigned"}</dd></div>
-          {consultant.lastWorkedCompany && <div><dt>Last worked at</dt><dd>{consultant.lastWorkedCompany}</dd></div>}
+          {consultant.lastWorkedCompany && <div><dt>Previous Hospital</dt><dd>{consultant.lastWorkedCompany}</dd></div>}
           {consultant.address && <div className="consultant-detail-wide"><dt>Address</dt><dd>{consultant.address}</dd></div>}
           {consultant.emergencyContactNo && <div><dt>Emergency contact</dt><dd>{consultant.emergencyContactNo}</dd></div>}
         </dl>

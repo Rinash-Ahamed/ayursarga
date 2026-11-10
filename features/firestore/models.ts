@@ -44,6 +44,9 @@ export type CentreGuidelineId =
 type CentreGuidelineOverrides = Partial<Record<CentreGuidelineId, string>>;
 
 export type HospitalDocument = AuditedDocument & {
+  pendingOfficialEmail?: string | null;
+  pendingOfficialEmailRequestedAt?: Timestamp | null;
+  pendingOfficialEmailRequestedBy?: string | null;
   legalName?: string;
   name: string;
   description: string;

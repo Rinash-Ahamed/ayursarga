@@ -256,7 +256,7 @@ service cloud.firestore {
           // invalidates approval and preserves an immutable contract revision.
           && resource.data.status != 'pending'
           && changed.hasOnly([
-            'name', 'description', 'email', 'phone', 'hospitalPhone1', 'hospitalPhone2',
+            'name', 'description', 'phone', 'hospitalPhone1', 'hospitalPhone2',
             'registeredAddress', 'address', 'city', 'district', 'state',
             'imageUrl', 'imageUrls', 'ayursargaRating', 'ayursargaReviewNote',
             'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies', 'locationUrl',
@@ -402,7 +402,7 @@ service cloud.firestore {
           && linkedAuditAction() == 'update'
           && hasValidHospitalProfileFields()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'name', 'description', 'email', 'phone', 'hospitalPhone1', 'hospitalPhone2',
+            'name', 'description', 'phone', 'hospitalPhone1', 'hospitalPhone2',
             'registeredAddress', 'address', 'city', 'district', 'state',
             'centreGuidelines', 'additionalCentreRules', 'facilities', 'legalPolicies',
             'additionalBystandersAllowed', 'maxAdditionalBystanders', 'additionalBystanderCharge',
@@ -617,6 +617,7 @@ service cloud.firestore {
     }
     match /invoiceReceipts/{receiptId} { allow read, write: if false; }
     match /invoicePaymentAttempts/{attemptId} { allow read, write: if false; }
+    match /portalAccountClaims/{claimId} { allow read, write: if false; }
 
     match /{document=**} {
       allow read, write: if false;

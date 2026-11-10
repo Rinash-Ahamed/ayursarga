@@ -62,7 +62,7 @@ before(async () => {
 });
 
 test("private payment intents, receipts, financials and webhook journals deny every client role", async () => {
-  for (const collection of ["consultationPaymentIntents", "consultationPaymentReceipts", "consultationFinancials", "consultationRefunds", "razorpayWebhookEvents", "cancellationPolicies", "invoiceReceipts", "invoicePaymentAttempts"]) {
+  for (const collection of ["consultationPaymentIntents", "consultationPaymentReceipts", "consultationFinancials", "consultationRefunds", "razorpayWebhookEvents", "cancellationPolicies", "invoiceReceipts", "invoicePaymentAttempts", "portalAccountClaims"]) {
     const path = `${collection}/private-${suffix}`;
     await seed(path, fields({ consumerId: ids.consumer, commissionPaise: 1000 }));
     for (const role of [undefined, "consumer", "hospital", "admin"]) {
@@ -98,6 +98,20 @@ test("hospital and consultant creation cannot bypass the server duplicate-email 
       assert.equal(response.status, 403);
     }
   }
+});
+
+test("hospital official emails and their approval requests cannot be changed through direct client writes", async () => {
+  const path=`hospitals/email-${suffix}`;
+  const data={...metadata,...fields({name:"Centre",description:"Existing",email:"old@example.test",phone:"9876543210",hospitalPhone1:"9876543210",hospitalPhone2:null,
+    address:"A complete centre address",registeredAddress:"A complete registered address",city:"Palakkad",district:"Palakkad",state:"Kerala",status:"active",isPublic:false,commissionPercentage:10})};
+  await seed(path,data);
+  const hospitalProfile=fields({uid:ids.hospital,role:"hospital",status:"active",hospitalId:path.split('/')[1]});
+  await seed(`users/${ids.hospital}`,hospitalProfile);
+  try {
+    for(const role of ["admin","hospital"]) for(const changes of [{email:"new@example.test"},{pendingOfficialEmail:"new@example.test"}]) {
+      assert.equal((await auditedUpdate(path,data,changes,role,"hospitals","update")).status,403);
+    }
+  } finally { await seed(`users/${ids.hospital}`,fields({uid:ids.hospital,role:"hospital",status:"active",hospitalId:centre})); }
 });
 
 test("hospital publication requires five images; live gallery changes cannot drop below five", async () => {

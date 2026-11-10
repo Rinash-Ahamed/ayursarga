@@ -61,7 +61,7 @@ export function createHospital(input: HospitalFields) {
   });
 }
 
-function adminHospitalAction(id: string, action: "update" | "contract_generated" | "contract_signed" | "deactivate" | "archive", data?: Record<string, unknown>) {
+function adminHospitalAction(id: string, action: "update" | "contract_generated" | "contract_signed" | "deactivate" | "archive" | "approve_email" | "reject_email", data?: Record<string, unknown>) {
   return authorizedMutationRequest<HospitalDocument>(`/api/admin/hospitals/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -110,9 +110,12 @@ export function activateHospital(id: string, previous?: DocumentData) {
 
 export const deactivateHospital = (id: string) => adminHospitalAction(id, "deactivate");
 
+export const reviewHospitalEmail = (id: string, approve: boolean, expectedEmail: string, expectedAuditId: string) =>
+  adminHospitalAction(id, approve ? "approve_email" : "reject_email", { expectedEmail, expectedAuditId });
+
 export const updateHospitalProfile = (id: string, input: Partial<HospitalProfileInput>) => {
   if (!id) throw new Error("Your hospital account is not connected correctly.");
-  return authorizedApiRequest<{ ok: true }>("/api/hospital/profile", {
+  return authorizedMutationRequest<HospitalDocument>("/api/hospital/profile", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),

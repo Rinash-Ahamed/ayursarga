@@ -128,6 +128,7 @@ export function HospitalsManager() {
       <h3>{item.name}</h3>
       <div className="admin-package-status" aria-label={`Hospital and package status for ${item.name}`}>
         <span className="portal-status" data-status={item.status}>{formatStatus(item.status)}</span>
+        {item.pendingOfficialEmail && <span className="portal-status" data-status="pending">Email change pending</span>}
         {!Object.hasOwn(summaries, item.id) ? <span className="portal-status">{summaryError ? "Package status unavailable" : "Checking package status…"}</span> : summaries[item.id].total === 0 ? <span className="portal-status">No packages added</span> : <>
           {summaries[item.id].pending > 0 && <span className="portal-status" data-status="pending">Package Approval Pending · {summaries[item.id].pending}</span>}
           {summaries[item.id].approved > 0 && <span className="portal-status" data-status="active">Packages Approved · {summaries[item.id].approved}</span>}

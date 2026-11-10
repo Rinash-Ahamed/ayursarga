@@ -15,6 +15,12 @@ export function isEmailReady() {
   return emailConfiguration() !== null;
 }
 
+/** Operator shutdown only; never called during an application request. */
+export function closeEmailTransport() {
+  transporter?.close();
+  transporter = null;
+}
+
 /** Shared server-only delivery for contact, authentication and booking emails. */
 export async function sendEmail(message: {
   to: string; subject: string; html: string; text: string; replyTo?: string; senderName?: string;

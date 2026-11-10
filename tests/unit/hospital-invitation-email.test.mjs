@@ -8,27 +8,38 @@ function fixture(options = {}) {
     ["hospitals/centre", { name: "Hospital", email: "partner@example.com", status: options.inactive ? "inactive" : "active" }],
     ...(!options.newUser ? [["users/partner", { uid: "partner", name: "Hospital", email: "partner@example.com", role: options.conflictingRole ? "consumer" : "hospital", hospitalId: "centre", status: "active" }]] : []),
   ]);
-  const calls = { emails: [], commits: 0, generatedAccount: 0, writes: [], lookup: 0 };
+  const calls = { emails: [], commits: 0, generatedAccount: 0, writes: [], lookup: 0, deleted: 0 };
+  let sequence = 0, authUid = options.newUser ? null : "partner";
   const snapshot = (ref) => ({ id: ref.path.split("/")[1], ref, exists: records.has(ref.path), data: () => records.get(ref.path) });
   const firestore = {
-    collection: (collection) => ({ doc: (id = "audit") => {
-      const ref = { path: `${collection}/${id}` };
+    collection: (collection) => ({ doc: (id = `audit-${++sequence}`) => {
+      const ref = { id, path: `${collection}/${id}` };
       return { ...ref, get: async () => snapshot(ref) };
-    }, where: () => ({ get: async () => ({ docs: [] }) }) }),
+    }, where: () => ({ limit: () => ({ get: async () => ({ docs: [] }) }) }) }),
     batch: () => {
       const pending = [];
-      return { set: (ref, data) => pending.push({ ref, data }), update: (ref, data) => pending.push({ ref, data }), commit: async () => {
+      return { set: (ref, data) => pending.push({ ref, data }), create: (ref, data) => pending.push({ ref, data }), update: (ref, data) => pending.push({ ref, data }), commit: async () => {
         if (options.failCommit) throw new Error("Atomic commit failed");
         calls.commits++;
         calls.writes.push(...pending);
-        for (const { ref, data } of pending) records.set(ref.path, data);
+        for (const { ref, data } of pending) records.set(ref.path, { ...records.get(ref.path), ...data });
       } };
     },
   };
+  firestore.runTransaction = async callback => {
+    const pending = [];
+    const result = await callback({ get: async ref => ref.path ? snapshot(ref) : ref.get(), create: (ref, data) => pending.push({ ref, data }), set: (ref, data) => pending.push({ ref, data }), update: (ref, data) => pending.push({ ref, data }) });
+    if(pending.some(({ref})=>ref.path.startsWith('users/'))){
+      if(options.failCommit)throw Error('Atomic commit failed');
+      calls.commits++;calls.writes.push(...pending);
+    }
+    for (const { ref, data } of pending) records.set(ref.path, {...records.get(ref.path),...data});
+    return result;
+  };
   const auth = {
-    getUserByEmail: async () => { calls.lookup++; if (options.newUser) throw { code: "auth/user-not-found" }; return { uid: "partner" }; },
-    createUser: async () => { calls.generatedAccount++; return { uid: "partner" }; },
-    deleteUser: async () => {}, updateUser: async () => {}, revokeRefreshTokens: async () => {},
+    getUserByEmail: async () => { calls.lookup++; if (!authUid) throw { code: "auth/user-not-found" }; return { uid: authUid }; },
+    createUser: async input => { calls.generatedAccount++; assert.equal(input.disabled, true); authUid = input.uid; return { uid: authUid }; },
+    deleteUser: async () => { calls.deleted++; }, updateUser: async () => {}, revokeRefreshTokens: async () => {},
   };
   const route = loadTypeScript("app/api/admin/hospitals/[hospitalId]/login-setup/route.ts", {
     "@/services/firebase/adminAuthorization": { AdminAuthorizationError: AuthorizationError, requireActiveAdmin: async () => { if (options.denied) throw new AuthorizationError(); return { uid: "admin", auth, firestore }; } },
@@ -51,8 +62,9 @@ test("Admin hospital invitation sends only after audited provisioning and return
     assert.equal(f.calls.commits, 1);
     assert.equal(f.calls.emails.length, 1);
     assert.deepEqual(f.calls.emails[0], { email: "partner@example.com", name: "Hospital", role: "hospital", invitation: true });
-    assert.equal(f.records.get("auditLogs/audit").actorRole, "admin");
-    assert.equal(f.records.get("users/partner").hospitalId, "centre");
+    const user = [...f.records].find(([path]) => path.startsWith("users/"))[1];
+    assert.equal(f.records.get(`auditLogs/${user.lastAuditId}`).actorRole, "admin");
+    assert.equal(user.hospitalId, "centre");
     assert.equal(f.calls.generatedAccount, newUser ? 1 : 0);
   }
 });

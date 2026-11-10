@@ -1,6 +1,179 @@
 # Session handoff
 
-Updated: 9 November 2026 (Asia/Calcutta).
+Updated: 10 November 2026 (Asia/Calcutta).
+
+## Standard contract typography and alignment (10 November 2026, v4.42.3)
+
+- Owner asked for a clean standard client contract without fancy fonts and with
+  no content removed. Preview now uses Arial throughout, restrained emerald
+  headings, white header/footer, thin table rules, equal party columns and plain
+  bold emphasis instead of serif display fonts, gradients, decorative circles
+  and pill highlights. Existing signature artwork/size/date markup retained.
+  Phone-width wrapping and equal signing boxes preserved.
+- PDF remains standard Helvetica. Contract-only export now preserves heading
+  number spacing and explicit field line breaks, uses equal party/contact columns,
+  measured wrapping with long-token splitting, slightly larger body/table text,
+  repeated table headers after page breaks, sensible table/paragraph spacing,
+  and keeps the complete signing section together. Restored the already-visible
+  contact block and both date labels that the old custom PDF parser skipped.
+  Shared invoice export remains byte-for-byte unchanged for its regression sample.
+  No wording, policy, booking/API/approval data or stored signed document changes.
+- Captured synthetic standard/long samples before changes at a fixed date. Their
+  complete populated HTML bodies are byte-identical after styling, with baseline
+  hashes retained in the contract layout tests. Every paragraph, heading,
+  non-signature table cell and contact value is checked in the PDF text; two date
+  labels, numbering and filenames are checked separately. Both sample PDFs stay
+  five pages. This is not a promise to squeeze arbitrarily long future records.
+- PDF skill used for rendered QA. Poppler was unavailable, so used the bundled
+  pdfjs-dist through a loopback-only browser renderer. Visually inspected all
+  ten final sample pages and checked 267/273 text items against page bounds.
+  Fifteen focused browser executions passed across desktop Chromium, 320px
+  Chromium and mobile WebKit, including unchanged invoice bytes, body baselines,
+  text completeness, five-page counts and preview alignment. Three focused unit
+  regressions passed (company/contact details, retained CP01/absent CP02 and shared
+  signing/activation URL behavior). No fresh build/lint/typecheck or deployment;
+  previous v4.42.2 full checks do not establish those checks for this layout update.
+- Spreadsheet skill updated only CON-009 steps/expectations in the local QA
+  workbook; 25 sheets, styles, controls, methods and tester history preserved.
+  It remains Manual required. AGENTS records standard typography/content
+  preservation; tests/qa documents the focused layout coverage. Real printer,
+  physical devices and production-record inspection remain unverified.
+
+## Authorized validation of v4.42.2 (10 November 2026)
+
+- Owner answered the pending approval question and authorized fresh lint,
+  typecheck, production build and local build-health checks. These supersede the
+  pending-validation notes for v4.42.1/v4.42.2 below. No version bump for checks.
+- ESLint exited 0 with no errors and the same three existing media warnings:
+  TreatmentFilm first/second video ref cleanup and the fixture publicMediaMocks
+  native img. No warnings were suppressed and unrelated media code was not
+  changed. Standalone typecheck and production build passed; all 87 static pages
+  generated. Focused creation/identity/contract/gallery/portal checks passed
+  55/55, plus the separate CON-008 template-removal check (56 total).
+- Started a fresh loopback production server for this exact build. Essential
+  /api/health and deep /api/health?deep=true JSON returned HTTP 200, configuration
+  and deep-configuration modes, with all 3/6 configured dependencies ready. The
+  themed /health?deep=true and HTML redirect checks passed. Browser rendering
+  passed at 390px and 1440px, with six service rows and no horizontal overflow.
+  Local anonymous requests to Admin hospital update, login-setup and Hospital
+  profile mutations returned 401 with no-store. Temporary server stopped and
+  generated typecheck cache removed; original next-env route reference restored.
+- No deployment, live Auth/profile mutation, SMTP send, payment or production
+  load test. Configuration readiness is not external connectivity, real email
+  delivery, deployed-role permission or scale proof. Native Firestore emulator
+  rules still await a supported JDK; previous undeployed rule changes remain
+  outstanding. Earlier 9 responsive email/commission UI checks were not rerun
+  in this validation-only turn; their prior results remain separately recorded.
+
+## Partner contract CP02 removal (10 November 2026, v4.42.2)
+
+- Owner explicitly requested removal of CP02/CPO2 from the contract table. Only
+  CP02 existed: removed both short-duration refund rows, its commercial-table
+  reference and the two dependent explanatory statements. Retained all three
+  CP01 postnatal refund rows, general cancellation instructions, other terms and
+  styling. No online consultation policy was added or changed. Existing signed
+  documents, records and operational cancellation/payment logic are unchanged;
+  this affects newly rendered partner-contract previews/downloads only.
+- Two focused template regressions passed (CON-008 and company details), checking
+  retained CP01 rows, absent CP02/CPO2 and preserved company/contact details.
+  No fresh build/lint/typecheck, deployment or live mutation. Updated CON-008 in
+  the local QA workbook with the spreadsheet skill; preserve its Automated method
+  and tester history. Supporting check is documented in tests/qa/README.md.
+
+## Remaining creation-flow medium fixes (10 November 2026, v4.42.1)
+
+- Supersedes the unresolved-medium note in the v4.42.0 entry below. Activation
+  now preflights official-email Auth/profile and private claim compatibility
+  before publishing or writing its activation audit. Conflicting Consumer,
+  Admin, foreign Hospital, unknown Auth and foreign reservation identities are
+  rejected without changing publication. It does not create an Auth account
+  before activation. Existing contract/photo prerequisites remain authoritative.
+- Login setup now uses a transaction for the final active/non-archived centre,
+  official email/revision, current target profile, identity claim and bounded
+  linked-account reads, followed by the atomic profile/claim/audit writes. Stale
+  hospital state and conflicting profile ownership stop setup without enabling
+  access or sending an invitation. No unsafe Auth compensation was restored.
+- Shared syncPortalAccountAccess waits for all independent Auth enable/disable
+  and token-revocation outcomes. Activation, deactivation/email changes and
+  login setup report a safe saved-but-incomplete 503 rather than ordinary success
+  after Auth failure. Database state/audits stay saved; no false rollback. Setup
+  suppresses invitations on incomplete Auth sync. Admin activation UI distinguishes
+  saved activation from a subsequent setup/email failure. Explicit setup recovery
+  also revokes old inactive/archived linked logins without rewriting their profile
+  history. A missing Auth identity counts as closed only when disabling access,
+  never when enabling it. Reads are bounded at 21 accounts with an overflow guard.
+- Hospital validation rejects blank/null/boolean/array/object commission values
+  instead of coercing them to zero. Explicit numeric or numeric-string 0 remains
+  allowed; existing numeric commission records and snapshots are unchanged.
+- Validation: 54/54 focused unit/API-fixture checks passed across identity,
+  invitation, normalized creation email, contract approval, gallery/publication
+  and portal mutations. Nine browser executions passed on desktop Chromium,
+  320px Chromium and mobile WebKit: email approval/request and explicit commission
+  validation. Includes stale setup, conflicting activation, Auth failure after
+  saved writes, recovery and preservation checks. No live mutations, emails,
+  account changes or deployments. No new rules/index/config changes required for
+  these medium fixes; previous undeployed rule restrictions remain outstanding.
+- A fresh build/lint/typecheck plus local build-health run was requested through
+  an asynchronous approval question, but no reply has arrived yet. They have NOT
+  been rerun for v4.42.1; the passing v4.42.0 checks are not proof for this update.
+  Native rules, real Auth outages, actual inbox receipt and physical devices remain
+  unverified. Auth and Firestore cannot commit atomically across providers; saved
+  partial outcomes are preserved and surfaced rather than silently rolled back.
+- QA workbook AUT-011, HOS-002 and HOS-011 updated using the spreadsheet skill.
+  Rendered before/after and verified only six steps/expectation cells changed;
+  all 25 sheets, methods, styles, controls and tester history preserved. Critical
+  role/provider checks stay Manual required. AGENTS and tests/qa guidance updated.
+
+## Hospital identity security and email approval (10 November 2026, v4.42.0)
+
+- Fixed the three high-priority creation-flow findings. Hospital login setup and
+  the trusted provisioning script no longer delete Auth accounts as compensation
+  for uncertain database outcomes. Shared server-only provisioning reserves an
+  audited private portalAccountClaims UID before Auth creation, creates disabled
+  accounts, enables only after profile persistence and recovers the same UID on
+  explicit retries. Unrecognized existing Auth accounts and conflicting roles
+  cannot be adopted. No passwords/action links are saved in claims.
+- Hospital self-service email changes now request Admin approval while keeping
+  the official email and current login unchanged. Admin can approve/decline with
+  the shared confirmation dialog and expected request/revision checks. Approval
+  and ordinary Admin email edits enforce normalized hospital-email uniqueness
+  through the existing creation-counter transaction, check Auth compatibility,
+  and atomically deactivate/audit old linked profiles. Admin must explicitly
+  send login setup for the new email. Cancel sends no request. The list shows an
+  email-request badge and the details screen exposes the request. No migration,
+  historical booking changes, Consumer/consultant Auth changes or live mutations.
+- The Node 24 operator script now reuses shared server validation/provisioning
+  and branded SMTP services through a narrow CLI-only TS/alias loader. It no
+  longer prints setup links or raw provider exceptions. It requires an explicit
+  project and configured email service, rechecks profile/hospital state inside a
+  transaction and closes its SMTP pool before exit. It was not run on live data.
+- Local rules deny direct Admin/Hospital official-email edits and all client
+  identity-claim reads/writes. Release the application first, then the rules;
+  neither was deployed. Existing Consumer centre-booking privacy restrictions
+  remain in the same undeployed rules. No new indexes required.
+- Validation: 42/42 focused local API/workflow regressions passed (identity,
+  invitation, creation-email, contract binding and portal mutations), plus a
+  final 12/12 identity/invitation rerun after typing corrections. Six email UI
+  executions passed on desktop, 320px Chromium and mobile WebKit. Typecheck and
+  production build passed. ESLint exited 0 with no errors and three pre-existing
+  media warnings (TreatmentFilm ref cleanup twice and publicMediaMocks img).
+- That fresh build served health JSON in essential/deep configuration mode with
+  3/6 ready dependencies, the themed /health?deep=true page and its HTML redirect.
+  Browser rendering passed at 390/1440px without horizontal overflow. The three
+  changed mutation endpoints rejected anonymous local HTTP requests with 401 and
+  no-store. Temporary production server was stopped. Configuration checks are
+  not connectivity, mailbox, scalability or deployed-permission proof.
+- Native Firestore email/claim denial tests updated but not run: installed Java
+  is 8, below current emulator requirements. Actual Firebase Auth provisioning,
+  SMTP receipt, physical-device behavior and deployed rules remain unverified.
+  Previously reported medium findings (activation/setup ordering and final setup
+  revalidation, blank commission acceptance and Auth-sync failure feedback) are
+  not claimed resolved by this high-priority-only task.
+- QA workbook AUT-011/HOS-003 instructions updated with account recovery and
+  approval checks using the spreadsheet skill. All 25 sheets, styles, controls,
+  methods and tester history preserved; only four steps/expectation cells
+  changed. Critical provider/permission tests remain Manual required. Supporting
+  local test commands are in tests/qa/README.md. AGENTS records these decisions.
 
 ## Partner image Next warnings (9 November 2026, v4.41.6)
 

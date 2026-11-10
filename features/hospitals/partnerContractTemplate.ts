@@ -39,7 +39,7 @@ const CONTRACT_BODY = `
         <tr><td>Advance and balance</td><td><span class="contract-highlight">10%</span> of the Total Price as an advance to Ayursarga, included in the booking price and credited against commission. The remaining <span class="contract-highlight">90%</span> is payable through Ayursarga or directly to the Partner, as disclosed, by check-in/service commencement. No advance variation.</td></tr>
         <tr><td>Fee tax and gateway costs</td><td>Applicable GST is additional to commission against a valid tax invoice. Each party bears charges on payments it collects, without duplicate recovery. Refund and service-failure costs follow clause 5.</td></tr>
         <tr><td>Settlement</td><td>Reconciliation covers Monday to Sunday. Statements are issued within 3 working days and undisputed payments by either party are due within 7 working days after the weekly period closes. Completed services and finalised cancellations/reversals enter settlement; future-service advances remain tracked.</td></tr>
-        <tr><td>Policy and bank references</td><td>CP01: postnatal care. CP02: approved short-duration services. Applies to mutually approved active Portal services, with policy recorded per booking. Bank records are linked to onboarding and independently verified before payment activation</td></tr>
+        <tr><td>Policy and bank references</td><td>CP01: postnatal care. Applies to mutually approved active Portal services, with policy recorded per booking. Bank records are linked to onboarding and independently verified before payment activation</td></tr>
         <tr><td>Optional agreed variations</td><td>None. Future changes require the affected clause, effective date and both parties’ written approval. Fixed-fee allocation: not applicable. Net amounts lawfully retained on cancellation are shared 50% to Ayursarga and 50% to the Partner under clause 5.3, separately from commission on completed services.</td></tr>
       </tbody></table>
       <p>2.1 Total Price means the confirmed customer price including disclosed service taxes and approved extras. The advance forms part of that price, is not automatically non-refundable and is credited rupee-for-rupee against commission. Any excess advance is settled or refunded; any remaining commission is payable by the Partner when it collects the balance. No double collection is permitted.</p>
@@ -63,12 +63,10 @@ const CONTRACT_BODY = `
         <tr><td>CP01 postnatal - 45 days or more</td><td>100% less only lawful disclosed unrecoverable gateway charges</td></tr>
         <tr><td>CP01 - 30 days or more, but fewer than 45 days</td><td>50% subject to the same permitted charge treatment</td></tr>
         <tr><td>CP01 - fewer than 30 days</td><td>No routine refund, subject to law and approved exceptions</td></tr>
-        <tr><td>CP02 short-duration - 2 days or more</td><td>100%, less only lawful disclosed unrecoverable gateway charges</td></tr>
-        <tr><td>CP02 - fewer than 2 days</td><td>No routine refund, subject to law and approved exceptions</td></tr>
       </tbody></table>
       <h3>5.1 Applicable policy and cancellation requests</h3>
-      <p>CP02 applies to rejuvenation, stress management and other approved short-duration services. Each listing and booking confirmation must state its policy. Alternative policies require both parties’ written approval and disclosure before booking. Cancellation requests must be emailed to info@ayursarga.com. Either party receiving a request must forward it promptly, preserving the original receipt time.</p>
-      <p>For cancellation calculations, one day means a continuous 24-hour period before the scheduled start or reference time stated in the booking confirmation, using the service location’s local time. Calculate from the earliest reliable receipt of the cancellation request. Exactly two days falls within the CP02 refundable category.</p>
+      <p>Each listing and booking confirmation must state its policy. Alternative policies require both parties’ written approval and disclosure before booking. Cancellation requests must be emailed to info@ayursarga.com. Either party receiving a request must forward it promptly, preserving the original receipt time.</p>
+      <p>For cancellation calculations, one day means a continuous 24-hour period before the scheduled start or reference time stated in the booking confirmation, using the service location’s local time. Calculate from the earliest reliable receipt of the cancellation request.</p>
       <p>5.2 Refund calculation<br />Refunds equal the applicable percentage of the amount paid, including the advance, less lawful, previously disclosed and unrecoverable gateway charges. Refunds cannot be below zero. No commission, additional administration fee or duplicate charge may be deducted. Cancellation does not make the unpaid balance due. Mandatory refunds and tax adjustments apply.</p>
       <p>5.3 Sharing cancellation amounts<br />Commission on the full package is not payable for cancelled, undelivered services. After lawful taxes and unrecovered charges, the net cancellation amount retained is shared 50% to Ayursarga and 50% to the Partner. Adjust the advance already held and settle any excess without duplicate deductions.</p>
       <p>5.4 Date changes<br />Delivery changes, hospitalisation or medical advice should first be considered for rescheduling. The Partner must offer reasonable available options within two working days. The Customer must accept any revised date, price and policy in writing. Requesting a change carries no penalty. The original cancellation reference date remains unless otherwise expressly agreed without reducing existing Customer rights.</p>
@@ -155,64 +153,59 @@ export function buildHospitalContractHtml(hospital: DocumentRecord<HospitalDocum
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Partner Centre Agreement</title>
   <style>
-    :root{--forest:#173e2b;--forest-deep:#0b2d1e;--emerald:#0f5739;--gold:#b8872f;--gold-soft:#e8c66d;--ink:#252921;--muted:#657363;--line:#d8dfd9;--paper:#fff}
+    :root{--forest:#173e2b;--ink:#252921;--muted:#657363;--line:#d8dfd9;--paper:#fff}
     *{box-sizing:border-box}
-    body{margin:0;background:#e8eee9;color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:10.25pt;line-height:1.48}
-    .contract-document{position:relative;width:min(100%,210mm);margin:0 auto 24px;padding:19mm 17mm 18mm;background:var(--paper);box-shadow:0 24px 70px rgba(11,45,30,.18);overflow:hidden}
-    .contract-document::before{content:"";position:absolute;top:43mm;right:-33mm;width:86mm;height:86mm;border:1px solid rgba(184,135,47,.09);border-radius:50%;box-shadow:0 0 0 12mm rgba(23,62,43,.025),0 0 0 24mm rgba(184,135,47,.018);pointer-events:none}
-    .contract-brand{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12mm;margin:-19mm -17mm 5mm;padding:8mm 17mm 6mm;border-bottom:4px solid var(--gold);background:linear-gradient(130deg,var(--forest-deep),var(--forest) 58%,var(--emerald));color:#fff;overflow:hidden}
-    .contract-brand::after{content:"";position:absolute;right:-15mm;top:-30mm;width:75mm;height:75mm;border:1px solid rgba(232,198,109,.22);border-radius:50%;box-shadow:0 0 0 9mm rgba(232,198,109,.05)}
+    body{margin:0;background:#f1f3f2;color:#252525;font-family:Arial,Helvetica,sans-serif;font-size:10.25pt;line-height:1.5}
+    .contract-document{width:min(100%,210mm);margin:0 auto 24px;padding:16mm 17mm 17mm;background:var(--paper);box-shadow:0 2px 12px rgba(0,0,0,.08)}
+    .contract-brand{display:flex;align-items:center;justify-content:space-between;gap:8mm;margin:0 0 6mm;padding:0 0 4mm;border-bottom:1.5pt solid var(--forest);color:var(--forest)}
     .contract-brand-lockup{position:relative;z-index:1;display:flex;align-items:center;gap:4mm}
-    .contract-brand img{width:18mm;height:18mm;object-fit:contain;border-radius:50%;background:#fff;padding:1.5mm}
-    .contract-brand strong{display:block;color:#fff;font-family:Georgia,serif;font-size:18pt;font-weight:500;letter-spacing:.02em}
-    .contract-brand small{display:block;margin-top:1mm;color:var(--gold-soft);font-size:7.5pt;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
-    .contract-classification{position:relative;z-index:1;padding:2.5mm 4mm;border:1px solid rgba(232,198,109,.5);border-radius:100px;color:var(--gold-soft);font-size:7pt;font-weight:700;letter-spacing:.13em;text-transform:uppercase}
-    .confidential-ribbon{display:flex;align-items:center;gap:3mm;margin:0 0 5mm;color:var(--forest);font-size:7.5pt;font-weight:700;letter-spacing:.13em;text-transform:uppercase}
-    .confidential-ribbon::before,.confidential-ribbon::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,transparent,var(--gold))}
-    .confidential-ribbon::after{background:linear-gradient(90deg,var(--gold),transparent)}
-    h1{max-width:145mm;margin:0 0 6mm;color:var(--forest);font-family:Georgia,serif;font-size:27pt;font-weight:500;line-height:1.08;letter-spacing:-.02em}
-    h2{position:relative;margin:6mm 0 3mm;padding:2.5mm 4mm 2.5mm 6mm;display:flex;align-items:baseline;gap:2.5mm;border:1px solid rgba(23,62,43,.12);border-left:3px solid var(--gold);border-radius:2mm;background:linear-gradient(90deg,#f3f7f3,#fff);color:var(--forest);font-family:Georgia,serif;font-size:15.5pt;font-weight:600;line-height:1.25;break-after:avoid}
-    .contract-section-number{flex:0 0 10mm;color:inherit;font:inherit;line-height:inherit;text-align:left}
-    h3{margin:4mm 0 2mm;color:var(--forest);font-size:11.5pt;break-after:avoid}
+    .contract-brand img{width:14mm;height:14mm;object-fit:contain}
+    .contract-brand strong{display:block;font-size:17pt;font-weight:700}
+    .contract-brand small{display:block;margin-top:1mm;color:var(--muted);font-size:8pt;font-weight:400}
+    .contract-classification{color:var(--muted);font-size:8pt;text-align:right}
+    .confidential-ribbon{margin:0 0 5mm;color:var(--forest);font-size:15pt;font-weight:700}
+    h1{margin:0 0 5mm;color:var(--forest);font-size:18pt;font-weight:700;line-height:1.3}
+    h2{margin:6mm 0 3mm;padding:0 0 1.5mm;display:flex;align-items:baseline;gap:1.5mm;border-bottom:1px solid var(--line);color:var(--forest);font-size:11.5pt;font-weight:700;line-height:1.4;break-after:avoid}
+    .contract-section-number{flex:0 0 7mm;color:inherit;font:inherit;text-align:left}
+    h3{margin:4mm 0 2mm;color:var(--ink);font-size:10.25pt;break-after:avoid}
     p{margin:0 0 3mm;orphans:3;widows:3}
-    .term-summary{position:relative;padding:4mm 5mm 4mm 6mm;border:1px solid var(--line);border-left:3px solid var(--forest);border-radius:2.5mm;background:#fff}
-    .contract-highlight{display:inline-block;padding:.45mm 1.4mm;border:1px solid rgba(184,135,47,.3);border-radius:1.5mm;background:#fbf4df;color:var(--forest);font-weight:750;line-height:1.25;white-space:nowrap}
-    .contract-highlight-strong{padding:.7mm 2mm;border-color:rgba(184,135,47,.52);background:#f5e8bf;font-size:10pt;font-weight:800}
-    table{width:100%;margin:4mm 0 5mm;border-collapse:separate;border-spacing:0;overflow:hidden;border:1px solid #cbd6cd;border-radius:3mm;font-size:9.1pt;break-inside:avoid;box-shadow:0 2mm 7mm rgba(23,62,43,.045)}
-    th{padding:2.5mm 3.5mm;background:linear-gradient(120deg,var(--forest-deep),var(--forest));color:#fff;text-align:left;font-size:8.3pt;letter-spacing:.06em;text-transform:uppercase}
-    td{padding:2.5mm 3.5mm;vertical-align:top;border-top:1px solid var(--line)}
+    .term-summary{padding:0;margin:0 0 4mm}
+    .contract-highlight{color:inherit;font-weight:700}
+    table{width:100%;margin:3mm 0 4mm;border-collapse:collapse;table-layout:fixed;border:1px solid var(--line);font-size:9.5pt;line-height:1.45}
+    th{padding:2.5mm 3mm;background:#edf2ef;color:var(--forest);text-align:left;font-size:9.5pt;font-weight:700}
+    th:first-child{width:34%}
+    td{padding:2.5mm 3mm;vertical-align:top;border-top:1px solid var(--line);overflow-wrap:anywhere}
     td+td,th+th{border-left:1px solid var(--line)}
-    tr:nth-child(even) td{background:#f5f8f5}
-    .party-details{margin-top:3mm;font-size:9.3pt}
-    .party-details th{width:50%;padding:3mm 5mm;border-bottom:1mm solid var(--gold);font-size:9pt}
-    .party-details td{padding:3mm 5mm;line-height:1.45}
-    .party-details td strong{display:inline-block;margin-bottom:1mm;color:var(--forest);font-size:7.4pt;letter-spacing:.09em;text-transform:uppercase}
+    thead{display:table-header-group}tr{break-inside:avoid}
+    .party-details th{width:50%}
+    .party-details td strong{display:inline-block;margin-bottom:1mm;color:var(--ink);font-size:inherit}
     .party-subdetail{margin-top:3mm;padding-top:2.5mm;border-top:1px solid var(--line)}
-    .contract-contact-grid{margin:4mm 0 5mm;display:grid;grid-template-columns:1fr 1fr;gap:2.5mm;break-inside:avoid}
-    .contract-contact-card{padding:3mm 4mm;border:1px solid var(--line);border-radius:2.5mm;background:linear-gradient(145deg,#f7faf7,#fff)}
-    .contract-contact-card>strong{display:block;margin-bottom:2mm;color:var(--forest);font-size:8pt;letter-spacing:.08em;text-transform:uppercase}
+    .contract-contact-grid{margin:4mm 0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;border:1px solid var(--line);break-inside:avoid}
+    .contract-contact-card{min-width:0;padding:3mm}
+    .contract-contact-card+.contract-contact-card{border-left:1px solid var(--line)}
+    .contract-contact-card>strong{display:block;margin-bottom:2mm;color:var(--forest);font-size:9.5pt}
     .contract-contact-card dl{margin:0}
     .contract-contact-card dl>div{padding:1.5mm 0;border-top:1px solid rgba(23,62,43,.1)}
     .contract-contact-card dl>div:first-child{padding-top:0;border-top:0}
-    .contract-contact-card dt{margin:0 0 .7mm;color:#647568;font-size:6.8pt;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
-    .contract-contact-card dd{margin:0;color:var(--ink);font-size:8.6pt;font-weight:600;line-height:1.4;overflow-wrap:anywhere}
-    .signature-boxes{table-layout:fixed;border-color:rgba(23,62,43,.42);box-shadow:0 3mm 10mm rgba(23,62,43,.09)}
-    .signature-boxes th{width:50%;padding:3mm 5mm;border-bottom:1mm solid var(--gold);font-size:8.7pt;letter-spacing:.08em}
+    .contract-contact-card dt{margin:0 0 .7mm;color:var(--muted);font-size:8.5pt}
+    .contract-contact-card dd{margin:0;color:var(--ink);font-size:9pt;line-height:1.4;overflow-wrap:anywhere}
+    .signature-boxes{break-inside:avoid}
+    .signature-boxes th{width:50%;padding:3mm;font-size:9.5pt}
     .signature-boxes td{box-sizing:border-box;width:50%;height:38mm;padding:4mm;background:#fff!important}
     .signature-boxes td+td{border-left:1px solid rgba(23,62,43,.28)}
     .signature-boxes td strong{display:block;color:var(--forest);font-size:7.4pt;letter-spacing:.08em;text-transform:uppercase}
-    .signature-mark{box-sizing:border-box;width:100%;height:29mm;padding:3mm;display:flex;flex-direction:column;justify-content:space-between;border:1px solid rgba(23,62,43,.16);border-radius:2mm;background:linear-gradient(145deg,#f7faf7,#fff)}
+    .signature-mark{width:100%;height:29mm;padding:3mm;display:flex;flex-direction:column;justify-content:space-between;border:1px solid var(--line);background:#fff}
     .signature-art{height:15mm;overflow:hidden;display:flex;align-items:flex-start;justify-content:center}
     .signature-art img{width:72%;height:auto;object-fit:contain;transform:translateY(-28%)}
     .signature-date{display:block;color:var(--forest);font-size:5.7pt;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
-    .contract-footer{display:flex;align-items:center;justify-content:space-between;gap:8mm;margin:8mm -17mm -18mm;padding:4mm 17mm;border-top:3px solid var(--gold);background:var(--forest-deep);color:#fff}
+    .contract-footer{display:flex;align-items:center;justify-content:space-between;gap:5mm;margin:7mm 0 0;padding:3mm 0 0;border-top:1px solid var(--line);color:var(--forest)}
     .contract-footer-brand{display:flex;align-items:center;gap:3mm}
     .contract-footer img{width:11mm;height:11mm;object-fit:contain;border-radius:50%;background:#fff;padding:1mm}
-    .contract-footer strong{font-family:Georgia,serif;font-size:12pt;font-weight:500}
-    .contract-footer span{color:var(--gold-soft);font-size:7pt;font-weight:700;letter-spacing:.12em;text-transform:uppercase;text-align:right}
+    .contract-footer strong{font-size:10pt;font-weight:700}
+    .contract-footer span{color:var(--muted);font-size:7.5pt;text-align:right}
     @page{size:A4;margin:13mm 14mm 15mm}
-    @media(max-width:640px){.contract-document{padding:12mm 8mm}.contract-brand{margin:-12mm -8mm 7mm;padding:8mm}.contract-brand img{width:14mm;height:14mm}.contract-classification{display:none}.contract-footer{margin:10mm -8mm -12mm;padding:5mm 8mm}}
-    @media print{body{background:#fff}.contract-document{width:auto;margin:0;padding:0;box-shadow:none;overflow:visible}.contract-document::before{display:none}.contract-brand{margin:0 0 5mm;padding:6mm 10mm}.contract-footer{margin:7mm 0 0;padding:4mm 8mm}}
+    @media(max-width:640px){.contract-document{padding:8mm 4mm}.contract-brand{gap:3mm}.contract-brand img{width:11mm;height:11mm}.contract-brand strong{font-size:14pt}.contract-classification{max-width:28mm;font-size:7pt}.signature-boxes td{padding:2mm}}
+    @media print{body{background:#fff}.contract-document{width:auto;margin:0;padding:0;box-shadow:none}.contract-brand{break-inside:avoid}.contract-footer{break-inside:avoid}}
   </style>
 </head>
 <body>

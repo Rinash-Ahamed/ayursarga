@@ -21,7 +21,7 @@ function fixture(data = {}, role = "admin", denied = false) {
   };
   const authorize = async (_request, allowed = ["admin"]) => {
     if (denied || !allowed.includes(role)) throw new BookingTestAuthorizationError("Denied", 403);
-    return { uid: "admin", role, profile: { hospitalId: "centre" }, firestore: f.firestore, auth: { updateUser: async () => { calls.auth++; }, revokeRefreshTokens: async () => { calls.auth++; } } };
+    return { uid: "admin", role, profile: { hospitalId: "centre" }, firestore: f.firestore, auth: { getUserByEmail: async () => {throw {code:'auth/user-not-found'};}, updateUser: async () => { calls.auth++; }, revokeRefreshTokens: async () => { calls.auth++; } } };
   };
   const load = (file) => loadTypeScript(file, {
     "@/services/firebase/adminAuthorization": { requireActiveAdmin: authorize, requireActiveUser: authorize, AdminAuthorizationError: BookingTestAuthorizationError },

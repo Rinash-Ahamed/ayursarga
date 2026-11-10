@@ -50,6 +50,7 @@ const screens = {
   "password-action": <PasswordActionForm />,
   "admin-dashboard": <AdminDashboard />, "admin-hospitals": <HospitalsManager />, "admin-details": <AdminHospitalDetails hospitalId="centre" />,
   "admin-hospital-cards": <HospitalsManager />,
+  "admin-email-request": <AdminHospitalDetails hospitalId="centre" />,
   "admin-hospitals-status-order": <HospitalsManager />,
   "admin-consultants-status-order": <ConsultantsManager />,
   "admin-consultants-duplicates": <ConsultantsManager />,

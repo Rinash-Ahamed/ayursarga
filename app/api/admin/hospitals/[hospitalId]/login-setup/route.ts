@@ -6,6 +6,8 @@ import { isFirebaseAdminReady } from "@/services/firebase/admin";
 import { authEmailSiteUrl, isAuthEmailReady, sendAuthEmail } from "@/services/auth/authEmailService";
 import { isEmailReady } from "@/services/email/emailService";
 import { allowRequest } from "@/services/api/rateLimit";
+import { preparePortalAccount, recordProvisioningReady, ProvisioningError, syncPortalAccountAccess } from "@/services/auth/provisioning";
+import { requestAuditDevice } from "@/services/api/audit";
 
 export const runtime = "nodejs";
 
@@ -26,7 +28,7 @@ async function handlePOST(request: Request, context: { params: Promise<{ hospita
     const hospitalReference = firestore.collection("hospitals").doc(hospitalId);
     const hospitalSnapshot = await hospitalReference.get();
     const hospital = hospitalSnapshot.data();
-    if (!hospitalSnapshot.exists || hospital?.status !== "active") {
+    if (!hospitalSnapshot.exists || hospital?.status !== "active" || hospital.archivedAt != null) {
       return apiJson({ error: "Activate the hospital before preparing its login." }, 409);
     }
 
@@ -34,30 +36,36 @@ async function handlePOST(request: Request, context: { params: Promise<{ hospita
     const name = String(hospital.name ?? "").trim();
     if (!email || !name) return apiJson({ error: "The hospital name and official email are required." }, 409);
 
-    let authUser;
-    let createdAuthUser = false;
-    try {
-      authUser = await auth.getUserByEmail(email);
-    } catch (error) {
-      if ((error as { code?: string }).code !== "auth/user-not-found") throw error;
-      authUser = await auth.createUser({ email, displayName: name, emailVerified: false, disabled: false });
-      createdAuthUser = true;
-    }
+    const prepared = await preparePortalAccount(auth, firestore, {
+      role: "hospital", email, hospitalId, actorId: adminUid, device: requestAuditDevice(request),
+    });
+    const { authUser } = prepared;
 
     const userReference = firestore.collection("users").doc(authUser.uid);
-    const userSnapshot = await userReference.get();
+    const replacedAuthUids = await firestore.runTransaction(async batch => {
+    const currentHospital = (await batch.get(hospitalReference)).data();
+    if (!currentHospital || currentHospital.status !== "active" || currentHospital.archivedAt != null
+      || currentHospital.lastAuditId !== hospital.lastAuditId
+      || String(currentHospital.email ?? "").trim().toLowerCase() !== email) {
+      throw new ProvisioningError("The hospital details or access changed. Refresh the hospital before sending login setup again.");
+    }
+    const userSnapshot = await batch.get(userReference);
     const previous = userSnapshot.data() ?? null;
-    if (!createdAuthUser && !previous) {
-      return apiJson({
-        error: "This email already has an unrecognized Firebase account. Review it in Firebase Authentication before linking this Hospital login.",
-      }, 409);
+    if (!prepared.canRecoverMissingProfile && !previous) {
+      throw new ProvisioningError("This email already has an unrecognized account. Ask the project owner to review it before preparing this Hospital login.");
     }
     if (previous && (previous.role !== "hospital" || previous.hospitalId !== hospitalId)) {
-      return apiJson({ error: "This email already belongs to a different Ayursarga account." }, 409);
+      throw new ProvisioningError("This email already belongs to a different Ayursarga account.");
     }
 
-    const linkedUsers = await firestore.collection("users").where("hospitalId", "==", hospitalId).get();
+    const linkedUsers = await batch.get(firestore.collection("users").where("hospitalId", "==", hospitalId).limit(21));
+    if (linkedUsers.docs.length > 20) throw new ProvisioningError("This hospital's login accounts need a project-owner review before changing access.");
     const replacedUsers = linkedUsers.docs.filter((document) => document.id !== authUser.uid && document.data().role === "hospital" && document.data().status === "active");
+    const currentClaim = (await batch.get(prepared.claimRef)).data();
+    if (prepared.canRecoverMissingProfile && (!currentClaim || currentClaim.authUid !== authUser.uid
+      || currentClaim.role !== "hospital" || currentClaim.hospitalId !== hospitalId || currentClaim.email !== email)) {
+      throw new ProvisioningError("The reserved account changed. Ask the project owner to review its login setup.");
+    }
 
     const auditReference = firestore.collection("auditLogs").doc();
     const now = FieldValue.serverTimestamp();
@@ -90,7 +98,6 @@ async function handlePOST(request: Request, context: { params: Promise<{ hospita
       lastAuditId: auditReference.id,
     };
     const action = previous ? (previous.status === "archived" ? "restore" : "update") : "create";
-    const batch = firestore.batch();
     batch.set(userReference, userData, { merge: Boolean(previous) });
     batch.set(auditReference, {
       action,
@@ -135,27 +142,26 @@ async function handlePOST(request: Request, context: { params: Promise<{ hospita
         },
       });
     }
-    try {
-      await batch.commit();
-    } catch (error) {
-      if (createdAuthUser) await auth.deleteUser(authUser.uid).catch(() => undefined);
-      throw error;
-    }
+    recordProvisioningReady(batch, firestore, { ...prepared, claim: currentClaim }, adminUid, requestAuditDevice(request));
+    // A failed acknowledgement does not prove the commit failed. Preserve Auth
+    // and its reservation; retries inspect this same identity instead.
+    // Also finish revoking historical inactive logins after a previous partial
+    // Auth failure, without rewriting their preserved profile/audit history.
+    return linkedUsers.docs.filter(user => user.id !== authUser.uid && user.data().role === "hospital").map(user => user.id);
+    });
 
-    await Promise.all([
-      auth.updateUser(authUser.uid, { disabled: false, displayName: name }),
-      auth.revokeRefreshTokens(authUser.uid),
-      ...replacedUsers.flatMap((user) => [
-        auth.updateUser(user.id, { disabled: true }),
-        auth.revokeRefreshTokens(user.id),
-      ]),
+    const synchronized = await syncPortalAccountAccess(auth, [
+      { uid: authUser.uid, disabled: false, displayName: name },
+      ...replacedAuthUids.map(uid => ({ uid, disabled: true })),
     ]);
+    if (!synchronized) return apiJson({ saved: true, error: "The hospital login was saved, but its access update could not be confirmed. No invitation was sent. Use Send login setup / reset again to check and complete access." }, 503);
 
     deliveringEmail = true;
     await sendAuthEmail(auth, { email, name, role: "hospital", invitation: true });
     return apiJson({ ok: true, email, emailSent: true });
   } catch (error) {
     if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
+    if (error instanceof ProvisioningError) return apiJson({ error: error.message }, error.status);
     console.error("Hospital login setup or invitation delivery failed.");
     return apiJson({ error: deliveringEmail
       ? "The Hospital account is ready, but its invitation email could not be sent. Retry sending the login setup link."

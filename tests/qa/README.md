@@ -1,5 +1,45 @@
 # Business workbook automation
 
+## Partner contract policy table
+
+CON-008 now verifies the owner-requested removal of CP02/CPO2 rows and references
+while preserving all three CP01 postnatal refund rows and excluding online
+consultation policy. Focused check:
+
+```powershell
+node --test --test-isolation=none --test-name-pattern='CON-008|partner contract renders' tests/unit/qa-candidates.test.mjs tests/unit/partner-contract-company-details.test.mjs
+```
+
+CON-009 layout coverage lives in `tests/e2e/contract-layout.spec.ts`. It compares
+the populated HTML body with the pre-typography-change baseline, checks every
+paragraph and non-signature table cell/contact field in the PDF text, verifies
+both five-page samples, equal preview columns/signing boxes and standard fonts,
+and retains the shared invoice PDF's byte hash. Run with the portal-ui config on
+desktop, phone-320 and webkit-phone. Real print/device review remains separate.
+
+## Hospital identity and email approval
+
+AUT-011 and HOS-003 retain critical manual sign-off. Local supporting checks:
+
+```powershell
+node --test --test-isolation=none tests/unit/hospital-identity-security.test.mjs tests/unit/hospital-invitation-email.test.mjs tests/unit/admin-creation-emails.test.mjs tests/unit/hospital-contract-approval.test.mjs tests/unit/portal-mutations.test.mjs
+node node_modules/@playwright/test/cli.js test --config=tests/config/playwright.portal-ui.config.ts --grep 'Hospital email' --project=desktop --project=phone-320 --project=webkit-phone
+```
+
+Fixtures cover interrupted provisioning, reserved identity reuse, duplicate email
+edits, conflicting roles, approval/rejection, Cancel without a request and mobile
+dialog scroll locks. They do not prove actual Auth/SMTP delivery or deployed
+permissions. Native email/claim denial cases are in the guarded local Firestore
+emulator suite. Release application changes before the tightened email rules.
+
+The same identity regressions now cover HOS-002/HOS-011: explicit commission,
+pre-publication identity conflicts, final setup transaction revalidation and
+truthful saved-but-incomplete Auth outcomes. The portal UI suite's
+`Hospital creation requires an explicit commission` test checks inline validation
+and explicitly entered zero at desktop/mobile sizes. Add that title to the grep
+above when validating commission changes. These checks do not simulate a real
+Firebase network outage or establish actual mailbox delivery.
+
 ## Consumer centre-booking privacy
 
 Supporting checks for BKG-008 and SEC-002 (critical deployed-role sign-off stays

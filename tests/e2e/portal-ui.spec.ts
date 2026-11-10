@@ -6,6 +6,39 @@ import { getCalendarMonthRange } from "../../utils/date";
 const styles = ["node_modules/tailwindcss/lib/css/preflight.css", "app/globals.css", "app/portal.css"].map((file) => readFileSync(file, "utf8")).join("\n");
 const screens = ["admin-dashboard", "admin-hospitals", "admin-details", "admin-consultants", "admin-users", "admin-bookings", "admin-availability", "admin-audits", "hospital-dashboard", "hospital-profile", "hospital-services", "hospital-bookings", "hospital-availability", "hospital-password", "admin-login", "hospital-login", "admin-forgot", "hospital-forgot"];
 
+test('Hospital email approval keeps Cancel non-mutating and uses the shared responsive confirmation dialog', async ({page}) => {
+  await page.route('**/*',route=>route.fulfill({status:204,body:''}));
+  for(const approve of [true,false]){
+    await mount(page,'admin-email-request');
+    await page.evaluate(()=>{(window as unknown as {emailReviewCalls:boolean[]}).emailReviewCalls.length=0;});
+    const name=approve?'Approve email change':'Decline request';
+    await page.getByRole('button',{name,exact:true}).click();
+    let dialog=page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    expect(await page.evaluate(()=>document.body.style.position)).toBe('fixed');
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+    await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
+    expect(await page.evaluate(()=>(window as unknown as {emailReviewCalls:boolean[]}).emailReviewCalls)).toEqual([]);
+    await page.getByRole('button',{name,exact:true}).click();dialog=page.getByRole('dialog');
+    await dialog.getByRole('button',{name:approve?'Approve email change':'Decline request',exact:true}).click();
+    await expect(page.getByRole('heading',{name:'Official email change request'})).toHaveCount(0);
+    expect(await page.evaluate(()=>(window as unknown as {emailReviewCalls:boolean[]}).emailReviewCalls)).toEqual([approve]);
+    expect(await page.evaluate(()=>document.body.style.position)).not.toBe('fixed');
+  }
+});
+
+test('Hospital email requests show pending approval without pretending the current official email changed',async({page})=>{
+  await page.route('**/*',route=>route.fulfill({status:204,body:''}));
+  await mount(page,'hospital-profile');
+  await page.getByLabel(/^Official email/).fill('new.official.hospital.email.address@example.test');
+  await page.getByRole('button',{name:'Save profile',exact:true}).click();
+  const note=page.locator('.portal-form-note').filter({hasText:'Current official email:'});
+  await expect(note).toContainText('hospital.contact.with.long.address@example.com');
+  await expect(note).toContainText('new.official.hospital.email.address@example.test');
+  await expect(note).toContainText('awaiting approval');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+});
+
 test('HOS-004: registered/service addresses mirror only while checkbox is selected', async ({page}) => {
   await page.route('**/*',route=>route.fulfill({status:204,body:''}));
   await mount(page,'admin-hospitals');
@@ -894,6 +927,26 @@ test("Hospital bookings go directly from start to complete with treatment badges
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await mount(page, "admin-booking-detail");
   await expect(page.locator(".portal-status")).toHaveText("confirmed");
+});
+
+test("Hospital creation requires an explicit commission and accepts entered zero without misaligning validation", async ({ page }) => {
+  await mount(page, "admin-hospitals");
+  await page.getByRole("button", { name: "Add Hospital", exact: true }).click();
+  const form = page.locator("form").first();
+  for (const [name, value] of Object.entries({ legalName: "Example hospital", name: "Example hospital", email: "new@example.test", phone: "9876543210", hospitalPhone1: "9876543210", city: "Palakkad", registeredAddress: "A complete registered address", address: "A complete service address" })) {
+    await form.locator(`input[name="${name}"]`).fill(value);
+  }
+  await form.getByPlaceholder("Search district or state").fill("Palakkad, Kerala");
+  const commission = form.locator('input[name="commission"]');
+  await commission.fill("");
+  await form.getByRole("button", { name: "Create hospital", exact: true }).click();
+  await expect(commission).toHaveAttribute("aria-invalid", "true");
+  await expect(commission).toBeFocused();
+  await expect(form).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await commission.fill("0");
+  await form.getByRole("button", { name: "Create hospital", exact: true }).click();
+  await expect(form).toHaveCount(0);
 });
 
 test("Admin creation duplicate emails remain inline and focus the email field without closing either form", async ({ page }) => {

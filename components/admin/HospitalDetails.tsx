@@ -12,6 +12,7 @@ import {
   getHospital,
   recordHospitalContractGeneration,
   updateHospital,
+  reviewHospitalEmail,
 } from "@/services/hospitals/hospitalService";
 import { buildHospitalContractPdf } from "@/features/hospitals/contractPdf";
 import { PortalShell } from "@/components/portal/PortalShell";
@@ -82,7 +83,7 @@ function ContractStepMarker({ step, done, active = false }: { step: number; done
   </span>;
 }
 
-type PendingHospitalAction = "activate" | "setup" | "deactivate";
+type PendingHospitalAction = "activate" | "setup" | "deactivate" | "approve_email" | "reject_email";
 type ContractPreview = ReturnType<typeof buildHospitalContractPdf> & { expectedContent: string };
 
 export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
@@ -179,12 +180,20 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         await confirmHospitalContractSigning(record.id, record, contractUrl);
       }
       await activateHospital(record.id, record.contractStatus === "signed" ? record : undefined);
-      await sendHospitalLoginSetup(record.id);
+      try { await sendHospitalLoginSetup(record.id); }
+      catch (caught) {
+        throw new Error(`The hospital is active, but login setup was not completed. ${caught instanceof Error ? caught.message : "Use Send login setup / reset to complete access."}`);
+      }
     }, `The hospital is active. A secure password setup link was sent to ${hospital.email}.`);
     if (pendingAction === "setup") await runAction(async (record) => {
       await sendHospitalLoginSetup(record.id);
     }, `A secure password setup/reset link was sent to ${hospital.email}.`, false);
     if (pendingAction === "deactivate") await runAction((record) => deactivateHospital(record.id), "The hospital is now inactive and hidden from consumers.");
+    if (pendingAction === "approve_email" || pendingAction === "reject_email") {
+      const approve = pendingAction === "approve_email";
+      await runAction(record => reviewHospitalEmail(record.id, approve, record.pendingOfficialEmail!, record.lastAuditId),
+        approve ? "The official email has been updated and the old login disabled. Use Send login setup / reset to prepare the new login." : "The email change request has been declined. The current email and login are unchanged.");
+    }
     setPendingAction(null);
   }
 
@@ -382,6 +391,10 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     : null;
   const actionDialog = pendingAction === "activate"
       ? { title: hospital?.status === "inactive" ? "Reactivate this hospital?" : "Activate this hospital?", message: hospital?.status === "pending" && !contractReady ? "Add the secure link to the signed contract. Continuing will confirm the signing, activate the hospital, and send its login setup email." : "The hospital will become visible to consumers and receive a secure login setup email.", confirmLabel: hospital?.status === "inactive" ? "Reactivate hospital" : "Activate hospital", tone: "default" as const }
+        : pendingAction === "approve_email"
+          ? { title: "Approve this email change?", message: `The official email will change to ${hospital?.pendingOfficialEmail ?? "the requested email"}. The old login will be disabled. Send a login setup link to prepare the new login after approval.`, confirmLabel: "Approve email change", tone: "default" as const }
+        : pendingAction === "reject_email"
+          ? { title: "Decline this email change?", message: "The current official email and login will remain unchanged.", confirmLabel: "Decline request", tone: "danger" as const }
         : pendingAction === "setup"
           ? { title: "Send login setup link?", message: `A secure password setup/reset link will be sent to ${hospital?.email ?? "this hospital"}.`, confirmLabel: "Send setup link", tone: "default" as const }
           : { title: "Deactivate this hospital?", message: "The hospital will be hidden from consumers while its operational history remains stored.", confirmLabel: "Deactivate hospital", tone: "danger" as const };
@@ -419,6 +432,11 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         </>}
       </article>
 
+      {hospital.pendingOfficialEmail && <section className="portal-card">
+        <h2>Official email change request</h2>
+        <p className="portal-form-note">Requested email: <strong style={{ overflowWrap: "anywhere" }}>{hospital.pendingOfficialEmail}</strong>. The current email and login remain unchanged until approval.</p>
+        <div className="portal-actions"><button className="portal-button" type="button" disabled={busy} onClick={() => setPendingAction("approve_email")}>Approve email change</button><button className="portal-button danger" type="button" disabled={busy} onClick={() => setPendingAction("reject_email")}>Decline request</button></div>
+      </section>}
       <article id="hospital-images" className="portal-card portal-hospital-media-card">
         <div className="portal-row-heading"><h2>Hospital images and map</h2><span className="portal-status" data-status={hospital.locationUrl || getHospitalImageUrls(hospital).length ? "active" : "pending"}>{hospital.locationUrl || getHospitalImageUrls(hospital).length ? "Added" : "Not added"}</span></div>
         {editingMedia ? <form className="portal-form portal-edit-form" onSubmit={saveHospitalMedia} noValidate>

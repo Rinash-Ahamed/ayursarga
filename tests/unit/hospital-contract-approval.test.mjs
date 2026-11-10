@@ -21,7 +21,7 @@ function fixture(options = {}) {
     records: { "hospitals/centre": { ...original, ...options.hospital }, ...options.records }, overrides: {
       "@/services/firebase/adminAuthorization": { AdminAuthorizationError: BookingTestAuthorizationError, requireActiveAdmin: async () => {
         if (f.actor.role !== "admin") throw new BookingTestAuthorizationError("Denied", 403);
-        return { uid: "admin", firestore: f.firestore, auth: { updateUser: async () => {}, revokeRefreshTokens: async () => {} } };
+        return { uid: "admin", firestore: f.firestore, auth: { getUserByEmail: async () => {throw {code:'auth/user-not-found'};}, updateUser: async () => {}, revokeRefreshTokens: async () => {} } };
       } },
     } });
   f.firestore.batch = () => {

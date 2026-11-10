@@ -10,6 +10,8 @@ import { apiHealth, apiJson, logApiError } from "@/services/api/server";
 import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { validateHospitalContractDetails } from "@/features/hospitals/contractDetails";
 import { hospitalContractContent, hospitalContractRevision, validContractUrl } from "@/features/hospitals/contractApproval";
+import { assertUniqueCreationEmail, DuplicateCreationEmailError } from "@/services/admin/uniqueCreationEmail";
+import { assertHospitalLoginEmailAvailable, ProvisioningError, syncPortalAccountAccess } from "@/services/auth/provisioning";
 
 export const runtime = "nodejs";
 
@@ -21,8 +23,8 @@ const EDITABLE_FIELDS = new Set([
   "contractEffectiveDate", "contractExpiryDate", "emergencyContact", "emergencyReferralHospital",
 ]);
 
-type HospitalAdminAction = "update" | "contract_generated" | "contract_signed" | "deactivate" | "archive";
-const HOSPITAL_ADMIN_ACTIONS: readonly HospitalAdminAction[] = ["update", "contract_generated", "contract_signed", "deactivate", "archive"];
+type HospitalAdminAction = "update" | "contract_generated" | "contract_signed" | "deactivate" | "archive" | "approve_email" | "reject_email";
+const HOSPITAL_ADMIN_ACTIONS: readonly HospitalAdminAction[] = ["update", "contract_generated", "contract_signed", "deactivate", "archive", "approve_email", "reject_email"];
 
 function handleGET() {
   return apiHealth("/api/admin/hospitals/[hospitalId]", [{ name: "firebaseAdmin", ready: isFirebaseAdminReady() }]);
@@ -44,7 +46,7 @@ async function handlePATCH(request: Request, context: { params: Promise<{ hospit
     if (!hospitalSnapshot.exists || !hospital) return apiJson({ error: "The hospital could not be found." }, 404);
 
     const now = Timestamp.now();
-    let auditAction: HospitalAdminAction | "status_change" = body.action;
+    let auditAction = body.action as string;
     let changes: Record<string, unknown>;
 
     if (body.action === "update") {
@@ -83,6 +85,7 @@ async function handlePATCH(request: Request, context: { params: Promise<{ hospit
         if (!profileValidation.isValid) {
           return apiJson({ error: Object.values(profileValidation.errors)[0] ?? "Hospital details are invalid." }, 400);
         }
+        if (Object.hasOwn(changes, "email")) changes.email = profileValidation.data.email;
         if ("imageUrls" in changes) {
           if (!Array.isArray(changes.imageUrls)) return apiJson({ error: "Hospital images are invalid." }, 400);
           const images = validateHospitalImageUrls(changes.imageUrls);
@@ -108,6 +111,18 @@ async function handlePATCH(request: Request, context: { params: Promise<{ hospit
         // Retain the earlier document and dates, but never reuse their approval
         // for changed legal/commercial particulars.
         changes.contractNeedsRegeneration = true;
+      }
+    } else if (body.action === "approve_email" || body.action === "reject_email") {
+      if (hospital.status === "archived" || !hospital.pendingOfficialEmail
+        || body.data?.expectedEmail !== hospital.pendingOfficialEmail || body.data?.expectedAuditId !== hospital.lastAuditId) {
+        return apiJson({ error: "This email request changed. Refresh the hospital before reviewing it." }, 409);
+      }
+      auditAction = "update";
+      changes = { pendingOfficialEmail: null, pendingOfficialEmailRequestedAt: null, pendingOfficialEmailRequestedBy: null };
+      if (body.action === "approve_email") {
+        const validation = validateHospitalFields({ ...hospital, email: hospital.pendingOfficialEmail });
+        if (!validation.isValid) return apiJson({ error: "Check the hospital details before approving its email." }, 400);
+        changes.email = validation.data.email;
       }
     } else if (body.action === "contract_generated") {
       if (hospital.status !== "pending") return apiJson({ error: "Contracts can be generated only while the hospital is Pending." }, 409);
@@ -156,6 +171,10 @@ async function handlePATCH(request: Request, context: { params: Promise<{ hospit
       changes = { status: "archived", isPublic: false, archivedAt: now, archivedBy: adminUid };
     }
 
+    const officialEmailChanged = Object.hasOwn(changes, "email")
+      && String(changes.email).trim().toLowerCase() !== String(hospital.email ?? "").trim().toLowerCase();
+    if (officialEmailChanged) Object.assign(changes, { pendingOfficialEmail: null, pendingOfficialEmailRequestedAt: null, pendingOfficialEmailRequestedBy: null });
+    if (officialEmailChanged) await assertHospitalLoginEmailAvailable(auth, firestore, hospitalId, String(changes.email));
     const auditReference = firestore.collection("auditLogs").doc();
     const auditedChanges = {
       ...changes,
@@ -163,7 +182,16 @@ async function handlePATCH(request: Request, context: { params: Promise<{ hospit
       updatedBy: adminUid,
       lastAuditId: auditReference.id,
     };
-    const batch = firestore.batch();
+    const affectedAuthUids = await firestore.runTransaction(async batch => {
+    const current = (await batch.get(hospitalReference)).data();
+    if (!current || current.lastAuditId !== hospital.lastAuditId) throw new ProvisioningError("Hospital details changed. Refresh before saving again.");
+    const counterReference = firestore.collection("systemSettings").doc("hospitalCreationSequence");
+    const counter = officialEmailChanged ? await batch.get(counterReference) : null;
+    if (officialEmailChanged) await assertUniqueCreationEmail(batch, firestore, "hospitals", String(changes.email), hospitalId);
+    const closesHospitalAccess = body.action === "deactivate" || body.action === "archive" || officialEmailChanged;
+    const linkedUsers = closesHospitalAccess ? await batch.get(firestore.collection("users").where("hospitalId", "==", hospitalId).limit(21)) : null;
+    if (linkedUsers && linkedUsers.docs.length > 20) throw new ProvisioningError("This hospital's login accounts need a project-owner review before changing access.");
+    if (counter) batch.set(counterReference, { value: Number(counter.data()?.value ?? 0) + 1, updatedAt: now, updatedBy: adminUid, lastAuditId: auditReference.id }, { merge: true });
     batch.update(hospitalReference, auditedChanges, { lastUpdateTime: hospitalSnapshot.updateTime! });
     batch.set(auditReference, {
       action: auditAction,
@@ -189,13 +217,6 @@ async function handlePATCH(request: Request, context: { params: Promise<{ hospit
         archivedAt: null, archivedBy: null, lastAuditId: auditReference.id,
       });
     }
-    const officialEmailChanged = body.action === "update"
-      && Object.hasOwn(changes, "email")
-      && String(changes.email ?? "").trim().toLowerCase() !== String(hospital.email ?? "").trim().toLowerCase();
-    const closesHospitalAccess = body.action === "deactivate" || body.action === "archive" || officialEmailChanged;
-    const linkedUsers = closesHospitalAccess
-      ? await firestore.collection("users").where("hospitalId", "==", hospitalId).get()
-      : null;
     const affectedAuthUids: string[] = [];
     linkedUsers?.docs.forEach((userDocument) => {
       const user = userDocument.data();
@@ -224,19 +245,21 @@ async function handlePATCH(request: Request, context: { params: Promise<{ hospit
       });
       affectedAuthUids.push(userDocument.id);
     });
-    await batch.commit();
+    return affectedAuthUids;
+    });
 
     if (affectedAuthUids.length) {
-      await Promise.all(affectedAuthUids.flatMap((uid) => [
-        auth.updateUser(uid, { disabled: true }),
-        auth.revokeRefreshTokens(uid),
-      ])).catch((authError) => {
-        logApiError("/api/admin/hospitals/[hospitalId] auth-sync", authError);
-      });
+      const synchronized = await syncPortalAccountAccess(auth, affectedAuthUids.map(uid => ({ uid, disabled: true })));
+      if (!synchronized) {
+        logApiError("/api/admin/hospitals/[hospitalId] auth-sync", new Error("auth-sync-incomplete"));
+        return apiJson({ saved: true, error: "The hospital changes were saved and its previous login access was removed from the portal, but the account security update could not be confirmed. Ask the project owner to check the login before sharing new access." }, 503);
+      }
     }
 
     return mutationJson(auditedChanges);
   } catch (error) {
+    if (error instanceof ProvisioningError) return apiJson({ error: error.message }, error.status);
+    if (error instanceof DuplicateCreationEmailError) return apiJson({ error: error.message, field: "email" }, error.status);
     if (error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
     if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
     logApiError("/api/admin/hospitals/[hospitalId]", error);

@@ -73,9 +73,9 @@ export function HospitalProfile() {
         legalPolicies: guidelines.legalPolicies,
         ...bystanderPolicy.data,
       };
-      await updateHospitalProfile(id, profile);
-      setHospital((current) => current ? { ...current, ...profile } : current);
-      setMessage("The hospital profile has been updated.");
+      const changes = await updateHospitalProfile(id, profile);
+      setHospital((current) => current ? { ...current, ...changes } : current);
+      setMessage(changes.pendingOfficialEmail ? "Profile saved. Your email change is awaiting Admin approval; your current email and login are unchanged." : "The hospital profile has been updated.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "We could not save the hospital profile. Check the details and try again.");
     } finally {
@@ -86,6 +86,7 @@ export function HospitalProfile() {
   return <PortalShell role="hospital" title="Profile">{hospital && <form className="portal-card portal-form" onSubmit={submit} noValidate>
     <p className="full portal-form-note">Complete every field marked with * before saving the hospital profile.</p>
     <HospitalFormFields defaultValues={hospital} errors={fieldErrors} />
+    <p className="full portal-form-note">Current official email: <strong style={{ overflowWrap: "anywhere" }}>{hospital.email}</strong>. Changes need Admin approval. Your current email and login stay unchanged until approved.{hospital.pendingOfficialEmail && <> Requested email: <strong style={{ overflowWrap: "anywhere" }}>{hospital.pendingOfficialEmail}</strong> (awaiting approval).</>}</p>
     <BystanderPolicyFields hospital={hospital} />
     <CentreGuidelineFields hospital={hospital} />
     <PortalToast message={error} notification={errorNotification} tone="error" />

@@ -5,11 +5,11 @@ import { bundleDialogHarness } from "../helpers/bundleDialogHarness";
 
 const bundle = bundleDialogHarness("tests/fixtures/contractPdfHarness.ts");
 type ContractFixture = Window & { contractPdfFixture(long: boolean): Promise<{pdf:string;html:string;filename:string}>; invoicePdfFixture(): Promise<string> };
-const textHash = (pdf: string) => createHash("sha256").update(
+const exportedText = (pdf: string) =>
   [...pdf.matchAll(/\(((?:\\.|[^\\)])*)\) Tj/g)].map(match => match[1])
     .filter(value => !["AYURSARGA", "PARTNER CENTRE AGREEMENT", "PRIVATE & CONFIDENTIAL", "Ayursarga Partner Network"].includes(value) && !/^Page \d+$/.test(value))
-    .join("").replace(/\s/g, ""),
-).digest("hex");
+    .map(value => value.replace(/\\([\\()])/g, "$1")).join("");
+const comparableText = (text: string) => text.normalize("NFKD").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, "-").replace(/[^\x20-\x7e]/g, "").replace(/\s/g, "").toLowerCase();
 
 test('CON-010: PDF filename uses current India date even while browser is on previous UTC day',async({page})=>{
   await page.clock.install({time:new Date('2026-11-08T20:00:00Z')});
@@ -19,16 +19,27 @@ test('CON-010: PDF filename uses current India date even while browser is on pre
 });
 
 for (const [long, baselineHash] of [
-  [false, "51410a442d90fefb1770c6e7476b7593fd692c1ce99bd42a9cf1d5fa09133275"],
-  [true, "2d97dc0c025cddb2a48a51a83a753de4b13042359a9b0be03d586d590fea24fe"],
+  [false, "65bd3f92a7eb6cdfb50ecdf16aab7572cc08a62fc238a32a7829385b286f133d"],
+  [true, "1b024caf24b14f8316108652ff20616d3846afc4f31032d661634c03f2cb9097"],
 ] as const) {
   test(`partner contract stays five pages with unchanged exported text (${long ? "long" : "standard"} particulars)`, async ({page}) => {
+    await page.clock.install({time:new Date("2026-11-10T08:00:00Z")});
     await page.setContent("<html></html>");
     await page.addScriptTag({content:bundle});
     const result = await page.evaluate(long => (window as unknown as ContractFixture).contractPdfFixture(long), long);
     expect(result.pdf).toMatch(/\/Count 5\b/);
-    expect(textHash(result.pdf)).toBe(baselineHash);
-    expect(result.pdf).toContain("/F1 9.1 Tf");
+    // Baseline taken before this typography task. The entire populated HTML
+    // body stays byte-identical; only the stylesheet and export layout change.
+    expect(createHash("sha256").update(result.html.split("<body>")[1].split("</body>")[0]).digest("hex")).toBe(baselineHash);
+    expect(result.pdf).toContain("/F1 9.5 Tf");
+    const expected = await page.evaluate(html => {
+      const document = new DOMParser().parseFromString(html, "text/html");
+      return [...document.querySelectorAll(".contract-document>p,.contract-document>h2,.contract-document>h3,.contract-document>table:not(.signature-boxes) :is(th,td),.contract-contact-card :is(dt,dd)")].map(node => node.textContent ?? "");
+    }, result.html);
+    const actual = comparableText(exportedText(result.pdf));
+    for (const text of expected) expect(actual, `Export retained: ${text.slice(0, 80)}`).toContain(comparableText(text));
+    expect(result.pdf).toContain("(1. Parties and term) Tj");
+    expect(result.pdf.match(/\(Date: 10\/11\/2026\) Tj/g)).toHaveLength(2);
     const streams = [...result.pdf.matchAll(/stream\n([\s\S]*?)\nendstream/g)].map(match => match[1]);
     expect(streams).toHaveLength(5);
     for (const [index, stream] of streams.entries()) {
@@ -68,6 +79,11 @@ test("compact HTML preview retains readable body text and equal unclipped signat
   });
   await page.setContent(html.replace("<head>", '<head><base href="https://contract.test/">'));
   expect(await page.locator("body").evaluate(node => Number.parseFloat(getComputedStyle(node).fontSize))).toBeCloseTo(10.25 * 96 / 72, 2);
+  for (const selector of ["body", ".contract-brand strong", "h2", "h3", ".contract-footer strong"]) {
+    expect(await page.locator(selector).first().evaluate(node => getComputedStyle(node).fontFamily)).toMatch(/Arial/);
+  }
+  const partyWidths = await page.locator(".party-details th").evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().width));
+  expect(partyWidths[0]).toBeCloseTo(partyWidths[1], 1);
   const boxes = page.locator(".signature-mark");
   await expect(boxes).toHaveCount(2);
   const first = (await boxes.nth(0).boundingBox())!, second = (await boxes.nth(1).boundingBox())!;

@@ -6,6 +6,7 @@ import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
 import { apiHealth, apiJson, logApiError } from "@/services/api/server";
 import { hasCurrentHospitalContract, validContractUrl } from "@/features/hospitals/contractApproval";
+import { assertHospitalLoginEmailAvailable, ProvisioningError, syncPortalAccountAccess } from "@/services/auth/provisioning";
 
 export const runtime = "nodejs";
 
@@ -44,6 +45,9 @@ async function handlePOST(request: Request, context: { params: Promise<{ hospita
 
     const auditReference = firestore.collection("auditLogs").doc();
     if (!hasMinimumHospitalImages(hospital)) return apiJson({ error: `Upload at least ${MIN_PUBLIC_HOSPITAL_IMAGES} different hospital images before making this hospital public.` }, 409);
+    // Reject identity conflicts before publishing, rather than discovering them
+    // in the subsequent explicit login-setup request.
+    await assertHospitalLoginEmailAvailable(auth, firestore, hospitalId, String(hospital.email).trim().toLowerCase());
     const now = FieldValue.serverTimestamp();
     const changes = {
       status: "active",
@@ -72,7 +76,8 @@ async function handlePOST(request: Request, context: { params: Promise<{ hospita
         ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
       },
     });
-    const linkedUsers = await firestore.collection("users").where("hospitalId", "==", hospitalId).get();
+    const linkedUsers = await firestore.collection("users").where("hospitalId", "==", hospitalId).limit(21).get();
+    if (linkedUsers.docs.length > 20) throw new ProvisioningError("This hospital's login accounts need a project-owner review before changing access.");
     const reactivatedAuthUids: string[] = [];
     const revokedAuthUids: string[] = [];
     const officialEmail = String(hospital.email ?? "").trim().toLowerCase();
@@ -113,22 +118,19 @@ async function handlePOST(request: Request, context: { params: Promise<{ hospita
     await batch.commit();
 
     if (reactivatedAuthUids.length || revokedAuthUids.length) {
-      await Promise.all([
-        ...reactivatedAuthUids.flatMap((uid) => [
-          auth.updateUser(uid, { disabled: false }),
-          auth.revokeRefreshTokens(uid),
-        ]),
-        ...revokedAuthUids.flatMap((uid) => [
-          auth.updateUser(uid, { disabled: true }),
-          auth.revokeRefreshTokens(uid),
-        ]),
-      ]).catch((authError) => {
-        logApiError("/api/admin/hospitals/[hospitalId]/activate auth-sync", authError);
-      });
+      const synchronized = await syncPortalAccountAccess(auth, [
+        ...reactivatedAuthUids.map(uid => ({ uid, disabled: false })),
+        ...revokedAuthUids.map(uid => ({ uid, disabled: true })),
+      ]);
+      if (!synchronized) {
+        logApiError("/api/admin/hospitals/[hospitalId]/activate auth-sync", new Error("auth-sync-incomplete"));
+        return apiJson({ saved: true, error: "The hospital is active, but its login access update could not be confirmed. Use Send login setup / reset to check and complete access before sharing the login." }, 503);
+      }
     }
 
     return apiJson({ ok: true });
   } catch (error) {
+    if (error instanceof ProvisioningError) return apiJson({ error: error.message }, error.status);
     if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
     logApiError("/api/admin/hospitals/[hospitalId]/activate", error);
     return apiJson({ error: "We could not activate the hospital. Check the server Firebase configuration and try again." }, 503);

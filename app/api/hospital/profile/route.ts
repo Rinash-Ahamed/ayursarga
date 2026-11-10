@@ -9,6 +9,9 @@ import { readJsonBody, RequestBodyError } from "@/services/api/request";
 import { allowRequest, requestFingerprint } from "@/services/api/rateLimit";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
 import { requestAuditDevice } from "@/services/api/audit";
+import { mutationJson } from "@/services/api/mutation";
+import { assertUniqueCreationEmail, DuplicateCreationEmailError } from "@/services/admin/uniqueCreationEmail";
+import { ProvisioningError } from "@/services/auth/provisioning";
 
 export const runtime = "nodejs";
 
@@ -103,10 +106,10 @@ async function handlePATCH(request: Request) {
       return apiJson({ error: Object.values(validation.errors)[0] ?? "Check the hospital profile details." }, 400);
     }
 
-    const changes = {
+    const changes: Record<string, unknown> = {
       name: validation.data.name,
       ...(Object.hasOwn(body, "description") ? { description: validation.data.description } : {}),
-      email: validation.data.email,
+      email: hospital.email,
       phone: validation.data.phone,
       hospitalPhone1: validation.data.hospitalPhone1,
       hospitalPhone2: validation.data.hospitalPhone2,
@@ -124,8 +127,21 @@ async function handlePATCH(request: Request) {
     const auditReference = firestore.collection("auditLogs").doc();
     const now = Timestamp.now();
     const metadata = { updatedAt: now, updatedBy: uid, lastAuditId: auditReference.id };
-    const updatedValues = { ...hospital, ...changes, ...metadata };
-    const batch = firestore.batch();
+    await firestore.runTransaction(async batch => {
+    const current = (await batch.get(hospitalReference)).data();
+    if (!current || current.status !== "active" || current.lastAuditId !== hospital.lastAuditId) throw new ProvisioningError("The hospital profile changed. Refresh before saving again.");
+    const requestedEmail = validation.data.email;
+    const emailRequested = requestedEmail !== String(current.email ?? "").trim().toLowerCase();
+    if (emailRequested) {
+      const counterReference = firestore.collection("systemSettings").doc("hospitalCreationSequence");
+      const counter = await batch.get(counterReference);
+      await assertUniqueCreationEmail(batch, firestore, "hospitals", requestedEmail, hospitalId);
+      Object.assign(changes, { pendingOfficialEmail: requestedEmail,
+        pendingOfficialEmailRequestedAt: current.pendingOfficialEmail === requestedEmail ? current.pendingOfficialEmailRequestedAt : now,
+        pendingOfficialEmailRequestedBy: uid });
+      batch.set(counterReference, { value: Number(counter.data()?.value ?? 0) + 1, updatedAt: now, updatedBy: uid, lastAuditId: auditReference.id }, { merge: true });
+    }
+    const updatedValues = { ...current, ...changes, ...metadata };
     batch.update(hospitalReference, { ...changes, ...metadata });
     batch.set(auditReference, {
       action: "update",
@@ -133,15 +149,17 @@ async function handlePATCH(request: Request) {
       recordId: hospitalId,
       actorId: uid,
       actorRole: "hospital",
-      previousValues: hospital,
+      previousValues: current,
       updatedValues,
       timestamp: now,
       source: "server",
       device: requestAuditDevice(request),
     });
-    await batch.commit();
-    return apiJson({ ok: true });
+    });
+    return mutationJson({ ...changes, ...metadata });
   } catch (error) {
+    if (error instanceof ProvisioningError) return apiJson({ error: error.message }, error.status);
+    if (error instanceof DuplicateCreationEmailError) return apiJson({ error: error.message, field: "email" }, error.status);
     if (error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);
     if (error instanceof AdminAuthorizationError) return apiJson({ error: error.message }, error.status);
     logApiError("PATCH /api/hospital/profile", error);
