@@ -8,6 +8,7 @@ import type { PortalRole } from "@/features/auth/contracts";
 import { ROUTES } from "@/config/routes";
 import { useAuth } from "@/hooks/useAuth";
 import { PortalNotifications } from "@/components/portal/PortalNotifications";
+import { AdminSessionWarning } from "@/components/portal/AdminSessionWarning";
 import { lockDocumentScroll } from "@/utils/documentScrollLock";
 import { ConsumerPortalFooter } from "@/components/consumer/ConsumerPortalFooter";
 import AyuBuddy from "@/components/AyuBuddy";
@@ -96,7 +97,7 @@ export function PortalShell({ role, title, children, focused = false }: {
   role: PortalRole; title: string; children: ReactNode; focused?: boolean;
 }) {
   const pathname = usePathname();
-  const { firebaseUser, userProfile, logout, isLoading } = useAuth();
+  const { firebaseUser, userProfile, logout, isLoading, sessionWarningOpen, staySignedIn } = useAuth();
   const [failedAvatar, setFailedAvatar] = useState<string | null>(null);
   const consumerAvatar = role === "consumer" && firebaseUser?.photoURL && firebaseUser.photoURL !== failedAvatar ? firebaseUser.photoURL : null;
   const [accountOpen, setAccountOpen] = useState(false);
@@ -283,6 +284,8 @@ export function PortalShell({ role, title, children, focused = false }: {
       {role === "consumer" && <ConsumerPortalFooter />}
     </section>
     {role === "consumer" && <AyuBuddy />}
+    {role === "admin" && <AdminSessionWarning open={Boolean(sessionWarningOpen)}
+      busy={isLoading} onContinue={staySignedIn} onSignOut={() => { void logout(); }} />}
     {role === "consumer" && <nav className="consumer-bottom-nav" aria-label="Consumer mobile navigation">
       {NAVIGATION.consumer.map(([label, href, icon], index) => <Link key={href} href={href} aria-label={label} aria-current={isNavigationActive(pathname, href) ? "page" : undefined}><PortalNavigationIcon name={icon} /><span>{["Bookings", "Search", "Profile", "Help"][index]}</span></Link>)}
     </nav>}

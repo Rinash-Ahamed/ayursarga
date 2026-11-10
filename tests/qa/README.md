@@ -1,5 +1,20 @@
 # Business workbook automation
 
+## Admin inactivity warning
+
+AUT-005 retains manual native-login/device sign-off. Supporting checks:
+
+```powershell
+node --test --test-isolation=none tests/unit/auth-idle-policy.test.mjs tests/unit/admin-mfa-login.test.mjs
+node node_modules/@playwright/test/cli.js test --config=tests/config/playwright.portal-ui.config.ts session-idle.spec.ts --project=desktop --project=phone-320 --project=webkit-phone
+```
+
+These exercise the real idle hook/provider gate and shared warning dialog with
+controlled clocks: warning at 13 minutes, explicit continuation, 15-minute expiry,
+late-tab denial, cleanup, sign-out and unchanged Hospital/Consumer policies.
+Separate native-MFA service mocks check password/OTP gating, not real Firebase
+sign-ins. Browser fixtures cover focus, responsive wrapping and scroll locking.
+
 ## Partner contract policy table
 
 CON-008 now verifies the owner-requested removal of CP02/CPO2 rows and references

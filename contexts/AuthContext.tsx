@@ -34,6 +34,8 @@ type AuthContextValue = {
   changePassword(currentPassword: string, newPassword: string): Promise<void>;
   refreshUserProfile(): Promise<UserProfile | null>;
   clearError(): void;
+  sessionWarningOpen: boolean;
+  staySignedIn(): boolean;
 };
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
@@ -44,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<AuthenticationError | null>(null);
+  const [idleWarningOpen, setIdleWarningOpen] = useState(false);
 
   useEffect(() => authService.subscribe((nextSnapshot) => {
     setSnapshot(nextSnapshot);
@@ -133,10 +136,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
   }, []);
 
-  useSessionIdleTimeout(
+  const staySignedIn = useSessionIdleTimeout(
     status === "authenticated" && Boolean(snapshot.user)
       && (snapshot.profile?.role === "admin" || snapshot.profile?.role === "hospital"),
     expireIdleSession,
+    setIdleWarningOpen,
+    snapshot.profile?.role === "admin",
   );
 
   const value = useMemo<AuthContextValue>(() => ({
@@ -157,7 +162,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     changePassword,
     refreshUserProfile,
     clearError,
-  }), [changePassword, clearError, completeAdminMfa, completeAdminMfaEnrollment, error, login, loginConsumerWithGoogle, logout, processing, reauthenticate, refreshUserProfile, resetPassword, snapshot, status]);
+    sessionWarningOpen: status === "authenticated" && snapshot.profile?.role === "admin" && idleWarningOpen,
+    staySignedIn,
+  }), [changePassword, clearError, completeAdminMfa, completeAdminMfaEnrollment, error, idleWarningOpen, login, loginConsumerWithGoogle, logout, processing, reauthenticate, refreshUserProfile, resetPassword, snapshot, status, staySignedIn]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

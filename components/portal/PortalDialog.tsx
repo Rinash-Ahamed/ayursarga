@@ -15,6 +15,8 @@ export function PortalDialog({
   children,
   onConfirm,
   onCancel,
+  onDismiss,
+  initialFocus = "cancel",
 }: {
   open: boolean;
   title: string;
@@ -27,11 +29,14 @@ export function PortalDialog({
   children?: ReactNode;
   onConfirm: () => void;
   onCancel: () => void;
+  onDismiss?: () => void;
+  initialFocus?: "confirm" | "cancel";
 }) {
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const confirmRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
   const messageId = useId();
-  return <ModalLayer open={open} className="portal-dialog-backdrop" busy={busy} onClose={onCancel} initialFocusRef={children ? undefined : cancelRef}>
+  return <ModalLayer open={open} className="portal-dialog-backdrop" busy={busy} onClose={onDismiss ?? onCancel} initialFocusRef={children ? undefined : initialFocus === "confirm" ? confirmRef : cancelRef}>
     <section className="portal-dialog" data-tone={tone} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={message ? messageId : undefined}>
       <span className="portal-dialog-leaf" aria-hidden="true" />
       <span className="portal-eyebrow">Please confirm</span>
@@ -40,7 +45,7 @@ export function PortalDialog({
       {children}
       <div className="portal-actions portal-dialog-actions">
         <button ref={cancelRef} type="button" className="portal-button secondary" disabled={busy} onClick={onCancel}>{cancelLabel}</button>
-        <button type="button" className={`portal-button${tone === "danger" ? " danger" : ""}`} disabled={busy || confirmDisabled} onClick={onConfirm}>{busy ? "Working..." : confirmLabel}</button>
+        <button ref={confirmRef} type="button" className={`portal-button${tone === "danger" ? " danger" : ""}`} disabled={busy || confirmDisabled} onClick={onConfirm}>{busy ? "Working..." : confirmLabel}</button>
       </div>
     </section>
   </ModalLayer>;

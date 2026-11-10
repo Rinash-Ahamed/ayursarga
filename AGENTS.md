@@ -114,7 +114,10 @@ to deploy, rerun maintenance scripts, or modify live data.
   must be redirected to their correct portal; unauthenticated users go to the
   relevant login page.
 - Retain the 15-minute inactivity sign-out for authenticated Admin and Hospital
-  sessions. Consumers remain signed in through the shared Firebase session and
+  sessions. Admin receives a warning after 13 idle minutes; only its explicit
+  Stay signed in action restarts the timer once shown. Never revive an expired
+  session or bypass native authenticator verification on a fresh Admin login.
+  Hospital inactivity behavior stays unchanged. Consumers remain signed in through the shared Firebase session and
   are not signed out merely for inactivity. Preserve explicit Logout, role and
   account-status checks, session revocation and server-side authorization; never
   add a parallel Consumer auth implementation or store tokens manually.

@@ -1,6 +1,35 @@
 # Session handoff
 
-Updated: 10 November 2026 (Asia/Calcutta).
+Updated: 11 November 2026 (Asia/Calcutta).
+
+## Admin idle warning without relaxing MFA (11 November 2026, v4.43.0)
+
+- Owner selected a two-minute logout warning and retained authenticator codes
+  on actual logout/new login. The existing 15-minute Admin/Hospital inactivity
+  timeout remains unchanged; no remembered-device exception or longer session.
+- Shared idle hook warns Admin at 13 idle minutes. The existing body-level
+  PortalDialog focuses Stay signed in, locks background scrolling and allows
+  explicit Sign out. Once visible, passive activity, Escape or backdrop clicks
+  cannot acknowledge it. Stay signed in resets only a still-valid timer; an
+  overdue background tab cannot revive itself before delayed timers execute.
+- AuthProvider exposes warning state/continuation without importing portal UI
+  into public routes. PortalShell renders the Admin-only warning. Existing
+  dialogs retain their default Cancel focus/dismissal via additive optional
+  props. Hospital retains its existing idle behavior; Consumer has no idle
+  sign-out. Native MFA, server permissions, cookies and tokens are unchanged.
+- Fourteen focused unit tests passed, including actual idle hook/provider role
+  gates and existing native-MFA service regressions. Twelve browser executions
+  passed across desktop Chromium, 320px mobile Chromium and mobile WebKit.
+  Three existing hospital email-approval dialog regressions also passed.
+  Browser fixtures use controlled clocks, not live Auth or physical devices.
+  Initial test-clock drift/effect-readiness flakes were corrected in fixtures;
+  the final complete idle browser run passed without retries. Visually checked
+  the themed narrow-mobile warning, including focused positive button.
+- Local QA AUT-005 steps/expectations updated; Manual required and all execution
+  history retained. All 25 sheets/styles/controls preserved; only two intended
+  cells changed. Technical mapping is in tests/qa/README.md. Version updated
+  consistently to 4.43.0. No full lint/typecheck/build requested for this change,
+  and none run. No deployment, rules/index changes or live data/Auth mutations.
 
 ## Standard contract typography and alignment (10 November 2026, v4.42.3)
 
