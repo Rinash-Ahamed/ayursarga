@@ -66,7 +66,7 @@ test("loading, signed-out and incomplete sessions never start a privileged idle 
   assert.equal(provider(null).gate, false);
 });
 
-function timerFixture(t) {
+function TimerFixture(t) {
   const cleanups=[],warnings=[];let logouts=0;
   const previousWindow=globalThis.window,previousDocument=globalThis.document;
   globalThis.window=new EventTarget();globalThis.document=Object.assign(new EventTarget(),{visibilityState:'visible'});
@@ -82,7 +82,7 @@ function timerFixture(t) {
 }
 
 test('Admin warning starts exactly two minutes before the unchanged 15-minute deadline, and passive activity cannot dismiss it',t=>{
-  const f=timerFixture(t);t.mock.timers.tick(13*60*1000-1);assert.deepEqual(f.warnings,[]);
+  const f=TimerFixture(t);t.mock.timers.tick(13*60*1000-1);assert.deepEqual(f.warnings,[]);
   t.mock.timers.tick(1);assert.deepEqual(f.warnings,[true]);
   globalThis.window.dispatchEvent(new Event('pointermove'));globalThis.window.dispatchEvent(new Event('focus'));
   t.mock.timers.tick(2*60*1000);assert.equal(f.logouts(),1);assert.deepEqual(f.warnings,[true,false]);
@@ -90,13 +90,13 @@ test('Admin warning starts exactly two minutes before the unchanged 15-minute de
 });
 
 test('explicit stay signed in resets the existing deadline, and cleanup removes warning/expiry callbacks',t=>{
-  const f=timerFixture(t);t.mock.timers.tick(13*60*1000);assert.equal(f.resume(),true);
+  const f=TimerFixture(t);t.mock.timers.tick(13*60*1000);assert.equal(f.resume(),true);
   assert.deepEqual(f.warnings,[true,false]);t.mock.timers.tick(13*60*1000-1);assert.equal(f.logouts(),0);
   assert.equal(f.warnings.at(-1),false);t.mock.timers.tick(1);assert.equal(f.warnings.at(-1),true);
   f.cleanup();t.mock.timers.tick(60*60*1000);assert.equal(f.logouts(),0);assert.equal(f.resume(),false);
 });
 
 test('an overdue suspended tab cannot resume its session before delayed timers run',t=>{
-  const f=timerFixture(t);t.mock.timers.setTime(15*60*1000+1);
+  const f=TimerFixture(t);t.mock.timers.setTime(15*60*1000+1);
   assert.equal(f.resume(),false);assert.equal(f.logouts(),1);
 });

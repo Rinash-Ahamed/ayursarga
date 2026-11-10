@@ -404,7 +404,8 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     <PortalFeedback error={error} notification={errorNotification} emptyTitle="No hospital selected" empty={!error && !loading && !hospital ? "Return to Hospitals and choose a hospital to continue." : undefined} />
     <PortalToast message={message} notification={messageNotification} />
     {hospital && <>
-      <article className="portal-card">
+      <section className="portal-hospital-overview" aria-label="Hospital overview" data-editing={editing ? "true" : undefined}>
+      <article className="portal-card portal-hospital-identity-card">
         <div className="portal-hospital-summary">
           <div>
             <div className="portal-row-heading"><h2>{hospital.name}</h2><span className="portal-status" data-status={hospital.status}>{formatStatus(hospital.status)}</span></div>
@@ -432,11 +433,6 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         </>}
       </article>
 
-      {hospital.pendingOfficialEmail && <section className="portal-card">
-        <h2>Official email change request</h2>
-        <p className="portal-form-note">Requested email: <strong style={{ overflowWrap: "anywhere" }}>{hospital.pendingOfficialEmail}</strong>. The current email and login remain unchanged until approval.</p>
-        <div className="portal-actions"><button className="portal-button" type="button" disabled={busy} onClick={() => setPendingAction("approve_email")}>Approve email change</button><button className="portal-button danger" type="button" disabled={busy} onClick={() => setPendingAction("reject_email")}>Decline request</button></div>
-      </section>}
       <article id="hospital-images" className="portal-card portal-hospital-media-card">
         <div className="portal-row-heading"><h2>Hospital images and map</h2><span className="portal-status" data-status={hospital.locationUrl || getHospitalImageUrls(hospital).length ? "active" : "pending"}>{hospital.locationUrl || getHospitalImageUrls(hospital).length ? "Added" : "Not added"}</span></div>
         {editingMedia ? <form className="portal-form portal-edit-form" onSubmit={saveHospitalMedia} noValidate>
@@ -451,6 +447,13 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
           {hospital.status !== "archived" && <div className="portal-actions"><button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditingMedia(true); setError(null); setMessage(null); }}>Edit map</button></div>}
         </>}
       </article>
+      </section>
+
+      {hospital.pendingOfficialEmail && <section className="portal-card portal-hospital-email-request">
+        <h2>Official email change request</h2>
+        <p className="portal-form-note">Requested email: <strong style={{ overflowWrap: "anywhere" }}>{hospital.pendingOfficialEmail}</strong>. The current email and login remain unchanged until approval.</p>
+        <div className="portal-actions"><button className="portal-button" type="button" disabled={busy} onClick={() => setPendingAction("approve_email")}>Approve email change</button><button className="portal-button danger" type="button" disabled={busy} onClick={() => setPendingAction("reject_email")}>Decline request</button></div>
+      </section>}
 
       <article className="portal-card portal-contract-card">
         <div className="portal-row-heading"><h2>Contract and approval</h2><span className="portal-status" data-status={contractStatus}>{formatStatus(contractStatus)}</span></div>

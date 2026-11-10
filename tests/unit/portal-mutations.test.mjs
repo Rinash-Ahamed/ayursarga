@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Timestamp } from "firebase-admin/firestore";
+import { readFileSync } from "node:fs";
 import { loadTypeScript } from "../helpers/loadTypeScript.mjs";
 
 class AuthorizationError extends Error { constructor(message, status) { super(message); this.status = status; } }
@@ -58,6 +59,60 @@ function fixture(records = {}, options = {}) {
 }
 const request = (body) => new Request("https://test.local/api/test", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
 const context = (key, value) => ({ params: Promise.resolve({ [key]: value }) });
+
+const validHospitalProfile={name:"Centre",legalName:"Centre LLP",email:"hospital@example.test",phone:"9876543210",hospitalPhone1:"9876543210",hospitalPhone2:null,
+  address:"A complete service address",registeredAddress:"A complete registered address",city:"Palakkad",district:"Palakkad",state:"Kerala",commissionPercentage:10,status:"active",description:"Legacy description retained",locationUrl:"https://www.google.com/maps?q=Palakkad"};
+
+test("native rules wire changed-only hospital requirement guards without requiring missing legacy fields globally",()=>{
+  const rules=readFileSync('firestore.rules','utf8');
+  const guard=rules.split('function hasValidChangedHospitalRequirements()')[1].split('function validAdminHospitalUpdate()')[0];
+  for(const field of ['locationUrl','hospitalPhone1','district'])assert.ok(guard.includes(`!changed.hasAny(['${field}'])`));
+  const hospitalRules=rules.split('match /hospitals/{hospitalId}')[1].split('match /consultants/')[0];
+  assert.ok(hospitalRules.includes('&& hasValidChangedHospitalRequirements()'));
+});
+
+test("hospital map saves reject blanks and incomplete embeds without changing records or audit history",async()=>{
+  const {validateHospitalLocationUrl:validate}=loadTypeScript("features/hospitals/location.ts");
+  for(const value of [""," \n\t ",null,undefined,"<iframe></iframe>",'<iframe src=""></iframe>']) {
+    assert.ok(validate(value).error);
+    const f=fixture({"hospitals/centre":validHospitalProfile});
+    const response=await f.load("app/api/admin/hospitals/[hospitalId]/route.ts").PATCH(request({action:"update",data:{locationUrl:value}}),context("hospitalId","centre"));
+    assert.equal(response.status,400);assert.equal(f.calls.commits,0);assert.equal(f.calls.writes.length,0);
+  }
+});
+
+test("valid hospital map embeds save only their supported HTTPS src with an atomic audit and Admin authorization",async()=>{
+  const f=fixture({"hospitals/centre":validHospitalProfile});
+  const response=await f.load("app/api/admin/hospitals/[hospitalId]/route.ts").PATCH(request({action:"update",data:{locationUrl:'<iframe src="https://www.google.com/maps/embed?pb=synthetic&amp;lang=en" onload="untrusted()"></iframe>'}}),context("hospitalId","centre"));
+  assert.equal(response.status,200);assert.equal(f.calls.writes.length,2);
+  const changes=(await response.json()).changes;assert.equal(changes.locationUrl,'https://www.google.com/maps/embed?pb=synthetic&lang=en');
+  assert.ok(f.calls.writes.some(([,ref])=>ref.path.startsWith('auditLogs/')));
+  const denied=fixture({"hospitals/centre":validHospitalProfile},{denied:true});
+  assert.equal((await denied.load("app/api/admin/hospitals/[hospitalId]/route.ts").PATCH(request({action:"update",data:{locationUrl:changes.locationUrl}}),context("hospitalId","centre"))).status,403);
+  assert.equal(denied.calls.commits,0);
+});
+
+test("explicitly clearing required hospital fields is rejected, while optional phone and untouched legacy particulars remain compatible",async()=>{
+  for(const key of ['name','legalName','email','phone','hospitalPhone1','registeredAddress','address','city','district','state','commissionPercentage'])for(const value of ['', '   ', null]){
+    const f=fixture({"hospitals/centre":validHospitalProfile});
+    const response=await f.load("app/api/admin/hospitals/[hospitalId]/route.ts").PATCH(request({action:'update',data:{[key]:value}}),context('hospitalId','centre'));
+    assert.equal(response.status,400,`${key} cannot be ${JSON.stringify(value)}`);assert.equal(f.calls.commits,0);
+  }
+  for(const profile of [validHospitalProfile,{...validHospitalProfile,legalName:null,registeredAddress:null,locationUrl:null}]){
+    const f=fixture({'hospitals/centre':profile});
+    const response=await f.load('app/api/admin/hospitals/[hospitalId]/route.ts').PATCH(request({action:'update',data:{hospitalPhone2:null,city:'Kochi'}}),context('hospitalId','centre'));
+    assert.equal(response.status,200);assert.equal(Object.hasOwn((await response.json()).changes,'locationUrl'),false);
+  }
+});
+
+test("all required contract particulars reject blanks and null values at the Admin endpoint",async()=>{
+  const particulars={registrationNumber:'REG123',cinNumber:'NOT APPLICABLE',panNumber:'ABCDE1234F',gstin:'NOT APPLICABLE',contractEffectiveDate:'2026-11-11',contractExpiryDate:'2029-11-11',emergencyContact:'9876543210',emergencyReferralHospital:'Nearby Hospital'};
+  for(const key of Object.keys(particulars))for(const value of ['', '   ', null]){
+    const f=fixture({'hospitals/centre':{...validHospitalProfile,...particulars}});
+    const response=await f.load('app/api/admin/hospitals/[hospitalId]/route.ts').PATCH(request({action:'update',data:{[key]:value}}),context('hospitalId','centre'));
+    assert.equal(response.status,400,key);assert.equal(f.calls.commits,0);
+  }
+});
 
 test("USR-010: Hospital cannot submit Admin editorial fields and denied callers cannot write them",async()=>{
   for(const data of [{ayursargaRating:5},{ayursargaReviewNote:"Untrusted editorial"}]) {

@@ -181,6 +181,10 @@ to deploy, rerun maintenance scripts, or modify live data.
   extract and store only its validated HTTPS `src` URL. Public centre details
   render that URL in a responsive map frame and retain an external maps link;
   never store or render arbitrary iframe HTML.
+  Saving a map requires a nonblank supported link or an embed with a usable src;
+  do not interpret an empty Save as map removal. Required hospital particulars
+  must reject explicit blank/null updates while retaining fallback compatibility
+  for untouched legacy records; secondary phone stays optional.
   Normalize supported Drive sharing links for display and keep gallery frames
   at a consistent 4:3 ratio. Image uploads use Firebase Admin Storage through
   `/api/hospitals/{hospitalId}/images`, server validation/re-encoding, a maximum

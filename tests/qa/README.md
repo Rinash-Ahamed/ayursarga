@@ -1,5 +1,30 @@
 # Business workbook automation
 
+## Hospital required fields and map saves
+
+HOS-002/HOS-014 supporting checks use `portal-mutations`,
+`admin-creation-emails` and `qa-candidates` unit suites. They cover blank,
+whitespace and explicit null values, required contract particulars, unchanged
+records/audits after rejection, valid map src extraction, Admin denial and
+optional-phone/legacy compatibility. The portal-ui `Hospital map requires` test
+checks the field error/focus, no invalid update call and corrected save on
+desktop, phone-320 and webkit-phone. No production writes are used.
+
+The guarded native emulator suite adds map/primary-phone/district clear denials
+and unchanged legacy-null compatibility. It requires JDK 21+; it has not been
+executed for this update with the currently installed Java 8. Deploy tightened
+Firestore rules explicitly; local API mocks do not establish deployed rules.
+
+## Hospital detail overview
+
+HOS-007 retains manual device review. Supporting local layout checks live in
+`tests/e2e/portal-ui.spec.ts` under `Hospital overview pairs`: two desktop columns,
+stacked tablet/mobile, long text, no horizontal overflow, available upload action,
+map editing and full-width hospital editing with Cancel. Run with the portal-ui
+config on desktop, tablet-1024, phone-320 and webkit-phone. Existing Hospital email
+approval checks also cover the request section below this grouped overview.
+No live upload, database mutation or email delivery is performed by these fixtures.
+
 ## Admin inactivity warning
 
 AUT-005 retains manual native-login/device sign-off. Supporting checks:
@@ -31,6 +56,9 @@ paragraph and non-signature table cell/contact field in the PDF text, verifies
 both five-page samples, equal preview columns/signing boxes and standard fonts,
 and retains the shared invoice PDF's byte hash. Run with the portal-ui config on
 desktop, phone-320 and webkit-phone. Real print/device review remains separate.
+The preview also asserts matching party/contact value, label and heading font
+sizes, consistent value line height and matching label weight/color. Existing
+explicit line breaks remain intact; this styling does not change PDF content.
 
 ## Hospital identity and email approval
 

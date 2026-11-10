@@ -6,6 +6,50 @@ import { getCalendarMonthRange } from "../../utils/date";
 const styles = ["node_modules/tailwindcss/lib/css/preflight.css", "app/globals.css", "app/portal.css"].map((file) => readFileSync(file, "utf8")).join("\n");
 const screens = ["admin-dashboard", "admin-hospitals", "admin-details", "admin-consultants", "admin-users", "admin-bookings", "admin-availability", "admin-audits", "hospital-dashboard", "hospital-profile", "hospital-services", "hospital-bookings", "hospital-availability", "hospital-password", "admin-login", "hospital-login", "admin-forgot", "hospital-forgot"];
 
+test('Hospital map requires a valid link and keeps invalid saves non-mutating',async({page})=>{
+  await page.route('**/*',route=>route.fulfill({status:204,body:''}));await mount(page,'admin-details');
+  const media=page.locator('#hospital-images');await media.getByRole('button',{name:'Edit map',exact:true}).click();
+  const field=media.getByRole('textbox',{name:'Map embed code or link *',exact:true});
+  await expect(field).toHaveAttribute('required','');
+  for(const value of ['', '   ', '<iframe></iframe>']){
+    await field.fill(value);await media.getByRole('button',{name:'Save map',exact:true}).click();
+    await expect(field).toHaveAttribute('aria-invalid','true');await expect(field).toBeFocused();
+    await expect(media.getByRole('alert')).toBeVisible();
+    expect(await page.evaluate(()=>(window as unknown as {qaRequestTrace:{kind:string}[]}).qaRequestTrace.filter(row=>row.kind==='hospital-update').length)).toBe(0);
+  }
+  await field.fill('<iframe src="https://www.google.com/maps/embed?pb=synthetic"></iframe>');
+  await media.getByRole('button',{name:'Save map',exact:true}).click();
+  await expect(field).toHaveCount(0);
+  await expect(media.getByRole('link',{name:'View centre map',exact:true})).toHaveAttribute('href','https://www.google.com/maps/embed?pb=synthetic');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+});
+
+test('Hospital overview pairs compact details and media cards without breaking edit or mobile layout',async({page})=>{
+  await page.route('**/*',route=>route.request().resourceType()==='image'
+    ?route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#dce8df"/></svg>'})
+    :route.fulfill({status:204,body:''}));
+  await mount(page,'admin-details');
+  const overview=page.getByRole('region',{name:'Hospital overview'});
+  await expect(overview.locator(':scope > article')).toHaveCount(2);
+  const identity=overview.locator('.portal-hospital-identity-card'),media=overview.locator('#hospital-images');
+  const left=await identity.boundingBox(),right=await media.boundingBox();
+  expect(left).not.toBeNull();expect(right).not.toBeNull();
+  if(page.viewportSize()!.width>=1180){expect(Math.abs(left!.y-right!.y)).toBeLessThan(2);expect(right!.x).toBeGreaterThan(left!.x+left!.width);}
+  else expect(right!.y).toBeGreaterThanOrEqual(left!.y+left!.height);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  await expect(media.getByRole('button',{name:'Upload images',exact:true})).toBeVisible();
+  await page.screenshot({path:`tmp/hospital-overview-${test.info().project.name}.png`,fullPage:false});
+  await media.getByRole('button',{name:'Edit map',exact:true}).click();
+  await expect(media.getByRole('button',{name:'Save map',exact:true})).toBeVisible();
+  await media.getByRole('button',{name:'Cancel',exact:true}).click();
+  await identity.getByRole('button',{name:'Edit hospital',exact:true}).click();
+  await expect(overview).toHaveAttribute('data-editing','true');
+  await expect(identity.getByRole('button',{name:'Save details',exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  await identity.getByRole('button',{name:'Cancel',exact:true}).click();
+  await expect(overview).not.toHaveAttribute('data-editing','true');
+});
+
 test('Hospital email approval keeps Cancel non-mutating and uses the shared responsive confirmation dialog', async ({page}) => {
   await page.route('**/*',route=>route.fulfill({status:204,body:''}));
   for(const approve of [true,false]){

@@ -1,7 +1,7 @@
 import { withApiTiming } from "@/services/api/timing";
 import { FieldValue } from "firebase-admin/firestore";
 import { DEFAULT_CENTRE_GUIDELINE_VALUES } from "@/features/hospitals/guidelines";
-import { validateHospitalFields } from "@/features/hospitals/validation";
+import { explicitHospitalParticulars, validateHospitalFields } from "@/features/hospitals/validation";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
 import { apiHealth, apiJson, logApiError } from "@/services/api/server";
@@ -20,7 +20,7 @@ async function handlePOST(request: Request) {
     const body = await readJsonBody(request, 32_000) as Record<string, unknown> | null;
     if (!body) return apiJson({ error: "Hospital details are required." }, 400);
 
-    const validation = validateHospitalFields(body);
+    const validation = validateHospitalFields(explicitHospitalParticulars(body));
     if (!validation.isValid) {
       return apiJson({ error: Object.values(validation.errors)[0] ?? "Hospital details are invalid." }, 400);
     }

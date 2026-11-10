@@ -3,7 +3,7 @@ import { Timestamp } from "firebase-admin/firestore";
 import { mutationJson } from "@/services/api/mutation";
 import { validateHospitalImageUrls, hasMinimumHospitalImages, MIN_PUBLIC_HOSPITAL_IMAGES } from "@/features/hospitals/images";
 import { validateHospitalLocationUrl } from "@/features/hospitals/location";
-import { validateHospitalFields } from "@/features/hospitals/validation";
+import { explicitHospitalParticulars, validateHospitalFields } from "@/features/hospitals/validation";
 import { AdminAuthorizationError, requireActiveAdmin } from "@/services/firebase/adminAuthorization";
 import { isFirebaseAdminReady } from "@/services/firebase/admin";
 import { apiHealth, apiJson, logApiError } from "@/services/api/server";
@@ -80,7 +80,7 @@ async function handlePATCH(request: Request, context: { params: Promise<{ hospit
         }
         Object.assign(changes, contractValidation.data);
       } else {
-        const merged = { ...hospital, ...changes };
+        const merged = { ...hospital, ...explicitHospitalParticulars(changes) };
         const profileValidation = validateHospitalFields(merged);
         if (!profileValidation.isValid) {
           return apiJson({ error: Object.values(profileValidation.errors)[0] ?? "Hospital details are invalid." }, 400);

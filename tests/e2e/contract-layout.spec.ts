@@ -84,6 +84,15 @@ test("compact HTML preview retains readable body text and equal unclipped signat
   }
   const partyWidths = await page.locator(".party-details th").evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().width));
   expect(partyWidths[0]).toBeCloseTo(partyWidths[1], 1);
+  const typography=async(selector:string)=>page.locator(selector).first().evaluate(node=>{
+    const style=getComputedStyle(node);return {size:style.fontSize,font:style.fontFamily,weight:style.fontWeight,lineHeight:style.lineHeight,color:style.color};
+  });
+  const partyValue=await typography('.party-details td'),contactValue=await typography('.contract-contact-card dd');
+  expect(partyValue.size).toBe(contactValue.size);expect(partyValue.font).toBe(contactValue.font);
+  expect(partyValue.lineHeight).toBe(contactValue.lineHeight);
+  const partyLabel=await typography('.party-details td strong'),contactLabel=await typography('.contract-contact-card dt');
+  expect(partyLabel.size).toBe(contactLabel.size);expect(partyLabel.weight).toBe(contactLabel.weight);expect(partyLabel.color).toBe(contactLabel.color);
+  expect((await typography('.party-details th')).size).toBe((await typography('.contract-contact-card>strong')).size);
   const boxes = page.locator(".signature-mark");
   await expect(boxes).toHaveCount(2);
   const first = (await boxes.nth(0).boundingBox())!, second = (await boxes.nth(1).boundingBox())!;

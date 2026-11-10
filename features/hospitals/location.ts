@@ -27,8 +27,9 @@ function isSupportedMapUrl(parsed: URL) {
 }
 
 export function validateHospitalLocationUrl(value: unknown) {
+  if (typeof value !== "string" || !value.trim()) return { locationUrl: null, error: "Add a Google Maps or OpenStreetMap link or embed code before saving." };
   const locationUrl = extractLocationUrl(value);
-  if (!locationUrl) return { locationUrl: null, error: null };
+  if (!locationUrl) return { locationUrl: null, error: "Paste a valid Google Maps or OpenStreetMap embed code or HTTPS link." };
   if (locationUrl.length > MAX_LOCATION_URL_LENGTH) return { locationUrl: null, error: `The map link must be ${MAX_LOCATION_URL_LENGTH} characters or fewer.` };
 
   try {

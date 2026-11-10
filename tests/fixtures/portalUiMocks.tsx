@@ -186,7 +186,7 @@ export const buildHospitalContractPdf = () => ({ html: "<h1>Contract fixture</h1
 export const authorizedApiRequest = async (url?: string, options?: RequestInit) => { portalUiState.calls++; return {
   ...(url?.endsWith("/image") ? { imageUrl: "https://images.test/consultant.webp" } : {}),
   imageUrls: url?.endsWith("/images") && options?.method === "PATCH" ? coverGallery.filter((image) => image !== JSON.parse(String(options.body)).imageUrl) : [] }; };
-export const updateHospital = async () => ({});
+export const updateHospital = async (_id: string, changes: Record<string, unknown>) => { qaRequestTrace.push({kind:"hospital-update",args:[_id,changes]}); return changes; };
 export const emailReviewCalls: boolean[] = [];
 Object.assign(globalThis, { emailReviewCalls });
 export const reviewHospitalEmail = async (_id: string, approve: boolean) => {

@@ -23,6 +23,12 @@ export type HospitalFields = {
 export type HospitalField = keyof HospitalFields;
 export type HospitalValidationErrors = Partial<Record<HospitalField, string>>;
 
+/** Missing legacy particulars may fall back; explicitly clearing them must fail. */
+export function explicitHospitalParticulars(input: Record<string, unknown>) {
+  return { ...input, ...Object.fromEntries(["legalName", "registeredAddress"]
+    .filter((field) => Object.hasOwn(input, field)).map((field) => [field, input[field] ?? ""])) };
+}
+
 function optionalWebUrl(value: unknown) {
   const url = toTrimmedString(value, 500);
   if (!url) return null;

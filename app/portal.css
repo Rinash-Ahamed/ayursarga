@@ -536,6 +536,19 @@ html[data-theme="dark"] .portal-toast[data-tone="error"],body[data-theme="dark"]
 .portal-page-actions{ margin-bottom:18px; }
 .portal-booking-navigation{ width:100%; margin:0 0 24px; align-items:center; }
 .portal-hospital-media-card{ margin-top:18px; }
+.portal-hospital-overview{ display:grid; grid-template-columns:minmax(0,1fr); gap:16px; min-width:0; }
+.portal-hospital-overview>.portal-card{ min-width:0; margin:0; padding:20px; }
+.portal-hospital-overview .portal-row-heading{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; }
+.portal-hospital-overview .portal-row-heading h2{ font-size:24px; line-height:1.25; }
+.portal-hospital-overview .portal-card-meta{ gap:6px 14px; margin-top:12px; }
+.portal-hospital-overview .portal-hospital-identity-card>p{ margin-block:10px; }
+.portal-hospital-overview .portal-image-manager{ margin-top:12px; }
+.portal-hospital-overview .portal-help-block{ margin-bottom:10px; }
+.portal-hospital-overview .portal-help-list{ font-size:12px; line-height:1.6; }
+.portal-hospital-overview .portal-hospital-gallery{ grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-bottom:14px; }
+.portal-hospital-email-request{ margin-top:18px; }
+@media(min-width:1180px){ .portal-hospital-overview:not([data-editing="true"]){ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:520px){ .portal-hospital-overview>.portal-card{ padding:16px; } .portal-hospital-overview .portal-hospital-gallery{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
 .portal-contract-card{ margin-top:18px; }
 .portal-assessment-card{ margin-top:18px; }
 .portal-detail-section{ margin-top:28px; }

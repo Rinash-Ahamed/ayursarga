@@ -177,8 +177,9 @@ export function buildHospitalContractHtml(hospital: DocumentRecord<HospitalDocum
     td{padding:2.5mm 3mm;vertical-align:top;border-top:1px solid var(--line);overflow-wrap:anywhere}
     td+td,th+th{border-left:1px solid var(--line)}
     thead{display:table-header-group}tr{break-inside:avoid}
+    .party-details{color:var(--ink);font-size:9pt;line-height:1.4}
     .party-details th{width:50%}
-    .party-details td strong{display:inline-block;margin-bottom:1mm;color:var(--ink);font-size:inherit}
+    .party-details td strong{display:inline-block}
     .party-subdetail{margin-top:3mm;padding-top:2.5mm;border-top:1px solid var(--line)}
     .contract-contact-grid{margin:4mm 0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;border:1px solid var(--line);break-inside:avoid}
     .contract-contact-card{min-width:0;padding:3mm}
@@ -187,7 +188,7 @@ export function buildHospitalContractHtml(hospital: DocumentRecord<HospitalDocum
     .contract-contact-card dl{margin:0}
     .contract-contact-card dl>div{padding:1.5mm 0;border-top:1px solid rgba(23,62,43,.1)}
     .contract-contact-card dl>div:first-child{padding-top:0;border-top:0}
-    .contract-contact-card dt{margin:0 0 .7mm;color:var(--muted);font-size:8.5pt}
+    .contract-contact-card dt,.party-details td strong{margin:0 0 .7mm;color:var(--muted);font-size:8.5pt;font-weight:400}
     .contract-contact-card dd{margin:0;color:var(--ink);font-size:9pt;line-height:1.4;overflow-wrap:anywhere}
     .signature-boxes{break-inside:avoid}
     .signature-boxes th{width:50%;padding:3mm;font-size:9.5pt}

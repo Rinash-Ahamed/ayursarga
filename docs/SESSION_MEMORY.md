@@ -2,6 +2,136 @@
 
 Updated: 11 November 2026 (Asia/Calcutta).
 
+## v4.43.3 requested build and lint validation (11 November 2026)
+
+- Owner requested fresh lint/build after the hospital overview, contract table
+  and map/required-field fixes. Production build passed: compilation, TypeScript
+  and all 87 static pages. ESLint passed with zero errors and three pre-existing
+  warnings (two TreatmentFilm cleanup refs; one raw img in publicMediaMocks).
+  Initial lint caught CommonJS require imports in the temporary health checker;
+  converted that ignored helper to ESM and reran full lint successfully. No
+  application changes, dependency changes or version bump for this validation.
+- Started that completed production build locally at 127.0.0.1:3117. Basic and
+  deep health JSON returned 200/ok; all six configuration checks ready. The deep
+  themed health page returned 200 and browser-rendered six styled service cards
+  with no page errors; external browser requests blocked. Visually reviewed it,
+  then stopped only this temporary server. Configuration-only checks do not
+  establish live connectivity, delivery, payment or native permission behavior.
+- Restored the build-generated next-env import to its prior value. No tsbuildinfo
+  appeared. No new workflow required a workbook edit; previous updated cases and
+  execution history retained. Existing rule changes remain undeployed and native
+  emulator coverage remains blocked by Java 8 versus required JDK 21+.
+- Latest requested filters/employee ordering remain unimplemented pending the
+  owner's screen clarification. No deployment or live data/email mutations.
+
+## Hospital blank-save validation (11 November 2026, v4.43.3)
+
+- Owner reported blank map saves and requested other hospital fields checked.
+  Map validator previously returned success/null for empty text or an iframe
+  with no src. It now rejects blank/whitespace/non-string input and unusable
+  embeds. Admin form marks it required, associates its error and uses existing
+  invalid-field focus/scroll behavior. Invalid submits never call the update
+  service; backend applies the same validator. Supported embeds still store
+  only validated HTTPS src URLs. Existing absent maps remain allowed when not
+  editing the map; no map activation prerequisite or removal action introduced.
+- Required-field testing found explicit null legalName/registeredAddress could
+  trigger legacy fallbacks and save a clear. Shared explicitHospitalParticulars
+  normalization is now used by Admin creation and partial-edit endpoints before
+  existing validation. Explicit blanks/null fail; absent/untouched legacy
+  particulars retain compatibility. Optional secondary phone and explicit 0%
+  commission remain valid. No booking/contract approval/payment logic changes.
+- Firestore changed-field guard rejects clearing a map, primary hospital phone
+  or district through direct client updates, preserving absent/null legacy
+  values on unrelated edits. Existing role/audit/field restrictions retained.
+  New native emulator tests cover denials and legacy compatibility, but were
+  NOT run: installed Java is 1.8.0_503; installed firebase-tools requires JDK 21+.
+  One source-wiring check passed; it is not native authorization proof. Rules
+  are local only and require explicit deployment; no index change.
+- Fifty-one focused unit/API checks passed, plus the separate rule-source check.
+  Coverage includes hospital creates/edits, all required contract particulars,
+  blank/space/null inputs, allowed optional/legacy updates, map normalization,
+  Admin denial and atomic/no-write outcomes. An initial new test wrongly expected
+  the already-seeded hospital fixture to contain zero centres; corrected it to
+  compare before/after counts and reran the full focused suite successfully.
+  Nine browser executions passed across desktop, 320px Chromium and mobile WebKit
+  for invalid-map errors/focus/no mutation, valid save, overview Edit/Cancel and
+  email approval controls. Browser update mock now records/returns submitted
+  changes so successful map state is exercised. No live data or emails used.
+- API-audit guidance used for caller/backend/validator/rules tracing. Spreadsheet
+  skill updated HOS-002/HOS-014 steps/expectations only; all 25 sheets/styles/
+  controls, automation classifications and tester history retained, verified by
+  four-cell comparison and before/after rendering. AGENTS and QA mapping updated.
+  Version synchronized to 4.43.3. No full build/lint/typecheck requested for this
+  update, no deployment, and unrelated existing worktree changes preserved.
+
+## Unified contract table typography (11 November 2026, v4.43.2)
+
+- Party table values previously inherited 9.5pt while contact values were 9pt;
+  party labels were bold 9.5pt versus regular muted 8.5pt contact labels.
+  Party values now use matching 9pt/1.4 line height and ink color. Shared label
+  styling uses muted regular 8.5pt, and both section headers remain 9.5pt.
+  Preserved inline-block party labels beside existing explicit breaks so no
+  extra blank line appears. No markup/content or PDF renderer changes.
+- Fifteen contract browser regressions passed across desktop Chromium, 320px
+  Chromium and mobile WebKit: unchanged populated body hashes/text, standard and
+  long PDFs still five pages, filename/date/signatures and unchanged invoice
+  export bytes. Final spacing/color preview refinements passed another three
+  browser checks. Added computed-style comparisons for both table hierarchies.
+  Visually reviewed the final first-table crop. No new full lint/build requested
+  or deployment performed; previous build validation predates these styles.
+- Updated local QA CON-009 steps/expectations using the spreadsheet skill,
+  preserving Manual required, execution history and all 25 sheets/styles/
+  controls. Only two intended cells changed; reviewed before/after rendering.
+  Version synchronized to 4.43.2. Existing unrelated worktree changes retained.
+
+## Compact Admin hospital overview (11 November 2026, v4.43.1)
+
+- Grouped the hospital identity/details and images/map into one named overview
+  section. Two equal-width cards appear from 1180px; smaller screens stack.
+  Scoped portal styles tighten padding, headings and guidance spacing, keep
+  status badges top-right, wrap long contact/address text and use compact 4:3
+  gallery thumbnails. All displayed details and photo instructions remain.
+- Hospital Edit stacks the overview to give the existing form full width;
+  Cancel restores the two-column layout. Map editing and all upload/removal,
+  activation, contract, permission and API logic are unchanged. Pending official
+  email requests remain visible in their own card immediately below the overview.
+- Eight focused browser executions passed for overview Edit/Cancel and existing
+  email-approval confirmation actions across desktop, tablet-1024, phone-320 and
+  mobile WebKit. After final top-right heading alignment, four overview executions
+  passed again. Synthetic images only; no live upload/email/data mutation.
+  Visually checked desktop and narrow-phone captures. No fresh full lint/build
+  requested for this layout change; earlier build results predate it.
+- Spreadsheet skill used to update HOS-007 steps/expectations, preserving Manual
+  required and all daily results. Verified all 25 sheets/styles/controls retained
+  and only the intended two cells changed; reviewed before/after renders.
+  Technical regression mapping is in tests/qa/README.md. Versions synchronized
+  to 4.43.1; no dependency, Firestore rule/index changes or deployment.
+
+## Owner-requested build, lint and local health validation (11 November 2026)
+
+- v4.43.0 production build passed, including its TypeScript phase and all 87
+  generated static pages. Full ESLint passed after fixing two new test-fixture
+  errors without suppressions: mount-readiness now updates an external DOM ref,
+  not React state from an effect, and the isolated hook fixture uses a valid
+  component-style name. No application behavior changed or new version needed.
+- Three existing warnings remain: two TreatmentFilm cleanup-ref warnings and
+  one raw img warning in the public-media test fixture. No lint errors.
+- Nineteen focused idle/MFA/health unit checks and twelve idle-warning browser
+  executions passed after the fixture corrections. Build did not require any
+  application-code fix. The build-generated next-env import change was restored
+  to avoid an unrelated generated-file diff.
+- Started this completed production build on loopback port 3117. Basic and deep
+  JSON health returned 200/ok; all six deep configuration dependencies ready:
+  Firebase Admin/client, contact/auth email, hospital images and consultation
+  payments. /health?deep=true returned 200 and rendered six styled service cards,
+  the expected heading and no browser page errors. External browser requests
+  were blocked. Visually reviewed the health page, then stopped this temporary
+  server. Health remains configuration-only, not proof of provider connectivity,
+  mailbox delivery, booking permissions or capacity.
+- Existing AUT-005 checklist already covers the new warning, Stay signed in,
+  expiry and MFA; its manual results remain untouched. No new feature/policy
+  change required another workbook edit. No deployment or live data mutations.
+
 ## Admin idle warning without relaxing MFA (11 November 2026, v4.43.0)
 
 - Owner selected a two-minute logout warning and retained authenticator codes

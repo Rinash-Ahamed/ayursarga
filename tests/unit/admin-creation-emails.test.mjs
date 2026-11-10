@@ -11,6 +11,16 @@ function create(f, collectionName, values = {}) {
   return f.load(`app/api/admin/${collectionName}/route.ts`).POST(request({ ...(collectionName === "hospitals" ? hospital : consultant), ...values }));
 }
 
+test('hospital creation rejects explicit blank or null required particulars without a record, counter or audit',async()=>{
+  for(const field of ['legalName','registeredAddress','name','email','phone','hospitalPhone1','address','city','district','state','commissionPercentage'])for(const value of ['', '   ', null]){
+    const f=bookingFlowFixture({actor:{uid:'admin',role:'admin'}});
+    const before=['hospitals','systemSettings','auditLogs'].map(collection=>f.values(collection).length);
+    const response=await create(f,'hospitals',{[field]:value});
+    assert.equal(response.status,400,field);assert.equal(f.calls.writes.length,0);
+    assert.deepEqual(['hospitals','systemSettings','auditLogs'].map(collection=>f.values(collection).length),before);
+  }
+});
+
 for (const collectionName of ["hospitals", "consultants"]) {
   test(`${collectionName}: existing active, inactive and archived emails block creation without side effects`, async () => {
     for (const status of ["active", "inactive", "archived"]) {

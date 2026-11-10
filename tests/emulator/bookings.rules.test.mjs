@@ -114,6 +114,17 @@ test("hospital official emails and their approval requests cannot be changed thr
   } finally { await seed(`users/${ids.hospital}`,fields({uid:ids.hospital,role:"hospital",status:"active",hospitalId:centre})); }
 });
 
+test("Admin map edits cannot clear a saved map, but legacy absent maps do not block unrelated updates",async()=>{
+  const path=`hospitals/map-${suffix}`;
+  const data={...metadata,...fields({name:'Centre',description:'Existing',email:'partner@example.test',phone:'9876543210',hospitalPhone1:'9876543210',address:'A complete centre address',city:'Palakkad',district:'Palakkad',state:'Kerala',commissionPercentage:10,status:'active',isPublic:false,locationUrl:'https://www.google.com/maps?q=Palakkad'})};
+  await seed(path,data);
+  for(const locationUrl of [null,'','   '])assert.equal((await auditedUpdate(path,data,{locationUrl},'admin','hospitals','update')).status,403);
+  for(const field of ['hospitalPhone1','district'])for(const value of [null,''])assert.equal((await auditedUpdate(path,data,{[field]:value},'admin','hospitals','update')).status,403);
+  assert.equal((await auditedUpdate(path,data,{locationUrl:'https://www.google.com/maps?q=Kochi'},'admin','hospitals','update')).status,200);
+  const legacy={...data,...fields({locationUrl:null,hospitalPhone1:null,district:null})};await seed(path,legacy);
+  assert.equal((await auditedUpdate(path,legacy,{city:'Kochi'},'admin','hospitals','update')).status,200);
+});
+
 test("hospital publication requires five images; live gallery changes cannot drop below five", async () => {
   const images = Array.from({ length: 5 }, (_, index) => `https://images.test/centre-${index}.webp`);
   const data = { ...metadata, ...fields({ name: "Centre", description: "Care", email: "partner@example.com", phone: "9876543210", hospitalPhone1: "9876543210", address: "A complete centre address", city: "Palakkad", district: "Palakkad", state: "Kerala", commissionPercentage: 10, status: "active", isPublic: true, contractStatus: "signed", contractUrl: "https://example.com/signed.pdf", imageUrls: images }), contractSignedAt: timestamp };
