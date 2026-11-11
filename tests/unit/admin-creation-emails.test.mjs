@@ -121,10 +121,13 @@ test("hospital codes continue beyond AH999 and do not reuse a higher stored sequ
 test("hospital ID fields are display-only and excluded from client write allowlists", () => {
   const rules = readFileSync("firestore.rules", "utf8");
   assert.doesNotMatch(rules, /['"]hospital(?:Code|Sequence)['"]/);
-  for (const path of ["components/admin/HospitalsManager.tsx", "components/admin/HospitalDetails.tsx", "components/hospital/HospitalProfile.tsx"]) {
+  for (const path of ["components/admin/HospitalsManager.tsx", "components/admin/HospitalDetails.tsx"]) {
     const source = readFileSync(path, "utf8");
     assert.match(source, /hospitalCode/);
     assert.match(source, /Hospital ID/);
     assert.doesNotMatch(source, /name=["']hospital(?:Code|Sequence)["']/);
+  }
+  for (const path of ["components/hospital/HospitalProfile.tsx", "features/hospitals/partnerContractTemplate.ts", "features/hospitals/contractPdf.ts"]) {
+    assert.doesNotMatch(readFileSync(path, "utf8"), /hospitalCode|hospitalSequence/);
   }
 });

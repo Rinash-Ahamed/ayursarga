@@ -6,10 +6,15 @@ import { getCalendarMonthRange } from "../../utils/date";
 const styles = ["node_modules/tailwindcss/lib/css/preflight.css", "app/globals.css", "app/portal.css"].map((file) => readFileSync(file, "utf8")).join("\n");
 const screens = ["admin-dashboard", "admin-hospitals", "admin-details", "admin-consultants", "admin-users", "admin-bookings", "admin-availability", "admin-audits", "hospital-dashboard", "hospital-profile", "hospital-services", "hospital-bookings", "hospital-availability", "hospital-password", "admin-login", "hospital-login", "admin-forgot", "hospital-forgot"];
 
-test('Hospital display ID remains readable and read-only across Admin and Hospital screens', async ({ page }) => {
+test('Hospital display ID is readable and read-only for Admin but absent from Hospital screens', async ({ page }) => {
   for (const screen of ['admin-hospitals', 'admin-details', 'hospital-profile']) {
     await mount(page, screen);
-    await expect(page.getByText('AH001', { exact: false }).first()).toBeVisible();
+    if (screen === 'hospital-profile') {
+      await expect(page.getByText('AH001', { exact: false })).toHaveCount(0);
+      await expect(page.getByText('Hospital ID', { exact: false })).toHaveCount(0);
+    } else {
+      await expect(page.getByText('AH001', { exact: false }).first()).toBeVisible();
+    }
     await expect(page.locator('input[name="hospitalCode"], input[name="hospitalSequence"]')).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
@@ -640,6 +645,34 @@ test("Admin Availability and complete Settings keep separate cards spaced withou
     }
     await page.screenshot({path:testInfo.outputPath(`${screen}-spacing.png`),fullPage:true});
   }
+});
+
+test('Hospital package checks use one shared indicator and preserve badges while refreshing', async ({ page }, info) => {
+  await page.route('**/*', route => route.fulfill({ status: 204, body: '' }));
+  await mount(page, 'admin-hospital-cards');
+  const cards = page.locator('.admin-hospital-card');
+  await expect(cards.first()).toContainText('Package Approval Pending');
+  await page.evaluate(() => Object.assign(window, { holdPackageSummary: true }));
+  const refresh = page.getByRole('button', { name: 'Refresh package status', exact: true });
+  await refresh.click();
+  await expect(page.getByText('Checking package status…', { exact: true })).toHaveCount(1);
+  await expect(page.locator('.portal-hospital-status-toolbar')).toContainText('Checking package status');
+  await expect(cards).toHaveCount(6);
+  await expect(cards.first()).toContainText('Package Approval Pending');
+  await expect(cards.filter({ hasText: 'Checking package status' })).toHaveCount(0);
+  await expect(refresh).toBeDisabled();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await page.screenshot({ path: info.outputPath('shared-package-loading.png'), fullPage: false });
+  await page.waitForFunction(() => Boolean((window as unknown as { releasePackageSummary?: () => void }).releasePackageSummary));
+  await page.evaluate(() => { const controls = window as unknown as { holdPackageSummary: boolean; releasePackageSummary: () => void }; controls.holdPackageSummary = false; controls.releasePackageSummary(); });
+  await expect(refresh).toBeEnabled();
+  await expect(page.getByText('Checking package status…', { exact: true })).toHaveCount(0);
+  await expect(cards.first()).toContainText('Package Approval Pending');
+  const summaryCalls = () => page.evaluate(() => (window as unknown as { qaRequestTrace: { kind: string }[] }).qaRequestTrace.filter(call => call.kind === 'package-summary').length);
+  expect(await summaryCalls()).toBe(2);
+  await page.getByRole('button', { name: 'Add Hospital', exact: true }).click();
+  await expect(page.locator('#add-hospital-form')).toBeVisible();
+  expect(await summaryCalls()).toBe(2);
 });
 
 test("Admin hospital cards show contacts created time and package approvals in a responsive three-column maximum", async ({ page }, testInfo) => {

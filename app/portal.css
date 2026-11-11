@@ -495,7 +495,8 @@ html[data-theme="dark"] .portal-toast[data-tone="error"],body[data-theme="dark"]
 .admin-package-status .portal-status{ white-space:normal; line-height:1.5; text-align:left; max-width:100%; }
 .admin-hospital-card>.portal-actions{ margin-top:auto; padding-top:0; }
 .admin-hospital-card>.portal-actions .portal-button{ min-height:44px; padding:10px 16px; }
-.portal-hospital-status-toolbar{ margin-block:14px; }
+.portal-hospital-status-toolbar{ margin-block:14px; justify-content:flex-end; align-items:center; }
+.portal-hospital-status-toolbar>.portal-form-error{ flex-basis:100%; text-align:right; }
 .admin-user-grid{ gap:12px; }
 .admin-user-grid>.portal-row{ min-width:0; flex-direction:column; align-items:stretch; padding:16px; gap:14px; }
 .admin-user-grid>.portal-row h3{ font-size:14px; line-height:1.4; overflow-wrap:anywhere; }

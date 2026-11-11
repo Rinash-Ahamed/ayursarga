@@ -8,7 +8,7 @@ const SESSION_CHECK_EVENTS = ["focus", "pageshow"] as const;
 const ACTIVITY_THROTTLE_MS = 1_000;
 const WARNING_BEFORE_MS = 2 * 60 * 1_000;
 
-export function useSessionIdleTimeout(enabled: boolean, onTimeout: () => void | Promise<void>, onWarningChange?: (open: boolean) => void, warningEnabled = false) {
+export function useSessionIdleTimeout(enabled: boolean, onTimeout: () => void | Promise<void>, onWarningChange?: (open: boolean) => void, warningEnabled = false, timeoutMs = SESSION_IDLE_TIMEOUT_MS) {
   const onTimeoutRef = useRef(onTimeout);
   const onWarningRef = useRef(onWarningChange);
   const resumeRef = useRef<(() => boolean) | null>(null);
@@ -39,18 +39,18 @@ export function useSessionIdleTimeout(enabled: boolean, onTimeout: () => void | 
     const schedule = () => {
       if (timer) clearTimeout(timer);
       if (warningTimer) clearTimeout(warningTimer);
-      timer = setTimeout(expire, Math.max(0, SESSION_IDLE_TIMEOUT_MS - (Date.now() - lastActivityAt)));
+      timer = setTimeout(expire, Math.max(0, timeoutMs - (Date.now() - lastActivityAt)));
       if (warningEnabled) warningTimer = setTimeout(() => {
         if (expired) return;
-        if (Date.now() - lastActivityAt >= SESSION_IDLE_TIMEOUT_MS) { expire(); return; }
+        if (Date.now() - lastActivityAt >= timeoutMs) { expire(); return; }
         warningOpen = true;
         onWarningRef.current?.(true);
-      }, Math.max(0, SESSION_IDLE_TIMEOUT_MS - WARNING_BEFORE_MS - (Date.now() - lastActivityAt)));
+      }, Math.max(0, timeoutMs - WARNING_BEFORE_MS - (Date.now() - lastActivityAt)));
     };
 
     resumeRef.current = () => {
       if (expired) return false;
-      if (Date.now() - lastActivityAt >= SESSION_IDLE_TIMEOUT_MS) { expire(); return false; }
+      if (Date.now() - lastActivityAt >= timeoutMs) { expire(); return false; }
       warningOpen = false;
       lastActivityAt = Date.now();
       onWarningRef.current?.(false);
@@ -62,7 +62,7 @@ export function useSessionIdleTimeout(enabled: boolean, onTimeout: () => void | 
       if (expired) return;
       const now = Date.now();
       // An overdue background tab must not regain access from its first click.
-      if (now - lastActivityAt >= SESSION_IDLE_TIMEOUT_MS) { expire(); return; }
+      if (now - lastActivityAt >= timeoutMs) { expire(); return; }
       // Opening/focusing the warning is not an acknowledgement. Require the
       // explicit Stay signed in action once the warning is visible.
       if (warningOpen) return;
@@ -73,7 +73,7 @@ export function useSessionIdleTimeout(enabled: boolean, onTimeout: () => void | 
 
     const checkExpiry = () => {
       if (expired) return;
-      if (Date.now() - lastActivityAt >= SESSION_IDLE_TIMEOUT_MS) expire();
+      if (Date.now() - lastActivityAt >= timeoutMs) expire();
       else recordActivity();
     };
 
@@ -95,6 +95,6 @@ export function useSessionIdleTimeout(enabled: boolean, onTimeout: () => void | 
       SESSION_CHECK_EVENTS.forEach((event) => window.removeEventListener(event, checkExpiry));
       document.removeEventListener("visibilitychange", checkVisibility);
     };
-  }, [enabled, warningEnabled]);
+  }, [enabled, warningEnabled, timeoutMs]);
   return useCallback(() => resumeRef.current?.() ?? false, []);
 }

@@ -2,12 +2,13 @@ import { createRoot } from "react-dom/client";
 import { useEffect, useRef, useState } from "react";
 import { useSessionIdleTimeout } from "@/hooks/useSessionIdleTimeout";
 import { AdminSessionWarning } from "@/components/portal/AdminSessionWarning";
+import { ADMIN_SESSION_IDLE_TIMEOUT_MS, SESSION_IDLE_TIMEOUT_MS } from "@/constants/auth";
 
 function Fixture() {
   const role=(window as unknown as {sessionRole:string}).sessionRole;
   const [signedIn,setSignedIn]=useState(true),[warning,setWarning]=useState(false);
   const root=useRef<HTMLElement>(null);
-  const resume=useSessionIdleTimeout(signedIn&&role!=="consumer",()=>setSignedIn(false),setWarning,role==="admin");
+  const resume=useSessionIdleTimeout(signedIn&&role!=="consumer",()=>setSignedIn(false),setWarning,role==="admin",role==="admin"?ADMIN_SESSION_IDLE_TIMEOUT_MS:SESSION_IDLE_TIMEOUT_MS);
   useEffect(()=>{Object.assign(window,{resumeFixtureSession:resume});if(root.current)root.current.dataset.ready="true";},[resume]);
   return <main ref={root}><p>{signedIn?"Signed in":"Signed out"}</p><button>Background action</button>
     <AdminSessionWarning open={signedIn&&role==="admin"&&warning} onContinue={resume} onSignOut={()=>setSignedIn(false)}/>

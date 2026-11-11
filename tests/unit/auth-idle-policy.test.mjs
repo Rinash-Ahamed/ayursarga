@@ -5,7 +5,7 @@ import { loadTypeScript } from "../helpers/loadTypeScript.mjs";
 // Exercise the actual provider's role gate and actual idle hook without
 // Firebase sign-in, network requests, or real waiting.
 function provider(role, status = "authenticated", hasUser = true) {
-  let index = 0, gate, expired, warningEnabled, logouts = 0;
+  let index = 0, gate, expired, warningEnabled, timeoutMs, logouts = 0;
   const states = [{ user: hasUser ? { uid: "fixture" } : null, profile: role ? { role } : null }, status, false, null, false];
   const authService = { logout: async () => { logouts++; } };
   const { AuthProvider } = loadTypeScript("contexts/AuthContext.tsx", {
@@ -16,10 +16,10 @@ function provider(role, status = "authenticated", hasUser = true) {
     },
     "next/navigation": { useRouter: () => ({ replace() {} }) },
     "@/services/auth/authService": { authService },
-    "@/hooks/useSessionIdleTimeout": { useSessionIdleTimeout: (enabled, callback, _warning, showWarning) => { gate = enabled; expired = callback; warningEnabled = showWarning; return () => true; } },
+    "@/hooks/useSessionIdleTimeout": { useSessionIdleTimeout: (enabled, callback, _warning, showWarning, duration) => { gate = enabled; expired = callback; warningEnabled = showWarning; timeoutMs = duration; return () => true; } },
   });
   const element = AuthProvider({ children: null });
-  return { gate, expired, warningEnabled, value: element.props.value, logouts: () => logouts };
+  return { gate, expired, warningEnabled, timeoutMs, value: element.props.value, logouts: () => logouts };
 }
 
 for (const role of ["consumer", "admin", "hospital"]) {
@@ -27,6 +27,7 @@ for (const role of ["consumer", "admin", "hospital"]) {
     const session = provider(role);
     assert.equal(session.gate, role !== "consumer");
     assert.equal(session.warningEnabled, role === "admin");
+    assert.equal(session.timeoutMs, (role === "admin" ? 60 : 15) * 60 * 1000);
     const cleanups = [];
     const { useSessionIdleTimeout } = loadTypeScript("hooks/useSessionIdleTimeout.ts", {
       react: { useCallback: fn => fn, useRef: value => ({ current: value }), useEffect: fn => { const cleanup = fn(); if (cleanup) cleanups.push(cleanup); } },
@@ -36,9 +37,14 @@ for (const role of ["consumer", "admin", "hospital"]) {
     globalThis.document = Object.assign(new EventTarget(), { visibilityState: "visible" });
     t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: 0 });
     try {
-      useSessionIdleTimeout(session.gate, session.expired);
+      useSessionIdleTimeout(session.gate, session.expired, undefined, false, session.timeoutMs);
       t.mock.timers.tick(15 * 60 * 1000 - 1);
       assert.equal(session.logouts(), 0);
+      t.mock.timers.tick(1);
+      await Promise.resolve();
+      assert.equal(session.logouts(), role === "hospital" ? 1 : 0);
+      t.mock.timers.tick(45 * 60 * 1000 - 1);
+      assert.equal(session.logouts(), role === "hospital" ? 1 : 0);
       t.mock.timers.tick(1);
       await Promise.resolve();
       assert.equal(session.logouts(), role === "consumer" ? 0 : 1);
@@ -74,15 +80,15 @@ function TimerFixture(t) {
   const {useSessionIdleTimeout}=loadTypeScript('hooks/useSessionIdleTimeout.ts',{
     react:{useCallback:fn=>fn,useRef:value=>({current:value}),useEffect:fn=>{const cleanup=fn();if(cleanup)cleanups.push(cleanup);}},
   });
-  const resume=useSessionIdleTimeout(true,()=>{logouts++;},open=>warnings.push(open),true);
+  const resume=useSessionIdleTimeout(true,()=>{logouts++;},open=>warnings.push(open),true,60*60*1000);
   t.after(()=>{cleanups.forEach(fn=>fn());t.mock.timers.reset();
     if(previousWindow===undefined)delete globalThis.window;else globalThis.window=previousWindow;
     if(previousDocument===undefined)delete globalThis.document;else globalThis.document=previousDocument;});
   return {resume,warnings,logouts:()=>logouts,cleanup:()=>cleanups.forEach(fn=>fn())};
 }
 
-test('Admin warning starts exactly two minutes before the unchanged 15-minute deadline, and passive activity cannot dismiss it',t=>{
-  const f=TimerFixture(t);t.mock.timers.tick(13*60*1000-1);assert.deepEqual(f.warnings,[]);
+test('Admin warning starts exactly two minutes before the 60-minute deadline, and passive activity cannot dismiss it',t=>{
+  const f=TimerFixture(t);t.mock.timers.tick(58*60*1000-1);assert.deepEqual(f.warnings,[]);
   t.mock.timers.tick(1);assert.deepEqual(f.warnings,[true]);
   globalThis.window.dispatchEvent(new Event('pointermove'));globalThis.window.dispatchEvent(new Event('focus'));
   t.mock.timers.tick(2*60*1000);assert.equal(f.logouts(),1);assert.deepEqual(f.warnings,[true,false]);
@@ -90,13 +96,13 @@ test('Admin warning starts exactly two minutes before the unchanged 15-minute de
 });
 
 test('explicit stay signed in resets the existing deadline, and cleanup removes warning/expiry callbacks',t=>{
-  const f=TimerFixture(t);t.mock.timers.tick(13*60*1000);assert.equal(f.resume(),true);
-  assert.deepEqual(f.warnings,[true,false]);t.mock.timers.tick(13*60*1000-1);assert.equal(f.logouts(),0);
+  const f=TimerFixture(t);t.mock.timers.tick(58*60*1000);assert.equal(f.resume(),true);
+  assert.deepEqual(f.warnings,[true,false]);t.mock.timers.tick(58*60*1000-1);assert.equal(f.logouts(),0);
   assert.equal(f.warnings.at(-1),false);t.mock.timers.tick(1);assert.equal(f.warnings.at(-1),true);
   f.cleanup();t.mock.timers.tick(60*60*1000);assert.equal(f.logouts(),0);assert.equal(f.resume(),false);
 });
 
 test('an overdue suspended tab cannot resume its session before delayed timers run',t=>{
-  const f=TimerFixture(t);t.mock.timers.setTime(15*60*1000+1);
+  const f=TimerFixture(t);t.mock.timers.setTime(60*60*1000+1);
   assert.equal(f.resume(),false);assert.equal(f.logouts(),1);
 });

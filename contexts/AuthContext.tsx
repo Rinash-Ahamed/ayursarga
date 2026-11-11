@@ -13,6 +13,7 @@ import { getConsumerProfileCompletionRedirect, getSafeRoleRedirect, isConsumerPr
 import { ROUTES } from "@/config/routes";
 import { authService } from "@/services/auth/authService";
 import { useSessionIdleTimeout } from "@/hooks/useSessionIdleTimeout";
+import { ADMIN_SESSION_IDLE_TIMEOUT_MS, SESSION_IDLE_TIMEOUT_MS } from "@/constants/auth";
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
@@ -142,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     expireIdleSession,
     setIdleWarningOpen,
     snapshot.profile?.role === "admin",
+    snapshot.profile?.role === "admin" ? ADMIN_SESSION_IDLE_TIMEOUT_MS : SESSION_IDLE_TIMEOUT_MS,
   );
 
   const value = useMemo<AuthContextValue>(() => ({

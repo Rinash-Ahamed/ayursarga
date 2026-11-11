@@ -12,7 +12,8 @@ async function mount(page:import('@playwright/test').Page,role='admin'){
   await expect(page.locator('main')).toHaveAttribute('data-ready','true');
 }
 test('Admin warning offers explicit continuation before expiry, then expires without bypassing login',async({page})=>{
-  await mount(page);await page.clock.runFor(12*60*1000);await expect(page.getByRole('dialog')).toHaveCount(0);
+  await mount(page);await page.clock.runFor(15*60*1000);await expect(page.getByText('Signed in',{exact:true})).toBeVisible();
+  await page.clock.runFor(42*60*1000);await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.clock.runFor(60*1000+50);const dialog=page.getByRole('dialog');await expect(dialog).toBeVisible();
   const stay=dialog.getByRole('button',{name:'Stay signed in',exact:true});await expect(stay).toBeFocused();
   expect(await page.evaluate(()=>document.body.style.position)).toBe('fixed');
@@ -20,14 +21,14 @@ test('Admin warning offers explicit continuation before expiry, then expires wit
   await page.screenshot({path:`tmp/session-warning-${test.info().project.name}.png`});
   await stay.click();await expect(dialog).toHaveCount(0);
   expect(await page.evaluate(()=>document.body.style.position)).not.toBe('fixed');
-  await page.clock.runFor(13*60*1000);await expect(dialog).toBeVisible();
+  await page.clock.runFor(58*60*1000);await expect(dialog).toBeVisible();
   await page.keyboard.press('Escape');await expect(dialog).toBeVisible();
   await page.clock.runFor(2*60*1000);await expect(page.getByText('Signed out',{exact:true})).toBeVisible();
   await expect(dialog).toHaveCount(0);
   expect(await page.evaluate(()=>(window as unknown as {resumeFixtureSession:()=>boolean}).resumeFixtureSession())).toBe(false);
 });
 test('Admin can sign out from the warning',async({page})=>{
-  await mount(page);await page.clock.runFor(13*60*1000);
+  await mount(page);await page.clock.runFor(58*60*1000);
   await page.getByRole('dialog').getByRole('button',{name:'Sign out',exact:true}).click();
   await expect(page.getByText('Signed out',{exact:true})).toBeVisible();
 });

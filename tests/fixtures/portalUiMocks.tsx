@@ -107,6 +107,9 @@ export const getHospital = async () => ({ ...hospital, imageUrls: portalUiState.
 export const getHospitalCapacity = async () => ({ ...metadata, id: "centre", hospitalId: "centre", totalRooms: 10, occupiedRooms: 4, status: "active" });
 export const listAllHospitals = () => page(portalUiState.screen === "admin-hospitals-empty" ? [] : portalUiState.screen === "admin-hospital-cards" ? Array.from({ length: 6 }, (_, index) => ({ ...hospital, id: `centre-${index}`, name: `${hospital.name} ${index + 1}` })) : [hospital]);
 export const getHospitalPackageSummaries = async (ids: string[]) => {
+  qaRequestTrace.push({ kind: "package-summary", args: [ids] });
+  const controls = globalThis as unknown as { holdPackageSummary?: boolean; releasePackageSummary?: () => void };
+  if (controls.holdPackageSummary) await new Promise<void>(resolve => { controls.releasePackageSummary = resolve; });
   if ((globalThis as unknown as { packageSummaryFailure?: boolean }).packageSummaryFailure) throw new Error("Unavailable");
   return { summaries: Object.fromEntries(ids.map((id, index) => [id, { total: index === 1 ? 0 : 4, pending: index === 1 ? 0 : 1, approved: index === 1 ? 0 : 1, draft: index === 1 ? 0 : 1, changesRequested: index === 1 ? 0 : 1 }])) };
 };

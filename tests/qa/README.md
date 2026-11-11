@@ -1,13 +1,23 @@
 # Business workbook automation
 
+## Hospital package-check loading
+
+HOS-007 uses `hospital-summary-batches` and `hospital-package-summary` unit tests
+for bounded two-request concurrency, 100 loaded hospitals/five batches, cancellation,
+partial failures, exact counts, Admin authorization and request limits. Portal-ui
+`Hospital package checks` and `Admin hospital cards show` checks cover one shared
+indicator, retained badges during refresh, failure/retry and responsive layout.
+The timing comparison is simulated network latency, not production performance.
+
 ## Hospital display IDs
 
 HOS-001 retains Manual required for live creation/access sign-off. Supporting
 `admin-creation-emails` and `portal-mutations` unit checks cover atomic AH IDs,
 concurrent creation, duplicate-email/role denials, rollback, legacy compatibility,
 AH999/1000, forged IDs and immutable edits/status transitions. The portal-ui
-`Hospital display ID` check covers read-only visibility and overflow on Admin
-list/details and Hospital profile, on desktop, 320px Chromium and mobile WebKit.
+`Hospital display ID` check covers read-only visibility on Admin list/details,
+absence from Hospital profile and overflow on desktop, 320px Chromium and mobile
+WebKit. Source checks guard against adding these codes to HTML/PDF contracts.
 These are isolated fixtures, not proof of live transactions or native rules.
 
 ## Consultant list filters and ordering
@@ -61,7 +71,7 @@ node node_modules/@playwright/test/cli.js test --config=tests/config/playwright.
 ```
 
 These exercise the real idle hook/provider gate and shared warning dialog with
-controlled clocks: warning at 13 minutes, explicit continuation, 15-minute expiry,
+controlled clocks: Admin warning at 58 minutes, explicit continuation, 60-minute expiry,
 late-tab denial, cleanup, sign-out and unchanged Hospital/Consumer policies.
 Separate native-MFA service mocks check password/OTP gating, not real Firebase
 sign-ins. Browser fixtures cover focus, responsive wrapping and scroll locking.

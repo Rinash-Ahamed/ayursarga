@@ -2,6 +2,87 @@
 
 Updated: 11 November 2026 (Asia/Calcutta).
 
+## Shared hospital package-check loading (11 November 2026, v4.45.3)
+
+- Owner requested one top-right checking indicator instead of repeated loading
+  badges, preserving actual per-hospital approval badges, and asked about scaling
+  to 100 hospitals. API audit traced the existing Admin-only summary endpoint:
+  max 20 hospitals/request, concurrent 10-ID chunks, projected status fields,
+  read-only snapshot and exact count fallback. No backend/rules/index changes.
+- Frontend previously sent refreshed chunks sequentially. Added a small shared
+  helper in packageSummary with at most two network requests concurrently, each
+  at most 20 loaded IDs. No worker thread is needed for network-bound operations.
+  List remains cursor-paginated at 20; 100 loaded hospitals require five requests,
+  not 100 card requests, without loading every hospital upfront.
+- One polite toolbar status, right-aligned and mobile-wrapping; no per-card
+  checking text. Cache still belongs to the mounted list; uncached loaded IDs
+  only are checked. Existing badges remain visible during refresh. Successes
+  publish incrementally, failures do not discard independent successful batches,
+  and failed refreshed cards become unavailable instead of falsely current.
+  Refresh has synchronous duplicate guard; aborted/stale runs cannot publish or
+  schedule remaining work. No persistent cache, polling, new permissions or data
+  mutations. Backend auth, rate/body limits and counts are unchanged.
+- Twelve focused batch/API tests passed: 100 IDs/five requests/max two in flight,
+  failure/incomplete response, abort, exact high-volume counts and authorization.
+  Controlled 25ms/request network simulation measured 230ms sequential versus
+  100ms bounded concurrency for the same five requests. This is not production
+  performance or capacity evidence; the live project was not load-tested.
+- Final six browser checks passed on desktop, 320px Chromium and mobile WebKit:
+  one shared loader, retained badges, refresh disable, failure/retry, no extra
+  request after opening Add Hospital, card alignment and no horizontal overflow.
+  Desktop/mobile screenshots reviewed. Earlier six executions also passed before
+  adding the no-refetch assertion. No fresh build/lint/typecheck requested or run
+  for this change; previous 4.45.2 build does not validate this new code.
+- Spreadsheet skill updated HOS-007 F12/G12 only, preserving all 25 sheets,
+  methods/history/styles/controls; before/after render reviewed. Updated QA mapping
+  and guardrails. Version 4.45.3. No deployment; preserve earlier session/ID edits.
+
+## Admin 60-minute idle session and requested checks (11 November 2026, v4.45.2)
+
+- Owner explicitly replaced Admin's 15-minute idle limit with 60 minutes,
+  retaining its two-minute warning/Stay signed in and MFA after actual logout
+  or fresh login. Added a dedicated Admin constant and an explicit duration
+  argument to the existing shared idle hook/provider. Hospital stays 15 minutes,
+  Consumer has no inactivity logout. No alternate auth/persistence or MFA bypass.
+- Warning occurs after 58 idle minutes; passive activity cannot dismiss an open
+  warning. Explicit continuation restarts the valid session only; expired or
+  suspended overdue tabs cannot resume. Existing cleanup, throttle and role gates
+  retained. No API, Firestore permission/index or deployment changes.
+- Fourteen role-policy/native-MFA service fixture tests passed. Twelve browser
+  tests passed on desktop, 320px Chromium and mobile WebKit using controlled
+  clocks: past-15-minute access, 58-minute warning, continuation, 60-minute
+  expiry, explicit logout, no expired revival, Hospital/Consumer behavior.
+- Requested production build passed compilation, TypeScript and all 87 static
+  pages. Full ESLint passed with 0 errors and 3 existing warnings: two
+  TreatmentFilm cleanup-ref warnings and publicMediaMocks raw-img warning.
+- Started the completed build locally on 127.0.0.1:3117. Basic/deep health JSON
+  returned 200/ok in configuration/deep-configuration modes, all six deep checks
+  ready. Themed deep health page returned 200, six styled service cards, visible
+  success heading and no browser page errors; screenshot reviewed. External
+  browser requests blocked. These checks do not establish live provider
+  delivery, database connectivity or full API/security workflow correctness.
+  Stopped only the temporary production server and restored generated next-env.
+- Spreadsheet skill updated AUT-005 F10/G10 only, retained 25 sheets, styles,
+  controls, execution history and Manual required designation; before/after
+  renders reviewed. Updated AGENTS and automation mapping. Version 4.45.2;
+  no deployment. Preserve prior Admin-only hospital ID changes.
+
+## Hospital IDs displayed only to Admin (11 November 2026, v4.45.1)
+
+- Owner clarified AH codes are Admin references only, not Hospital-facing or
+  contract content. Removed the Hospital profile display; retained Admin list
+  and details. No assignment, database, booking, Auth or contract changes.
+- Confirmed HTML/PDF contract sources do not reference hospitalCode or
+  hospitalSequence. Updated source regressions and browser expectations.
+  Fourteen focused creation/identity checks and three browser executions passed
+  (desktop, 320px Chromium, mobile WebKit). No full build/lint requested or run.
+- This is display scope, not field-level database secrecy: assigned Hospital
+  access still reads its existing operational hospital document. No broadened
+  permissions or new public projection fields; no deployment required for rules.
+- Updated AGENTS and QA mapping. Spreadsheet skill changed HOS-001 F6/G6 only,
+  retained all 25 sheets, styles, controls, execution history and Manual required
+  classification; reviewed before/after renders. Version 4.45.1. No deployment.
+
 ## Hospital display IDs (11 November 2026, v4.45.0)
 
 - Owner approved AH001-style IDs for new hospitals, with no legacy backfill

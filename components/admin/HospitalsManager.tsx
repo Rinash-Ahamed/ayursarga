@@ -5,7 +5,7 @@ import { useCallback, useDeferredValue, useEffect, useRef, useState, type FormEv
 import type { HospitalDocument } from "@/features/firestore/models";
 import type { StatusOrderedCursor } from "@/services/firestore/statusOrderedQuery";
 import { createHospital, listAllHospitals, getHospitalPackageSummaries } from "@/services/hospitals/hospitalService";
-import type { HospitalPackageSummary } from "@/features/hospitals/packageSummary";
+import { loadHospitalPackageSummaryBatches, type HospitalPackageSummary } from "@/features/hospitals/packageSummary";
 import { formatDisplayDateTime } from "@/utils/date";
 import { hospitalFormValues, validateHospitalFields, type HospitalValidationErrors } from "@/features/hospitals/validation";
 import { PortalShell } from "@/components/portal/PortalShell";
@@ -32,23 +32,28 @@ export function HospitalsManager() {
   const error = actionError ?? loadError;
   const summaryCache = useRef<Record<string, HospitalPackageSummary>>(Object.create(null));
   const [summaries, setSummaries] = useState<Record<string, HospitalPackageSummary>>({});
-  const [summaryError, setSummaryError] = useState(false);
+  const [summaryFailed, setSummaryFailed] = useState(false);
   const [summaryRetry, setSummaryRetry] = useState(0);
-  const summaryLoading = !summaryError && items.some(item => !Object.hasOwn(summaries, item.id));
+  const [summaryCompletedKey, setSummaryCompletedKey] = useState("");
+  const refreshRequested = useRef(false);
   const hospitalIds = JSON.stringify(items.map(item => item.id));
+  const summaryKey = `${hospitalIds}:${summaryRetry}`;
+  const summaryLoading = summaryCompletedKey !== summaryKey;
+  const summaryError = !summaryLoading && summaryFailed;
   useEffect(() => {
     const controller = new AbortController();
     const ids = (JSON.parse(hospitalIds) as string[]).filter(id => !Object.hasOwn(summaryCache.current, id));
     void (async () => {
-      try {
-        for (let offset = 0; offset < ids.length; offset += 20) {
-          const result = await getHospitalPackageSummaries(ids.slice(offset, offset + 20), controller.signal);
-          if (controller.signal.aborted) return;
-          Object.assign(summaryCache.current, result.summaries);
-          setSummaries({ ...summaryCache.current });
-          setSummaryError(false);
-        }
-      } catch { if (!controller.signal.aborted) setSummaryError(true); }
+      const failed = await loadHospitalPackageSummaryBatches(ids, getHospitalPackageSummaries, batch => {
+        Object.assign(summaryCache.current, batch);
+        setSummaries(current => ({ ...current, ...batch }));
+      }, controller.signal);
+      if (controller.signal.aborted) return;
+      // Failed refreshes must not present an old approval as a fresh result.
+      setSummaries({ ...summaryCache.current });
+      setSummaryFailed(failed.length > 0);
+      setSummaryCompletedKey(`${hospitalIds}:${summaryRetry}`);
+      refreshRequested.current = false;
     })();
     return () => controller.abort();
   }, [hospitalIds, summaryRetry]);
@@ -122,14 +127,23 @@ export function HospitalsManager() {
 
     <PortalFeedback error={error} notification={actionError ? actionErrorNotification : loadErrorNotification} emptyTitle="No hospitals yet" empty={!error && !isLoading && items.length === 0 ? "Choose Add Hospital to set up your first centre." : undefined} />
     <PortalToast message={actionMessage} notification={actionMessageNotification} />
-    {items.length > 0 && <div className="portal-actions portal-hospital-status-toolbar"><button className="portal-button secondary" type="button" disabled={summaryLoading} onClick={() => { summaryCache.current = Object.create(null); setSummaries({}); setSummaryError(false); setSummaryRetry(value => value + 1); }}>Refresh package status</button>{summaryError && <p className="portal-form-error" role="alert">Package status could not be loaded. Choose Refresh package status to try again.</p>}</div>}
+    {items.length > 0 && <div className="portal-actions portal-hospital-status-toolbar">
+      <span className="portal-form-note" role="status" aria-live="polite">{summaryLoading ? "Checking package status…" : ""}</span>
+      <button className="portal-button secondary" type="button" disabled={summaryLoading} onClick={() => {
+        if (refreshRequested.current) return;
+        refreshRequested.current = true;
+        summaryCache.current = Object.create(null);
+        setSummaryRetry(value => value + 1);
+      }}>Refresh package status</button>
+      {summaryError && <p className="portal-form-error" role="alert">Package status could not be loaded. Choose Refresh package status to try again.</p>}
+    </div>}
     <div className="admin-card-layout"><div className="portal-list admin-card-grid admin-hospital-grid">{items.map((item) => <Link className="portal-card portal-card-link admin-hospital-card" href={`/admin/hospitals/${encodeURIComponent(item.id)}`} key={item.id}>
       <div className="admin-hospital-header">
       <h3>{item.name}</h3>
       <div className="admin-package-status" aria-label={`Hospital and package status for ${item.name}`}>
         <span className="portal-status" data-status={item.status}>{formatStatus(item.status)}</span>
         {item.pendingOfficialEmail && <span className="portal-status" data-status="pending">Email change pending</span>}
-        {!Object.hasOwn(summaries, item.id) ? <span className="portal-status">{summaryError ? "Package status unavailable" : "Checking package status…"}</span> : summaries[item.id].total === 0 ? <span className="portal-status">No packages added</span> : <>
+        {!Object.hasOwn(summaries, item.id) ? (summaryError ? <span className="portal-status">Package status unavailable</span> : null) : summaries[item.id].total === 0 ? <span className="portal-status">No packages added</span> : <>
           {summaries[item.id].pending > 0 && <span className="portal-status" data-status="pending">Package Approval Pending · {summaries[item.id].pending}</span>}
           {summaries[item.id].approved > 0 && <span className="portal-status" data-status="active">Packages Approved · {summaries[item.id].approved}</span>}
           {summaries[item.id].changesRequested > 0 && <span className="portal-status" data-status="pending">Changes Requested · {summaries[item.id].changesRequested}</span>}

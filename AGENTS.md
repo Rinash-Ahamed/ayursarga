@@ -113,8 +113,8 @@ to deploy, rerun maintenance scripts, or modify live data.
 - Protect every portal page with its matching `RequireRole`. Unauthorized users
   must be redirected to their correct portal; unauthenticated users go to the
   relevant login page.
-- Retain the 15-minute inactivity sign-out for authenticated Admin and Hospital
-  sessions. Admin receives a warning after 13 idle minutes; only its explicit
+- Admin inactivity sign-out is 60 minutes; Hospital remains 15 minutes.
+  Admin receives a warning after 58 idle minutes; only its explicit
   Stay signed in action restarts the timer once shown. Never revive an expired
   session or bypass native authenticator verification on a fresh Admin login.
   Hospital inactivity behavior stays unchanged. Consumers remain signed in through the shared Firebase session and
@@ -308,8 +308,10 @@ to deploy, rerun maintenance scripts, or modify live data.
   for links, logins and bookings. The hospitalCreationSequence counter stores a
   separate hospitalSequence because its value also advances on email changes.
   Preserve counter history; do not reset numbering or backfill legacy hospitals
-  without explicit approval. Show the code read-only in Admin list/details and
-  Hospital profile. Hospital descriptions are no longer shown/collected in creation or
+  without explicit approval. Show the code read-only in Admin list/details only,
+  never in Hospital/Consumer interfaces, emails or contracts. This is an internal
+  Admin reference, not a replacement for the hospital's legal registration number.
+  Hospital descriptions are no longer shown/collected in creation or
   edit forms or exposed publicly; preserve legacy stored descriptions when
   saving other details. Required creation fields are hospital name,
   official email, owner WhatsApp number, primary hospital phone, city/locality,
@@ -561,6 +563,12 @@ to deploy, rerun maintenance scripts, or modify live data.
   aggregations for dashboard totals and deploy required indexes deliberately.
   Do not load complete collections or add realtime listeners without a genuine
   live-update requirement.
+- Admin hospital package checks use one shared toolbar loading message, not
+  per-card loading badges. Keep actual approval badges on each card and retain
+  them while refreshing; failed refreshes must not present stale approvals as
+  current. Fetch only uncached loaded IDs in batches of 20 with at most two
+  concurrent requests. Keep cancellation/stale-response guards, explicit refresh
+  and truthful per-card unavailable states; no unbounded thread/worker fan-out.
 - Lists with Active/Inactive records show inactive entries last, including after
   local status changes. Use the shared status-phase cursor for hospital, user,
   consultant and operational package queries so current records are exhausted
