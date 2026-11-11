@@ -50,7 +50,7 @@ function fixture(options={}) {
   f.firestore.batch=()=>{const pending=[];const writer={};for(const method of ['set','update','create'])writer[method]=(...args)=>{pending.push([method,args]);return writer;};
     writer.commit=()=>f.firestore.runTransaction(async transaction=>{for(const [method,args] of pending)transaction[method](...args);});return writer;};
   const setup=()=>f.load('app/api/admin/hospitals/[hospitalId]/login-setup/route.ts').POST(new Request('https://test.local/api/setup',{method:'POST'}),context);
-  const admin=(action,data)=>f.load('app/api/admin/hospitals/[hospitalId]/route.ts').PATCH(request({action,data}),context);
+  const admin=(action,data)=>f.load('app/api/admin/hospitals/[hospitalId]/route.ts').PATCH(request({action,data,expectedAuditId:f.records.get('hospitals/centre').lastAuditId??null}),context);
   const profile=data=>f.load('app/api/hospital/profile/route.ts').PATCH(request({...centre,...data,description:undefined,legalName:undefined,commissionPercentage:undefined,status:undefined,archivedAt:undefined,lastAuditId:undefined}));
   const activate=()=>f.load('app/api/admin/hospitals/[hospitalId]/activate/route.ts').POST(new Request('https://test.local/api/activate',{method:'POST'}),context);
   return {...f,authUsers,auth,setup,admin,profile,activate,stats:()=>({created,enabled,emails}),current:()=>f.records.get('hospitals/centre')};
@@ -115,7 +115,7 @@ test('duplicate email edits and requests reject active, inactive and archived ma
   }
   const f=fixture({records:{'hospitals/second':{...centre,email:'second@example.test'}}});
   const first=f.admin('update',{email:'free@example.test'});
-  const second=f.load('app/api/admin/hospitals/[hospitalId]/route.ts').PATCH(request({action:'update',data:{email:'free@example.test'}}),{params:Promise.resolve({hospitalId:'second'})});
+  const second=f.load('app/api/admin/hospitals/[hospitalId]/route.ts').PATCH(request({action:'update',data:{email:'free@example.test'},expectedAuditId:centre.lastAuditId}),{params:Promise.resolve({hospitalId:'second'})});
   assert.deepEqual((await Promise.all([first,second])).map(response=>response.status).sort(),[200,409]);
   assert.equal(f.values('hospitals').filter(hospital=>hospital.email==='free@example.test').length,1);
 });

@@ -6,6 +6,35 @@ import { getCalendarMonthRange } from "../../utils/date";
 const styles = ["node_modules/tailwindcss/lib/css/preflight.css", "app/globals.css", "app/portal.css"].map((file) => readFileSync(file, "utf8")).join("\n");
 const screens = ["admin-dashboard", "admin-hospitals", "admin-details", "admin-consultants", "admin-users", "admin-bookings", "admin-availability", "admin-audits", "hospital-dashboard", "hospital-profile", "hospital-services", "hospital-bookings", "hospital-availability", "hospital-password", "admin-login", "hospital-login", "admin-forgot", "hospital-forgot"];
 
+test('Hospital edit forms preserve opened revisions and reject stale saves after another form commits', async ({ page }) => {
+  await page.route('**/*', route => route.fulfill({ status: 204, body: '' }));
+  await mount(page, 'admin-details');
+  const identity = page.locator('.portal-hospital-identity-card');
+  const media = page.locator('#hospital-images');
+  await identity.getByRole('button', { name: 'Edit hospital', exact: true }).click();
+  await media.getByRole('button', { name: 'Edit map', exact: true }).click();
+  await media.locator('textarea[name="hospitalLocationUrl"]').fill('https://www.google.com/maps?q=Kochi');
+  await media.getByRole('button', { name: 'Save map', exact: true }).click();
+  await expect(media.getByRole('button', { name: 'Edit map', exact: true })).toBeVisible();
+  await identity.getByRole('button', { name: 'Save details', exact: true }).click();
+  await expect(page.getByText('Hospital details changed. Refresh before saving again.').first()).toBeVisible();
+  const revisions = await page.evaluate(() => (window as unknown as { qaRequestTrace: { kind: string; args: unknown[] }[] }).qaRequestTrace.filter(row => row.kind === 'hospital-update').map(row => row.args[2]));
+  expect(revisions).toEqual(['audit', 'audit']);
+  await expect(identity.getByRole('button', { name: 'Save details', exact: true })).toBeEnabled();
+  await identity.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await identity.getByRole('button', { name: 'Edit hospital', exact: true }).click();
+  await identity.getByRole('button', { name: 'Save details', exact: true }).click();
+  await expect(identity.getByRole('button', { name: 'Edit hospital', exact: true })).toBeVisible();
+});
+
+test('Future consultations cannot be completed in Admin and retain cancellation and rescheduling actions', async ({ page }) => {
+  await page.route('**/*', route => route.fulfill({ status: 204, body: '' }));
+  await mount(page, 'admin-consultations');
+  await expect(page.getByRole('button', { name: 'Mark completed', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Reschedule', exact: true })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Cancel appointment', exact: true })).toBeEnabled();
+});
+
 test('Hospital display ID is readable and read-only for Admin but absent from Hospital screens', async ({ page }) => {
   for (const screen of ['admin-hospitals', 'admin-details', 'hospital-profile']) {
     await mount(page, screen);

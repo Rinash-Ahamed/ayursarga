@@ -17,6 +17,7 @@ import { auditPayment } from "@/services/payments/consultationPaymentsAdmin";
 import { consultationCancellationEligibility, validCancellationSnapshot, snapshotConsultationCancellation } from "@/features/consultations/cancellationPolicy";
 import { generateConsultationSlots } from "@/features/consultations/slots";
 import { consumerRescheduleEligibility } from "@/features/consultations/rescheduling";
+import { consultationCompletionEligibility } from "@/features/consultations/completion";
 import { bookingChangeReason } from "@/features/bookings/changeReason";
 import { readScheduleDay, requireFreeSlot, releaseSlot, saveSlotEntry, SlotReservationError } from "@/services/consultations/slotReservationsAdmin";
 
@@ -67,6 +68,9 @@ async function handlePATCH(request: Request, context: { params: Promise<{ bookin
         ? ["requested", "confirmed"].includes(booking.status) : booking.status === "confirmed";
       if (!allowed) throw new ConsultationError("This appointment has changed. Refresh before trying again.", 409);
       const now = Timestamp.now();
+      if (action === "completed" && !consultationCompletionEligibility(booking, now.toMillis()).allowed) {
+        throw new ConsultationError("This consultation can be marked completed only after its scheduled end. Check the appointment date and time.", 409);
+      }
       const update: Record<string, unknown> = { status: action === "reschedule" ? "confirmed" : action, updatedAt: now, updatedBy: uid };
       let consultantContact: Record<string, unknown> | undefined;
       let previousDay: Awaited<ReturnType<typeof readScheduleDay>> | undefined;

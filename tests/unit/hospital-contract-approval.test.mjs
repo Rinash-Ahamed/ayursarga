@@ -31,8 +31,8 @@ function fixture(options = {}) {
         for (const [method, args] of pending) transaction[method](...args);
       }) };
   };
-  const update = (action, data) => f.load("app/api/admin/hospitals/[hospitalId]/route.ts").PATCH(new Request("https://local.test/api/admin/hospitals/centre", {
-    method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action, data }),
+  const update = (action, data, expectedAuditId = f.records.get("hospitals/centre").lastAuditId ?? null) => f.load("app/api/admin/hospitals/[hospitalId]/route.ts").PATCH(new Request("https://local.test/api/admin/hospitals/centre", {
+    method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action, data, expectedAuditId }),
   }), context);
   const activate = () => f.load("app/api/admin/hospitals/[hospitalId]/activate/route.ts").POST(new Request("https://local.test/api/admin/hospitals/centre/activate", { method: "POST" }), context);
   return { ...f, update, activate, current: () => f.records.get("hospitals/centre") };
@@ -124,4 +124,36 @@ test("rules deny direct approval/activation and pending-particular bypasses, pre
   assert.match(admin, /resource.data.status != 'pending'/);
   for (const action of ["contract_generated", "contract_signed", "hospital_activated"]) assert.doesNotMatch(admin, new RegExp(`action == '${action}'`));
   assert.match(rules, /match \/hospitalContractRevisions\/\{revisionId\} \{[\s\S]*?allow read: if isAdmin\(\);[\s\S]*?allow create, update, delete: if false;/);
+});
+
+test("opened hospital revisions reject stale profile, email, map, assessment and contract edits without writes", async () => {
+  const f = fixture({ hospital: { status: "active", lastAuditId: "opened-revision" } });
+  assert.equal((await f.update("update", { hospitalPhone1: "9876543211" }, "opened-revision")).status, 200);
+  const saved = f.current(), writes = f.calls.writes.length;
+  for (const data of [{ name: "Older name", hospitalPhone1: original.hospitalPhone1 }, { email: original.email },
+    { locationUrl: "https://www.google.com/maps?q=Kochi" }, { ayursargaRating: 4, ayursargaReviewNote: "Old review" }, { emergencyContact: original.emergencyContact }]) {
+    assert.equal((await f.update("update", data, "opened-revision")).status, 409);
+    assert.equal(f.current(), saved); assert.equal(f.calls.writes.length, writes);
+  }
+  const response = await f.update("update", { hospitalPhone2: "9876543212" }, saved.lastAuditId);
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).changes.lastAuditId, f.current().lastAuditId);
+  assert.notEqual(f.current().lastAuditId, saved.lastAuditId);
+});
+
+test("competing hospital edits cannot both commit and legacy records require an explicit null revision", async () => {
+  const f = fixture({ hospital: { lastAuditId: "opened" } });
+  const results = await Promise.all([f.update("update", { hospitalPhone1: "9876543211" }, "opened"), f.update("update", { hospitalPhone1: "9876543212" }, "opened")]);
+  assert.deepEqual(results.map(result => result.status).sort(), [200, 409]);
+  assert.equal(f.values("auditLogs").length, 1);
+  const legacy = fixture();
+  const route = legacy.load("app/api/admin/hospitals/[hospitalId]/route.ts");
+  for (const extra of [{}, { expectedAuditId: "" }, { expectedAuditId: false }]) {
+    const response = await route.PATCH(new Request("https://local.test/api/test", { method: "PATCH", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "update", data: { hospitalPhone1: "9876543211" }, ...extra }) }), context);
+    assert.equal(response.status, 400);
+  }
+  assert.equal(legacy.calls.writes.length, 0);
+  assert.equal((await legacy.update("update", { hospitalPhone1: "9876543211" }, null)).status, 200);
+  assert.equal((await legacy.update("update", { hospitalPhone1: original.hospitalPhone1 }, null)).status, 409);
 });

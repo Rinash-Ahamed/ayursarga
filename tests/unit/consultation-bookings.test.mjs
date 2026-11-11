@@ -184,15 +184,17 @@ test("retrying original creation after cancellation suppresses obsolete pending 
   assert.equal(f.values("notifications").filter((record) => record.message.includes("email could not")).length, 0);
 });
 
-test("original pending confirmations cannot replay after rescheduling, completion, archival or a missing booking", async () => {
+test("original pending confirmations cannot replay after rescheduling, completion, archival or a missing booking", async (t) => {
   for (const change of ["reschedule", "completed", "consumer-cancelled", "archived", "missing"]) {
     const f = fixture({ throwAfterCommit: true });
     assert.equal((await create(f)).status, 503);
     const booking = f.values("consultationBookings")[0];
     if (change === "reschedule" || change === "completed") {
       f.actor.role = "admin"; f.actor.uid = "admin";
+      if (change === "completed") t.mock.timers.enable({ apis: ["Date"], now: Date.parse("2099-10-27T00:00:00+05:30") });
       assert.equal((await update(f, booking.id, { action: change, requestId: "update-before-original-retry-001",
         confirmedDate: "2099-10-26", confirmedTime: "10:00" })).status, 200);
+      if (change === "completed") t.mock.timers.reset();
     } else if (change === "consumer-cancelled") {
       assert.equal((await update(f, booking.id, { status: "cancelled" })).status, 200);
     } else if (change === "archived") f.records.set(`consultationBookings/${booking.id}`, { ...booking, archivedAt: {} });
@@ -318,7 +320,7 @@ async function seeded(options = {}) {
   return { f, id: (await response.json()).bookingId };
 }
 
-test("Admin reschedules a confirmed consultation, emails old and new schedule once, then completes it", async () => {
+test("Admin reschedules a confirmed consultation, emails old and new schedule once, then completes it", async (t) => {
   const { f, id } = await seeded();
   f.actor.role = "admin"; f.actor.uid = "admin";
   const savedBefore = f.records.get(`consultationBookings/${id}`);
@@ -340,6 +342,8 @@ test("Admin reschedules a confirmed consultation, emails old and new schedule on
   assert.doesNotMatch(f.calls.smtp[1].text, /five minutes/); // private notes are not copied into email.
   assert.equal(f.values("notifications").filter((item) => item.recipientId === "patient").length, 1);
   assert.equal(f.values("auditLogs").filter((item) => item.module === "consultationBookings").length, 2);
+  assert.equal((await update(f, id, { action: "completed" })).status, 409);
+  t.mock.timers.enable({ apis: ["Date"], now: Date.parse("2099-10-26T11:00:00+05:30") });
   assert.equal((await update(f, id, { action: "completed" })).status, 200);
   assert.equal(f.calls.smtp.length, 2);
   assert.ok(f.records.get(`consultationBookings/${id}`).completedAt);

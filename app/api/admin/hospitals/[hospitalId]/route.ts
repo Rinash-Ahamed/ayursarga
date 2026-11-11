@@ -33,9 +33,13 @@ function handleGET() {
 async function handlePATCH(request: Request, context: { params: Promise<{ hospitalId: string }> }) {
   try {
     const { uid: adminUid, auth, firestore } = await requireActiveAdmin(request);
-    const body = await readJsonBody(request, 32_000) as { action?: HospitalAdminAction; data?: Record<string, unknown> } | null;
+    const body = await readJsonBody(request, 32_000) as { action?: HospitalAdminAction; data?: Record<string, unknown>; expectedAuditId?: unknown } | null;
     if (!body?.action || !HOSPITAL_ADMIN_ACTIONS.includes(body.action)) {
       return apiJson({ error: "Select a valid hospital action." }, 400);
+    }
+    if (body.action === "update" && (!Object.hasOwn(body, "expectedAuditId")
+      || body.expectedAuditId !== null && (typeof body.expectedAuditId !== "string" || !body.expectedAuditId || body.expectedAuditId.length > 160))) {
+      return apiJson({ error: "Refresh the hospital details before saving your changes." }, 400);
     }
 
     const { hospitalId } = await context.params;
@@ -44,6 +48,9 @@ async function handlePATCH(request: Request, context: { params: Promise<{ hospit
     const hospitalSnapshot = await hospitalReference.get();
     const hospital = hospitalSnapshot.data();
     if (!hospitalSnapshot.exists || !hospital) return apiJson({ error: "The hospital could not be found." }, 404);
+    if (body.action === "update" && (hospital.lastAuditId ?? null) !== body.expectedAuditId) {
+      return apiJson({ error: "Hospital details changed. Refresh before saving again." }, 409);
+    }
 
     const now = Timestamp.now();
     let auditAction = body.action as string;
@@ -185,6 +192,7 @@ async function handlePATCH(request: Request, context: { params: Promise<{ hospit
     const affectedAuthUids = await firestore.runTransaction(async batch => {
     const current = (await batch.get(hospitalReference)).data();
     if (!current || current.lastAuditId !== hospital.lastAuditId) throw new ProvisioningError("Hospital details changed. Refresh before saving again.");
+    if (body.action === "update" && (current.lastAuditId ?? null) !== body.expectedAuditId) throw new ProvisioningError("Hospital details changed. Refresh before saving again.");
     const counterReference = firestore.collection("systemSettings").doc("hospitalCreationSequence");
     const counter = officialEmailChanged ? await batch.get(counterReference) : null;
     if (officialEmailChanged) await assertUniqueCreationEmail(batch, firestore, "hospitals", String(changes.email), hospitalId);

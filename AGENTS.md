@@ -208,6 +208,11 @@ to deploy, rerun maintenance scripts, or modify live data.
 - Admin alone controls centre location, commission,
   Pending/Active state, contract
   workflow, signed-contract URL, visibility, activation, and archive/restore.
+  Hospital profile, map, contract-particular and assessment edits must send the
+  form's opened expectedAuditId (explicit null only for legacy records without
+  one). Check it before identity side effects and again in the audited transaction.
+  Keep each form's revision until its own successful save or explicit reopening;
+  another form's save/reload must not silently authorize older unsaved values.
 - The Admin Users page keeps Consumer and Hospital accounts in separate
   role-filtered views. Admin accounts are not mixed into either list. Both lists
   use reversible Make inactive / Make active account controls through a verified
@@ -451,7 +456,12 @@ to deploy, rerun maintenance scripts, or modify live data.
   still earned or automatically reversing consultant transfers.
   Admin can
   reschedule to a validated date/exact time, complete, or cancel; do not restore
-  Confirm or Reject actions. Preserve legacy requested/rejected records without
+  Confirm or Reject actions. Completion is permitted only at/after the saved
+  appointment end in IST, checked inside the booking transaction and by the same
+  UI helper. For legacy appointments use their saved window end, not current
+  consultant availability; missing/invalid schedules fail closed. Preserve
+  idempotent completed retries and all historical records.
+  Preserve legacy requested/rejected records without
   silently migrating them. Consumers may reschedule their own confirmed online
   consultation once, inclusively at least 24 hours before its scheduled IST
   start, with the same consultant/service and unchanged payment. Reuse the

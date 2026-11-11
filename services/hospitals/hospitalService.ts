@@ -61,18 +61,18 @@ export function createHospital(input: HospitalFields) {
   });
 }
 
-function adminHospitalAction(id: string, action: "update" | "contract_generated" | "contract_signed" | "deactivate" | "archive" | "approve_email" | "reject_email", data?: Record<string, unknown>) {
+function adminHospitalAction(id: string, action: "update" | "contract_generated" | "contract_signed" | "deactivate" | "archive" | "approve_email" | "reject_email", data?: Record<string, unknown>, expectedAuditId?: string | null) {
   return authorizedMutationRequest<HospitalDocument>(`/api/admin/hospitals/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action, data }),
+    body: JSON.stringify({ action, data, ...(action === "update" ? { expectedAuditId } : {}) }),
     signedOutMessage: "Your Admin session has expired. Sign in again to update the hospital.",
     failureMessage: "We could not update the hospital. Please try again.",
   });
 }
 
-export const updateHospital = (id: string, input: HospitalAdminUpdate) =>
-  adminHospitalAction(id, "update", input);
+export const updateHospital = (id: string, input: HospitalAdminUpdate, expectedAuditId: string | null) =>
+  adminHospitalAction(id, "update", input, expectedAuditId);
 
 export const recordHospitalContractGeneration = (id: string, expectedContent: string) =>
   adminHospitalAction(id, "contract_generated", { expectedContent });

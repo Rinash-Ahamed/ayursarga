@@ -58,7 +58,7 @@ function fixture(records = {}, options = {}) {
     }),
   };
 }
-const request = (body) => new Request("https://test.local/api/test", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+const request = (body) => new Request("https://test.local/api/test", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...(body.action === "update" ? { expectedAuditId: null } : {}), ...body }) });
 const context = (key, value) => ({ params: Promise.resolve({ [key]: value }) });
 
 const validHospitalProfile={name:"Centre",legalName:"Centre LLP",email:"hospital@example.test",phone:"9876543210",hospitalPhone1:"9876543210",hospitalPhone2:null,

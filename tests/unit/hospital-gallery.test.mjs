@@ -97,7 +97,7 @@ test("private galleries allow gradual uploads/removal, and old public galleries 
 
 test("Admin general image updates cannot bypass the minimum; unauthorized activation/upload stays denied", async () => {
   const f = fixture({ status: "active", isPublic: true });
-  const response = await f.load("app/api/admin/hospitals/[hospitalId]/route.ts").PATCH(bookingTestRequest("/api/admin/hospitals/centre", { action: "update", data: { imageUrls: images.slice(0, 4) } }), context);
+  const response = await f.load("app/api/admin/hospitals/[hospitalId]/route.ts").PATCH(bookingTestRequest("/api/admin/hospitals/centre", { action: "update", expectedAuditId: f.records.get("hospitals/centre").lastAuditId ?? null, data: { imageUrls: images.slice(0, 4) } }), context);
   assert.equal(response.status, 409);
   assert.equal(f.values("auditLogs").length, 0);
   for (const path of [activatePath, imagePath]) {

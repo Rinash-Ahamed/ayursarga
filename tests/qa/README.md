@@ -1,5 +1,21 @@
 # Business workbook automation
 
+## Admin QA high-priority fixes
+
+HOS-006 now also covers stale hospital edits: `hospital-contract-approval` checks
+opened revisions, competing saves, legacy null revisions and safe retry after
+refresh. `hospital-identity-security`, `hospital-gallery` and `portal-mutations`
+retain validation, email/access, gallery and atomic-audit coverage. Portal UI
+checks verify an open details form retains its revision after another form saves.
+
+CBK-013 retains Manual required. `consultation-completion` verifies the exact
+saved IST end boundary, legacy windows, invalid schedules, unauthorized requests
+and idempotent completion. `consultation-bookings` covers payment, notification,
+cancellation and reschedule preservation; completion tests advance a controlled
+clock rather than permitting future completion. Portal UI checks keep completion
+disabled for future appointments while cancellation/rescheduling stay available.
+Fixtures are not proof of live permissions, payment or email delivery.
+
 ## Hospital package-check loading
 
 HOS-007 uses `hospital-summary-batches` and `hospital-package-summary` unit tests

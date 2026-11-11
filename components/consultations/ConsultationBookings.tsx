@@ -31,6 +31,7 @@ import { ConsultationCancellationInfo } from "@/components/consultations/Consult
 import { consultationCancellationEligibility } from "@/features/consultations/cancellationPolicy";
 import { usePortalClock } from "@/hooks/usePortalClock";
 import { consumerRescheduleEligibility } from "@/features/consultations/rescheduling";
+import { consultationCompletionEligibility } from "@/features/consultations/completion";
 import { bookingChangeReason } from "@/features/bookings/changeReason";
 import { BookingChangeReasonField } from "@/components/bookings/BookingChangeReasonField";
 import { CancellationDetails } from "@/components/bookings/CancellationDetails";
@@ -116,6 +117,9 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
   }
   async function confirm() {
     if (!action || submitting.current) return;
+    if (action.status === "completed" && !consultationCompletionEligibility(action.booking, clock ?? NaN).allowed) {
+      setError("This consultation can be marked completed only after its scheduled end. Check the appointment date and time."); return;
+    }
     if ((action.status === "cancelled" || action.status === "reschedule") && !bookingChangeReason(reason)) {
       setError(`Enter a ${action.status === "cancelled" ? "cancellation" : "rescheduling"} reason using 3 to 500 characters.`); return;
     }
@@ -197,6 +201,7 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
     {!isLoading && !loadError && items.length > 0 && visibleItems.length === 0 && <PortalFeedback emptyTitle="No matching online consultations" empty="No consultations currently loaded on this page match the selected search or filters." />}
     <div className={`consultation-history consumer-booking-list${role === "admin" ? " admin-record-grid admin-booking-grid portal-record-grid portal-booking-grid" : ""}`}>{visibleItems.map((booking) => {
       const reschedule = consumerRescheduleEligibility(booking, clock ?? NaN);
+      const completion = consultationCompletionEligibility(booking, clock ?? NaN);
       return <article className="portal-row consumer-booking-row operational-booking-card consultation-history-card" data-accent={booking.status} key={booking.id}>
       <div className="consumer-booking-copy">
       <span className="consumer-booking-reference">Booking ID: {booking.bookingReference}</span>
@@ -222,7 +227,7 @@ export function ConsultationBookings({ role, bookingId }: { role: "admin" | "con
       {role === "consumer" && booking.status === "confirmed" && <section className="consultation-cancellation" aria-label="Rescheduling policy"><h3>Rescheduling</h3><p>{reschedule.used ? "Your one-time reschedule has been used. Contact Ayursarga if you need more help." : reschedule.deadlineAt ? <>You can reschedule once with the same consultant, at least 24 hours before your appointment. Reschedule by {formatDisplayDateTime(reschedule.deadlineAt)} IST (inclusive).{clock !== null && !reschedule.allowed && " The rescheduling deadline has passed. Contact Ayursarga for help."}</> : "Contact Ayursarga to check rescheduling for this appointment."}</p></section>}
       <div className="operational-booking-actions"><div className="portal-actions">
         {(role === "admin" && ["requested", "confirmed"].includes(booking.status) || role === "consumer" && reschedule.allowed) && <button className="portal-button secondary" disabled={busy} onClick={() => open(booking, "reschedule")}>Reschedule</button>}
-        {role === "admin" && booking.status === "confirmed" && <button className="portal-button" disabled={busy} onClick={() => open(booking, "completed")}>Mark completed</button>}
+        {role === "admin" && booking.status === "confirmed" && <button className="portal-button" disabled={busy || !completion.allowed} title="Available after the scheduled consultation ends" onClick={() => open(booking, "completed")}>Mark completed</button>}
         {role === "admin" && booking.paymentIntentId && ["confirmed", "cancelled"].includes(booking.status) && booking.paymentStatus !== "refunded" && (!booking.refundSummary || booking.refundSummary.status === "failed") && <button className="portal-button danger" disabled={busy} onClick={() => setRefundBooking(booking)}>{booking.status === "cancelled" ? "Issue refund" : "Cancel & Refund"}</button>}
         {role === "admin" && booking.refundSummary && ["checking", "unknown", "initiated"].includes(booking.refundSummary.status) && <button className="portal-button secondary" disabled={busy} onClick={() => void checkRefund(booking)}>Check refund status</button>}
         {["requested", "confirmed"].includes(booking.status) && (role === "admin" || !booking.cancellationPolicy || (clock !== null && consultationCancellationEligibility(booking.cancellationPolicy, booking.status, booking.paymentTotals ?? null, clock).allowed)) && <button className="portal-button danger" disabled={busy} onClick={() => open(booking, "cancelled")}>Cancel appointment</button>}

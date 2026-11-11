@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import type { HospitalDocument } from "@/features/firestore/models";
 import type { DocumentRecord } from "@/services/firestore/firestoreService";
 import {
@@ -85,6 +85,20 @@ function ContractStepMarker({ step, done, active = false }: { step: number; done
 
 type PendingHospitalAction = "activate" | "setup" | "deactivate" | "approve_email" | "reject_email";
 type ContractPreview = ReturnType<typeof buildHospitalContractPdf> & { expectedContent: string };
+
+/** Keep the opened form's revision, even if another local action reloads the record. */
+function HospitalEditForm({ revision, onSubmit, children, className = "portal-form portal-edit-form" }: {
+  revision?: string | null;
+  onSubmit: (event: FormEvent<HTMLFormElement>, expectedAuditId: string | null) => Promise<string | null | undefined>;
+  children: ReactNode;
+  className?: string;
+}) {
+  const [expectedAuditId, setExpectedAuditId] = useState(revision ?? null);
+  return <form className={className} noValidate onSubmit={async (event) => {
+    const committedRevision = await onSubmit(event, expectedAuditId);
+    if (committedRevision !== undefined) setExpectedAuditId(committedRevision);
+  }}>{children}</form>;
+}
 
 export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
   const router = useRouter();
@@ -214,7 +228,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     }
   }
 
-  async function saveContractDetails(event: FormEvent<HTMLFormElement>) {
+  async function saveContractDetails(event: FormEvent<HTMLFormElement>, expectedAuditId: string | null) {
     event.preventDefault();
     if (!hospital || busy) return;
     const form = event.currentTarget;
@@ -229,12 +243,13 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     }
     setBusy(true);
     try {
-      const changes = await updateHospital(hospital.id, validation.data);
+      const changes = await updateHospital(hospital.id, validation.data, expectedAuditId);
       setHospital((current) => current ? { ...current, ...changes } : current);
       if (changes.contractNeedsRegeneration) setContractUrl("");
       setEditingContractParticulars(false);
       setContractFieldErrors({});
       setMessage("The contract particulars have been saved.");
+      return changes.lastAuditId ?? null;
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "We could not save the contract particulars. Try again.");
     } finally {
@@ -261,7 +276,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     if (downloaded) setContractPreview(null);
   }
 
-  async function saveHospitalDetails(event: FormEvent<HTMLFormElement>) {
+  async function saveHospitalDetails(event: FormEvent<HTMLFormElement>, expectedAuditId: string | null) {
     event.preventDefault();
     if (!hospital || busy) return;
     const formElement = event.currentTarget;
@@ -294,12 +309,13 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
         city: validation.data.city,
         district: validation.data.district,
         state: validation.data.state,
-      });
+      }, expectedAuditId);
       setHospital((current) => current ? { ...current, ...changes } : current);
       if (changes.contractNeedsRegeneration) setContractUrl("");
       setEditing(false);
       setFieldErrors({});
       setMessage("The hospital details have been updated.");
+      return changes.lastAuditId ?? null;
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "We could not save the hospital details. Please try again.");
     } finally {
@@ -307,7 +323,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     }
   }
 
-  async function saveHospitalMedia(event: FormEvent<HTMLFormElement>) {
+  async function saveHospitalMedia(event: FormEvent<HTMLFormElement>, expectedAuditId: string | null) {
     event.preventDefault();
     if (!hospital || busy) return;
     const formElement = event.currentTarget;
@@ -324,11 +340,12 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
 
     setBusy(true);
     try {
-      const changes = await updateHospital(hospital.id, { locationUrl: location.locationUrl });
+      const changes = await updateHospital(hospital.id, { locationUrl: location.locationUrl }, expectedAuditId);
       setHospital((current) => current ? { ...current, ...changes } : current);
       setEditingMedia(false);
       setLocationError(null);
       setMessage("The hospital map has been updated.");
+      return changes.lastAuditId ?? null;
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "We could not save the hospital map. Please try again.");
     } finally {
@@ -336,7 +353,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
     }
   }
 
-  async function savePublicAssessment(event: FormEvent<HTMLFormElement>) {
+  async function savePublicAssessment(event: FormEvent<HTMLFormElement>, expectedAuditId: string | null) {
     event.preventDefault();
     if (!hospital || busy) return;
     if (hospital.status !== "active") {
@@ -360,9 +377,10 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
       const changes = await updateHospital(hospital.id, {
         ayursargaRating: rating === null ? null : Math.round(rating * 10) / 10,
         ayursargaReviewNote: reviewNote || null,
-      });
+      }, expectedAuditId);
       setHospital((current) => current ? { ...current, ...changes } : current);
       setMessage("The public Ayursarga assessment has been updated.");
+      return changes.lastAuditId ?? null;
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "We could not save the public assessment. Please try again.");
     } finally {
@@ -416,10 +434,10 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
             </div>
           </div>
         </div>
-        {editing ? <form className="portal-form portal-edit-form" onSubmit={saveHospitalDetails} noValidate>
+        {editing ? <HospitalEditForm revision={hospital.lastAuditId} onSubmit={saveHospitalDetails}>
           <HospitalFormFields defaultValues={hospital} errors={fieldErrors} includeLegalName />
           <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save details"}</button><button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditing(false); setFieldErrors({}); setError(null); }}>Cancel</button></div>
-        </form> : <>
+        </HospitalEditForm> : <>
           <div className="portal-card-meta">
             {hospital.hospitalCode && <span>Hospital ID: {hospital.hospitalCode}</span>}<span>{hospital.email}</span><span>Owner WhatsApp: {hospital.phone}</span><span>Hospital Phone 1: {hospital.hospitalPhone1 || "Not added"}</span>{hospital.hospitalPhone2 && <span>Hospital Phone 2: {hospital.hospitalPhone2}</span>}
           </div>
@@ -435,10 +453,10 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
 
       <article id="hospital-images" className="portal-card portal-hospital-media-card">
         <div className="portal-row-heading"><h2>Hospital images and map</h2><span className="portal-status" data-status={hospital.locationUrl || getHospitalImageUrls(hospital).length ? "active" : "pending"}>{hospital.locationUrl || getHospitalImageUrls(hospital).length ? "Added" : "Not added"}</span></div>
-        {editingMedia ? <form className="portal-form portal-edit-form" onSubmit={saveHospitalMedia} noValidate>
+        {editingMedia ? <HospitalEditForm revision={hospital.lastAuditId} onSubmit={saveHospitalMedia}>
           <HospitalLocationField defaultValue={hospital.locationUrl} error={locationError} />
           <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save map"}</button><button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditingMedia(false); setLocationError(null); setError(null); }}>Cancel</button></div>
-        </form> : <>
+        </HospitalEditForm> : <>
           {hospital.status === "archived"
             ? <HospitalImageGallery imageUrls={getHospitalImageUrls(hospital)} hospitalName={hospital.name} />
             : <HospitalImageManager hospitalId={hospital.id} hospitalName={hospital.name} imageUrls={getHospitalImageUrls(hospital)} isPublic={hospital.status === "active" && hospital.isPublic === true} disabled={busy} onChange={(imageUrls) => setHospital((current) => current ? { ...current, imageUrls, imageUrl: null } : current)} />}
@@ -481,7 +499,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
           <div><span>Contract signed date</span><strong>{formatDate(signedAt)}</strong></div>
           <div><span>Active date</span><strong>{formatDate(activatedAt)}</strong></div>
         </div>
-        {hospital.status === "pending" && <form className="portal-form portal-contract-particulars" onSubmit={saveContractDetails} noValidate>
+        {hospital.status === "pending" && <HospitalEditForm key={editingContractParticulars ? "editing" : "locked"} revision={hospital.lastAuditId} className="portal-form portal-contract-particulars" onSubmit={saveContractDetails}>
           <div className="full portal-row-heading">
             <div><h3>Contract particulars</h3><p>{editingContractParticulars ? "Complete these legal and operational details before previewing the agreement." : "Saved particulars are locked. Select Edit particulars to make changes."}</p></div>
             {!editingContractParticulars && <button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditingContractParticulars(true); setContractFieldErrors({}); setError(null); setMessage(null); }}>Edit particulars</button>}
@@ -495,7 +513,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
           <label>Partner emergency contact *<input name="emergencyContact" defaultValue={hospital.emergencyContact ?? ""} maxLength={160} required disabled={!editingContractParticulars} aria-invalid={Boolean(contractFieldErrors.emergencyContact)} /><ContractFieldError field="emergencyContact" errors={contractFieldErrors} /></label>
           <label>Emergency transfer (nearby hospital transfer in case of an emergency) *<input name="emergencyReferralHospital" defaultValue={hospital.emergencyReferralHospital ?? ""} maxLength={200} required disabled={!editingContractParticulars} aria-invalid={Boolean(contractFieldErrors.emergencyReferralHospital)} /><ContractFieldError field="emergencyReferralHospital" errors={contractFieldErrors} /></label>
           {editingContractParticulars && <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save contract particulars"}</button></div>}
-        </form>}
+        </HospitalEditForm>}
         {hospital.status === "pending" && hospital.contractNeedsRegeneration && <p className="portal-form-error" role="status">The hospital particulars have changed. Preview and download the updated agreement, then add its signed copy before activation. The earlier signed agreement is kept.</p>}
         {hospital.contractUrl && <p>{hospital.status === "pending" && !contractReady ? "Earlier signed contract" : "Signed contract"}: <a className="portal-inline-link" href={hospital.contractUrl} target="_blank" rel="noreferrer">View contract</a></p>}
         {hospital.status !== "active" && hospital.status !== "archived" && imagesMissing > 0 && <div id="hospital-activation-images-error" className="portal-form-error" role="status">
@@ -530,7 +548,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
       {hospital.status === "active" && <article className="portal-card portal-assessment-card">
         <div className="portal-row-heading"><h2>Public Ayursarga assessment</h2><span className="portal-status" data-status="active">Public</span></div>
         <p>Add Ayursarga’s assessment of this centre. Customers will see it labelled as an Ayursarga review, not a patient review.</p>
-        <form className="portal-form portal-edit-form" onSubmit={savePublicAssessment} noValidate>
+        <HospitalEditForm revision={hospital.lastAuditId} onSubmit={savePublicAssessment}>
           <fieldset className="portal-rating-field full">
             <legend>Ayursarga rating</legend>
             <input type="hidden" name="ayursargaRating" value={assessmentRating ?? ""} />
@@ -559,7 +577,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
             />
           </label>
           <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save public assessment"}</button></div>
-        </form>
+        </HospitalEditForm>
       </article>}
     </>}
     <PortalDialog open={Boolean(pendingAction)} title={actionDialog.title} message={actionDialog.message} tone={actionDialog.tone} confirmLabel={actionDialog.confirmLabel} busy={busy} onCancel={() => { setContractUrlError(null); setPendingAction(null); }} onConfirm={() => void confirmPendingAction()}>

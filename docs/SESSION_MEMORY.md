@@ -2,6 +2,51 @@
 
 Updated: 11 November 2026 (Asia/Calcutta).
 
+## Two high-priority Admin QA fixes (11 November 2026, v4.45.5)
+
+- Owner requested the two highs from the preceding Admin QA review. Fixed stale
+  hospital forms overwriting newer saved details, and premature completion of
+  future online consultations. The four previously reported medium findings
+  (availability retry duplication, block-removal confirmation, transient-load
+  redirects and partial Users-list status ordering) were not in this task.
+- Hospital update API requires the opened expectedAuditId at the top level,
+  explicitly null for untouched legacy records without an audit ID. Validate it
+  against the initial read before email identity work and against the transaction
+  snapshot before committing changes/audits/access updates. Keep existing
+  preconditions, normalized uniqueness, contract binding and access sync intact.
+  The shared service forwards it; profile/map/particulars/assessment forms retain
+  their own opened revision across other local saves/reloads and advance it only
+  after their own committed save. Explicit reopen uses the current record.
+- Shared consultationCompletionEligibility uses the saved exact end in IST,
+  inclusively. Legacy appointments use their saved window end, not the provider's
+  current availability. Missing/invalid schedules fail closed. The booking
+  transaction checks before any writes; Admin UI disables premature completion
+  and rechecks confirmation. Already-completed retries remain harmless. No
+  migration, changed payment/refund/slot rules or Search Center workflow changes.
+- Focused unit/route regressions: 93/93 passed across hospital contract approval,
+  identity/access, galleries, portal mutations, consultation completion and the
+  complete consultation-bookings suite. Covers concurrent/stale saves, legacy
+  revisions, validation/roles, atomic failure, exact end boundary, legacy/missing
+  schedules, retry deduplication, payment, reschedule/cancel and email lifecycle.
+  Existing completion fixtures now advance a controlled clock to the actual end.
+- Final browser regressions: 12/12 passed on desktop, 320px Chromium and mobile
+  WebKit. Open details revisions survive another form's save; stale errors retain
+  the form, explicit reopen can save; future completion stays disabled while
+  cancel/reschedule stay usable; contract locking and description-removal remain.
+  Initial run had three test-only failures from an input selector for the existing
+  map textarea. Corrected the selector and reran all selected checks successfully.
+- QA workbook HOS-006 and CBK-013 expectations/prerequisites updated, HOS-006 P1;
+  existing automated/manual classifications and daily execution history retained.
+  All 25 sheets and other ZIP members preserved. Only two affected row heights
+  expanded for wrapping. Artifact native Skia module unavailable, so used narrow
+  ZIP/XML fallback, read-only openpyxl verification and reviewed Pillow previews.
+  Technical mappings updated in tests/qa. No native Excel rendering claimed.
+- Version 4.45.5 synchronized in package/lockfile. No fresh build, lint, standalone
+  typecheck, full API health, live workflow/provider checks or deployment requested
+  or run for these new changes. Prior 4.45.4 results do not validate this patch.
+  No Firestore rules/index/schema change or rules deployment required. API app
+  deployment is still needed to make the fixes live; none performed.
+
 ## Image delivery audit and optimization (11 November 2026, v4.45.4)
 
 - Continuation reviewed the existing uncommitted implementation and preserved
