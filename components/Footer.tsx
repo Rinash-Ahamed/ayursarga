@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import images from "@/config/image-assets.json";
 import { motion, useReducedMotion } from "framer-motion";
 import { ROUTES } from "@/config/routes";
 import { AYURSARGA_PHONE } from "@/config/contact";
@@ -88,7 +89,7 @@ export default function Footer({ sectionPrefix = "", backToTopHref }: { sectionP
         <a href={sectionPrefix ? ROUTES.public.home : "#hero"} className="footer-mark" aria-label="Return to the Ayursarga home section">
           <span className="footer-logo-wrap">
             <span className="footer-logo-crop">
-              <Image src="/mainlogo.png" alt="" width={58} height={58} loading="lazy" quality={90} sizes="58px" />
+              <Image src={images.logo.src} alt="" width={58} height={58} loading="lazy" unoptimized sizes="58px" />
             </span>
           </span>
           <motion.span

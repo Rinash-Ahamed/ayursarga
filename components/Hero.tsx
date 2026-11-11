@@ -1,6 +1,7 @@
 "use client";
 
-import Image, { type ImageLoaderProps } from "next/image";
+import Image from "next/image";
+import images from "@/config/image-assets.json";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import MagneticButton from "./MagneticButton";
@@ -13,10 +14,6 @@ const CORE_VALUES = [
   { title: "Excellence", description: "Quality care, every day." },
   { title: "Growth", description: "Growing together, creating impact." },
 ] as const;
-
-function heroPosterLoader({ src, width, quality }: ImageLoaderProps) {
-  return `/_next/image?url=${encodeURIComponent(src)}&w=${width}&q=${quality ?? 82}`;
-}
 
 export default function Hero() {
   const heroRef = useRef<HTMLElement>(null);
@@ -88,8 +85,7 @@ export default function Hero() {
     <section id="hero" ref={heroRef}>
       <Image
         className="hero-background-poster"
-        src="/hero-video-poster-web.webp"
-        loader={heroPosterLoader}
+        src={images["hero-video-poster"].src}
         alt=""
         fill
         priority

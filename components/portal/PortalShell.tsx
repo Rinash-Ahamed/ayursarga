@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import images from "@/config/image-assets.json";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { PortalRole } from "@/features/auth/contracts";
@@ -199,7 +200,7 @@ export function PortalShell({ role, title, children, focused = false }: {
     return <main className="portal-consumer-focus">
       <header className="portal-consumer-focus-header">
         <Link href="/" className="portal-wordmark" aria-label="Return to Ayursarga home">
-          <Image src="/mainlogo.png" alt="" width={40} height={40} loading="eager" quality={90} sizes="40px" />
+          <Image src={images.logo.src} alt="" width={40} height={40} loading="eager" unoptimized sizes="40px" />
           <span>Ayursarga</span>
         </Link>
         <div className="portal-consumer-focus-title">
@@ -218,7 +219,7 @@ export function PortalShell({ role, title, children, focused = false }: {
     <aside className="portal-sidebar" data-role={role} data-mobile-open={mobileMenuOpen || undefined} data-collapsed={sidebarCollapsed || undefined}>
       <div className="portal-sidebar-top">
         <Link href="/" className="portal-wordmark" aria-label="Return to Ayursarga home">
-          <Image src="/mainlogo.png" alt="" width={44} height={44} loading="eager" quality={90} sizes="44px" />
+          <Image src={images.logo.src} alt="" width={44} height={44} loading="eager" unoptimized sizes="44px" />
           <span>Ayursarga</span>
         </Link>
         <button className="portal-sidebar-collapse" type="button" aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} aria-expanded={!sidebarCollapsed} aria-controls="portal-sidebar-navigation" onClick={toggleSidebar}>
@@ -252,7 +253,7 @@ export function PortalShell({ role, title, children, focused = false }: {
     {mobileMenuOpen && <button className="portal-mobile-menu-backdrop" type="button" aria-label="Close portal menu" onClick={() => setMobileMenuOpen(false)} />}
     <section className="portal-content">
       <header className="portal-page-header" ref={headerRef}>
-        {role === "consumer" && <Link className="consumer-mobile-brand" href={ROUTES.public.home} aria-label="Return to Ayursarga home"><Image src="/mainlogo.png" alt="" width={30} height={30} sizes="30px" /><span>Ayursarga</span></Link>}
+        {role === "consumer" && <Link className="consumer-mobile-brand" href={ROUTES.public.home} aria-label="Return to Ayursarga home"><Image src={images.logo.src} alt="" width={30} height={30} sizes="30px" unoptimized /><span>Ayursarga</span></Link>}
         <div className="portal-page-heading">
           <h1>{title}</h1>
         </div>

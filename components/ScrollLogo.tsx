@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import images from "@/config/image-assets.json";
 import { useEffect, useRef } from "react";
 
 export default function ScrollLogo() {
@@ -52,7 +53,7 @@ export default function ScrollLogo() {
     <div ref={containerRef} className="scroll-logo" aria-hidden="true">
       <div ref={logoRef} className="scroll-logo-mark">
         <span className="scroll-logo-crop">
-          <Image src="/mainlogo.png" alt="" width={54} height={54} loading="eager" quality={90} sizes="54px" />
+          <Image src={images.logo.src} alt="" width={54} height={54} loading="eager" unoptimized sizes="54px" />
         </span>
       </div>
     </div>

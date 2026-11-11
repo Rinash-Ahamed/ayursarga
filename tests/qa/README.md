@@ -162,6 +162,15 @@ must be preserved when updating the local Git-ignored workbook.
 
 ## Public media checks
 
+UXP-008 image-delivery expectations additionally cover content-hashed compressed
+artwork, shared direct UI marks, responsive portal hospital thumbnails and stable
+frames. `tests/unit/image-delivery.test.mjs` verifies source dimensions/metadata,
+cache/variant policy and token-preserving variants. `scripts/audit-image-delivery.mjs`
+captures actual local production image requests, bytes and responsive screenshots
+with external requests blocked. Cold/warm samples are not production billing or
+capacity proof. Physical-device/provider review remains required. See
+`docs/IMAGE_DELIVERY_AUDIT_2026-11-11.md` for measured results and verification limits.
+
 UXP-008 also has focused asset and media-lifecycle checks:
 
 ```powershell

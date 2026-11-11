@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import images from "@/config/image-assets.json";
 import Link from "next/link";
 import { DateInput } from "@/components/forms/DateInput";
 import { formatDisplayDate, toDateInputValue } from "@/utils/date";
@@ -14,7 +15,8 @@ const WELLNESS_PATHS = [
     id: "prenatal-care",
     name: "Prenatal care",
     description: "Comprehensive care for mother and baby throughout pregnancy, with guidance and support for a healthy journey.",
-    image: "/wellness/prenatal-care.jpg",
+    image: images["prenatal-care"].src,
+    thumbnail: images["prenatal-care-thumb"].src,
     question: "What services are you looking for?",
     hint: "",
     options: ["Pregnancy yoga", "Dietary advice", "Doctor consultation"],
@@ -23,7 +25,8 @@ const WELLNESS_PATHS = [
     id: "postnatal-care",
     name: "Postnatal care",
     description: "Restorative support after childbirth, helping the mother recover while nurturing the baby and family.",
-    image: "/wellness/postnatal-care.jpeg",
+    image: images["postnatal-care"].src,
+    thumbnail: images["postnatal-care-thumb"].src,
     question: "Your Postnatal Care includes.",
     hint: "",
     options: ["Mother Care", "Baby Care"],
@@ -32,7 +35,8 @@ const WELLNESS_PATHS = [
     id: "lactation-support",
     name: "Lactation support",
     description: "Dedicated lactation care for mother and baby, with guidance for confident and comfortable feeding.",
-    image: "/wellness/lactation-support.jpg",
+    image: images["lactation-support"].src,
+    thumbnail: images["lactation-support-thumb"].src,
     question: "What are your concerns?",
     hint: "Choose all that apply. You can add a concern in your own words.",
     options: ["Low milk supply", "Latching difficulty", "Breast engorgement", "Others"],
@@ -41,7 +45,8 @@ const WELLNESS_PATHS = [
     id: "rejuvenation",
     name: "Rejuvenation",
     description: "Doctor-guided restorative care designed around rest, renewal, and your individual wellbeing goals.",
-    image: "/wellness/panchakarma.jpeg",
+    image: images.panchakarma.src,
+    thumbnail: images["panchakarma-thumb"].src,
     question: "Explore Your Wellness Options",
     hint: "Choose the wellness option you would like to explore.",
     options: ["Detox & Panchakarma", "Cosmetologist consultation"],
@@ -50,7 +55,8 @@ const WELLNESS_PATHS = [
     id: "womens-wellness",
     name: "Women’s wellness",
     description: "Personalised Ayurvedic care supporting women’s health and wellbeing through different life stages.",
-    image: "/wellness/womens-wellness.jpeg",
+    image: images["womens-wellness"].src,
+    thumbnail: images["womens-wellness-thumb"].src,
     question: "What would you like guidance with?",
     hint: "Select any concerns you would like to discuss. Clinical suitability is confirmed by a qualified physician.",
     options: ["Menstrual irregularities", "PCOD / PCOS", "Perimenopausal concerns", "Uterine fibroids", "Infertility", "Others"],
@@ -59,7 +65,8 @@ const WELLNESS_PATHS = [
     id: "stress-management",
     name: "Stress management",
     description: "Quiet stays, therapies, and practices designed to support rest and a calmer daily rhythm.",
-    image: "/wellness/stress-management.jpeg",
+    image: images["stress-management"].src,
+    thumbnail: images["stress-management-thumb"].src,
     question: "What kind of wellness experience are you looking for?",
     hint: "Choose the kind of support you would like included in your request.",
     options: ["Wellness Retreats", "Spa & Rejuvenation", "Psychologist consultation"],
@@ -221,7 +228,7 @@ export default function WellnessGuide({ onProfileChange }: { onProfileChange?: (
         >
           <div className="wellness-guide-panel-head">
             <div className="wellness-guide-selected-path">
-              <span className="wellness-guide-selected-image"><Image src={selectedPath.image} alt="" fill sizes="58px" quality={75} /></span>
+              <span className="wellness-guide-selected-image"><Image src={selectedPath.thumbnail} alt="" fill sizes="58px" unoptimized /></span>
               <div><span>Selected wellness path</span><strong>{selectedPath.name}</strong></div>
             </div>
             <div className="wellness-guide-panel-actions">

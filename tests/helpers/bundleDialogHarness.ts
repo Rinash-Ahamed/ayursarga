@@ -29,7 +29,7 @@ export function bundleDialogHarness(fixture = "tests/fixtures/dialogHarness.tsx"
     const entry = { source: "", imports: {} as Record<string, number> };
     modules.push(entry);
     const source = readFileSync(filename, "utf8");
-    entry.source = /\.tsx?$/.test(filename) ? ts.transpileModule(source, {
+    entry.source = filename.endsWith(".json") ? `module.exports=${source};` : /\.tsx?$/.test(filename) ? ts.transpileModule(source, {
       compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
     }).outputText : source;
     for (const [, specifier] of entry.source.matchAll(/require\(["']([^"']+)["']\)/g)) {

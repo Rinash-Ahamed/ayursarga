@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import images from "@/config/image-assets.json";
 import Link from "next/link";
 import { platformHealthReport } from "@/services/api/platformHealth";
 import { formatDisplayDateTime } from "@/utils/date";
@@ -36,7 +37,7 @@ export default async function HealthPage({ searchParams }: { searchParams: Promi
     <section className="health-card" aria-labelledby="health-title">
       <header className="health-header">
         <Link className="health-brand" href="/" aria-label="Ayursarga home">
-          <Image src="/mainlogo.png" alt="" width={52} height={52} priority />
+          <Image src={images.logo.src} alt="" width={52} height={52} sizes="52px" unoptimized priority />
           <span>Ayursarga</span>
         </Link>
         <span className="health-live-label"><i aria-hidden="true" />{deep ? "Expanded checks" : "Configuration"}</span>

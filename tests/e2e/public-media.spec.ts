@@ -20,7 +20,7 @@ async function mount(page:Page, fail=false, posterGate?:Promise<void>) {
     const url=new URL(request.url??'/', 'http://127.0.0.1');
     if(url.pathname==="/"){response.writeHead(200,{"Content-Type":"text/html"});response.end('<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="fixture-root"></div></body></html>');return;}
     const path=`public${url.pathname==='/_next/image'?url.searchParams.get('url'):url.pathname}`;
-    if(!/^public\/(?:video\/)?[\w.-]+\.(?:webp|mp4)$/.test(path)||!existsSync(path)){response.writeHead(404);response.end('not found');return;}
+    if(!/^public\/(?:(?:video|optimized)\/)?[\w.-]+\.(?:webp|mp4)$/.test(path)||!existsSync(path)){response.writeHead(404);response.end('not found');return;}
     if(posterGate&&path.includes('hero-video-poster'))await posterGate;
     const video=path.endsWith('.mp4');
     if(video){requests.push(url.pathname);if(fail){response.destroy();return;}await new Promise(resolve=>setTimeout(resolve,250));}

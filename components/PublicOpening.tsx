@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import images from "@/config/image-assets.json";
 import { useEffect, useState } from "react";
 
 const OPENING_SESSION_KEY = "ayursarga-public-opening-seen";
@@ -48,7 +49,7 @@ export default function PublicOpening() {
   return (
     <div className="public-opening" data-phase={phase} aria-hidden="true">
       <div className="public-opening-mark">
-        <Image src="/mainlogo.png" alt="" width={72} height={72} priority quality={82} sizes="72px" />
+        <Image src={images.logo.src} alt="" width={72} height={72} priority unoptimized sizes="72px" />
         <span>Ayursarga</span>
       </div>
     </div>

@@ -9,6 +9,7 @@ export function loadTypeScript(entry, overrides = {}) {
   const require = createRequire(path.join(root, "package.json"));
   const cache = new Map();
   function load(filename) {
+    if (filename.endsWith('.json')) return JSON.parse(readFileSync(filename, 'utf8'));
     if (cache.has(filename)) return cache.get(filename).exports;
     const loadedModule = { exports: {} };
     cache.set(filename, loadedModule);

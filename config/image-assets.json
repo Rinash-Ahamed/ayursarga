@@ -1,0 +1,114 @@
+{
+  "logo": {
+    "src": "/optimized/logo-31a52c0c4675.webp",
+    "width": 192,
+    "height": 184,
+    "bytes": 11818,
+    "originalBytes": 396742
+  },
+  "whatsapp": {
+    "src": "/optimized/whatsapp-c87535424f60.webp",
+    "width": 128,
+    "height": 193,
+    "bytes": 3870,
+    "originalBytes": 86177
+  },
+  "why": {
+    "src": "/optimized/why-d4f0e5e9c658.webp",
+    "width": 1402,
+    "height": 1122,
+    "bytes": 280164,
+    "originalBytes": 2411554
+  },
+  "hero-video-poster": {
+    "src": "/optimized/hero-video-poster-b44664ce1ee3.webp",
+    "width": 1600,
+    "height": 900,
+    "bytes": 324668,
+    "originalBytes": 324668
+  },
+  "prenatal-care": {
+    "src": "/optimized/prenatal-care-44ba424d250e.webp",
+    "width": 960,
+    "height": 1438,
+    "bytes": 118950,
+    "originalBytes": 2477438
+  },
+  "postnatal-care": {
+    "src": "/optimized/postnatal-care-01f4856bf189.webp",
+    "width": 736,
+    "height": 920,
+    "bytes": 53462,
+    "originalBytes": 64478
+  },
+  "lactation-support": {
+    "src": "/optimized/lactation-support-809028fc8182.webp",
+    "width": 960,
+    "height": 1373,
+    "bytes": 48274,
+    "originalBytes": 2172151
+  },
+  "panchakarma": {
+    "src": "/optimized/panchakarma-f9770d65a421.webp",
+    "width": 736,
+    "height": 736,
+    "bytes": 55416,
+    "originalBytes": 58371
+  },
+  "womens-wellness": {
+    "src": "/optimized/womens-wellness-121157948cee.webp",
+    "width": 736,
+    "height": 1104,
+    "bytes": 85282,
+    "originalBytes": 93240
+  },
+  "stress-management": {
+    "src": "/optimized/stress-management-b7ac370ff367.webp",
+    "width": 736,
+    "height": 920,
+    "bytes": 48836,
+    "originalBytes": 69003
+  },
+  "prenatal-care-thumb": {
+    "src": "/optimized/prenatal-care-thumb-e2062e08d7e5.webp",
+    "width": 128,
+    "height": 192,
+    "bytes": 4266,
+    "originalBytes": 2477438
+  },
+  "postnatal-care-thumb": {
+    "src": "/optimized/postnatal-care-thumb-9eead61a76ee.webp",
+    "width": 128,
+    "height": 160,
+    "bytes": 3386,
+    "originalBytes": 64478
+  },
+  "lactation-support-thumb": {
+    "src": "/optimized/lactation-support-thumb-51e8ffe1eab8.webp",
+    "width": 128,
+    "height": 183,
+    "bytes": 3334,
+    "originalBytes": 2172151
+  },
+  "panchakarma-thumb": {
+    "src": "/optimized/panchakarma-thumb-8e7d3eae3856.webp",
+    "width": 128,
+    "height": 128,
+    "bytes": 3474,
+    "originalBytes": 58371
+  },
+  "womens-wellness-thumb": {
+    "src": "/optimized/womens-wellness-thumb-b9890a77e3ee.webp",
+    "width": 128,
+    "height": 192,
+    "bytes": 6854,
+    "originalBytes": 93240
+  },
+  "stress-management-thumb": {
+    "src": "/optimized/stress-management-thumb-630b42cdb1d7.webp",
+    "width": 128,
+    "height": 160,
+    "bytes": 4536,
+    "originalBytes": 69003
+  }
+}

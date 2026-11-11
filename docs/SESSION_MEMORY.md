@@ -2,6 +2,67 @@
 
 Updated: 11 November 2026 (Asia/Calcutta).
 
+## Image delivery audit and optimization (11 November 2026, v4.45.4)
+
+- Continuation reviewed the existing uncommitted implementation and preserved
+  earlier before/after measurements. Fresh lint, separate typecheck, production
+  build, 21 focused tests and 24 browser regressions passed. Added a verification
+  label to the local audit script so reruns do not overwrite baseline evidence.
+  Fresh production verification reproduced eight optimizer requests and identical
+  after-byte totals across mobile/tablet/desktop, no broken images or overflow.
+  Warm local LCP was 1004/584/656ms, not a speedup claim. Basic/deep health and
+  styled page passed on this build; both temporary servers stopped. No live
+  Storage test repeated, no additional behaviour/workbook/version changes.
+- Audited all public, hospital/consultant, portal/avatar, contract/PDF and CSS
+  image renderers. Pre-generated content-hashed WebP marks/artwork/thumbnails,
+  preserved originals and photo aspect/frames, reused one 192px direct logo across
+  public/auth/portals, direct sub-4KB WhatsApp mark and 128px selection thumbnails.
+  Hero, Why and six wellness photos remain responsive Next-optimized; original
+  hero bytes unchanged, removed redundant loader. No global optimization disable.
+- Bounded optimizer widths 15 to 9 and quality options 4 to 2, retained AVIF/WebP,
+  31-day optimizer TTL, one-year immutable derived assets. Portal galleries reuse
+  existing token-preserving 480/800/1200 upload variants. No persisted schema,
+  upload permission, metadata/file deletion, booking or animation changes.
+- Local production journeys: optimizer requests 11 to 8 (27% fewer), encoded image
+  bytes down 3.8% mobile/3.1% tablet/4.6% desktop, no broken images/overflow.
+  Cold LCP results mixed; after warm-cache LCP 784/492/544ms is descriptive, not
+  a speedup claim. Actual Vercel billing not inspected. Nine replaced source files
+  down 91%, not equivalent to page-byte savings. Full report and reproduction:
+  docs/IMAGE_DELIVERY_AUDIT_2026-11-11.md and scripts/audit-image-delivery.mjs.
+- Approved bounded live read-only sample: three hospital WebP sizes and one
+  consultant portrait accessible with tokens (206, immutable one-year caching);
+  no-token requests denied (403). No URLs/tokens/customer data logged, no writes.
+- Lint passed with three existing warnings, separate typecheck and final build
+  passed (87 static pages). Initial sandbox build EPERM resolved by approved run.
+  21 focused tests, 12 media phone/desktop/WebKit and 12 centre-details phone/
+  desktop checks passed. Production screenshots inspected. Final-build basic/deep
+  health JSON and themed page returned 200/ok, six config dependencies ready,
+  no browser errors. Temporary servers stopped; no deployment or live workflows.
+- Required QA workbook UXP-008 F13/G13 only updated; all 25 sheets, controls and
+  tester history preserved. Artifact native Skia failed; narrow ZIP/XML fallback
+  with read-only openpyxl checks and Pillow previews used. Version 4.45.4 in both
+  manifests, no dependency changes. Preserve earlier session-note work.
+
+## Requested build, lint and health validation (11 November 2026, v4.45.3)
+
+- Fresh `npm.cmd run build` completed successfully, including TypeScript checks
+  and all 87 static pages. Compilation reported 76 seconds and TypeScript
+  reported 76 seconds; these local build timings are not API latency evidence.
+- `npm.cmd run lint` exited successfully with zero errors and three existing
+  warnings: two effect-cleanup ref warnings in TreatmentFilm and one raw-image
+  warning in the publicMediaMocks test fixture. No rules were suppressed.
+- Started this build on a fresh temporary production server at 127.0.0.1:3117.
+  `/api/health` and `/api/health?deep=true` returned HTTP 200, status ok, modes
+  configuration/deep-configuration. All six deep configuration dependencies were
+  ready. `/health?deep=true` returned HTTP 200; Playwright verified the heading,
+  six service cards, applied styling and no page errors. Screenshot reviewed at
+  `tmp/build-health-4.45.3.png`. Stopped the temporary server after validation.
+- Configuration health does not verify live database access, deployed permissions,
+  SMTP delivery, Razorpay transactions or every API workflow. No deployment,
+  production mutation, application behaviour change or version bump performed.
+  The preceding Admin audit findings remain unfixed; passing these checks does
+  not resolve them. No workbook expectations changed during this validation.
+
 ## Shared hospital package-check loading (11 November 2026, v4.45.3)
 
 - Owner requested one top-right checking indicator instead of repeated loading

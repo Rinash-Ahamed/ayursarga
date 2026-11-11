@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Image from "next/image";
+import images from "@/config/image-assets.json";
 
 const BENEFITS = [
   ["partners", "Approved hospital partners", "Only active hospitals approved for public discovery appear to consumers."],
@@ -82,7 +83,7 @@ export default function Sanctuary() {
       <span className="trust-media-label">Why Ayursarga</span>
       <div className="trust-media">
         <Image
-          src="/why.png"
+          src={images.why.src}
           loading="eager"
           alt="Ayursarga connecting trusted Ayurvedic hospitals, services, appointment requests and personal guidance"
           width={1402}

@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { authorizedApiRequest } from "@/services/api/client";
-import { MAX_HOSPITAL_IMAGES, MIN_PUBLIC_HOSPITAL_IMAGES } from "@/features/hospitals/images";
+import { hospitalImageSrcSet, MAX_HOSPITAL_IMAGES, MIN_PUBLIC_HOSPITAL_IMAGES } from "@/features/hospitals/images";
 import { prepareHospitalImage } from "@/utils/prepareHospitalImage";
 import { PortalToast } from "@/components/portal/PortalToast";
 import { PortalDialog } from "@/components/portal/PortalDialog";
@@ -94,7 +94,7 @@ export function HospitalImageManager({ hospitalId, hospitalName, imageUrls, onCh
         <a href={url} target="_blank" rel="noreferrer" aria-label={`View ${hospitalName} image ${index + 1}${index === 0 ? ", cover image" : ""}`}>
           {/* Existing approved external links and uploaded Storage images share this gallery. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={url} alt={`${hospitalName} image ${index + 1}`} loading="lazy" decoding="async" referrerPolicy="no-referrer" />
+          <img src={url} srcSet={hospitalImageSrcSet(url)} sizes="(max-width: 600px) 50vw, 320px" width={1200} height={900} alt={`${hospitalName} image ${index + 1}`} loading="lazy" decoding="async" referrerPolicy="no-referrer" />
           {index === 0 && <span className="portal-image-cover-badge">Cover image</span>}
         </a>
         <button className="portal-button danger" type="button" disabled={busy || disabled || !canRemove} onClick={() => setRemoving(url)} aria-label={`Remove centre image ${index + 1}`}>Remove</button>

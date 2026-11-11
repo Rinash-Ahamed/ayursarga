@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
+import images from "@/config/image-assets.json";
 import { usePathname } from "next/navigation";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -119,7 +120,7 @@ function PublicNav({ sectionPrefix = "", solid = false }: NavProps) {
     <header id="site-nav" className={scrolled || solid ? "scrolled" : ""}>
       <div className="nav-inner">
         <a href={sectionPrefix ? "/" : "#hero"} className="nav-mark">
-          <Image src="/mainlogo.png" alt="Ayursarga" width={56} height={56} priority loading="eager" quality={90} sizes="56px" />
+          <Image src={images.logo.src} alt="Ayursarga" width={56} height={56} priority loading="eager" unoptimized sizes="56px" />
           <span>Ayursarga</span>
         </a>
         <nav className="nav-links">
@@ -132,7 +133,7 @@ function PublicNav({ sectionPrefix = "", solid = false }: NavProps) {
         <div ref={accountRef} className={`nav-account-actions${consumerSignedIn ? " has-consumer" : ""}`}>
           {consumerSignedIn ? <div className="nav-profile">
             <button type="button" className="nav-profile-trigger" aria-label="Open your Ayursarga account" aria-expanded={profileOpen} onClick={() => setProfileOpen((current) => !current)}>
-              <Image className="nav-profile-avatar-image" src={avatarUrl || "/mainlogo.png"} alt="" width={42} height={42} sizes="42px" unoptimized={Boolean(avatarUrl)} referrerPolicy="no-referrer" />
+              <Image className="nav-profile-avatar-image" src={avatarUrl || images.logo.src} alt="" width={42} height={42} sizes="42px" unoptimized referrerPolicy="no-referrer" />
             </button>
             {profileOpen && <div className="nav-profile-menu">
               <div className="nav-profile-details">
@@ -157,7 +158,7 @@ function PublicNav({ sectionPrefix = "", solid = false }: NavProps) {
       <a href={ROUTES.public.contact} aria-current={pathname === ROUTES.public.contact ? "page" : undefined}><MobileNavIcon name="contact" /><span>Contact</span></a>
       <div ref={mobileAccountRef} className="mobile-bottom-account">
         {consumerSignedIn ? <button type="button" aria-label="Open your Ayursarga account" aria-expanded={profileOpen} onClick={() => setProfileOpen((current) => !current)}>
-          <Image className="mobile-bottom-avatar" src={avatarUrl || "/mainlogo.png"} alt="" width={28} height={28} sizes="28px" unoptimized={Boolean(avatarUrl)} referrerPolicy="no-referrer" />
+          <Image className="mobile-bottom-avatar" src={avatarUrl || images.logo.src} alt="" width={28} height={28} sizes="28px" unoptimized referrerPolicy="no-referrer" />
           <span>Profile</span>
         </button> : <button type="button" onClick={openLogin}><MobileNavIcon name="account" /><span>Login</span></button>}
         {consumerSignedIn && profileOpen && <div className="nav-profile-menu mobile-profile-menu">
