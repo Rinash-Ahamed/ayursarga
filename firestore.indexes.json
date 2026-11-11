@@ -20,6 +20,18 @@
     },
     {
       "collectionGroup": "consultants", "queryScope": "COLLECTION",
+      "fields": [{ "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "employeeSequence", "order": "ASCENDING" }]
+    },
+    {
+      "collectionGroup": "consultants", "queryScope": "COLLECTION",
+      "fields": [{ "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "consultationServices", "arrayConfig": "CONTAINS" }, { "fieldPath": "name", "order": "ASCENDING" }]
+    },
+    {
+      "collectionGroup": "consultants", "queryScope": "COLLECTION",
+      "fields": [{ "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "consultationServices", "arrayConfig": "CONTAINS" }, { "fieldPath": "employeeId", "order": "ASCENDING" }]
+    },
+    {
+      "collectionGroup": "consultants", "queryScope": "COLLECTION",
       "fields": [{ "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "name", "order": "ASCENDING" }]
     },
     {

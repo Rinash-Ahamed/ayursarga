@@ -82,3 +82,49 @@ test("hospital and consultant direct client creation remain denied", () => {
     assert.match(block, /allow create(?:, update, delete)?: if false;/);
   }
 });
+
+test("hospital display IDs are atomic, sequential and independent of internal IDs or email edits", async () => {
+  const f = bookingFlowFixture({ actor: { role: "admin" }, records: {
+    "systemSettings/hospitalCreationSequence": { value: 25 },
+    "hospitals/legacy": { name: "Legacy", email: "legacy@example.test" },
+  } });
+  const responses = await Promise.all([
+    create(f, "hospitals", { email: "first@example.test", hospitalCode: "AH999", hospitalSequence: 999 }),
+    create(f, "hospitals", { email: "second@example.test" }),
+  ]);
+  assert.deepEqual(responses.map(response => response.status), [201, 201]);
+  const saved = await Promise.all(responses.map(response => response.json()));
+  assert.deepEqual(saved.map(record => record.hospitalCode), ["AH001", "AH002"]);
+  for (const result of saved) {
+    assert.notEqual(result.hospitalId, result.hospitalCode);
+    const record = f.records.get(`hospitals/${result.hospitalId}`);
+    assert.equal(record.hospitalCode, result.hospitalCode);
+    const audit = f.records.get(`auditLogs/${record.lastAuditId}`);
+    assert.equal(audit.updatedValues.hospitalCode, result.hospitalCode);
+    assert.equal(audit.recordId, result.hospitalId);
+  }
+  assert.equal(f.records.get("systemSettings/hospitalCreationSequence").value, 27);
+  assert.equal(f.records.get("systemSettings/hospitalCreationSequence").hospitalSequence, 2);
+  assert.equal(f.records.get("hospitals/legacy").hospitalCode, undefined);
+});
+
+test("hospital codes continue beyond AH999 and do not reuse a higher stored sequence", async () => {
+  const f = bookingFlowFixture({ actor: { role: "admin" }, records: {
+    "systemSettings/hospitalCreationSequence": { value: 2000, hospitalSequence: 998 },
+    "hospitals/old": { hospitalCode: "AH999", hospitalSequence: 999, email: "old@example.test" },
+  } });
+  const response = await create(f, "hospitals");
+  assert.equal(response.status, 201);
+  assert.equal((await response.json()).hospitalCode, "AH1000");
+});
+
+test("hospital ID fields are display-only and excluded from client write allowlists", () => {
+  const rules = readFileSync("firestore.rules", "utf8");
+  assert.doesNotMatch(rules, /['"]hospital(?:Code|Sequence)['"]/);
+  for (const path of ["components/admin/HospitalsManager.tsx", "components/admin/HospitalDetails.tsx", "components/hospital/HospitalProfile.tsx"]) {
+    const source = readFileSync(path, "utf8");
+    assert.match(source, /hospitalCode/);
+    assert.match(source, /Hospital ID/);
+    assert.doesNotMatch(source, /name=["']hospital(?:Code|Sequence)["']/);
+  }
+});

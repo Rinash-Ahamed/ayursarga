@@ -138,6 +138,7 @@ export function HospitalsManager() {
       </div>
       </div>
       <dl className="admin-card-facts">
+        {item.hospitalCode && <div><dt>Hospital ID</dt><dd>{item.hospitalCode}</dd></div>}
         {item.legalName && item.legalName !== item.name && <div className="admin-hospital-fact-wide"><dt>Legal name</dt><dd>{item.legalName}</dd></div>}
         <div className="admin-hospital-fact-wide"><dt>Location</dt><dd>{[...new Set([item.city, item.district, item.state].filter(Boolean))].join(", ") || "Not provided"}</dd></div>
         <div><dt>Email</dt><dd>{item.email || "Not provided"}</dd></div>

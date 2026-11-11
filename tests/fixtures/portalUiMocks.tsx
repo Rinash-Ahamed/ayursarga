@@ -23,7 +23,7 @@ export class Timestamp {
 }
 const now = Timestamp.now();
 const metadata = { createdAt: now, updatedAt: now, createdBy: "actor", updatedBy: "actor", archivedAt: null, archivedBy: null, lastAuditId: "audit" };
-export const hospital = { ...metadata, id: "centre", name: "Ayursarga Mother and Baby Ayurvedic Wellness Centre with a Long Name", legalName: "Ayursarga Wellness", email: "hospital.contact.with.long.address@example.com", phone: "9876543210", hospitalPhone1: "9876543210", address: "An extended address with locality and building information, Palakkad, Kerala", registeredAddress: "Palakkad, Kerala", city: "Palakkad", district: "Palakkad", state: "Kerala", description: "Care centre description", commissionPercentage: 20, status: "active", isPublic: true, contractStatus: "signed", contractUrl: "https://example.com/signed.pdf", contractGeneratedAt: now, contractSignedAt: now, activatedAt: now, imageUrls: ["https://images.test/hospital.webp"], imageUrl: null, facilities: [], legalPolicies: "Centre policy information" };
+export const hospital = { ...metadata, id: "centre", hospitalCode: "AH001", hospitalSequence: 1, name: "Ayursarga Mother and Baby Ayurvedic Wellness Centre with a Long Name", legalName: "Ayursarga Wellness", email: "hospital.contact.with.long.address@example.com", phone: "9876543210", hospitalPhone1: "9876543210", address: "An extended address with locality and building information, Palakkad, Kerala", registeredAddress: "Palakkad, Kerala", city: "Palakkad", district: "Palakkad", state: "Kerala", description: "Care centre description", commissionPercentage: 20, status: "active", isPublic: true, contractStatus: "signed", contractUrl: "https://example.com/signed.pdf", contractGeneratedAt: now, contractSignedAt: now, activatedAt: now, imageUrls: ["https://images.test/hospital.webp"], imageUrl: null, facilities: [], legalPolicies: "Centre policy information" };
 const services = [7, 14, 21].map((days) => ({ ...metadata, id: `package-${days}`, hospitalId: "centre", status: "active", name: `${days}-day package`, packageDurationDays: days, price: 24000, procedures: { headMassage: 3, hairPack: 2 }, description: "Package notes and information for patients." }));
 const bookings = ["requested", "confirmed", "reschedule_requested"].map((status, index) => ({ ...metadata, id: `booking-${index}`, bookingReference: `AYUR00000${index}`, hospitalId: "centre", hospitalName: hospital.name, serviceName: "14-day package", consumerId: "patient", consumerName: "Patient With a Longer Display Name", consumerEmail: "patient.with.a.very.long.email.address@example.com", consumerPhone: "9876543210", consumerAddress: hospital.address, preferredDate: now, preferredTime: "10:00", price: 24000, servicePrice: 24000, status, treatmentStatus: "started", totalAmount: 24000, estimatedCommission: 4800 }));
 const autoConfirmedBooking = { ...bookings[0], status: "confirmed", treatmentStatus: "not_started", preferredTime: "Flexible", confirmedDate: now, confirmedTime: null, confirmedAt: now };
@@ -146,8 +146,19 @@ export const listUsers = async (role: string) => {
   if (userListControl.holdRole === role) await new Promise<void>(resolve => userListControl.pending.push(resolve));
   return result;
 };
-export const listConsultants = (options?: { cursor?: unknown }) => {
+export const consultantListState = { statuses: {} as Record<string, string> };
+Object.assign(globalThis, { consultantListState });
+export const listConsultants = (options?: { cursor?: unknown; status?: string }, search = "", service?: string) => {
   creationReads.consultants++;
+  if(portalUiState.screen==='admin-consultants-filters'){
+    qaRequestTrace.push({kind:'consultants',args:[options,search,service]});
+    const documents=[1000,10,3,1,11,2].map(sequence=>({...consultant,id:`AS${String(sequence).padStart(3,'0')}`,employeeId:`AS${String(sequence).padStart(3,'0')}`,employeeSequence:sequence,
+      name:`Consultant ${sequence}`,status:consultantListState.statuses[`AS${String(sequence).padStart(3,'0')}`]??([2,11].includes(sequence)?'inactive':'active'),
+      consultationServices:[sequence===3||sequence===11?'psychologist':'prenatal-doctor']}))
+      .filter(record=>(!options?.status||record.status===options.status)&&(!service||record.consultationServices.includes(service))
+        &&(!search.trim()||record.employeeId.startsWith(search.trim().toUpperCase())||record.name.toLowerCase().startsWith(search.trim().toLowerCase())));
+    return Promise.resolve({documents,cursor:null,hasMore:false});
+  }
   if (portalUiState.screen === "admin-consultants-duplicates") {
     const record = (id: string) => ({ ...consultant, id, employeeId: id });
     return Promise.resolve(options?.cursor
@@ -257,7 +268,7 @@ export const uploadConsultantPhoto = async (id: string, file: File, expected?: s
   return `https://firebasestorage.googleapis.com/v0/b/test/o/consultants%2F${id}%2Fimages%2F00000000-0000-0000-0000-000000000001.webp?alt=media&token=test`;
 };
 export const updateUserProfile = async () => { portalUiState.calls++; };
-export const setConsultantStatus = async () => ({ ok: true, lastAuditId: "status-consultant-audit" });
+export const setConsultantStatus = async (id: string, status: string) => { if(portalUiState.screen==='admin-consultants-filters')consultantListState.statuses[id]=status; return { ok: true, lastAuditId: "status-consultant-audit" }; };
 export const clearAllAuditLogs = async () => { auditMfaCalls.clears++; return 0; };
 export const markAllNotificationsRead = async () => {};
 export const markNotificationRead = async () => {};

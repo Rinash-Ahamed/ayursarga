@@ -1,5 +1,31 @@
 # Business workbook automation
 
+## Hospital display IDs
+
+HOS-001 retains Manual required for live creation/access sign-off. Supporting
+`admin-creation-emails` and `portal-mutations` unit checks cover atomic AH IDs,
+concurrent creation, duplicate-email/role denials, rollback, legacy compatibility,
+AH999/1000, forged IDs and immutable edits/status transitions. The portal-ui
+`Hospital display ID` check covers read-only visibility and overflow on Admin
+list/details and Hospital profile, on desktop, 320px Chromium and mobile WebKit.
+These are isolated fixtures, not proof of live transactions or native rules.
+
+## Consultant list filters and ordering
+
+CST-010 uses `tests/unit/consultant-list.test.mjs` and the existing inactive-last
+suite for bounded cursor phases, numeric employee order (including AS999/AS1000),
+status/service combinations, indexed prefix search contracts and denied queries.
+The portal-ui `Consultant filters combine` test covers filter combinations,
+status-change membership, Clear filters, empty states and mobile control sizing.
+Existing duplicate-record and Add/Edit/photo checks remain in the same suite.
+Run on desktop, phone-320 and webkit-phone. No live cloud/provider actions occur.
+
+Deploy the three new consultant composite indexes before relying on the new
+queries. Local fixtures verify their declarations, not live index readiness.
+Default/service-filtered pagination uses employeeSequence ascending. Existing
+name/ID prefix searches keep their indexed query order for bounded pagination;
+loaded matches are presented in numeric employee order with inactive last.
+
 ## Hospital required fields and map saves
 
 HOS-002/HOS-014 supporting checks use `portal-mutations`,

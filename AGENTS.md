@@ -228,6 +228,12 @@ to deploy, rerun maintenance scripts, or modify live data.
   1,000-expression evaluation limit despite valid roles and fields. Consultants
   do not create authentication accounts. Their IDs use the sequential `AS001`
   format, and creates, profile edits, and Active/Inactive changes are audited.
+  Our Consultants defaults to numeric employeeSequence ascending with inactive
+  records last across bounded cursor phases. Keep Status/Online service filters,
+  Clear filters and existing prefix search. Use declared composite indexes;
+  never fetch the entire collection to sort/filter. Locally inserted or changed
+  cards must retain numeric ID order. Filtered membership and partial cursors
+  must be refreshed after changes that would invalidate them.
   Profile/status updates require the opened record's expectedAuditId, checked
   transactionally against lastAuditId. Keep the form's original revision while
   editing, return the committed revision and update local state; reload after a
@@ -296,7 +302,14 @@ to deploy, rerun maintenance scripts, or modify live data.
   atomically; direct client hospital/consultant creation stays denied. Preserve
   existing records; do not silently merge, archive or rewrite duplicates.
 - New hospitals start `pending` and private. The secondary hospital phone is
-  optional. Hospital descriptions are no longer shown/collected in creation or
+  optional. New creates receive a server-only immutable hospitalCode (AH001,
+  AH002, expanding beyond three digits) and numeric hospitalSequence. Assign
+  these atomically with create/audit, retaining the opaque Firestore document ID
+  for links, logins and bookings. The hospitalCreationSequence counter stores a
+  separate hospitalSequence because its value also advances on email changes.
+  Preserve counter history; do not reset numbering or backfill legacy hospitals
+  without explicit approval. Show the code read-only in Admin list/details and
+  Hospital profile. Hospital descriptions are no longer shown/collected in creation or
   edit forms or exposed publicly; preserve legacy stored descriptions when
   saving other details. Required creation fields are hospital name,
   official email, owner WhatsApp number, primary hospital phone, city/locality,

@@ -84,6 +84,7 @@ export function HospitalProfile() {
   }
 
   return <PortalShell role="hospital" title="Profile">{hospital && <form className="portal-card portal-form" onSubmit={submit} noValidate>
+    {hospital.hospitalCode && <p className="full portal-form-note">Hospital ID: <strong>{hospital.hospitalCode}</strong></p>}
     <p className="full portal-form-note">Complete every field marked with * before saving the hospital profile.</p>
     <HospitalFormFields defaultValues={hospital} errors={fieldErrors} />
     <p className="full portal-form-note">Current official email: <strong style={{ overflowWrap: "anywhere" }}>{hospital.email}</strong>. Changes need Admin approval. Your current email and login stay unchanged until approved.{hospital.pendingOfficialEmail && <> Requested email: <strong style={{ overflowWrap: "anywhere" }}>{hospital.pendingOfficialEmail}</strong> (awaiting approval).</>}</p>

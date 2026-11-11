@@ -421,7 +421,7 @@ export function AdminHospitalDetails({ hospitalId }: { hospitalId: string }) {
           <div className="portal-actions full"><button className="portal-button" disabled={busy}>{busy ? "Saving..." : "Save details"}</button><button className="portal-button secondary" type="button" disabled={busy} onClick={() => { setEditing(false); setFieldErrors({}); setError(null); }}>Cancel</button></div>
         </form> : <>
           <div className="portal-card-meta">
-            <span>{hospital.email}</span><span>Owner WhatsApp: {hospital.phone}</span><span>Hospital Phone 1: {hospital.hospitalPhone1 || "Not added"}</span>{hospital.hospitalPhone2 && <span>Hospital Phone 2: {hospital.hospitalPhone2}</span>}
+            {hospital.hospitalCode && <span>Hospital ID: {hospital.hospitalCode}</span>}<span>{hospital.email}</span><span>Owner WhatsApp: {hospital.phone}</span><span>Hospital Phone 1: {hospital.hospitalPhone1 || "Not added"}</span>{hospital.hospitalPhone2 && <span>Hospital Phone 2: {hospital.hospitalPhone2}</span>}
           </div>
           <p><strong>Legal name:</strong> {hospital.legalName || hospital.name}</p>
           <p><strong>Registered address:</strong> {hospital.registeredAddress || hospital.address}</p>

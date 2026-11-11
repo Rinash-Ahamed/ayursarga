@@ -60,13 +60,20 @@ async function handlePOST(request: Request) {
       lastAuditId: auditReference.id,
     };
 
-    await firestore.runTransaction(async (batch) => {
+    const hospitalCode = await firestore.runTransaction(async (batch) => {
       const counterReference = firestore.collection("systemSettings").doc("hospitalCreationSequence");
       const counter = await batch.get(counterReference);
       await assertUniqueCreationEmail(batch, firestore, "hospitals", validation.data.email);
-      batch.set(counterReference, { value: Number(counter.data()?.value ?? 0) + 1,
+      const latest = await batch.get(firestore.collection("hospitals").orderBy("hospitalSequence", "desc").limit(1));
+      // Email changes also advance value; keep the display-ID sequence separate.
+      const previousSequence = Math.max(counter.data()?.hospitalSequence ?? 0, latest.docs[0]?.data().hospitalSequence ?? 0);
+      if (!Number.isSafeInteger(previousSequence) || previousSequence < 0 || previousSequence >= Number.MAX_SAFE_INTEGER) throw new Error("Invalid hospital sequence");
+      const hospitalSequence = previousSequence + 1;
+      const code = `AH${String(hospitalSequence).padStart(3, "0")}`;
+      const savedHospital = { ...hospitalData, hospitalCode: code, hospitalSequence };
+      batch.set(counterReference, { value: Number(counter.data()?.value ?? 0) + 1, hospitalSequence,
         updatedAt: now, updatedBy: adminUid, lastAuditId: auditReference.id }, { merge: true });
-      batch.create(hospitalReference, hospitalData);
+      batch.create(hospitalReference, savedHospital);
       batch.set(auditReference, {
         action: "create",
         module: "hospitals",
@@ -74,7 +81,7 @@ async function handlePOST(request: Request) {
         actorId: adminUid,
         actorRole: "admin",
         previousValues: null,
-        updatedValues: hospitalData,
+        updatedValues: savedHospital,
         timestamp: now,
         source: "server",
         device: {
@@ -83,9 +90,10 @@ async function handlePOST(request: Request) {
           ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
         },
       });
+      return code;
     });
 
-    return apiJson({ ok: true, hospitalId: hospitalReference.id }, 201);
+    return apiJson({ ok: true, hospitalId: hospitalReference.id, hospitalCode }, 201);
   } catch (error) {
     if (error instanceof DuplicateCreationEmailError) return apiJson({ error: error.message, field: "email" }, error.status);
     if (error instanceof RequestBodyError) return apiJson({ error: error.message }, error.status);

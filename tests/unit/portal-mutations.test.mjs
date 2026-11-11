@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { Timestamp } from "firebase-admin/firestore";
 import { readFileSync } from "node:fs";
 import { loadTypeScript } from "../helpers/loadTypeScript.mjs";
+import { bookingFlowFixture } from "../helpers/bookingFlowFixture.mjs";
 
 class AuthorizationError extends Error { constructor(message, status) { super(message); this.status = status; } }
 function fixture(records = {}, options = {}) {
@@ -62,6 +63,28 @@ const context = (key, value) => ({ params: Promise.resolve({ [key]: value }) });
 
 const validHospitalProfile={name:"Centre",legalName:"Centre LLP",email:"hospital@example.test",phone:"9876543210",hospitalPhone1:"9876543210",hospitalPhone2:null,
   address:"A complete service address",registeredAddress:"A complete registered address",city:"Palakkad",district:"Palakkad",state:"Kerala",commissionPercentage:10,status:"active",description:"Legacy description retained",locationUrl:"https://www.google.com/maps?q=Palakkad"};
+
+test("hospital identity cannot be edited and ordinary updates or deactivation leave it unchanged", async () => {
+  const hospital = { ...validHospitalProfile, hospitalCode: "AH001", hospitalSequence: 1 };
+  for (const field of ["hospitalCode", "hospitalSequence"]) {
+    const f = fixture({ "hospitals/centre": hospital });
+    const response = await f.load("app/api/admin/hospitals/[hospitalId]/route.ts").PATCH(request({ action: "update", data: { [field]: field === "hospitalCode" ? "AH999" : 999 } }), context("hospitalId", "centre"));
+    assert.equal(response.status, 400);
+    assert.equal(f.calls.commits, 0);
+  }
+  for (const body of [{ action: "update", data: { hospitalPhone2: "9876543211" } }, { action: "deactivate" }]) {
+    const f = bookingFlowFixture({ actor: { uid: "admin", role: "admin" }, records: { "hospitals/centre": hospital }, overrides: {
+      "@/services/auth/provisioning": { syncPortalAccountAccess: async () => true, ProvisioningError: class extends Error {} },
+    } });
+    const response = await f.load("app/api/admin/hospitals/[hospitalId]/route.ts").PATCH(request(body), context("hospitalId", "centre"));
+    assert.equal(response.status, 200);
+    const changes = (await response.json()).changes;
+    assert.equal(changes.hospitalCode, undefined);
+    assert.equal(changes.hospitalSequence, undefined);
+    assert.equal(f.records.get("hospitals/centre").hospitalCode, "AH001");
+    assert.equal(f.records.get("hospitals/centre").hospitalSequence, 1);
+  }
+});
 
 test("native rules wire changed-only hospital requirement guards without requiring missing legacy fields globally",()=>{
   const rules=readFileSync('firestore.rules','utf8');

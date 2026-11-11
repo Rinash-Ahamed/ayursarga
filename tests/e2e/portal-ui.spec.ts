@@ -6,6 +6,33 @@ import { getCalendarMonthRange } from "../../utils/date";
 const styles = ["node_modules/tailwindcss/lib/css/preflight.css", "app/globals.css", "app/portal.css"].map((file) => readFileSync(file, "utf8")).join("\n");
 const screens = ["admin-dashboard", "admin-hospitals", "admin-details", "admin-consultants", "admin-users", "admin-bookings", "admin-availability", "admin-audits", "hospital-dashboard", "hospital-profile", "hospital-services", "hospital-bookings", "hospital-availability", "hospital-password", "admin-login", "hospital-login", "admin-forgot", "hospital-forgot"];
 
+test('Hospital display ID remains readable and read-only across Admin and Hospital screens', async ({ page }) => {
+  for (const screen of ['admin-hospitals', 'admin-details', 'hospital-profile']) {
+    await mount(page, screen);
+    await expect(page.getByText('AH001', { exact: false }).first()).toBeVisible();
+    await expect(page.locator('input[name="hospitalCode"], input[name="hospitalSequence"]')).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+});
+
+test('Consultant filters combine status and service, preserve ascending IDs and reset cleanly after status changes',async({page},info)=>{
+  await page.route('**/*',route=>route.fulfill({status:204,body:''}));await mount(page,'admin-consultants-filters');
+  const ids=page.locator('.consultant-employee-id'),status=page.getByRole('combobox',{name:'Status',exact:true}),service=page.getByRole('combobox',{name:'Online service',exact:true});
+  await expect(ids).toHaveText(['AS001','AS003','AS010','AS1000','AS002','AS011']);
+  await status.selectOption('inactive');await expect(ids).toHaveText(['AS002','AS011']);
+  await service.selectOption('psychologist');await expect(ids).toHaveText(['AS011']);
+  await status.selectOption('active');await expect(ids).toHaveText(['AS003']);
+  await page.getByRole('button',{name:'Make inactive',exact:true}).click();await expect(ids).toHaveCount(0);
+  await expect(page.getByText('No consultants match these filters. Change or clear the filters to try again.')).toBeVisible();
+  await page.getByRole('button',{name:'Clear filters',exact:true}).click();await expect(ids).toHaveText(['AS001','AS010','AS1000','AS002','AS003','AS011']);
+  await page.getByRole('searchbox',{name:'Search consultants'}).fill('AS010');await expect(ids).toHaveText(['AS010']);
+  await service.selectOption('psychologist');await expect(ids).toHaveCount(0);
+  await page.getByRole('button',{name:'Clear filters',exact:true}).click();await expect(ids).toHaveCount(6);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  if(page.viewportSize()!.width<521){expect(parseFloat(await status.evaluate(node=>getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(16);}
+  await page.screenshot({path:info.outputPath('consultant-filters.png'),fullPage:false});
+});
+
 test('Hospital map requires a valid link and keeps invalid saves non-mutating',async({page})=>{
   await page.route('**/*',route=>route.fulfill({status:204,body:''}));await mount(page,'admin-details');
   const media=page.locator('#hospital-images');await media.getByRole('button',{name:'Edit map',exact:true}).click();
@@ -440,7 +467,7 @@ test("duplicate consultant responses stay unique through editing and loading ano
   await page.getByRole("button", { name: /Load more/i }).click();
   await expect(cards).toHaveCount(3);
   await expect(edited.locator("h3")).toHaveText("Edited Consultant");
-  expect(await cards.locator(".consultant-employee-id").allTextContents()).toEqual(["AS002", "AS001", "AS003"]);
+  expect(await cards.locator(".consultant-employee-id").allTextContents()).toEqual(["AS001", "AS002", "AS003"]);
   expect(warnings).toEqual([]);
 });
 

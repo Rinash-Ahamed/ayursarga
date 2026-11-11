@@ -54,6 +54,7 @@ const screens = {
   "admin-hospitals-status-order": <HospitalsManager />,
   "admin-consultants-status-order": <ConsultantsManager />,
   "admin-consultants-duplicates": <ConsultantsManager />,
+  "admin-consultants-filters": <ConsultantsManager />,
   "admin-users-status-order": <UsersList />,
   "hospital-services-status-order": <ServicesManager />,
   "admin-packages-status-order": <AdminHospitalDetails hospitalId="centre" />,

@@ -52,7 +52,7 @@ export function listAllHospitals(options: StatusOrderedOptions = {}, searchTerm 
 export function createHospital(input: HospitalFields) {
   const validation = validateHospitalFields(input);
   if (!validation.isValid) throw new Error(Object.values(validation.errors)[0] ?? "Hospital details are invalid.");
-  return authorizedApiRequest<{ ok: true; hospitalId: string }>("/api/admin/hospitals", {
+  return authorizedApiRequest<{ ok: true; hospitalId: string; hospitalCode: string }>("/api/admin/hospitals", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(validation.data),

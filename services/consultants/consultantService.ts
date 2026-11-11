@@ -9,6 +9,7 @@ import { runStatusOrderedQuery, type StatusOrderedOptions } from "@/services/fir
 import { authorizedApiRequest, decodeMutation } from "@/services/api/client";
 import { consultantPhotoFileError } from "@/features/consultants/photo";
 import { prepareImageUpload } from "@/utils/prepareImageUpload";
+import type { ConsultationServiceId } from "@/features/consultations/catalog";
 
 export async function uploadConsultantPhoto(consultantId: string, file: File, expectedImageUrl?: string | null) {
   const error = consultantPhotoFileError(file);
@@ -22,7 +23,7 @@ export async function uploadConsultantPhoto(consultantId: string, file: File, ex
   return result.imageUrl;
 }
 
-export function listConsultants(options: StatusOrderedOptions = {}, searchTerm = "") {
+export function listConsultants(options: StatusOrderedOptions = {}, searchTerm = "", service?: ConsultationServiceId) {
   const trimmedSearch = searchTerm.trim();
   const searchingByEmployeeId = /^as\d*/i.test(trimmedSearch);
   const prefix = searchingByEmployeeId
@@ -31,7 +32,8 @@ export function listConsultants(options: StatusOrderedOptions = {}, searchTerm =
   const sortField = prefix ? (searchingByEmployeeId ? "employeeId" : "name") : "employeeSequence";
   return runStatusOrderedQuery<ConsultantDocument>({
     collectionPath: COLLECTIONS.consultants,
-    sort: { field: sortField, direction: prefix ? "asc" : "desc" },
+    sort: { field: sortField, direction: "asc" },
+    filters: service ? [{ field: "consultationServices", operator: "array-contains", value: service }] : [],
     startAtValues: prefix ? [prefix] : undefined,
     endAtValues: prefix ? [`${prefix}\uf8ff`] : undefined,
     excludeArchived: false,

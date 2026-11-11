@@ -2,6 +2,96 @@
 
 Updated: 11 November 2026 (Asia/Calcutta).
 
+## Hospital display IDs (11 November 2026, v4.45.0)
+
+- Owner approved AH001-style IDs for new hospitals, with no legacy backfill
+  because existing test hospitals will be cleared separately. No data deletion,
+  migration, counter reset or production mutation was performed or authorized
+  by this implementation.
+- Hospital creation assigns immutable hospitalCode and hospitalSequence inside
+  its existing duplicate-email/counter/create/audit transaction. Uses the separate
+  hospitalSequence property on hospitalCreationSequence because value also
+  advances on official-email changes. One bounded latest-sequence read guards
+  against a lagging counter; AH999 expands to AH1000 without truncation. Failed
+  creates cannot consume a committed code; client-supplied codes are ignored.
+- Existing opaque hospital document IDs, routes, Auth associations, booking and
+  contract references remain unchanged. Optional model fields preserve legacy
+  records. Admin list/details and Hospital profile show read-only Hospital ID
+  when present. Public discovery and booking payloads unchanged. Existing server
+  field allowlists and direct-client changed-field restrictions already exclude
+  both identity fields; no Firestore rule/index changes required for this feature.
+- Final 34 creation/mutation fixture tests passed, including concurrent creates,
+  failed commits, duplicate-email/role denials, lost-response retry, legacy
+  compatibility, sequential IDs, forged fields and immutable updates/deactivation.
+  Initial added deactivation check used a fixture without linked-user queries;
+  moved it to the existing transaction-capable booking fixture and reran all 34.
+  Auth synchronization is mocked in that check, not a live Auth integration test.
+- Six browser checks passed on desktop, 320px Chromium and mobile WebKit: ID
+  visibility/read-only/overflow across all three screens plus existing responsive
+  hospital overview/edit behavior. Sandbox worker EPERM required an approved
+  local Playwright escalation. No live Firebase/provider tests were run.
+- Spreadsheet skill updated HOS-001 F6/G6 only. Verified all 25 sheets, styles,
+  controls, test methods and execution history retained; before/after previews
+  reviewed. Manual required sign-off remains. Updated automation mapping and
+  guardrails. Version synchronized to 4.45.0. No build/lint/typecheck requested
+  for this feature; no deployment. Preserve earlier consultant-filter changes.
+
+## Consultant index deployment (11 November 2026)
+
+- Owner reauthenticated and explicitly authorized deployment after the consultant
+  list loading failure. Ran scoped `firebase deploy --only firestore:indexes
+  --project ayursarga-connect --non-interactive`; exit 0, deployment succeeded.
+- Read-only live index inspection confirmed all three new consultant indexes
+  exist but remain CREATING (status+employeeSequence ASC, and status+service
+  array+employeeId/name ASC). Existing consultant indexes remain READY.
+  Retry the list once Firebase finishes building; deployment success alone does
+  not establish query readiness or a successful authenticated UI regression.
+- No rules/application deployment, live records changed, or build/lint rerun.
+  The scoped deployment also reapplied configured auditLogs field-index
+  exemptions; no operational documents or permissions were changed.
+
+## Consultant list filters and ascending IDs (11 November 2026, v4.44.0)
+
+- Owner confirmed Admin -> Our Consultants as the target. Added Status (All,
+  Active, Inactive), Online service (existing explicit assignments), and Clear
+  filters alongside existing name/ID prefix search. Responsive shared controls
+  use four columns on wide screens, two on narrower screens and one on phones;
+  existing 16px mobile control sizing retained. Scoped portal styles only.
+- Default/service-filtered queries now order employeeSequence ascending instead
+  of descending; bounded phase cursors still exhaust current records before
+  inactive records. Shared query helper accepts an optional single-status filter
+  and never enters a second phase for that filter. Existing callers without it
+  retain their behavior. No whole-list downloads or new listeners/caches.
+- Numeric display ordering also handles local inserts and updates, AS999/AS1000,
+  and legacy IDs without sequence values, with inactive last. Name/employee-ID
+  prefix searches retain their existing indexed query ordering/cursor semantics;
+  loaded matching cards are presented in numeric ID order. Unloaded name-search
+  pages are not globally scanned/reordered; no speculative search migration or
+  fix to the previously deferred As-name prefix issue is included.
+- Filtered edit/create flows reload to maintain membership. Status changes reload
+  when a status filter or partial pagination would invalidate the current page;
+  safe fully loaded views patch locally and re-sort. Existing form/revision,
+  photos, status endpoint, audit and booking logic remain unchanged. Filters close
+  an opened editor/schedule when explicitly changed. API/direct-read trace stays
+  within Admin consultant SDK queries; native reads remain Admin-only, writes
+  stay server-only. No new persisted fields or permission changes.
+- Added three composite indexes: status+employeeSequence ASC, and status+
+  consultationServices CONTAINS+name/employeeId ASC. Existing service+sequence ASC
+  index reused; old indexes retained. These are NOT deployed. App and Firebase
+  index deployment/initialization must complete before relying on new queries.
+- Eighteen focused unit/query/consultant mutation tests passed. Twelve browser
+  executions passed on desktop, 320px Chromium and mobile WebKit: filter/service/
+  search combinations, empty states, status-change membership, Clear, duplicate
+  pagination and existing Add/Edit/photo flows. Initial duplicate test expected
+  old insertion order; updated only that expectation and reran all 12 successfully.
+  Reviewed desktop/mobile filter screenshots. No cloud data/provider actions.
+- Spreadsheet skill updated CST-010 steps/expectations only, retained Automated
+  classification, execution history and all 25 sheets/styles/controls; verified
+  exactly two changed cells and reviewed before/after renders. QA mapping/AGENTS
+  updated. Version synchronized to 4.44.0. No fresh full build/lint/typecheck
+  requested or run for this change; no deployment. Working tree was clean at
+  task start (earlier work was committed by owner).
+
 ## v4.43.3 requested build and lint validation (11 November 2026)
 
 - Owner requested fresh lint/build after the hospital overview, contract table
