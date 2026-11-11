@@ -1,15 +1,8 @@
 import { isIsoDate } from "@/utils/date";
 
 /** Complete only after the saved appointment/window ends, never a new provider schedule. */
-export function consultationCompletionEligibility(booking: {
-  status: string;
-  confirmedDate?: string | null;
-  preferredDate?: string | null;
-  confirmedTime?: string | null;
-  confirmedEndTime?: string | null;
-  slotStartTime?: string | null;
-  slotEndTime?: string | null;
-}, now: number) {
+export function consultationCompletionEligibility(value: unknown, now: number) {
+  const booking = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
   const date = booking.confirmedDate ?? booking.preferredDate;
   const start = booking.confirmedTime ?? booking.slotStartTime;
   const end = booking.confirmedEndTime ?? booking.slotEndTime;

@@ -12,6 +12,9 @@ test("completion uses the saved exact end in IST, inclusively, not the broader p
   assert.equal(eligibility(booking, end).endsAt, "2026-11-12T04:30:00.000Z");
   assert.equal(eligibility({ ...booking, status: "cancelled" }, end).allowed, false);
   assert.equal(eligibility(booking, NaN).allowed, false);
+  for (const invalid of [null, undefined, [], "confirmed", { status: "confirmed" }]) {
+    assert.equal(eligibility(invalid, end).allowed, false);
+  }
 });
 test("legacy appointments use their saved window end; invalid or missing schedules fail closed", () => {
   assert.equal(eligibility({ ...booking, confirmedTime: null, confirmedEndTime: null }, end).allowed, false);
